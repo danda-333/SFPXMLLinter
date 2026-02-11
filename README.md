@@ -116,23 +116,3 @@ Example override in VS Code settings:
   ]
 }
 ```
-
-## XSD
-
-Workspace is configured to use XSD schemas from `Docs/Schemas`:
-
-- XML catalog: `Docs/Schemas/catalog.xml`
-- Generated namespace bundles: `Docs/Schemas/_generated/*.xsd`
-- VS Code config: `.vscode/settings.json` (`xml.catalogs` + `xml.fileAssociations`)
-
-Notes:
-
-- `catalog.xml` maps imported namespaces to local generated aggregate schemas.
-- File associations map common SFP file patterns (`*WorkFlow*.xml`, `XML_Components/**/*.xml`, `XML/**/*.xml`, `XML_Templates/**/*.xml`, ...).
-- For non-standard naming, add `<?xml-model ...?>` to file header or extend `xml.fileAssociations`.
-
-Regenerate catalog and namespace bundles after changing XSD files:
-
-```bash
-npm run schemas:generate
-```

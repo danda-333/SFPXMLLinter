@@ -67,6 +67,15 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - Files opened internally by indexer are ignored for diagnostics.
 - Full workspace indexing runs in background (non-blocking startup).
 
+## Index domains
+
+- Indexing is isolated into 2 independent domains:
+  - `template` domain: `XML_Templates` + `XML_Components`
+  - `runtime` domain: `XML`
+- Diagnostics, completion, definition, references, and rename use the domain of the current document.
+- This prevents symbol collisions when the same `Form Ident` exists in both template and runtime trees.
+- Reindex/rebuild operations update both domains, but symbol resolution never mixes them.
+
 ## Dev
 
 ```bash

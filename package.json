@@ -2,7 +2,7 @@
   "name": "sfp-xml-linter",
   "displayName": "SFP XML Linter",
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
-  "publisher": "daniel-sasek",
+  "publisher": "DanielSasek",
   "license": "MIT",
   "version": "0.0.1",
   "engines": {

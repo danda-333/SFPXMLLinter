@@ -3,7 +3,7 @@ import { WorkspaceIndex, IndexedForm } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 
-type IndexAccessor = () => WorkspaceIndex;
+type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type RenameKind = "form" | "control" | "button" | "section";
 
 interface RenameTarget {
@@ -43,7 +43,7 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
       return undefined;
     }
 
-    const index = this.getIndex();
+    const index = this.getIndex(document.uri);
     const edit = new vscode.WorkspaceEdit();
     const seen = new Set<string>();
     pushRenameLocation(edit, seen, target.declaration, normalizedNewName);
@@ -80,7 +80,7 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
       return undefined;
     }
 
-    const index = this.getIndex();
+    const index = this.getIndex(document.uri);
     const facts = parseDocumentFacts(document);
 
     const formEntry = findFormByUri(index, document.uri);

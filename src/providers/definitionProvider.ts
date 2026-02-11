@@ -4,7 +4,7 @@ import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 
-type IndexAccessor = () => WorkspaceIndex;
+type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 
 export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
   constructor(private readonly getIndex: IndexAccessor) {}
@@ -14,7 +14,7 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
       return undefined;
     }
 
-    const index = this.getIndex();
+    const index = this.getIndex(document.uri);
     const facts = parseDocumentFacts(document);
 
     for (const formRef of facts.formIdentReferences) {

@@ -4,7 +4,7 @@ import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 
-type IndexAccessor = () => WorkspaceIndex;
+type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type TargetKind =
   | "form"
   | "control"
@@ -37,7 +37,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       return [];
     }
 
-    const index = this.getIndex();
+    const index = this.getIndex(document.uri);
     const out: vscode.Location[] = [];
     const seen = new Set<string>();
 
@@ -113,7 +113,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       return undefined;
     }
 
-    const index = this.getIndex();
+    const index = this.getIndex(document.uri);
     const facts = parseDocumentFacts(document);
 
     const formEntry = findFormByUri(index, document.uri);

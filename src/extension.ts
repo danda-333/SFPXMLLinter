@@ -1,7 +1,7 @@
 ﻿import * as vscode from "vscode";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
 import { DiagnosticsEngine } from "./diagnostics/engine";
-import { documentInConfiguredRoots } from "./utils/paths";
+import { documentInConfiguredRoots, getXmlIndexDomainByUri, XmlIndexDomain } from "./utils/paths";
 import { DiagnosticsHoverProvider } from "./providers/diagnosticsHoverProvider";
 import { HoverRegistry, DocumentationHoverResolver } from "./providers/hoverRegistry";
 import { BuildXmlTemplatesService } from "./template/buildXmlTemplatesService";
@@ -16,16 +16,19 @@ import { getSettings } from "./config/settings";
 import { parseDocumentFacts } from "./indexer/xmlFacts";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  const DEBUG_PREFIX = "[SFP-DBG]";
   const diagnostics = vscode.languages.createDiagnosticCollection("sfpXmlLinter");
   const buildOutput = vscode.window.createOutputChannel("SFP XML Linter Build");
   const indexOutput = vscode.window.createOutputChannel("SFP XML Linter Index");
-  const indexer = new WorkspaceIndexer();
+  const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
+  const runtimeIndexer = new WorkspaceIndexer(["XML"]);
   const engine = new DiagnosticsEngine();
   const buildService = new BuildXmlTemplatesService();
   const documentationHoverResolver = new DocumentationHoverResolver();
   const hoverDocsWatchers: vscode.Disposable[] = [];
   let hasInitialIndex = false;
   let hasShownInitialIndexReadyNotification = false;
+  let hasCompletedInitialWorkspaceValidation = false;
   let isReindexRunning = false;
   let queuedReindexScope: "none" | "bootstrap" | "all" = "none";
   let deferredFullReindexTimer: NodeJS.Timeout | undefined;
@@ -35,6 +38,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   let lowPriorityValidationStartTimer: NodeJS.Timeout | undefined;
   let queuedFullTemplateBuild = false;
   const queuedTemplatePaths = new Set<string>();
+  const pendingContentChangesSinceLastSave = new Set<string>();
   const highPriorityValidationQueue: string[] = [];
   const highPriorityValidationSet = new Set<string>();
   const lowPriorityValidationQueue: string[] = [];
@@ -45,11 +49,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(indexOutput);
 
   function logBuild(message: string): void {
-    buildOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
+    buildOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
   }
 
   function logIndex(message: string): void {
-    indexOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
+    indexOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
   }
 
   function formatIndexProgress(event: RebuildIndexProgressEvent): string {
@@ -78,6 +82,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       default:
         return event.message ?? event.phase;
     }
+  }
+
+  function getIndexerByDomain(domain: XmlIndexDomain): WorkspaceIndexer {
+    return domain === "runtime" ? runtimeIndexer : templateIndexer;
+  }
+
+  function getIndexerForUri(uri: vscode.Uri): WorkspaceIndexer {
+    const domain = getXmlIndexDomainByUri(uri);
+    return getIndexerByDomain(domain === "other" ? "template" : domain);
+  }
+
+  function getIndexForUri(uri?: vscode.Uri): ReturnType<WorkspaceIndexer["getIndex"]> {
+    if (!uri) {
+      const active = vscode.window.activeTextEditor?.document.uri;
+      if (active) {
+        return getIndexerForUri(active).getIndex();
+      }
+
+      return templateIndexer.getIndex();
+    }
+
+    return getIndexerForUri(uri).getIndex();
   }
 
   function createBuildRunOptions(silent: boolean): {
@@ -243,10 +269,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       logIndex("Initial indexing START");
     }
 
-    await indexer.rebuildIndex({
+    await templateIndexer.rebuildIndex({
       onProgress: verbose
         ? (event) => {
-            logIndex(formatIndexProgress(event));
+            logIndex(`[template] ${formatIndexProgress(event)}`);
+          }
+        : undefined
+    });
+
+    await runtimeIndexer.rebuildIndex({
+      onProgress: verbose
+        ? (event) => {
+            logIndex(`[runtime] ${formatIndexProgress(event)}`);
           }
         : undefined
     });
@@ -257,8 +291,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     hasInitialIndex = true;
     validateOpenDocuments();
-    const uris = await globConfiguredXmlFiles();
-    enqueueWorkspaceValidation(uris);
+    if (!hasCompletedInitialWorkspaceValidation) {
+      const uris = await globConfiguredXmlFiles();
+      enqueueWorkspaceValidation(uris);
+      hasCompletedInitialWorkspaceValidation = true;
+      logIndex("Background workspace validation queued (first full index only).");
+    }
   }
 
   async function rebuildBootstrapIndexAndValidateOpenDocs(options?: { verboseProgress?: boolean }): Promise<void> {
@@ -267,11 +305,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       logIndex("Bootstrap indexing START (components + forms)");
     }
 
-    await indexer.rebuildIndex({
+    await templateIndexer.rebuildIndex({
       scope: "bootstrap",
       onProgress: verbose
         ? (event) => {
-            logIndex(formatIndexProgress(event));
+            logIndex(`[template] ${formatIndexProgress(event)}`);
+          }
+        : undefined
+    });
+
+    await runtimeIndexer.rebuildIndex({
+      scope: "bootstrap",
+      onProgress: verbose
+        ? (event) => {
+            logIndex(`[runtime] ${formatIndexProgress(event)}`);
           }
         : undefined
     });
@@ -285,8 +332,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function queueReindex(scope: "bootstrap" | "all"): Promise<void> {
+    logIndex(`QUEUE reindex requested scope=${scope} running=${isReindexRunning}`);
     if (isReindexRunning) {
       queuedReindexScope = maxReindexScope(queuedReindexScope, scope);
+      logIndex(`QUEUE reindex deferred scope=${queuedReindexScope}`);
       return;
     }
 
@@ -297,11 +346,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       let pendingScope: "bootstrap" | "all" = scope;
       do {
         queuedReindexScope = "none";
+        const passStartedAt = Date.now();
+        logIndex(`REINDEX pass START scope=${pendingScope}`);
         if (pendingScope === "bootstrap") {
           await rebuildBootstrapIndexAndValidateOpenDocs({ verboseProgress });
         } else {
           await rebuildIndexAndValidateOpenDocs({ verboseProgress });
         }
+        logIndex(`REINDEX pass DONE scope=${pendingScope} in ${Date.now() - passStartedAt} ms`);
 
         const queued = queuedReindexScope;
         if (queued === "none") {
@@ -311,6 +363,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       } while (true);
 
       const durationMs = Date.now() - startedAt;
+      logIndex(`REINDEX all passes DONE in ${durationMs} ms`);
       vscode.window.setStatusBarMessage(`SFP XML Linter: Indexace dokončena (${durationMs} ms)`, 4000);
 
       if (!hasShownInitialIndexReadyNotification) {
@@ -351,6 +404,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     isTemplateBuildRunning = true;
     logBuild("Worker START");
     let executedBuild = false;
+    let executedFullBuild = false;
+    const builtTargetPaths = new Set<string>();
     try {
       do {
         if (queuedFullTemplateBuild) {
@@ -358,6 +413,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           logBuild("BUILD START full templates");
           await buildService.run(workspaceFolder, createBuildRunOptions(true));
           executedBuild = true;
+          executedFullBuild = true;
           logBuild("BUILD DONE full templates");
           continue;
         }
@@ -371,11 +427,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         logBuild(`BUILD START target: ${vscode.workspace.asRelativePath(nextPath, false)} (remaining=${queuedTemplatePaths.size})`);
         await buildService.runForPath(workspaceFolder, nextPath, createBuildRunOptions(true));
         executedBuild = true;
+        builtTargetPaths.add(nextPath);
         logBuild(`BUILD DONE target: ${vscode.workspace.asRelativePath(nextPath, false)}`);
       } while (queuedFullTemplateBuild || queuedTemplatePaths.size > 0);
 
       if (executedBuild) {
-        await queueReindex("all");
+        if (executedFullBuild) {
+          logIndex("POST-BUILD reindex scope=all");
+          await queueReindex("all");
+        } else {
+          const refreshStartedAt = Date.now();
+          const refreshedCount = await refreshFormsFromTemplateTargets([...builtTargetPaths]);
+          logIndex(`POST-BUILD incremental form refresh count=${refreshedCount} in ${Date.now() - refreshStartedAt} ms`);
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -387,13 +451,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  async function refreshFormsFromTemplateTargets(targetPaths: readonly string[]): Promise<number> {
+    let refreshed = 0;
+    for (const targetPath of targetPaths) {
+      const uri = vscode.Uri.file(targetPath);
+      try {
+        const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
+        if (!doc) {
+          continue;
+        }
+
+        const root = (parseDocumentFacts(doc).rootTag ?? "").toLowerCase();
+        if (root !== "form") {
+          continue;
+        }
+
+        const result = templateIndexer.refreshFormDocument(doc);
+        if (result.updated) {
+          refreshed++;
+          validateDocument(doc);
+          if (isUserOpenDocument(doc.uri)) {
+            enqueueValidation(doc.uri, "high");
+          }
+        }
+      } catch {
+        // Ignore transient file states during/after build.
+      }
+    }
+
+    return refreshed;
+  }
+
   function isInFolder(uri: vscode.Uri, folderName: string): boolean {
     const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/").toLowerCase();
     const token = `${folderName.toLowerCase()}/`;
     return rel.startsWith(token) || rel.includes(`/${token}`);
   }
 
-  async function maybeAutoBuildTemplates(document: vscode.TextDocument): Promise<void> {
+  async function maybeAutoBuildTemplates(document: vscode.TextDocument, componentKeyHint?: string): Promise<void> {
     const settings = getSettings();
     if (!settings.autoBuildOnSave) {
       return;
@@ -425,7 +520,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
+    const indexedDependents = componentKeyHint ? collectDependentTemplatesFromIndex(componentKeyHint) : [];
+    if (indexedDependents.length > 0) {
+      logBuild(`Dependents from index: ${indexedDependents.length}`);
+      for (const templatePath of indexedDependents) {
+        await queueTemplateBuild(workspaceFolder, templatePath);
+      }
+      return;
+    }
+
+    const fallbackStartedAt = Date.now();
     const dependentTemplates = await buildService.findTemplatesUsingComponent(workspaceFolder, document.uri.fsPath);
+    logBuild(`Dependents fallback scan took ${Date.now() - fallbackStartedAt} ms`);
     if (dependentTemplates.length === 0) {
       logBuild("No dependents found -> FULL build fallback");
       await queueTemplateBuild(workspaceFolder);
@@ -436,6 +542,36 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     for (const templatePath of dependentTemplates) {
       await queueTemplateBuild(workspaceFolder, templatePath);
     }
+  }
+
+  function collectDependentTemplatesFromIndex(componentKey: string): string[] {
+    const idx = templateIndexer.getIndex();
+    const candidateKeys = new Set<string>([componentKey]);
+    const baseName = componentKey.split("/").pop() ?? componentKey;
+    const variants = idx.componentKeysByBaseName.get(baseName);
+    if (variants) {
+      for (const variant of variants) {
+        candidateKeys.add(variant);
+      }
+    }
+
+    const result = new Set<string>();
+    for (const key of candidateKeys) {
+      const refs = idx.componentReferenceLocationsByKey.get(key);
+      if (!refs) {
+        continue;
+      }
+
+      for (const location of refs) {
+        if (!isInFolder(location.uri, "XML_Templates")) {
+          continue;
+        }
+
+        result.add(location.uri.fsPath);
+      }
+    }
+
+    return [...result].sort((a, b) => a.localeCompare(b));
   }
 
   function validateDocument(document: vscode.TextDocument): void {
@@ -450,7 +586,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
-    const result = engine.buildDiagnostics(document, indexer.getIndex());
+    const result = engine.buildDiagnostics(document, getIndexerForUri(document.uri).getIndex());
     diagnostics.set(document.uri, result);
   }
 
@@ -496,12 +632,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
+      pendingContentChangesSinceLastSave.add(event.document.uri.toString());
       validateDocument(event.document);
       if (isUserOpenDocument(event.document.uri)) {
         enqueueValidation(event.document.uri, "high");
       }
     }),
-    vscode.workspace.onDidCloseTextDocument((document) => enqueueValidation(document.uri, "low")),
     vscode.window.onDidChangeVisibleTextEditors(() => {
       validateOpenDocuments();
       for (const uri of getUserOpenUris()) {
@@ -515,12 +651,43 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     vscode.workspace.onDidSaveTextDocument((document) => {
+      const saveKey = document.uri.toString();
+      const hadContentChanges = pendingContentChangesSinceLastSave.has(saveKey);
+      pendingContentChangesSinceLastSave.delete(saveKey);
+
       validateDocument(document);
-      enqueueValidation(document.uri, "high");
+      if (isUserOpenDocument(document.uri)) {
+        enqueueValidation(document.uri, "high");
+      }
+
+      if (!hadContentChanges) {
+        logIndex(`SAVE skip unchanged: ${vscode.workspace.asRelativePath(document.uri, false)}`);
+        return;
+      }
+
       if (isReindexRelevantUri(document.uri)) {
         const root = (parseDocumentFacts(document).rootTag ?? "").toLowerCase();
-        const isBootstrapRelevantRoot = root === "form" || root === "component";
-        void queueReindex(isBootstrapRelevantRoot ? "bootstrap" : "all");
+        const rel = vscode.workspace.asRelativePath(document.uri, false);
+        const activeIndexer = getIndexerForUri(document.uri);
+        let refreshedComponentKey: string | undefined;
+        if (root === "form") {
+          const startedAt = Date.now();
+          const refreshed = activeIndexer.refreshFormDocument(document);
+          logIndex(
+            `SAVE form incremental refresh ${refreshed.updated ? "UPDATED" : "SKIPPED"} (${refreshed.reason}) ${rel} in ${Date.now() - startedAt} ms`
+          );
+        } else if (root === "component") {
+          const startedAt = Date.now();
+          const refreshed = activeIndexer.refreshComponentDocument(document);
+          refreshedComponentKey = refreshed.componentKey;
+          logIndex(
+            `SAVE component incremental refresh ${refreshed.updated ? "UPDATED" : "SKIPPED"} (${refreshed.reason}) ${rel} in ${Date.now() - startedAt} ms`
+          );
+        } else {
+          logIndex(`SAVE skip non-structural root='${root || "unknown"}': ${rel}`);
+        }
+        void maybeAutoBuildTemplates(document, refreshedComponentKey);
+        return;
       }
       void maybeAutoBuildTemplates(document);
     }),
@@ -562,7 +729,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.languages.registerHoverProvider({ language: "xml" }, new HoverRegistry([documentationHoverResolver])),
     vscode.languages.registerCompletionItemProvider(
       { language: "xml" },
-      new SfpXmlCompletionProvider(() => indexer.getIndex()),
+      new SfpXmlCompletionProvider((uri) => getIndexForUri(uri)),
       "<",
       " ",
       ":",
@@ -570,9 +737,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       "'",
       "="
     ),
-    vscode.languages.registerReferenceProvider({ language: "xml" }, new SfpXmlReferencesProvider(() => indexer.getIndex())),
-    vscode.languages.registerDefinitionProvider({ language: "xml" }, new SfpXmlDefinitionProvider(() => indexer.getIndex())),
-    vscode.languages.registerRenameProvider({ language: "xml" }, new SfpXmlRenameProvider(() => indexer.getIndex())),
+    vscode.languages.registerReferenceProvider({ language: "xml" }, new SfpXmlReferencesProvider((uri) => getIndexForUri(uri))),
+    vscode.languages.registerDefinitionProvider({ language: "xml" }, new SfpXmlDefinitionProvider((uri) => getIndexForUri(uri))),
+    vscode.languages.registerRenameProvider({ language: "xml" }, new SfpXmlRenameProvider((uri) => getIndexForUri(uri))),
     vscode.languages.registerDocumentSemanticTokensProvider(
       { language: "xml" },
       new SfpSqlPlaceholderSemanticProvider(),
@@ -700,7 +867,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       output.appendLine("SFP XML Linter - Workspace Diagnostics Report");
       output.appendLine("");
 
-      await indexer.rebuildIndex();
+      await templateIndexer.rebuildIndex();
+      await runtimeIndexer.rebuildIndex();
       const uris = await globConfiguredXmlFiles();
 
       const byRule = new Map<string, number>();
@@ -708,7 +876,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       for (const uri of uris) {
         const doc = await vscode.workspace.openTextDocument(uri);
-        const ds = engine.buildDiagnostics(doc, indexer.getIndex());
+        const ds = engine.buildDiagnostics(doc, getIndexerForUri(uri).getIndex());
         if (ds.length === 0) {
           continue;
         }

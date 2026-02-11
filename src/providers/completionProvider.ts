@@ -6,7 +6,7 @@ import { documentInConfiguredRoots, normalizeComponentKey } from "../utils/paths
 import { collectTemplateAvailableControlIdents } from "../utils/templateControls";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 
-type IndexAccessor = () => WorkspaceIndex;
+type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 
 const ROOT_ELEMENTS = ["Form", "WorkFlow", "DataView", "Filter", "Dashboard", "Configuration", "Component"];
 
@@ -182,7 +182,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     const facts = parseDocumentFacts(document);
-    const index = this.getIndex();
+    const index = this.getIndex(document.uri);
     const values = [...collectResolvableControlIdents(document, facts, index)].sort((a, b) => a.localeCompare(b));
     const items = asValueItems(values, vscode.CompletionItemKind.Reference);
     for (const item of items) {
@@ -258,7 +258,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
   private async completeAttributeValues(document: vscode.TextDocument, ctx: TagContext): Promise<vscode.CompletionItem[]> {
     const facts = parseDocumentFacts(document);
-    const index = this.getIndex();
+    const index = this.getIndex(document.uri);
     const tag = (ctx.currentTag ?? "").toLowerCase();
     const attr = ctx.valueAttribute;
 

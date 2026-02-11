@@ -48,8 +48,8 @@ export class BuildXmlTemplatesService {
     const out = new Set<string>();
 
     for (const uri of templateUris) {
-      const document = await vscode.workspace.openTextDocument(uri);
-      const text = document.getText();
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      const text = Buffer.from(bytes).toString("utf8");
       for (const usingRef of extractUsingComponentRefs(text)) {
         if (usingRef === relNoExt || usingRef.split("/").pop() === targetBaseName) {
           out.add(uri.fsPath);
@@ -156,7 +156,7 @@ function execProcess(command: string, args: string[], cwd: string, options: Exec
       stdoutBuffer = lines.remaining;
       for (const line of lines.complete) {
         if (line.trim().length > 0) {
-          console.log(`[sfpXmlLinter] ${line}`);
+          console.log(`[SFP-DBG][sfpXmlLinter] ${line}`);
         }
         options.onStdoutLine?.(line);
       }
@@ -186,7 +186,7 @@ function execProcess(command: string, args: string[], cwd: string, options: Exec
       if (stdoutBuffer.length > 0) {
         const line = stdoutBuffer;
         if (line.trim().length > 0) {
-          console.log(`[sfpXmlLinter] ${line}`);
+          console.log(`[SFP-DBG][sfpXmlLinter] ${line}`);
         }
         options.onStdoutLine?.(line);
       }

@@ -40,9 +40,10 @@ export function documentInConfiguredRoots(document: vscode.TextDocument): boolea
   });
 }
 
-export async function globConfiguredXmlFiles(): Promise<vscode.Uri[]> {
+export async function globConfiguredXmlFiles(rootsOverride?: readonly string[]): Promise<vscode.Uri[]> {
   const settings = getSettings();
-  const includePatterns = settings.workspaceRoots.map((root) => {
+  const roots = rootsOverride && rootsOverride.length > 0 ? [...rootsOverride] : settings.workspaceRoots;
+  const includePatterns = roots.map((root) => {
     const normalizedRoot = root.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
     return `**/${normalizedRoot}/**/*.xml`;
   });
@@ -56,6 +57,21 @@ export async function globConfiguredXmlFiles(): Promise<vscode.Uri[]> {
   }
 
   return [...map.values()];
+}
+
+export type XmlIndexDomain = "template" | "runtime" | "other";
+
+export function getXmlIndexDomainByUri(uri: vscode.Uri): XmlIndexDomain {
+  const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/").toLowerCase();
+  if (/(^|\/)xml_components\//.test(rel) || /(^|\/)xml_templates\//.test(rel)) {
+    return "template";
+  }
+
+  if (/(^|\/)xml\//.test(rel)) {
+    return "runtime";
+  }
+
+  return "other";
 }
 
 export function makeRangeFromIndices(text: string, start: number, length: number): vscode.Range {

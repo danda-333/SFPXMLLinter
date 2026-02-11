@@ -102,6 +102,9 @@ export interface ParsedDocumentFacts {
 
 const ATTR_REGEX = /([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
 
+let lastIndexedText: string | undefined;
+let lastLineStarts: number[] | undefined;
+
 export function parseDocumentFacts(document: vscode.TextDocument): ParsedDocumentFacts {
   return parseDocumentFactsFromText(document.getText());
 }
@@ -166,7 +169,7 @@ export function parseDocumentFactsFromText(rawText: string): ParsedDocumentFacts
 
   for (const m of text.matchAll(/<([A-Za-z_][\w:.-]*)\b([^>]*)>/g)) {
     const tagName = stripPrefix(m[1]);
-    const attrsStart = attributeStartIndex(m);
+    const attrsStart = attributeStartIndex(m, 2);
     const attrs = parseAttributes(m[2] ?? "", text, attrsStart);
     const formIdentAttr = attrs.get("FormIdent");
     if (formIdentAttr?.value && formIdentAttr.valueRange) {
@@ -191,7 +194,8 @@ export function parseDocumentFactsFromText(rawText: string): ParsedDocumentFacts
     }
   }
 
-  for (const buttonTag of collectButtonTags(text)) {
+  const buttonTags = collectButtonTags(text);
+  for (const buttonTag of buttonTags) {
     const attrs = parseAttributes(buttonTag.rawAttrs, text, buttonTag.attrsStartIndex);
     const ident = attrs.get("Ident");
     const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
@@ -280,7 +284,7 @@ export function parseDocumentFactsFromText(rawText: string): ParsedDocumentFacts
     }
   }
 
-  for (const buttonTag of collectButtonTags(text)) {
+  for (const buttonTag of buttonTags) {
     const attrs = parseAttributes(buttonTag.rawAttrs, text, buttonTag.attrsStartIndex);
     const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
 
@@ -473,9 +477,43 @@ function parseAttributes(rawAttrs: string, fullText: string, attrsStartIndex: nu
 
 function indexToPosition(text: string, index: number): vscode.Position {
   const safeIndex = Math.max(0, Math.min(text.length, index));
-  const before = text.slice(0, safeIndex);
-  const lines = before.split(/\r?\n/);
-  return new vscode.Position(lines.length - 1, lines[lines.length - 1]?.length ?? 0);
+  const lineStarts = getLineStarts(text);
+
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const start = lineStarts[mid];
+    const nextStart = mid + 1 < lineStarts.length ? lineStarts[mid + 1] : Number.MAX_SAFE_INTEGER;
+    if (safeIndex < start) {
+      high = mid - 1;
+    } else if (safeIndex >= nextStart) {
+      low = mid + 1;
+    } else {
+      return new vscode.Position(mid, safeIndex - start);
+    }
+  }
+
+  const fallbackLine = Math.max(0, Math.min(lineStarts.length - 1, low));
+  const fallbackStart = lineStarts[fallbackLine] ?? 0;
+  return new vscode.Position(fallbackLine, safeIndex - fallbackStart);
+}
+
+function getLineStarts(text: string): number[] {
+  if (lastIndexedText === text && lastLineStarts) {
+    return lastLineStarts;
+  }
+
+  const starts: number[] = [0];
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) {
+      starts.push(i + 1);
+    }
+  }
+
+  lastIndexedText = text;
+  lastLineStarts = starts;
+  return starts;
 }
 
 function stripPrefix(value: string): string {
@@ -483,9 +521,9 @@ function stripPrefix(value: string): string {
   return parts[parts.length - 1];
 }
 
-function attributeStartIndex(match: RegExpMatchArray): number {
+function attributeStartIndex(match: RegExpMatchArray, attrsGroupIndex = 1): number {
   const full = match[0] ?? "";
-  const attrs = match[1] ?? "";
+  const attrs = match[attrsGroupIndex] ?? "";
   const fullStart = match.index ?? 0;
   const attrsOffset = full.indexOf(attrs);
   return fullStart + (attrsOffset >= 0 ? attrsOffset : 0);

@@ -8,6 +8,7 @@ import { resolveComponentByKey } from "../indexer/componentResolve";
 import { getSystemMetadata } from "../config/systemMetadata";
 import { collectTemplateAvailableControlIdents } from "../utils/templateControls";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
+import { maskXmlComments } from "../utils/xmlComments";
 
 export interface RuleDiagnostic {
   ruleId: string;
@@ -38,6 +39,7 @@ export class DiagnosticsEngine {
     this.validateWorkflowControlIdentReferences(document, facts, index, issues);
     this.validateUsingReferences(facts, index, issues);
     this.validateHtmlTemplateControlReferences(document, facts, index, issues);
+    this.validateSqlEqualsSpacing(document, issues);
 
     const settings = getSettings();
     const ignoreState = parseIgnoreState(document);
@@ -543,6 +545,30 @@ export class DiagnosticsEngine {
       });
     }
   }
+
+  private validateSqlEqualsSpacing(document: vscode.TextDocument, issues: RuleDiagnostic[]): void {
+    const text = maskXmlComments(document.getText());
+    const blockRegex = /<(SQL|Command)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+    for (const blockMatch of text.matchAll(blockRegex)) {
+      const whole = blockMatch[0] ?? "";
+      const content = blockMatch[2] ?? "";
+      const wholeStart = blockMatch.index ?? 0;
+      const contentOffset = whole.indexOf(content);
+      if (contentOffset < 0) {
+        continue;
+      }
+
+      const contentStart = wholeStart + contentOffset;
+      for (const relativeIndex of collectInvalidEqualsIndices(content)) {
+        const absoluteIndex = contentStart + relativeIndex;
+        issues.push({
+          ruleId: "sql-convention-equals-spacing",
+          range: new vscode.Range(document.positionAt(absoluteIndex), document.positionAt(absoluteIndex + 1)),
+          message: "In SQL/Command blocks, '=' must be separated by at least one space on both sides."
+        });
+      }
+    }
+  }
 }
 
 function collectWorkflowControlShareCodes(
@@ -783,4 +809,45 @@ function levenshteinDistance(a: string, b: string): number {
   }
 
   return prev[b.length];
+}
+
+function collectInvalidEqualsIndices(sql: string): number[] {
+  const out: number[] = [];
+  let inSingleQuote = false;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (ch === "'") {
+      if (inSingleQuote && sql[i + 1] === "'") {
+        i++;
+        continue;
+      }
+
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+
+    if (inSingleQuote) {
+      continue;
+    }
+
+    if (ch !== "=") {
+      continue;
+    }
+
+    const prev = i > 0 ? sql[i - 1] : "";
+    const next = i + 1 < sql.length ? sql[i + 1] : "";
+    if (prev === "<" || prev === ">" || prev === "!" || prev === "=" || next === "=") {
+      continue;
+    }
+
+    if (!isWhitespace(prev) || !isWhitespace(next)) {
+      out.push(i);
+    }
+  }
+
+  return out;
+}
+
+function isWhitespace(ch: string): boolean {
+  return ch === " " || ch === "\t" || ch === "\r" || ch === "\n";
 }

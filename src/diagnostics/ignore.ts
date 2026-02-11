@@ -11,42 +11,60 @@ export function parseIgnoreState(document: vscode.TextDocument): IgnoreState {
 
   for (let line = 0; line < document.lineCount; line++) {
     const content = document.lineAt(line).text;
-    const commentMatch = /<!--\s*@Ignore(File)?\s+([^>]+?)\s*-->/.exec(content);
-    if (!commentMatch) {
-      continue;
-    }
+    const xmlMatch = /<!--\s*@Ignore(File)?\s+([^>]+?)\s*-->/i.exec(content);
+    if (xmlMatch) {
+      const isFile = Boolean(xmlMatch[1]);
+      const rules = parseRuleList(xmlMatch[2]);
 
-    const isFile = Boolean(commentMatch[1]);
-    const rawRules = commentMatch[2];
-    const rules = rawRules
-      .split(/[\s,]+/)
-      .map((v) => v.trim())
-      .filter(Boolean)
-      .map((v) => v.toLowerCase());
-
-    if (isFile) {
-      for (const rule of rules) {
-        ignoredRulesForFile.add(rule);
+      if (isFile) {
+        for (const rule of rules) {
+          ignoredRulesForFile.add(rule);
+        }
+      } else {
+        const targetLine = findNextMeaningfulLine(document, line + 1);
+        if (targetLine !== undefined) {
+          addIgnoredRulesForLine(ignoredRulesByLine, targetLine, rules);
+        }
       }
-      continue;
     }
 
-    const targetLine = findNextMeaningfulLine(document, line + 1);
-    if (targetLine === undefined) {
-      continue;
+    // SQL/Command inline ignore support:
+    // SELECT ... -- @Ignore sql-convention-equals-spacing
+    const sqlLineMatch = /--\s*@Ignore\s+(.+)$/i.exec(content);
+    if (sqlLineMatch) {
+      const rules = parseRuleList(sqlLineMatch[1]);
+      addIgnoredRulesForLine(ignoredRulesByLine, line, rules);
     }
 
-    const entry = ignoredRulesByLine.get(targetLine) ?? new Set<string>();
-    for (const rule of rules) {
-      entry.add(rule);
+    // SQL/Command inline block ignore support:
+    // SELECT ... /* @Ignore sql-convention-equals-spacing */
+    const sqlBlockMatch = /\/\*\s*@Ignore\s+(.+?)\s*\*\//i.exec(content);
+    if (sqlBlockMatch) {
+      const rules = parseRuleList(sqlBlockMatch[1]);
+      addIgnoredRulesForLine(ignoredRulesByLine, line, rules);
     }
-    ignoredRulesByLine.set(targetLine, entry);
   }
 
   return {
     ignoredRulesForFile,
     ignoredRulesByLine
   };
+}
+
+function addIgnoredRulesForLine(target: Map<number, Set<string>>, line: number, rules: readonly string[]): void {
+  const entry = target.get(line) ?? new Set<string>();
+  for (const rule of rules) {
+    entry.add(rule);
+  }
+  target.set(line, entry);
+}
+
+function parseRuleList(rawRules: string): string[] {
+  return rawRules
+    .split(/[\s,]+/)
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .map((v) => v.toLowerCase());
 }
 
 export function isRuleIgnored(ignoreState: IgnoreState, ruleId: string, line: number): boolean {

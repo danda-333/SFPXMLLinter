@@ -36,7 +36,16 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
             actions.push(suggestionAction);
           }
 
-          actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
+          if (code === "sql-convention-equals-spacing") {
+            const fixSpacingAction = this.createSqlEqualsSpacingFixAction(document, diagnostic);
+            if (fixSpacingAction) {
+              actions.push(fixSpacingAction);
+            }
+
+            actions.push(this.createSqlInlineIgnoreAction(document, diagnostic, code));
+          } else {
+            actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
+          }
           inlineFixCount++;
         }
       }
@@ -115,6 +124,62 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     action.edit = edit;
     return action;
   }
+
+  private createSqlInlineIgnoreAction(document: vscode.TextDocument, diagnostic: vscode.Diagnostic, ruleId: string): vscode.CodeAction {
+    const action = new vscode.CodeAction(`Ignore '${ruleId}' on this SQL line`, vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+
+    const line = diagnostic.range.start.line;
+    const text = document.lineAt(line).text;
+    const insertPos = new vscode.Position(line, text.length);
+    const suffix = text.trimEnd().endsWith("*/") ? "" : ` /* @Ignore ${ruleId} */`;
+
+    const edit = new vscode.WorkspaceEdit();
+    if (suffix.length > 0) {
+      edit.insert(document.uri, insertPos, suffix);
+    }
+
+    action.edit = edit;
+    return action;
+  }
+
+  private createSqlEqualsSpacingFixAction(document: vscode.TextDocument, diagnostic: vscode.Diagnostic): vscode.CodeAction | undefined {
+    const eqRange = diagnostic.range;
+    if (eqRange.start.line !== eqRange.end.line) {
+      return undefined;
+    }
+
+    const eqOffset = document.offsetAt(eqRange.start);
+    const fullText = document.getText();
+    const eqChar = fullText[eqOffset] ?? "";
+    if (eqChar !== "=") {
+      return undefined;
+    }
+
+    const prev = eqOffset > 0 ? fullText[eqOffset - 1] : "";
+    const next = eqOffset + 1 < fullText.length ? fullText[eqOffset + 1] : "";
+    const needsLeftSpace = !isWhitespace(prev);
+    const needsRightSpace = !isWhitespace(next);
+    if (!needsLeftSpace && !needsRightSpace) {
+      return undefined;
+    }
+
+    const action = new vscode.CodeAction("Fix SQL spacing around '='", vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.isPreferred = true;
+
+    const edit = new vscode.WorkspaceEdit();
+    if (needsLeftSpace) {
+      edit.insert(document.uri, eqRange.start, " ");
+    }
+
+    if (needsRightSpace) {
+      edit.insert(document.uri, eqRange.end, " ");
+    }
+
+    action.edit = edit;
+    return action;
+  }
 }
 
 function whitespacePrefix(text: string): string {
@@ -134,4 +199,8 @@ function extractDidYouMeanSuggestion(message: string): string | undefined {
   }
 
   return undefined;
+}
+
+function isWhitespace(ch: string): boolean {
+  return ch === " " || ch === "\t" || ch === "\r" || ch === "\n";
 }

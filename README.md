@@ -23,12 +23,16 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - `duplicate-section-ident`
   - `unknown-using-component`
   - `unknown-using-section`
+  - `sql-convention-equals-spacing` (`=` in `SQL`/`Command` must have spaces on both sides)
   - `FormControl xsi:type="ShareCodeControl"` is validated against `WorkFlow/ControlShareCodes/ControlShareCode` (local + injected via `Using`)
 - Per-rule severity config (`sfpXmlLinter.rules`) with values: `off`, `warning`, `error`
 - Ignore directives:
   - `<!-- @Ignore rule-id -->` (applies to next non-empty line)
   - `<!-- @IgnoreFile rule-id -->` (applies to whole file)
   - `all` is supported as wildcard rule id
+  - SQL inline ignore is supported in `SQL`/`Command` blocks:
+    - `-- @Ignore rule-id`
+    - `/* @Ignore rule-id */`
 - Hover on diagnostics (message + rule id)
 - Completion (context-aware foundation):
   - root/child elements
@@ -51,6 +55,9 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - Ignore rule on next line (`<!-- @Ignore rule-id -->`)
   - Ignore rule in file (`<!-- @IgnoreFile rule-id -->`)
   - Ignore all rules in file (`<!-- @IgnoreFile all -->`)
+  - SQL convention quick fixes for `sql-convention-equals-spacing`:
+    - auto-fix spacing around `=`
+    - add SQL inline ignore (`/* @Ignore sql-convention-equals-spacing */`)
 - Build command:
   - `SFP XML Linter: Build XML Templates`
   - TypeScript builder hook + fallback to legacy PowerShell script (`BuildXmlTemplates.ps1`)

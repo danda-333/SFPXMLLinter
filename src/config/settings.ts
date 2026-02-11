@@ -30,6 +30,7 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "duplicate-section-ident": "warning",
   "unknown-using-component": "error",
   "unknown-using-section": "warning",
+  "sql-convention-equals-spacing": "warning",
   "ident-convention-button-postfix": "warning",
   "ident-convention-group-button-postfix": "warning",
   "ident-convention-workflow-postfix": "warning",

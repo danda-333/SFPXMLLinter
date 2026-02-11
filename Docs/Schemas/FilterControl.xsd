@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Form.Controls.FilterControl -->
+  <xs:element name="FilterControl">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="Filter" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Controls" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Control" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ExtensionControls" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Control" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="FullText" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="ResultList" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="SelectedRow" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="DirectFilterControls" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Control" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="PackageIdents" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Sections" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Section" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="Description" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DescriptionResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="SetButtonTitle" type="xs:string" use="optional" default="" />
+      <xs:attribute name="SetButtonTitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="OpenButtonTitle" type="xs:string" use="optional" default="" />
+      <xs:attribute name="OpenButtonTitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsAdvancedSetting" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsClickOutsideClose" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsApplyImmediately" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsShowButton" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsShowSelected" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsOnlyQueryString" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsSave" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Priority" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsSegmnetFilterToStorageIdent" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="FilterRenderType" type="xs:string" use="optional" default="Default" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FilterConditions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DataSource" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="DefaultFilterIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsVisible" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsReadOnly" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsFakeReadOnly" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="TabIndex" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsShowUserWhere" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="HelpTitle" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpTitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpDescription" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpDescriptionResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="CssClass" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

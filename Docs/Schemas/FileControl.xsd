@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+  <xs:import namespace="http://www.gappex.com/sfp/Form/Control/Settings" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Parameters" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Froms" />
+
+
+  <!-- SFP.Kernel.Model.Form.Controls.FileControl -->
+  <xs:element name="FileControl">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="Settings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:any namespace="http://www.gappex.com/sfp/Form/Control/Settings" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="SettingPermissions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SettingPermissionCommon" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="OtherSource" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SQL" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Columns" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Column" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Parameters" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any namespace="http://www.gappex.com/sfp/DataSource/Parameters" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DataPermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Dependencies" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Froms" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="From" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DLLData" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="GroupIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="FormIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailTarget" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsGeneratePaging" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="RemoteConnectionStringIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsPermissionInTempTable" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsInitJSDependency" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsCache" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="CacheAbsoluteExpiration" type="xs:decimal" use="optional" default="0.3" />
+      <xs:attribute name="PermissionModeType" type="xs:string" use="optional" default="Basic" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Rename" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SQL" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Columns" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Column" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Parameters" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any namespace="http://www.gappex.com/sfp/DataSource/Parameters" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DataPermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Dependencies" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Froms" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="From" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DLLData" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="GroupIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="FormIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailTarget" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsGeneratePaging" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="RemoteConnectionStringIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsPermissionInTempTable" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsInitJSDependency" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsCache" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="CacheAbsoluteExpiration" type="xs:decimal" use="optional" default="0.3" />
+      <xs:attribute name="PermissionModeType" type="xs:string" use="optional" default="Basic" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Buttons" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Button" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FileSettingDataSource" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SQL" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Columns" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Column" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Parameters" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any namespace="http://www.gappex.com/sfp/DataSource/Parameters" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DataPermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Dependencies" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Froms" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="From" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DLLData" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="GroupIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="FormIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailTarget" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsGeneratePaging" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="RemoteConnectionStringIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsPermissionInTempTable" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsInitJSDependency" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsCache" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="CacheAbsoluteExpiration" type="xs:decimal" use="optional" default="0.3" />
+      <xs:attribute name="PermissionModeType" type="xs:string" use="optional" default="Basic" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="SortDataSource" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SQL" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Columns" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Column" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Parameters" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any namespace="http://www.gappex.com/sfp/DataSource/Parameters" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DataPermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Dependencies" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Froms" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="From" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DLLData" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="GroupIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="FormIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailTarget" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsGeneratePaging" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="RemoteConnectionStringIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsPermissionInTempTable" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsInitJSDependency" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsCache" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="CacheAbsoluteExpiration" type="xs:decimal" use="optional" default="0.3" />
+      <xs:attribute name="PermissionModeType" type="xs:string" use="optional" default="Basic" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FilterConditions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DataSource" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="IsShowDeleteButton" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsShowEditButton" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsFileEdit" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsEnableSelect" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsSingleFile" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="RenderType" type="xs:string" use="optional" default="Basic" />
+      <xs:attribute name="DownloadAllType" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="ShowDownloadAllType" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="DeleteType" type="xs:string" use="optional" default="All" />
+      <xs:attribute name="EditType" type="xs:string" use="optional" default="All" />
+      <xs:attribute name="FileEditType" type="xs:string" use="optional" default="All" />
+      <xs:attribute name="ModeType" type="xs:string" use="optional" default="Normal" />
+      <xs:attribute name="FormExtensionIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsRequired" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsShowRequired" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsVersion" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsShowFileList" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsWebDav" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="SettingType" type="xs:string" use="optional" default="Basic" />
+      <xs:attribute name="IsFileTimestamp" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsVisible" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsReadOnly" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsFakeReadOnly" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="TabIndex" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsShowUserWhere" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="HelpTitle" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpTitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpDescription" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpDescriptionResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="CssClass" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

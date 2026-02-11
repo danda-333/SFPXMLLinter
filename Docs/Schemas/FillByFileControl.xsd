@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Form.Controls.FillByFileControl -->
+  <xs:element name="FillByFileControl">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="Mappings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Mapping" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="GroupMappings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="GroupMapping" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="AcceptableHTMLTags" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="AcceptableFileExtensions" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="AttachmentFilters" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="AttachmentFilter" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="RemoveStartReplayValues" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="RawValueItem" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="RemoveIllegalData" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="RawValueItem" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="RemoveReplaySetting" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Attributes" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Lines" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="StartValues" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="RawValueItem" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsEnabled" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsDefaultValueAttribute" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsDefaultValueLine" type="xs:boolean" use="optional" default="true" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FilterConditions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DataSource" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="AcceptableHTMLTagType" type="xs:string" use="optional" />
+      <xs:attribute name="OriginalFileToFileControlIdent" type="xs:string" use="optional" />
+      <xs:attribute name="IsRemoveEmailReplay" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsVisible" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsReadOnly" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsFakeReadOnly" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="TabIndex" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsShowUserWhere" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="HelpTitle" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpTitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpDescription" type="xs:string" use="optional" default="" />
+      <xs:attribute name="HelpDescriptionResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="CssClass" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

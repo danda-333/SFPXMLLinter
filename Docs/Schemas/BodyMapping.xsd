@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.EmailReceiver.Mappings.BodyMapping -->
+  <xs:element name="BodyMapping">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="Expressions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="AcceptableHTMLTags" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="RemoveStartReplayValues" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="RawValueItem" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="RemoveIllegalData" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="RawValueItem" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="RemoveReplaySetting" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Attributes" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Lines" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="StartValues" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="RawValueItem" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsEnabled" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsDefaultValueAttribute" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsDefaultValueLine" type="xs:boolean" use="optional" default="true" />
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="IsRemoveEmailReplay" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="AcceptableHTMLTagType" type="xs:string" use="optional" />
+      <xs:attribute name="BodyType" type="xs:string" use="optional" default="UniqueBody" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="IsRequired" type="xs:boolean" use="optional" default="false" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

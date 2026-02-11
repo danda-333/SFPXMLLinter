@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Mappings.Mapping -->
+  <xs:element name="Mapping">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="FromIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ToIdent" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

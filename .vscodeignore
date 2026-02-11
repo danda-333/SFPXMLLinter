@@ -1,0 +1,12 @@
+.vscode/**
+node_modules/**
+src/**
+SFPDocs/**
+SFPExampleProject/**
+Docs/Schemas/**
+Docs/ImplementationPlan.MD
+Scripts/**
+tsconfig.json
+package-lock.json
+**/*.map
+**/*.ts

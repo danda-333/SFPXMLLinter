@@ -1,0 +1,76 @@
+{
+  "name": "SFP XML Core",
+  "scopeName": "sfp.xml.core",
+  "injectionSelector": "L:text.xml - comment.block.xml - meta.embedded.block.sfp.htmltemplate.xml - meta.embedded.block.sfp.sql.xml - meta.embedded.block.sfp.command.xml",
+  "patterns": [
+    {
+      "include": "#ignoreComments"
+    },
+    {
+      "include": "#importantTags"
+    },
+    {
+      "include": "#importantAttributes"
+    },
+    {
+      "include": "#xsiTypeValues"
+    },
+    {
+      "include": "#enumValues"
+    }
+  ],
+  "repository": {
+    "ignoreComments": {
+      "name": "comment.block.sfp.ignore.xml",
+      "match": "<!--\\s*@Ignore\\s+[A-Za-z0-9_.-]+\\s*-->"
+    },
+    "importantTags": {
+      "patterns": [
+        {
+          "name": "entity.name.tag.sfp.root.xml",
+          "match": "(?<=</?)(?:Form|WorkFlow|View|DataView|Library|Configuration|Dashboard|Filter|PartialRender)(?=\\b)"
+        },
+        {
+          "name": "entity.name.tag.sfp.structure.xml",
+          "match": "(?<=</?)(?:Controls|Control|Buttons|Button|Sections|Section|Using|Usings|Include|DataSource|Columns|Column|Froms|Parameters|Extensions|Extension|States|State|Groups|Group|FormControls|Mappings|Mapping)(?=\\b)"
+        }
+      ]
+    },
+    "importantAttributes": {
+      "patterns": [
+        {
+          "name": "entity.other.attribute-name.sfp.identity.xml",
+          "match": "\\b(?:Ident|FormIdent|ControlIdent|ButtonIdent|SectionIdent|MappingIdent|PackageIdent)\\b(?=\\s*=)"
+        },
+        {
+          "name": "entity.other.attribute-name.sfp.type.xml",
+          "match": "\\b(?:xsi:type|DataType|LibraryType|SegmentType|Insert|TargetXPath|Component|Name|Root|ForRoot|AppliesTo)\\b(?=\\s*=)"
+        },
+        {
+          "name": "entity.other.attribute-name.sfp.ui.xml",
+          "match": "\\b(?:TitleResourceKey|DescriptionResourceKey|IconCssClass|ColorType|PlacementType|DefaultTitleResourceKey)\\b(?=\\s*=)"
+        },
+        {
+          "name": "entity.other.attribute-name.sfp.flags.xml",
+          "match": "\\b(?:IsVisible|IsReadOnly|IsRequired|IsSave|IsTranslate|IsOptional|IsPrimaryKey|IsManualPaging|IsGeneratePaging|IsSubForm)\\b(?=\\s*=)"
+        }
+      ]
+    },
+    "xsiTypeValues": {
+      "name": "meta.attribute-value.sfp.xsi.xml",
+      "match": "(?<=\\bxsi:type\\s*=\\s*[\"'])(?:[A-Za-z_][A-Za-z0-9_.:-]*)(?=[\"'])"
+    },
+    "enumValues": {
+      "patterns": [
+        {
+          "name": "support.constant.sfp.datatype.xml",
+          "match": "(?<=\\bDataType\\s*=\\s*[\"'])(?:None|String|VarChar|Number|Double|Time|Date|DateTime|Bool|SmallNumber|StringList|VarCharList|NumberList|SmallNumberList|ByteList|Time24|Guid|BigNumber)(?=[\"'])"
+        },
+        {
+          "name": "constant.language.boolean.sfp.xml",
+          "match": "(?<=\\=\\s*[\"'])(?:true|false)(?=[\"'])"
+        }
+      ]
+    }
+  }
+}

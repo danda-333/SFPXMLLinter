@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Models.Returns.CreateAccountReturn -->
+  <xs:element name="CreateAccountReturn">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="Account" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="StateType" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="LanguageCode" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="ThemeType" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="ID" type="xs:int" minOccurs="0" maxOccurs="1" />
+              <xs:element name="ASPNETUserID" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Email" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="UserName" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="FirstName" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="LastName" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="State" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Phone" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="LanguageID" type="xs:int" minOccurs="0" maxOccurs="1" />
+              <xs:element name="CreateDate" type="xs:dateTime" minOccurs="0" maxOccurs="1" />
+              <xs:element name="BossAccountID" type="xs:int" minOccurs="0" maxOccurs="1" />
+              <xs:element name="FullName" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="ADUserSID" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Data" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="GoogleID" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="GoogleTokenIdent" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="GoogleEmail" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="PasswordRecoverToken" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="PasswordRecoverTokenValidityDate" type="xs:dateTime" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Theme" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="DefaultFolderID" type="xs:int" minOccurs="0" maxOccurs="1" />
+              <xs:element name="DefaultRedirectSegmentTypeID" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="IsSystem" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+              <xs:element name="PersonNumber" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="DeputyAccountID" type="xs:int" minOccurs="0" maxOccurs="1" />
+              <xs:element name="DeputyNote" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="AlertType" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="BossIdent" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="UICultureCode" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="IsActiveSegmentSortTop" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+              <xs:element name="IsRequiredChangePassword" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+              <xs:element name="IsPublic" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+              <xs:element name="AzureUserName" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="LastChangePasswordDate" type="xs:dateTime" minOccurs="0" maxOccurs="1" />
+              <xs:element name="AvatarFileDataGuid" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="IsLocalAccount" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

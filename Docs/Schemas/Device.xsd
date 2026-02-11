@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.Settings.Devices.Device -->
+  <xs:element name="Device">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="IsEnabled" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="QRCodeDomainUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="PairDeviceValidityDateMinute" type="xs:int" use="optional" default="10" />
+      <xs:attribute name="RefreshTokenValidityDateMinute" type="xs:int" use="optional" default="44640" />
+      <xs:attribute name="TokenValidationDateMinute" type="xs:int" use="optional" default="1440" />
+      <xs:attribute name="TokenSecurityKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TokenIssuer" type="xs:string" use="optional" default="" />
+      <xs:attribute name="APIUrl" type="xs:string" use="optional" default="~/API/" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

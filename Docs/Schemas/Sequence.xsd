@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Form.Sequences.Sequence -->
+  <xs:element name="Sequence">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="IsPrimary" type="xs:boolean" use="optional" />
+      <xs:attribute name="Start" type="xs:int" use="optional" />
+      <xs:attribute name="Increment" type="xs:int" use="optional" />
+      <xs:attribute name="DataType" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

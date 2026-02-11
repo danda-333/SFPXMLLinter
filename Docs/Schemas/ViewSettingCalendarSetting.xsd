@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Settings.CalendarSettings.ViewSettingCalendarSetting -->
+  <xs:element name="ViewSettingCalendarSetting">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="SlotLabelFormat" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+
+            <!-- Attributes -->
+      <xs:attribute name="WeekDay" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Day" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Hour" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Minute" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Month" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Year" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsOmitCommas" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Meridiem" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsOmitZeroMinute" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Second" type="xs:string" use="optional" default="" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="HiddenDays" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="int" type="xs:int" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="MultiMonth" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="TitleFormat" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="MaxColumn" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="MinWidth" type="xs:int" use="optional" default="0" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Duration" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+
+            <!-- Attributes -->
+      <xs:attribute name="Day" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="Week" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="Month" type="xs:int" use="optional" default="0" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="TitleFormat" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+
+            <!-- Attributes -->
+      <xs:attribute name="WeekDay" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Day" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Hour" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Minute" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Month" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Year" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsOmitCommas" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Meridiem" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsOmitZeroMinute" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Second" type="xs:string" use="optional" default="" />
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="ViewType" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="Name" type="xs:string" use="optional" />
+      <xs:attribute name="Type" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="ButtonText" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ButtonTextResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DurationDay" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="DurationWeek" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="SlotDuration" type="xs:string" use="optional" default="" />
+      <xs:attribute name="SlotDurationDay" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="DayMinWidth" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsStickyFooterScrollbar" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

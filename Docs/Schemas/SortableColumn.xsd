@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.DataSource.Columns.SortableColumn -->
+  <xs:element name="SortableColumn">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="SQL" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="Padding" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+
+            <!-- Attributes -->
+      <xs:attribute name="Left" type="xs:int" use="optional" />
+      <xs:attribute name="Right" type="xs:int" use="optional" />
+      <xs:attribute name="Top" type="xs:int" use="optional" />
+      <xs:attribute name="Bottom" type="xs:int" use="optional" />
+      <xs:attribute name="LeftColumnIdent" type="xs:string" use="optional" />
+      <xs:attribute name="RightColumnIdent" type="xs:string" use="optional" />
+      <xs:attribute name="TopColumnIdent" type="xs:string" use="optional" />
+      <xs:attribute name="BottomColumnIdent" type="xs:string" use="optional" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Settings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element name="ShareSetting" />
+                <xs:element name="TimeSetting" />
+                <xs:element name="ColumnExportSetting" />
+                <xs:element name="Setting" />
+              </xs:choice>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="DataBindType" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="FormatterType" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ToolTip" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ToolTipResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsVisible" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsPrimaryKey" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Width" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsDefaultSort" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="SortType" type="xs:string" use="optional" default="ASC" />
+      <xs:attribute name="IsTranslate" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Format" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ExcelFormat" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsExcelFormat" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsStripHTML" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="MaxLength" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsValueToolTip" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="DataType" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="BackgroundColorColumnIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsClickable" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsSortable" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="TableIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ColumnIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TableAlterIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="CssClass" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsOptional" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="ParentColumnIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TextAlign" type="xs:string" use="optional" default="Left" />
+      <xs:attribute name="IsEnterToBR" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsSearchable" type="xs:boolean" use="optional" default="true" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.Kiosk.TemplateKiosk -->
+  <xs:element name="TemplateKiosk">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="HTMLTemplate" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="DataSources" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DataSource" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Settings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element name="RazorEngineSetting" />
+                <xs:element name="Setting" />
+              </xs:choice>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="IsRazorEngine" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsRenderTemplateEnableHTTPEncoding" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsRenderTemplate" type="xs:boolean" use="optional" default="false" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

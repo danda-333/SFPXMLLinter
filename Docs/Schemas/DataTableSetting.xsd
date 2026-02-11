@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/DataView/Settings"
+           xmlns="http://www.gappex.com/sfp/DataView/Settings"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.DataView.Settings.DataTableSetting -->
+  <xs:element name="DataTableSetting">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="RowHeight" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsClassicPaging" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsSupportCopyToClipboard" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsResponsive" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsRowNumToQueryString" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsSearchBox" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

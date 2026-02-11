@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.WorkFlow.Actions.AresAction -->
+  <xs:element name="Ares">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="ConvertValueMappings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ConvertValueMapping" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="StreetIdent" type="xs:string" use="optional" />
+      <xs:attribute name="StreetTemplate" type="xs:string" use="optional" />
+      <xs:attribute name="StreetNumberIdent" type="xs:string" use="optional" />
+      <xs:attribute name="StreetNumberTemplate" type="xs:string" use="optional" />
+      <xs:attribute name="OrientationNumberIdent" type="xs:string" use="optional" />
+      <xs:attribute name="CityIdent" type="xs:string" use="optional" />
+      <xs:attribute name="CityPartIdent" type="xs:string" use="optional" />
+      <xs:attribute name="DistrictIdent" type="xs:string" use="optional" />
+      <xs:attribute name="CreateDateIdent" type="xs:string" use="optional" />
+      <xs:attribute name="CreateDateFormat" type="xs:string" use="optional" />
+      <xs:attribute name="ZIPCodeIdent" type="xs:string" use="optional" />
+      <xs:attribute name="ICOIdent" type="xs:string" use="optional" />
+      <xs:attribute name="NameIdent" type="xs:string" use="optional" />
+      <xs:attribute name="DICIdent" type="xs:string" use="optional" />
+      <xs:attribute name="CountryIdent" type="xs:string" use="optional" />
+      <xs:attribute name="CountryCodeIdent" type="xs:string" use="optional" />
+      <xs:attribute name="RegisteredCourtIdent" type="xs:string" use="optional" />
+      <xs:attribute name="SectionCourtIdent" type="xs:string" use="optional" />
+      <xs:attribute name="FolderCourtIdent" type="xs:string" use="optional" />
+      <xs:attribute name="RegisteredCourtTemplate" type="xs:string" use="optional" />
+      <xs:attribute name="SectionCourtTemplate" type="xs:string" use="optional" />
+      <xs:attribute name="FolderCourtTemplate" type="xs:string" use="optional" />
+      <xs:attribute name="IsReload" type="xs:boolean" use="optional" />
+      <xs:attribute name="LegalFormNameIdent" type="xs:string" use="optional" />
+      <xs:attribute name="LegalFormCodeIdent" type="xs:string" use="optional" />
+      <xs:attribute name="NumberOfEmployeesIdent" type="xs:string" use="optional" />
+      <xs:attribute name="ErrorDialogTitle" type="xs:string" use="optional" />
+      <xs:attribute name="ErrorDialogTitleResourceKey" type="xs:string" use="optional" />
+      <xs:attribute name="ErrorDialogDescription" type="xs:string" use="optional" />
+      <xs:attribute name="ErrorDialogDescriptionResourceKey" type="xs:string" use="optional" />
+      <xs:attribute name="SuccessDialogTitle" type="xs:string" use="optional" />
+      <xs:attribute name="SuccessDialogTitleResourceKey" type="xs:string" use="optional" />
+      <xs:attribute name="SuccessDialogDescription" type="xs:string" use="optional" />
+      <xs:attribute name="SuccessDialogDescriptionResourceKey" type="xs:string" use="optional" />
+      <xs:attribute name="ActionStart" type="xs:string" use="optional" />
+      <xs:attribute name="RunPriority" type="xs:int" use="optional" default="1" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

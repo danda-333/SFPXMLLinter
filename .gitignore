@@ -1,0 +1,15 @@
+﻿# dependencies
+node_modules/
+
+# build outputs
+out/
+*.vsix
+
+# local IDE
+.vscode/
+
+# exclude example project
+SFPExampleProject/
+
+# misc
+*.log

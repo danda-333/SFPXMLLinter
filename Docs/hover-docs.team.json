@@ -1,0 +1,21 @@
+﻿{
+  "entries": [
+    {
+      "attribute": "Ident",
+      "summary": "Tymova konvence: Ident drzte kratky a stabilni.",
+      "details": "Preferuj business vyznam, ne technicke zkratky bez kontextu."
+    },
+    {
+      "tag": "WorkFlow",
+      "attribute": "StartState",
+      "summary": "Tymova konvence: StartState ponechte na 1.",
+      "details": "State 1 pouzivejte pro novy zaznam pred prvnim ulozenim."
+    },
+    {
+      "tag": "WorkFlow",
+      "attribute": "DeleteState",
+      "summary": "Tymova konvence: DeleteState ponechte na 0.",
+      "details": "State 0 je vyhrazeny pro smazane zaznamy."
+    }
+  ]
+}

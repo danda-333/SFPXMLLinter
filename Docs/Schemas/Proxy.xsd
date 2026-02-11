@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Commons.Proxy -->
+  <xs:element name="Proxy">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="Address" type="xs:string" use="optional" />
+      <xs:attribute name="Port" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="UserName" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Password" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Domain" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

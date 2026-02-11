@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Configuration"
+           xmlns="http://www.gappex.com/sfp/Configuration"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.Sections.APISection -->
+  <xs:element name="APISection">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="IsLoginAs" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="LoginAsAcceptPermission" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsLogin" type="xs:boolean" use="optional" default="true" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Form.Validations.RangeNumberValidation -->
+  <xs:element name="RangeNumberValidation">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="Min" type="xs:int" use="optional" />
+      <xs:attribute name="Max" type="xs:int" use="optional" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="ErrorMessage" type="xs:string" use="optional" />
+      <xs:attribute name="ErrorMessageResourceKey" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.AccountSync.Settings.AzureHeaderSetting -->
+  <xs:element name="AzureHeaderSetting">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="Headers" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="IdentValue" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

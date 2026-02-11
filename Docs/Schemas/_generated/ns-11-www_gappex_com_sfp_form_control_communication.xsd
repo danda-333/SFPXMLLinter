@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.gappex.com/sfp/Form/Control/Communication"
+           xmlns="http://www.gappex.com/sfp/Form/Control/Communication"
+           elementFormDefault="qualified">
+
+  <!-- Auto-generated aggregate schema for namespace imports -->
+  <xs:include schemaLocation="../ButtonWidget.xsd" />
+  <xs:include schemaLocation="../CommunicationFormTemplate.xsd" />
+  <xs:include schemaLocation="../CommunicationTemplate.xsd" />
+  <xs:include schemaLocation="../EditWidget.xsd" />
+  <xs:include schemaLocation="../FileListWidget.xsd" />
+  <xs:include schemaLocation="../FileTemplate.xsd" />
+  <xs:include schemaLocation="../FormExtensionControlWidget.xsd" />
+  <xs:include schemaLocation="../OtherEmailControlWidget.xsd" />
+  <xs:include schemaLocation="../OtherEmailWidget.xsd" />
+  <xs:include schemaLocation="../OtherSourceTemplate.xsd" />
+  <xs:include schemaLocation="../PermissionWidget.xsd" />
+  <xs:include schemaLocation="../PriorityControlWidget.xsd" />
+  <xs:include schemaLocation="../ReceivedEmailWidget.xsd" />
+  <xs:include schemaLocation="../RichTextBoxControlWidget.xsd" />
+  <xs:include schemaLocation="../SettingPermissionControlWidget.xsd" />
+
+</xs:schema>
+

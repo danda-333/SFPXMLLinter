@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Settings.SentToEmailSetting -->
+  <xs:element name="SentToEmailSetting">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="SubjectResourceKey" type="xs:string" use="optional" />
+      <xs:attribute name="BodyResourceKey" type="xs:string" use="optional" />
+      <xs:attribute name="IsOnlySystemEmail" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

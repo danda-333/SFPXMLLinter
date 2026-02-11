@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Form/Control/Communication"
+           xmlns="http://www.gappex.com/sfp/Form/Control/Communication"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Form.Controls.Communications.Widgets.EditWidget -->
+  <xs:element name="EditWidget">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.gappex.com/sfp/WorkFlow/ShareCodes"
+           xmlns="http://www.gappex.com/sfp/WorkFlow/ShareCodes"
+           elementFormDefault="qualified">
+
+  <!-- Auto-generated aggregate schema for namespace imports -->
+  <xs:include schemaLocation="../ActionShareCode.xsd" />
+  <xs:include schemaLocation="../ButtonShareCode.xsd" />
+  <xs:include schemaLocation="../ControlShareCode.xsd" />
+  <xs:include schemaLocation="../JavaScriptShareCode.xsd" />
+  <xs:include schemaLocation="../WorkFlow.ShareCodes.ShareCode.xsd" />
+
+</xs:schema>
+

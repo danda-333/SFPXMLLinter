@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/DataView/Settings"
+           xmlns="http://www.gappex.com/sfp/DataView/Settings"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.DataView.Settings.FileSetting -->
+  <xs:element name="FileSetting">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="FormIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ControlIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsFormImmediatelySave" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="ButtonIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

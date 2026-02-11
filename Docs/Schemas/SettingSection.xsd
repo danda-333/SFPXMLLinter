@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Configuration"
+           xmlns="http://www.gappex.com/sfp/Configuration"
+           elementFormDefault="qualified">
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Parameters" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Froms" />
+
+
+  <!-- SFP.Kernel.Model.Configuration.Sections.SettingSection -->
+  <xs:element name="SettingSection">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="ExternalSignIn" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Google" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Microsoft" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="SLA" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="EmailToPermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsHoliday" type="xs:boolean" use="optional" default="false" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="User" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Actions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Action" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="RequiredPageDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="SettingDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="DefaultFolderGroupSegmentIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsDeputy" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsDefaultRedirect" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsDefaultRequiredChangePassword" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="ThemeType" type="xs:string" use="optional" default="None" />
+      <xs:attribute name="IsPublic" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsLoginAPI" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsProfileAvatar" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsTwoFactorAuth" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="TwoFactorAuthSendMethodType" type="xs:string" use="optional" default="Email" />
+      <xs:attribute name="IsProfileTwoFactorAuth" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsDefaultTwoFactorAuth" type="xs:boolean" use="optional" default="false" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="File" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="DLLExternalStorage" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="DLLValidation" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="WebDav" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsOpenInApp" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="TokenExpirationMinute" type="xs:int" use="optional" default="120" />
+      <xs:attribute name="DownloadAccessType" type="xs:string" use="optional" default="Login" />
+      <xs:attribute name="IsOfficePreview" type="xs:boolean" use="optional" default="false" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Global" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="ExternalCssRelativePaths" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ExternalJavaScriptRelativePaths" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Favicons" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Favicon" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="RemoteConnectionStrings" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="RemoteConnectionString" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Logos" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Logo" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="RTBEditor" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Scheduler" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="PriorityDataViewSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsHidePasswordRecover" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsHideLanguage" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="MainLogoPath" type="xs:string" use="optional" default="" />
+      <xs:attribute name="LoginLogoPath" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsAutoRecognizeLanguage" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsNotificationIgnoreRotatedDirection" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsSignalREnabled" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="GoogleAPIKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="FullTextLanguage" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsShareOrder" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsNote" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="LogOffUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsMetaVersion" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsDataViewToolTipCTRL" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="GlobalSearchIdent" type="xs:string" use="optional" default="GlobalSearch" />
+      <xs:attribute name="AppName" type="xs:string" use="optional" />
+      <xs:attribute name="IsLogOffAzure" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsReCaptchaPublicPage" type="xs:boolean" use="optional" default="false" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Alert" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="PushNotification" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="RefreshTime" type="xs:int" use="optional" default="60000" />
+      <xs:attribute name="UnreadNotShowAfterMinute" type="xs:int" use="optional" default="60" />
+      <xs:attribute name="Delay" type="xs:int" use="optional" default="12000" />
+      <xs:attribute name="IsVisible" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="AlertType" type="xs:string" use="optional" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Messanger" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsVisible" type="xs:boolean" use="optional" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Group" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Actions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Action" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ACL" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="AccessUserDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="AccessGroupDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="AccessFolderTreeDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsLocalAdmin" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="AccountPermission" type="xs:string" use="optional" default="" />
+      <xs:attribute name="GroupPermission" type="xs:string" use="optional" default="" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="HTTP" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Header" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Device" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsEnabled" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="QRCodeDomainUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="PairDeviceValidityDateMinute" type="xs:int" use="optional" default="10" />
+      <xs:attribute name="RefreshTokenValidityDateMinute" type="xs:int" use="optional" default="44640" />
+      <xs:attribute name="TokenValidationDateMinute" type="xs:int" use="optional" default="1440" />
+      <xs:attribute name="TokenSecurityKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TokenIssuer" type="xs:string" use="optional" default="" />
+      <xs:attribute name="APIUrl" type="xs:string" use="optional" default="~/API/" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ReceivedEmail" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsHeader" type="xs:boolean" use="optional" />
+      <xs:attribute name="IsSubject" type="xs:boolean" use="optional" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ShareSettings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element name="TimeSetting" />
+                <xs:element name="Setting" />
+              </xs:choice>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

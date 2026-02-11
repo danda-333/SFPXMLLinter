@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Configuration/ISDS"
+           xmlns="http://www.gappex.com/sfp/Configuration/ISDS"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.ISDS.MappingISDS -->
+  <xs:element name="Mapping">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="ControlIdent" type="xs:string" use="optional" />
+      <xs:attribute name="PropertyIdent" type="xs:string" use="optional" />
+      <xs:attribute name="IsRequired" type="xs:boolean" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

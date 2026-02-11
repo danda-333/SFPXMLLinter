@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Configuration/ISDS"
+           xmlns="http://www.gappex.com/sfp/Configuration/ISDS"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.ISDS.ButtonMappingISDS -->
+  <xs:element name="ButtonMapping">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="ISDSState" type="xs:int" use="optional" />
+      <xs:attribute name="ButtonIdent" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

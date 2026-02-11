@@ -1,0 +1,307 @@
+{
+  "name": "SFP XML Embedded Blocks",
+  "scopeName": "sfp.xml.embedded",
+  "injectionSelector": "L:text.xml - comment.block.xml",
+  "patterns": [
+    {
+      "include": "#htmlTemplateBlock"
+    },
+    {
+      "include": "#sqlBlock"
+    },
+    {
+      "include": "#commandBlock"
+    }
+  ],
+  "repository": {
+    "htmlTemplateBlock": {
+      "name": "meta.embedded.block.sfp.htmltemplate.xml",
+      "begin": "(<)((?:[A-Za-z_][\\w.-]*:)?HTMLTemplate)(\\b[^>]*)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.xml"
+        },
+        "2": {
+          "name": "entity.name.tag.xml"
+        },
+        "3": {
+          "name": "meta.tag.xml"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.xml"
+        }
+      },
+      "contentName": "text.html.embedded.sfp",
+      "end": "(</)((?:[A-Za-z_][\\w.-]*:)?HTMLTemplate)(\\s*)(>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.xml"
+        },
+        "2": {
+          "name": "entity.name.tag.xml"
+        },
+        "3": {
+          "name": "meta.whitespace.xml"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.xml"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#sfpHtmlCustomControlTags"
+        },
+        {
+          "include": "#htmlCdataBlock"
+        },
+        {
+          "include": "#sfpHtmlPlaceholders"
+        },
+        {
+          "include": "#sfpPseudoDirectives"
+        },
+        {
+          "include": "#sfpRazor"
+        },
+        {
+          "include": "text.html.basic"
+        }
+      ]
+    },
+    "sqlBlock": {
+      "name": "meta.embedded.block.sfp.sql.xml",
+      "begin": "(<)((?:[A-Za-z_][\\w.-]*:)?SQL)(\\b[^>]*)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.xml"
+        },
+        "2": {
+          "name": "entity.name.tag.xml"
+        },
+        "3": {
+          "name": "meta.tag.xml"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.xml"
+        }
+      },
+      "contentName": "source.sql",
+      "end": "(</)((?:[A-Za-z_][\\w.-]*:)?SQL)(\\s*)(>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.xml"
+        },
+        "2": {
+          "name": "entity.name.tag.xml"
+        },
+        "3": {
+          "name": "meta.whitespace.xml"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.xml"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#xmlCommentBlock"
+        },
+        {
+          "include": "#sqlCdataBlock"
+        },
+        {
+          "include": "#sfpSqlPlaceholders"
+        },
+        {
+          "include": "source.sql"
+        }
+      ]
+    },
+    "commandBlock": {
+      "name": "meta.embedded.block.sfp.command.xml",
+      "begin": "(<)((?:[A-Za-z_][\\w.-]*:)?Command)(\\b[^>]*)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.xml"
+        },
+        "2": {
+          "name": "entity.name.tag.xml"
+        },
+        "3": {
+          "name": "meta.tag.xml"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.xml"
+        }
+      },
+      "contentName": "source.sql",
+      "end": "(</)((?:[A-Za-z_][\\w.-]*:)?Command)(\\s*)(>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.xml"
+        },
+        "2": {
+          "name": "entity.name.tag.xml"
+        },
+        "3": {
+          "name": "meta.whitespace.xml"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.xml"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#xmlCommentBlock"
+        },
+        {
+          "include": "#sqlCdataBlock"
+        },
+        {
+          "include": "#sfpSqlPlaceholders"
+        },
+        {
+          "include": "source.sql"
+        }
+      ]
+    },
+    "htmlCdataBlock": {
+      "name": "meta.embedded.cdata.sfp.html",
+      "begin": "(<!\\[CDATA\\[)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.cdata.begin.xml"
+        }
+      },
+      "end": "(\\]\\]>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.cdata.end.xml"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#sfpHtmlCustomControlTags"
+        },
+        {
+          "include": "#sfpHtmlPlaceholders"
+        },
+        {
+          "include": "#sfpPseudoDirectives"
+        },
+        {
+          "include": "#sfpRazor"
+        },
+        {
+          "include": "text.html.basic"
+        }
+      ]
+    },
+    "sqlCdataBlock": {
+      "name": "meta.embedded.cdata.sfp.sql",
+      "begin": "(<!\\[CDATA\\[)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.cdata.begin.xml"
+        }
+      },
+      "end": "(\\]\\]>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.cdata.end.xml"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#xmlCommentBlock"
+        },
+        {
+          "include": "#sfpSqlPlaceholders"
+        },
+        {
+          "include": "source.sql"
+        }
+      ]
+    },
+    "xmlCommentBlock": {
+      "name": "comment.block.xml",
+      "begin": "<!--",
+      "end": "-->"
+    },
+    "sfpHtmlCustomControlTags": {
+      "patterns": [
+        {
+          "name": "invalid.illegal.unrecognized-tag.html",
+          "match": "(?<=</?)(?:Control|ControlLabel|ControlPlaceHolder)(?=\\b)"
+        }
+      ]
+    },
+    "sfpSqlPlaceholders": {
+      "patterns": [
+        {
+          "match": "(?:^|\\s)(#[^#\\s]+#)",
+          "captures": {
+            "1": {
+              "name": "constant.other.sfp.sql-placeholder"
+            }
+          }
+        },
+        {
+          "name": "constant.other.sfp.sql-placeholder",
+          "match": "#[^#\\s]+#"
+        },
+        {
+          "name": "variable.parameter.sfp.sql.strong",
+          "match": "@[A-Za-z_][A-Za-z0-9_]*"
+        },
+        {
+          "name": "variable.other.sfp.template",
+          "match": "\\{\\{\\s*[A-Za-z0-9_:.\\-/]+\\s*\\}\\}"
+        },
+        {
+          "name": "constant.other.sfp.resource-key",
+          "match": "\\[#[-A-Za-z0-9_.]+#\\]"
+        }
+      ]
+    },
+    "sfpHtmlPlaceholders": {
+      "patterns": [
+        {
+          "name": "constant.other.sfp.resource-key",
+          "match": "\\[#[-A-Za-z0-9_.]+#\\]"
+        },
+        {
+          "name": "variable.other.sfp.legacy-expression",
+          "match": "\\[%[^%\\r\\n]*%\\]"
+        },
+        {
+          "name": "variable.other.sfp.template",
+          "match": "\\{\\{\\s*[A-Za-z0-9_:.\\-/]+\\s*\\}\\}"
+        }
+      ]
+    },
+    "sfpPseudoDirectives": {
+      "patterns": [
+        {
+          "name": "keyword.control.sfp.pseudo",
+          "match": "\\[(?i:/?(?:if|for|foreach)|else(?:if)?)(?:[^\\]]*)\\]"
+        }
+      ]
+    },
+    "sfpRazor": {
+      "patterns": [
+        {
+          "name": "keyword.control.razor.sfp",
+          "match": "@(?i:if|foreach|for|switch|model|functions)\\b"
+        },
+        {
+          "name": "variable.other.razor.sfp",
+          "match": "@[A-Za-z_][A-Za-z0-9_\\.]*"
+        },
+        {
+          "name": "meta.embedded.razor.expression.sfp",
+          "match": "@\\([^\\r\\n]*\\)"
+        }
+      ]
+    }
+  }
+}

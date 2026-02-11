@@ -1,0 +1,27 @@
+{
+  "name": "SFP SQL Placeholders",
+  "scopeName": "sfp.sql.placeholders",
+  "injectionSelector": "L:source.sql - comment - comment.block.xml - comment.block",
+  "patterns": [
+    {
+      "name": "entity.name.tag",
+      "match": "'(?:''|[^'\\r\\n])*'"
+    },
+    {
+      "match": "(?:^|\\s)(#[^#\\s]+#)",
+      "captures": {
+        "1": {
+          "name": "constant.other.sfp.sql-placeholder"
+        }
+      }
+    },
+    {
+      "name": "constant.other.sfp.sql-placeholder",
+      "match": "#[^#\\s]+#"
+    },
+    {
+      "name": "variable.parameter.sfp.sql.strong",
+      "match": "@[A-Za-z_][A-Za-z0-9_]*"
+    }
+  ]
+}

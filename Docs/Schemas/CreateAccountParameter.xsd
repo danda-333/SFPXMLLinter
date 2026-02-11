@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Models.Parameters.CreateAccountParameter -->
+  <xs:element name="CreateAccountParameter">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="AccessToken" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="UserName" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="ID" type="xs:string" minOccurs="0" maxOccurs="1" />
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

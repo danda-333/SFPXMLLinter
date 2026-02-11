@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Settings.CalendarSettings.DurationCalendarSetting -->
+  <xs:element name="DurationCalendarSetting">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="Day" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="Week" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="Month" type="xs:int" use="optional" default="0" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

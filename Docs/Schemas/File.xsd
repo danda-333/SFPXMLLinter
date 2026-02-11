@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Parameters" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Froms" />
+
+
+  <!-- SFP.Kernel.Model.Configuration.Settings.File.File -->
+  <xs:element name="File">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="DLLExternalStorage" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="XmlContent" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Path" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ClassType" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DLLIdent" type="xs:string" use="optional" default="" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="DLLValidation" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="XmlContent" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Path" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ClassType" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DLLIdent" type="xs:string" use="optional" default="" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="WebDav" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="DataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="RootUrl" type="xs:string" use="optional" />
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="IsOpenInApp" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="TokenExpirationMinute" type="xs:int" use="optional" default="120" />
+      <xs:attribute name="DownloadAccessType" type="xs:string" use="optional" default="Login" />
+      <xs:attribute name="IsOfficePreview" type="xs:boolean" use="optional" default="false" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

@@ -1,0 +1,44 @@
+﻿{
+  "entries": [
+    {
+      "tag": "Form",
+      "summary": "Form definuje entitu a vytvari tabulku usr.[Ident].",
+      "details": "U Controls definuj business pole. Systemove sloupce (ID, AccountID, CreateDate...) nevytvarej jako Control."
+    },
+    {
+      "tag": "WorkFlow",
+      "summary": "WorkFlow ridi stavy, prava a akce nad Form.",
+      "details": "FormIdent musi odkazovat na existujici Form."
+    },
+    {
+      "tag": "Using",
+      "summary": "Using vklada komponentu/sekce do XML sablony.",
+      "details": "Component (nebo Name) odkazuje na soubor v XML_Components."
+    },
+    {
+      "attribute": "FormIdent",
+      "summary": "FormIdent je reference na Form Ident.",
+      "details": "Mela by odkazovat na existujici Form v indexu workspace."
+    },
+    {
+      "attribute": "Ident",
+      "summary": "Ident je unikatni identifikator v dane strukture.",
+      "details": "Pouzivej PascalCase a ASCII bez diakritiky."
+    },
+    {
+      "attribute": "xsi:type",
+      "summary": "xsi:type urcuje konkretni typ prvku.",
+      "details": "U Control/Section/Button pouzij podporovane typy z IntelliSense."
+    },
+    {
+      "attribute": "MappingFormIdent",
+      "summary": "MappingFormIdent urcuje cilovy Form pro Mapping ToIdent.",
+      "details": "Pokud je vyplneny, ToIdent se validuje proti controls ciloveho Form."
+    },
+    {
+      "tag": "Mapping",
+      "summary": "Mapping prenasi hodnotu z FromIdent do ToIdent.",
+      "details": "FromIdent je zdroj, ToIdent cil. Pri MappingFormIdent se cil bere z tohoto Formu."
+    }
+  ]
+}

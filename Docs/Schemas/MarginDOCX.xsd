@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Sections.DOCXs.MarginDOCX -->
+  <xs:element name="MarginDOCX">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="Top" type="xs:int" use="optional" default="1440" />
+      <xs:attribute name="Right" type="xs:string" use="optional" default="1440" />
+      <xs:attribute name="Bottom" type="xs:int" use="optional" default="1440" />
+      <xs:attribute name="Left" type="xs:string" use="optional" default="1440" />
+      <xs:attribute name="Header" type="xs:string" use="optional" default="720" />
+      <xs:attribute name="Footer" type="xs:string" use="optional" default="720" />
+      <xs:attribute name="Gutter" type="xs:string" use="optional" default="0" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

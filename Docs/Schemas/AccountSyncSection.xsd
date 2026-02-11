@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Configuration"
+           xmlns="http://www.gappex.com/sfp/Configuration"
+           elementFormDefault="qualified">
+  <xs:import namespace="http://www.gappex.com/sfp/Configuration/AccountSync" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Parameters" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Froms" />
+
+
+  <!-- SFP.Kernel.Model.Configuration.Sections.AccountSyncSection -->
+  <xs:element name="AccountSyncSection">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="AccountSync" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Users" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="UserAccountSync" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Groups" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="GroupAccountSync" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Rules" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any namespace="http://www.gappex.com/sfp/Configuration/AccountSync" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DefaultGroupAccount" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="RunApps" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="RunAppAccountSync" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="AcceptAccountDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:choice minOccurs="0" maxOccurs="1">
+                <xs:element name="PairAccount" />
+                <xs:element name="DLLPairAccount" />
+              </xs:choice>
+              <xs:element name="Settings" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:choice minOccurs="0" maxOccurs="unbounded">
+                      <xs:element name="AzureSetting" />
+                      <xs:element name="Setting" />
+                    </xs:choice>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="DeleteType" type="xs:string" use="optional" />
+      <xs:attribute name="IsUserOnlyDeactive" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsGroupOnlyDeactive" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="ADUserNameIdent" type="xs:string" use="optional" default="userprincipalname" />
+      <xs:attribute name="ADEmployeeNumberIdent" type="xs:string" use="optional" default="employeeNumber" />
+      <xs:attribute name="ADSIDIdent" type="xs:string" use="optional" default="objectsid" />
+      <xs:attribute name="ADEmailIdent" type="xs:string" use="optional" default="mail" />
+      <xs:attribute name="ADPhoneIdent" type="xs:string" use="optional" default="telephonenumber" />
+      <xs:attribute name="ADPathIdent" type="xs:string" use="optional" default="distinguishedName" />
+      <xs:attribute name="ADGroupPathIdent" type="xs:string" use="optional" default="distinguishedName" />
+      <xs:attribute name="ADPathManagerIdent" type="xs:string" use="optional" default="manager" />
+      <xs:attribute name="ADUserAccountControlIdent" type="xs:string" use="optional" default="userAccountControl" />
+      <xs:attribute name="ADWhenChangedIdent" type="xs:string" use="optional" default="whenChanged" />
+      <xs:attribute name="ADWhenCreatedIdent" type="xs:string" use="optional" default="whenCreated" />
+      <xs:attribute name="ADFirstNameIdent" type="xs:string" use="optional" default="givenname" />
+      <xs:attribute name="ADLastNameIdent" type="xs:string" use="optional" default="sn" />
+      <xs:attribute name="ADDisplayNameIdent" type="xs:string" use="optional" default="displayname" />
+      <xs:attribute name="ADGroupSIDIdent" type="xs:string" use="optional" default="objectsid" />
+      <xs:attribute name="ADGroupWhenChangedIdent" type="xs:string" use="optional" default="whenChanged" />
+      <xs:attribute name="ADGroupWhenCreatedIdent" type="xs:string" use="optional" default="whenCreated" />
+      <xs:attribute name="ADGroupNameIdent" type="xs:string" use="optional" default="cn" />
+      <xs:attribute name="ADGroupMemberIdent" type="xs:string" use="optional" default="member" />
+      <xs:attribute name="ADGroupEmailIdent" type="xs:string" use="optional" default="mail" />
+      <xs:attribute name="ADGroupDescriptionIdent" type="xs:string" use="optional" default="description" />
+      <xs:attribute name="IsSubGroupUserToParent" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsLoadSubGroup" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsUserNameWithoutDomain" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="FirstImportType" type="xs:string" use="optional" default="ADToSFP" />
+      <xs:attribute name="MainPath" type="xs:string" use="optional" default="" />
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

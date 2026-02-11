@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.EmailReceiver.EmailConnections.IMAPEmailConnection -->
+  <xs:element name="IMAPEmailConnection">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="ReadingRules" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ReadingRule" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="Port" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="SSL" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsDownloadAllFiles" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="ServerUrl" type="xs:string" use="optional" />
+      <xs:attribute name="UserName" type="xs:string" use="optional" />
+      <xs:attribute name="Password" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Folder" type="xs:string" use="optional" default="" />
+      <xs:attribute name="ShareBoxEmail" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

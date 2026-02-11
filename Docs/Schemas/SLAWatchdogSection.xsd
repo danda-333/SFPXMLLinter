@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Configuration"
+           xmlns="http://www.gappex.com/sfp/Configuration"
+           elementFormDefault="qualified">
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Parameters" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Froms" />
+
+
+  <!-- SFP.Kernel.Model.Configuration.Sections.SLAWatchdogSection -->
+  <xs:element name="SLAWatchdogSection">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="SLAWatchdog" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="HolidayDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

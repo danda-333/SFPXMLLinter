@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://www.gappex.com/sfp/Form/Control/Settings"
+           xmlns="http://www.gappex.com/sfp/Form/Control/Settings"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Form.Controls.Settings.ResizeSetting -->
+  <xs:element name="ResizeSetting">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="ProcessType" type="xs:string" use="optional" default="Immediately" />
+      <xs:attribute name="ResizeType" type="xs:string" use="optional" default="CropPhoto" />
+      <xs:attribute name="Width" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="Height" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="Percent" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

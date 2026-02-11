@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Settings.CalendarSettings.SlotLabelFormatCalendarSetting -->
+  <xs:element name="SlotLabelFormatCalendarSetting">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="WeekDay" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Day" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Hour" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Minute" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Month" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Year" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsOmitCommas" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Meridiem" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsOmitZeroMinute" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Second" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

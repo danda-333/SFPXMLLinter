@@ -1,0 +1,227 @@
+{
+  "name": "sfp-xml-linter",
+  "displayName": "SFP XML Linter",
+  "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
+  "publisher": "daniel-sasek",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters"
+  ],
+  "keywords": [
+    "xml",
+    "linter",
+    "intellisense",
+    "workflow",
+    "sfp"
+  ],
+  "activationEvents": [
+    "onLanguage:xml",
+    "onCommand:sfpXmlLinter.buildXmlTemplates",
+    "onCommand:sfpXmlLinter.buildXmlTemplatesAll",
+    "onCommand:sfpXmlLinter.showBuildQueueLog",
+    "onCommand:sfpXmlLinter.rebuildIndex",
+    "onCommand:sfpXmlLinter.workspaceDiagnosticsReport"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "semanticTokenTypes": [
+      {
+        "id": "sfpSqlPlaceholder",
+        "description": "SFP SQL placeholder token inside XML SQL/Command blocks."
+      },
+      {
+        "id": "sfpSqlString",
+        "description": "SFP SQL string literal token inside XML SQL/Command blocks."
+      }
+    ],
+    "grammars": [
+      {
+        "scopeName": "sfp.xml.core",
+        "path": "./syntaxes/sfp-xml-core.tmLanguage.json",
+        "injectTo": [
+          "text.xml"
+        ]
+      },
+      {
+        "scopeName": "sfp.xml.embedded",
+        "path": "./syntaxes/sfp-xml-embedded.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.sfp.sql.xml": "sql",
+          "meta.embedded.block.sfp.command.xml": "sql",
+          "meta.embedded.block.sfp.htmltemplate.xml": "html"
+        },
+        "injectTo": [
+          "text.xml"
+        ]
+      },
+      {
+        "scopeName": "sfp.sql.placeholders",
+        "path": "./syntaxes/sfp-sql-placeholders.tmLanguage.json",
+        "injectTo": [
+          "source.sql"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "sfpXmlLinter.buildXmlTemplates",
+        "title": "SFP XML Linter: Build XML Templates (Current / Selection)"
+      },
+      {
+        "command": "sfpXmlLinter.buildXmlTemplatesAll",
+        "title": "SFP XML Linter: Build XML Templates (All)"
+      },
+      {
+        "command": "sfpXmlLinter.showBuildQueueLog",
+        "title": "SFP XML Linter: Show Build Queue Log"
+      },
+      {
+        "command": "sfpXmlLinter.workspaceDiagnosticsReport",
+        "title": "SFP XML Linter: Workspace Diagnostics Report"
+      },
+      {
+        "command": "sfpXmlLinter.rebuildIndex",
+        "title": "SFP XML Linter: Rebuild Full Index"
+      }
+    ],
+    "configuration": {
+      "title": "SFP XML Linter",
+      "properties": {
+        "sfpXmlLinter.workspaceRoots": {
+          "type": "array",
+          "default": [
+            "XML",
+            "XML_Templates",
+            "XML_Components"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Folders to scan for XML symbols and validations."
+        },
+        "sfpXmlLinter.resourcesRoots": {
+          "type": "array",
+          "default": [
+            "Resources"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Reserved for future translations-related features."
+        },
+        "sfpXmlLinter.hoverDocsFiles": {
+          "type": "array",
+          "default": [
+            "Docs/hover-docs.json",
+            "Docs/hover-docs.team.json"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "List of JSON files with concise hover documentation entries."
+        },
+        "sfpXmlLinter.rules": {
+          "type": "object",
+          "default": {
+            "unknown-form-ident": "error",
+            "unknown-form-control-ident": "error",
+            "unknown-form-button-ident": "error",
+            "unknown-workflow-button-share-code-ident": "error",
+            "unknown-form-section-ident": "warning",
+            "unknown-mapping-ident": "warning",
+            "unknown-mapping-form-ident": "warning",
+            "unknown-required-action-ident": "warning",
+            "unknown-workflow-action-value-control-ident": "error",
+            "unknown-workflow-show-hide-control-ident": "error",
+            "unknown-html-template-control-ident": "error",
+            "duplicate-control-ident": "warning",
+            "duplicate-button-ident": "warning",
+            "duplicate-section-ident": "warning",
+            "unknown-using-component": "error",
+            "unknown-using-section": "warning",
+            "ident-convention-button-postfix": "warning",
+            "ident-convention-group-button-postfix": "warning",
+            "ident-convention-workflow-postfix": "warning",
+            "ident-convention-view-postfix": "warning",
+            "ident-convention-lookup-control": "warning"
+          },
+          "description": "Per-rule severity mapping. Allowed values: off, warning, error."
+        },
+        "sfpXmlLinter.templateBuilder.mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "typescript",
+            "powershell"
+          ],
+          "default": "auto",
+          "description": "Template builder mode. auto prefers TypeScript implementation and falls back to PowerShell script."
+        },
+        "sfpXmlLinter.templateBuilder.powershellScriptPath": {
+          "type": "string",
+          "default": "SFPExampleProject/Scripts/BuildXmlTemplates.ps1",
+          "description": "Path to legacy BuildXmlTemplates.ps1 script relative to workspace root."
+        },
+        "sfpXmlLinter.templateBuilder.autoBuildOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "When enabled, saving XML_Templates/XML_Components files automatically triggers BuildXmlTemplates."
+        },
+        "sfpXmlLinter.templateBuilder.componentSaveBuildScope": {
+          "type": "string",
+          "enum": [
+            "dependents",
+            "full"
+          ],
+          "default": "dependents",
+          "description": "On XML_Components save, build only dependent templates when possible (dependents) or rebuild all templates (full)."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[xml]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "on"
+        }
+      },
+      "editor.semanticTokenColorCustomizations": {
+        "rules": {
+          "sfpSqlPlaceholder": "#7FDBFF",
+          "sfpSqlString": "#F44747"
+        }
+      },
+      "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": "variable.parameter.sfp.sql.strong",
+            "settings": {
+              "foreground": "#FF9800"
+            }
+          },
+          {
+            "scope": "constant.other.sfp.sql-placeholder",
+            "settings": {
+              "foreground": "#7FDBFF"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",
+    "package:vsix": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+  <!-- Auto-generated for XML by Red Hat (LemMinX). -->
+  <uri name="http://www.gappex.com/sfp/Common" uri="_generated/ns-01-www_gappex_com_sfp_common.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Configuration" uri="_generated/ns-02-www_gappex_com_sfp_configuration.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Configuration/AccountSync" uri="_generated/ns-03-www_gappex_com_sfp_configuration_accountsync.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Configuration/DataSync" uri="_generated/ns-04-www_gappex_com_sfp_configuration_datasync.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Configuration/EmailReceiver" uri="_generated/ns-05-www_gappex_com_sfp_configuration_emailreceiver.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Configuration/ISDS" uri="_generated/ns-06-www_gappex_com_sfp_configuration_isds.xsd"/>
+  <uri name="http://www.gappex.com/sfp/DataSource/Froms" uri="_generated/ns-07-www_gappex_com_sfp_datasource_froms.xsd"/>
+  <uri name="http://www.gappex.com/sfp/DataSource/Parameters" uri="_generated/ns-08-www_gappex_com_sfp_datasource_parameters.xsd"/>
+  <uri name="http://www.gappex.com/sfp/DataView/Settings" uri="_generated/ns-09-www_gappex_com_sfp_dataview_settings.xsd"/>
+  <uri name="http://www.gappex.com/sfp/EmailReceiver/Imports" uri="_generated/ns-10-www_gappex_com_sfp_emailreceiver_imports.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Form/Control/Communication" uri="_generated/ns-11-www_gappex_com_sfp_form_control_communication.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Form/Control/DocumentApproval" uri="_generated/ns-12-www_gappex_com_sfp_form_control_documentapproval.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Form/Control/Settings" uri="_generated/ns-13-www_gappex_com_sfp_form_control_settings.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Form/Imports" uri="_generated/ns-14-www_gappex_com_sfp_form_imports.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Form/Indexes" uri="_generated/ns-15-www_gappex_com_sfp_form_indexes.xsd"/>
+  <uri name="http://www.gappex.com/sfp/Form/Wizard" uri="_generated/ns-16-www_gappex_com_sfp_form_wizard.xsd"/>
+  <uri name="http://www.gappex.com/sfp/WorkFlow/ShareCodes" uri="_generated/ns-17-www_gappex_com_sfp_workflow_sharecodes.xsd"/>
+</catalog>
+

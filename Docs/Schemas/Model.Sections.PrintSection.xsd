@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Parameters" />
+  <xs:import namespace="http://www.gappex.com/sfp/DataSource/Froms" />
+  <xs:import namespace="http://www.gappex.com/sfp/Form/Imports" />
+  <xs:import namespace="http://www.gappex.com/sfp/Form/Wizard" />
+
+
+  <!-- SFP.Kernel.Model.Sections.PrintSection -->
+  <xs:element name="PrintSection">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="Sources" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DataSource" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="HTMLTemplate" type="xs:string" minOccurs="0" maxOccurs="1" />
+        <xs:element name="Settings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element name="RazorEngineSetting" />
+                <xs:element name="Setting" />
+              </xs:choice>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Actions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Action" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ExternalCssRelativePaths" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FormFilter" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="QueryStringRemoveParameters" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DataPermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DynamicPermission" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="CreatePermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="AccessToken" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Sections" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Section" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Buttons" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Button" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Controls" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Control" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="SLACriteriaControls" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Control" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Settings" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Setting" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Indexes" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Index" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Sequences" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Sequence" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Imports" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any namespace="http://www.gappex.com/sfp/Form/Imports" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="BreadcrumbSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="PackageIdents" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ExternalCssRelativePaths" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ExternalJavaScriptRelativePaths" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="SetSegmentFilterDataSource" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Components" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Component" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Wizard" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="IsFolderTreePermission" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsPublic" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsPaging" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsPublicTokenRequired" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsOnlyPublicUser" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsReCaptcha" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="LayoutType" type="xs:string" use="optional" default="Form" />
+      <xs:attribute name="PublicUserLogin" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsUnloadConfirm" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="MainIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="SegmentType" type="xs:string" use="optional" default="" />
+      <xs:attribute name="FormType" type="xs:string" use="optional" default="Classic" />
+      <xs:attribute name="FolderLevel" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="FolderGroupSegmentIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsSubForm" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsSubFormDetailOpenAsForm" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsRazorEngine" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsOverwriteCheck" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsDebug" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="IsCache" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="CacheAbsoluteExpiration" type="xs:decimal" use="optional" default="0.3" />
+      <xs:attribute name="Width" type="xs:int" use="optional" default="0" />
+      <xs:attribute name="IsCreateTable" type="xs:boolean" use="optional" default="true" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="AccessPermissions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="DenyPermissions" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="VisibleCondition" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SQL" type="xs:string" minOccurs="0" maxOccurs="1" />
+              <xs:element name="Columns" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Column" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Parameters" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any namespace="http://www.gappex.com/sfp/DataSource/Parameters" minOccurs="0" maxOccurs="unbounded" processContents="strict" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DataPermissions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Dependencies" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Froms" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="From" minOccurs="0" maxOccurs="unbounded" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="DLLData" type="xs:anyType" minOccurs="0" maxOccurs="1" />
+            </xs:all>
+
+            <!-- Attributes -->
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="GroupIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="FormIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailUrl" type="xs:string" use="optional" default="" />
+      <xs:attribute name="DetailTarget" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsGeneratePaging" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="RemoteConnectionStringIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsPermissionInTempTable" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsInitJSDependency" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="IsCache" type="xs:boolean" use="optional" default="false" />
+      <xs:attribute name="CacheAbsoluteExpiration" type="xs:decimal" use="optional" default="0.3" />
+      <xs:attribute name="PermissionModeType" type="xs:string" use="optional" default="Basic" />
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+
+      <!-- Attributes -->
+      <xs:attribute name="IsUsedStyleSheet" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="FormFilterIdent" type="xs:string" use="optional" default="" />
+      <xs:attribute name="Ident" type="xs:string" use="optional" />
+      <xs:attribute name="IsVisible" type="xs:boolean" use="optional" default="true" />
+      <xs:attribute name="Title" type="xs:string" use="optional" default="" />
+      <xs:attribute name="TitleResourceKey" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IconCssClass" type="xs:string" use="optional" default="" />
+      <xs:attribute name="IsRazorEngine" type="xs:string" use="optional" default="" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

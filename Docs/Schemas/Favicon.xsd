@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.Configuration.Settings.Global.Favicons.Favicon -->
+  <xs:element name="Favicon">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="Rel" type="xs:string" use="optional" />
+      <xs:attribute name="Type" type="xs:string" use="optional" />
+      <xs:attribute name="Sizes" type="xs:string" use="optional" />
+      <xs:attribute name="Href" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

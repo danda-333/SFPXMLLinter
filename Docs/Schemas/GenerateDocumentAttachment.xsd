@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified">
+
+  <!-- SFP.Kernel.Model.WorkFlow.Actions.Commons.Attachments.GenerateDocumentAttachment -->
+  <xs:element name="GenerateDocumentAttachment">
+    <xs:complexType>
+
+      <!-- Attributes -->
+      <xs:attribute name="SectionIdent" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+
+</xs:schema>

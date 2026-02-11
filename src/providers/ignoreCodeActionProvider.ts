@@ -85,7 +85,7 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     action.diagnostics = [diagnostic];
 
     const edit = new vscode.WorkspaceEdit();
-    edit.insert(document.uri, new vscode.Position(0, 0), `<!-- @IgnoreFile ${ruleId} -->\n`);
+    edit.insert(document.uri, getFileIgnoreInsertPosition(document), `<!-- @IgnoreFile ${ruleId} -->\n`);
 
     action.edit = edit;
     return action;
@@ -96,7 +96,7 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     action.diagnostics = [diagnostic];
 
     const edit = new vscode.WorkspaceEdit();
-    edit.insert(document.uri, new vscode.Position(0, 0), "<!-- @IgnoreFile all -->\n");
+    edit.insert(document.uri, getFileIgnoreInsertPosition(document), "<!-- @IgnoreFile all -->\n");
 
     action.edit = edit;
     return action;
@@ -203,4 +203,18 @@ function extractDidYouMeanSuggestion(message: string): string | undefined {
 
 function isWhitespace(ch: string): boolean {
   return ch === " " || ch === "\t" || ch === "\r" || ch === "\n";
+}
+
+function getFileIgnoreInsertPosition(document: vscode.TextDocument): vscode.Position {
+  if (document.lineCount === 0) {
+    return new vscode.Position(0, 0);
+  }
+
+  const firstLineText = document.lineAt(0).text;
+  // Keep XML declaration as the first content in XML files.
+  if (/^\s*<\?xml\b/i.test(firstLineText)) {
+    return new vscode.Position(1, 0);
+  }
+
+  return new vscode.Position(0, 0);
 }

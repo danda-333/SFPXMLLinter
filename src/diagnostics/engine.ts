@@ -814,8 +814,41 @@ function levenshteinDistance(a: string, b: string): number {
 function collectInvalidEqualsIndices(sql: string): number[] {
   const out: number[] = [];
   let inSingleQuote = false;
+  let inLineComment = false;
+  let inBlockComment = false;
   for (let i = 0; i < sql.length; i++) {
     const ch = sql[i];
+    const next = i + 1 < sql.length ? sql[i + 1] : "";
+
+    if (inLineComment) {
+      if (ch === "\n" || ch === "\r") {
+        inLineComment = false;
+      }
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (ch === "*" && next === "/") {
+        inBlockComment = false;
+        i++;
+      }
+      continue;
+    }
+
+    if (!inSingleQuote) {
+      if (ch === "-" && next === "-") {
+        inLineComment = true;
+        i++;
+        continue;
+      }
+
+      if (ch === "/" && next === "*") {
+        inBlockComment = true;
+        i++;
+        continue;
+      }
+    }
+
     if (ch === "'") {
       if (inSingleQuote && sql[i + 1] === "'") {
         i++;
@@ -835,7 +868,6 @@ function collectInvalidEqualsIndices(sql: string): number[] {
     }
 
     const prev = i > 0 ? sql[i - 1] : "";
-    const next = i + 1 < sql.length ? sql[i + 1] : "";
     if (prev === "<" || prev === ">" || prev === "!" || prev === "=" || next === "=") {
       continue;
     }

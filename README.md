@@ -117,7 +117,7 @@ Example override in VS Code settings:
 }
 ```
 
-## XSD (XML by Red Hat)
+## XSD
 
 Workspace is configured to use XSD schemas from `Docs/Schemas`:
 

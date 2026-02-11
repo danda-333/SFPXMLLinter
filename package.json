@@ -18,6 +18,10 @@
     "workflow",
     "sfp"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danda-333/SFPXMLLinter.git"
+  },
   "activationEvents": [
     "onLanguage:xml",
     "onCommand:sfpXmlLinter.buildXmlTemplates",

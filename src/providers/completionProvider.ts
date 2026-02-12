@@ -36,6 +36,7 @@ const ATTRIBUTES_BY_TAG: Record<string, string[]> = {
     "xsi:type",
     "Ident",
     "DataType",
+    "MaxLength",
     "Title",
     "TitleResourceKey",
     "IsReadOnly",
@@ -132,8 +133,20 @@ const DATA_TYPE_CHOICE_LOOKUP_MULTI = "StringList,VarCharList,NumberList,SmallNu
 const INSERT_MODES = ["append", "prepend", "before", "after", "placeholder"];
 const COLOR_CSS = ["danger", "warning", "primary", "info", "success", "dark"];
 const ACTION_START_TYPES = ["BeforeValidation", "AfterValidation", "AfterSave", "AfterPermission"];
-const PARAMETER_TYPES = ["dsp:VariableParameter", "dsp:ValueParameter"];
+const PARAMETER_TYPES = ["dsp:VariableParameter", "dsp:ValueParameter", "dsp:TableParameter"];
 const PARAMETER_CONSTANT_TYPES = ["UserID", "UserLanguageID", "UICultureCode"];
+const PARAMETER_SET_DATA_TYPES = [
+  "ActualData",
+  "OldData",
+  "ParentData",
+  "QueryStringData",
+  "POSTData",
+  "HTTPData",
+  "ExtensionData",
+  "HTMLAttribute",
+  "SelectedValueData",
+  "SpecifyData"
+];
 const SQL_CONSTANT_PARAMETERS: Array<{ ident: string; dataType: string; constantType: string }> = [
   { ident: "UserID", dataType: "Number", constantType: "UserID" },
   { ident: "UserLanguageID", dataType: "Number", constantType: "UserLanguageID" },
@@ -348,6 +361,10 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     if (attr === "constanttype") {
       const prefix = getActiveAttributeValuePrefixAtPosition(document, position, "ConstantType") ?? ctx.valuePrefix;
       return parameterConstantTypeItems(prefix);
+    }
+
+    if (attr === "setdatatype") {
+      return asValueItems(PARAMETER_SET_DATA_TYPES, vscode.CompletionItemKind.EnumMember);
     }
 
     if (attr === "formident") {
@@ -882,6 +899,11 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         "ValueParameter",
         `<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="$1" DataType="\${2|${DATA_TYPE_CHOICE_ALL}|}" Value="$3"$0 />`
       );
+      const table = snippetItem(
+        "table table parameter",
+        "TableParameter",
+        `<dsp:Parameter xsi:type="dsp:TableParameter" Ident="$1" />$0`
+      );
       const constantUser = snippetItem(
         "user usr const constant",
         "Constant UserID",
@@ -903,6 +925,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       return [
         variable,
         value,
+        table,
         constantUser,
         constantLanguage,
         constantCulture

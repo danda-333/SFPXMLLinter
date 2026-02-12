@@ -213,18 +213,20 @@ export function parseDocumentFactsFromText(rawText: string): ParsedDocumentFacts
     }
   }
 
-  for (const m of text.matchAll(/<Section\b([^>]*)>/gi)) {
-    const attr = findAttribute(m[1], "Ident", text, attributeStartIndex(m));
+  const sectionTags = collectSectionTags(text);
+  for (const sectionTag of sectionTags) {
+    const attrs = parseAttributes(sectionTag.rawAttrs, text, sectionTag.attrsStartIndex);
+    const attr = attrs.get("Ident");
     if (!attr?.value) {
       continue;
     }
 
     facts.declaredSections.add(attr.value);
     if (attr.valueRange) {
-      facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "section" });
+      facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "section", scopeKey: sectionTag.scopeKey });
     }
     if (attr.valueRange) {
-      facts.workflowReferences.push({ kind: "section", ident: attr.value, range: attr.valueRange });
+      facts.workflowReferences.push({ kind: "section", ident: attr.value, range: attr.valueRange, scopeKey: sectionTag.scopeKey });
     }
   }
 
@@ -535,6 +537,12 @@ interface ButtonTagMatch {
   scopeKey: string;
 }
 
+interface SectionTagMatch {
+  rawAttrs: string;
+  attrsStartIndex: number;
+  scopeKey: string;
+}
+
 function collectButtonTags(text: string): ButtonTagMatch[] {
   const out: ButtonTagMatch[] = [];
   const stack: Array<{ name: string; start: number }> = [];
@@ -554,6 +562,46 @@ function collectButtonTags(text: string): ButtonTagMatch[] {
       const attrsStartIndex = tagStart + (attrsStartOffset >= 0 ? attrsStartOffset : 0);
       const parentButtons = findNearestOpenTag(stack, "buttons");
       const scopeKey = parentButtons ? `buttons@${parentButtons.start}` : "__global_buttons__";
+
+      out.push({
+        rawAttrs,
+        attrsStartIndex,
+        scopeKey
+      });
+    }
+
+    if (isClosing) {
+      popOpenTag(stack, name);
+      continue;
+    }
+
+    if (!isSelfClosing) {
+      stack.push({ name, start: tagStart });
+    }
+  }
+
+  return out;
+}
+
+function collectSectionTags(text: string): SectionTagMatch[] {
+  const out: SectionTagMatch[] = [];
+  const stack: Array<{ name: string; start: number }> = [];
+  const tagRegex = /<\s*(\/?)\s*([A-Za-z_][\w:.-]*)([^>]*)>/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = tagRegex.exec(text)) !== null) {
+    const isClosing = match[1] === "/";
+    const name = stripPrefix(match[2]).toLowerCase();
+    const rawAttrs = match[3] ?? "";
+    const fullTag = match[0] ?? "";
+    const tagStart = match.index ?? 0;
+    const isSelfClosing = !isClosing && /\/\s*$/.test(rawAttrs);
+
+    if (!isClosing && name === "section") {
+      const attrsStartOffset = fullTag.indexOf(rawAttrs);
+      const attrsStartIndex = tagStart + (attrsStartOffset >= 0 ? attrsStartOffset : 0);
+      const parentSections = findNearestOpenTag(stack, "sections");
+      const scopeKey = parentSections ? `sections@${parentSections.start}` : "__global_sections__";
 
       out.push({
         rawAttrs,

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.5
+
+- Validation updates:
+  - `duplicate-section-ident` now follows group-local scoping (same behavior as button duplicate checks).
+  - Added typo diagnostic `typo-maxlenght-attribute` for `Control`/`Parameter` attributes (`MaxLenght` -> `MaxLength`).
+- IntelliSense updates:
+  - Added `TableParameter` snippet for `dsp:TableParameter`.
+  - Added `SetDataType` enum value suggestions for variable parameters:
+    - `ActualData`, `OldData`, `ParentData`, `QueryStringData`, `POSTData`, `HTTPData`, `ExtensionData`, `HTMLAttribute`, `SelectedValueData`, `SpecifyData`.
+  - Added `MaxLength` to control attribute completion suggestions.
+
 ## 0.0.4
 
 - SQL IntelliSense stability and UX polish:

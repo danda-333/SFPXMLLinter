@@ -40,6 +40,7 @@ export class DiagnosticsEngine {
     this.validateWorkflowControlIdentReferences(document, facts, index, issues);
     this.validateUsingReferences(facts, index, issues);
     this.validateHtmlTemplateControlReferences(document, facts, index, issues);
+    this.validateCommonAttributeTypos(document, issues);
     this.validateSqlEqualsSpacing(document, issues);
 
     const settings = getSettings();
@@ -71,11 +72,11 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
-    const seen = new Map<string, { control?: boolean; buttonByScope: Set<string>; section?: boolean }>();
+    const seen = new Map<string, { control?: boolean; buttonByScope: Set<string>; sectionByScope: Set<string> }>();
     const occurrences = collectExpandedIdentOccurrences(facts, index);
     for (const occurrence of occurrences) {
       const key = occurrence.ident;
-      const flags = seen.get(key) ?? { buttonByScope: new Set<string>() };
+      const flags = seen.get(key) ?? { buttonByScope: new Set<string>(), sectionByScope: new Set<string>() };
       const ruleId =
         occurrence.kind === "control"
           ? "duplicate-control-ident"
@@ -93,6 +94,17 @@ export class DiagnosticsEngine {
           });
         } else {
           flags.buttonByScope.add(scopeKey);
+        }
+      } else if (occurrence.kind === "section") {
+        const scopeKey = occurrence.scopeKey ?? "__global_sections__";
+        if (flags.sectionByScope.has(scopeKey)) {
+          issues.push({
+            ruleId,
+            range: occurrence.range,
+            message: `Duplicate ${occurrence.kind} Ident '${occurrence.ident}'.`
+          });
+        } else {
+          flags.sectionByScope.add(scopeKey);
         }
       } else if (flags[occurrence.kind]) {
         issues.push({
@@ -574,6 +586,32 @@ export class DiagnosticsEngine {
           ruleId: "sql-convention-equals-spacing",
           range: new vscode.Range(document.positionAt(absoluteIndex), document.positionAt(absoluteIndex + 1)),
           message: "In SQL/Command blocks, '=' must be separated by at least one space on both sides."
+        });
+      }
+    }
+  }
+
+  private validateCommonAttributeTypos(document: vscode.TextDocument, issues: RuleDiagnostic[]): void {
+    const text = maskXmlComments(document.getText());
+    const tagRegex = /<((?:[A-Za-z_][\w.-]*:)?(?:Control|Parameter))\b([^>]*)>/gi;
+
+    let tagMatch: RegExpExecArray | null;
+    while ((tagMatch = tagRegex.exec(text)) !== null) {
+      const fullTag = tagMatch[0] ?? "";
+      const attrsRaw = tagMatch[2] ?? "";
+      const tagStart = tagMatch.index ?? 0;
+      const attrsOffsetInTag = fullTag.indexOf(attrsRaw);
+      const attrsStart = tagStart + (attrsOffsetInTag >= 0 ? attrsOffsetInTag : 0);
+
+      const typoRegex = /\bMaxLenght\b(?=\s*=)/gi;
+      let typoMatch: RegExpExecArray | null;
+      while ((typoMatch = typoRegex.exec(attrsRaw)) !== null) {
+        const start = attrsStart + typoMatch.index;
+        const end = start + typoMatch[0].length;
+        issues.push({
+          ruleId: "typo-maxlenght-attribute",
+          range: new vscode.Range(document.positionAt(start), document.positionAt(end)),
+          message: `Attribute 'MaxLenght' is a typo. Did you mean 'MaxLength'?`
         });
       }
     }

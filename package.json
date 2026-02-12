@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -147,6 +147,7 @@
             "duplicate-section-ident": "warning",
             "unknown-using-component": "error",
             "unknown-using-section": "warning",
+            "typo-maxlenght-attribute": "warning",
             "sql-convention-equals-spacing": "warning",
             "ident-convention-button-postfix": "warning",
             "ident-convention-group-button-postfix": "warning",

@@ -23,6 +23,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - `duplicate-section-ident`
   - `unknown-using-component`
   - `unknown-using-section`
+  - `typo-maxlenght-attribute` (`MaxLenght` typo in `Control`/`Parameter`; expected `MaxLength`)
   - `sql-convention-equals-spacing` (`=` in `SQL`/`Command` must have spaces on both sides)
   - `FormControl xsi:type="ShareCodeControl"` is validated against `WorkFlow/ControlShareCodes/ControlShareCode` (local + injected via `Using`)
 - Per-rule severity config (`sfpXmlLinter.rules`) with values: `off`, `warning`, `error`

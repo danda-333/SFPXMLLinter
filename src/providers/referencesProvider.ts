@@ -3,6 +3,8 @@ import { WorkspaceIndex, IndexedComponent, IndexedForm } from "../indexer/types"
 import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
+import { getSystemMetadata } from "../config/systemMetadata";
+import { getEquivalentFormIdentKeys, resolveSystemTableName } from "../utils/formIdents";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type TargetKind =
@@ -46,12 +48,15 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     }
 
     if (target.kind === "form") {
-      for (const location of index.formIdentReferenceLocations.get(target.ident) ?? []) {
-        pushUniqueLocation(out, seen, location);
-      }
+      const metadata = getSystemMetadata();
+      for (const formIdentKey of getEquivalentFormIdentKeys(target.ident, metadata)) {
+        for (const location of index.formIdentReferenceLocations.get(formIdentKey) ?? []) {
+          pushUniqueLocation(out, seen, location);
+        }
 
-      for (const location of index.mappingFormIdentReferenceLocations.get(target.ident) ?? []) {
-        pushUniqueLocation(out, seen, location);
+        for (const location of index.mappingFormIdentReferenceLocations.get(formIdentKey) ?? []) {
+          pushUniqueLocation(out, seen, location);
+        }
       }
 
       return out;
@@ -139,16 +144,24 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       }
 
       const form = index.formsByIdent.get(ref.formIdent);
-      if (!form) {
-        continue;
+      if (form) {
+        return {
+          formIdent: form.ident,
+          ident: form.ident,
+          kind: "form",
+          declaration: form.formIdentLocation
+        };
       }
 
-      return {
-        formIdent: form.ident,
-        ident: form.ident,
-        kind: "form",
-        declaration: form.formIdentLocation
-      };
+      const systemTable = resolveSystemTableName(ref.formIdent, getSystemMetadata());
+      if (systemTable) {
+        return {
+          formIdent: systemTable,
+          ident: ref.formIdent,
+          kind: "form",
+          declaration: new vscode.Location(document.uri, ref.range)
+        };
+      }
     }
 
     for (const ref of facts.mappingFormIdentReferences) {
@@ -157,16 +170,24 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       }
 
       const form = index.formsByIdent.get(ref.formIdent);
-      if (!form) {
-        continue;
+      if (form) {
+        return {
+          formIdent: form.ident,
+          ident: form.ident,
+          kind: "form",
+          declaration: form.formIdentLocation
+        };
       }
 
-      return {
-        formIdent: form.ident,
-        ident: form.ident,
-        kind: "form",
-        declaration: form.formIdentLocation
-      };
+      const systemTable = resolveSystemTableName(ref.formIdent, getSystemMetadata());
+      if (systemTable) {
+        return {
+          formIdent: systemTable,
+          ident: ref.formIdent,
+          kind: "form",
+          declaration: new vscode.Location(document.uri, ref.range)
+        };
+      }
     }
 
     for (const usingRef of facts.usingReferences) {

@@ -9,6 +9,7 @@ import { getSystemMetadata } from "../config/systemMetadata";
 import { collectTemplateAvailableControlIdents } from "../utils/templateControls";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 import { maskXmlComments } from "../utils/xmlComments";
+import { getAllFormIdentCandidates, isKnownFormIdent } from "../utils/formIdents";
 
 export interface RuleDiagnostic {
   ruleId: string;
@@ -112,8 +113,10 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
+    const metadata = getSystemMetadata();
+    const candidates = getAllFormIdentCandidates(index, metadata);
     for (const ref of facts.formIdentReferences) {
-      if (index.formsByIdent.has(ref.formIdent)) {
+      if (isKnownFormIdent(ref.formIdent, index, metadata)) {
         continue;
       }
 
@@ -123,7 +126,7 @@ export class DiagnosticsEngine {
         message: withDidYouMean(
           `Referenced FormIdent '${ref.formIdent}' was not found in indexed forms.`,
           ref.formIdent,
-          index.formsByIdent.keys()
+          candidates
         )
       });
     }
@@ -274,8 +277,10 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
+    const metadata = getSystemMetadata();
+    const candidates = getAllFormIdentCandidates(index, metadata);
     for (const ref of facts.mappingFormIdentReferences) {
-      if (index.formsByIdent.has(ref.formIdent)) {
+      if (isKnownFormIdent(ref.formIdent, index, metadata)) {
         continue;
       }
 
@@ -285,7 +290,7 @@ export class DiagnosticsEngine {
         message: withDidYouMean(
           `MappingFormIdent '${ref.formIdent}' was not found in indexed forms.`,
           ref.formIdent,
-          index.formsByIdent.keys()
+          candidates
         )
       });
     }
@@ -483,8 +488,12 @@ export class DiagnosticsEngine {
         });
       }
 
+      const normalizedForeignKey = isLookupMulti
+        ? trimTrailingPluralS(parsed.foreignKey)
+        : parsed.foreignKey;
+
       if (parsed.targetKind === "system") {
-        if (!metadata.systemTableAllowedForeignKeys.has(parsed.foreignKey)) {
+        if (!metadata.systemTableAllowedForeignKeys.has(normalizedForeignKey)) {
           issues.push({
             ruleId: "ident-convention-lookup-control",
             range: control.range,
@@ -499,10 +508,10 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      const fk = parsed.foreignKey;
+      const fk = normalizedForeignKey;
       const isKnownControl = targetForm.controls.has(fk);
       const isDefaultColumn = metadata.defaultFormColumns.has(fk);
-      const isPreferredSuffix = metadata.preferredForeignKeySuffixes.some((suffix) => endsWithExact(parsed.foreignKey, suffix));
+      const isPreferredSuffix = metadata.preferredForeignKeySuffixes.some((suffix) => endsWithExact(fk, suffix));
       if (!isKnownControl && !isDefaultColumn && !isPreferredSuffix) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
@@ -716,6 +725,14 @@ function parseLookupControlIdent(
     targetKind: best.targetKind,
     foreignKey: best.foreignKey
   };
+}
+
+function trimTrailingPluralS(value: string): string {
+  if (!value.toLowerCase().endsWith("s")) {
+    return value;
+  }
+
+  return value.slice(0, -1);
 }
 
 function withDidYouMean(message: string, typed: string | undefined, candidates: Iterable<string>): string {

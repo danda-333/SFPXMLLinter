@@ -5,6 +5,8 @@ import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots, normalizeComponentKey } from "../utils/paths";
 import { collectTemplateAvailableControlIdents } from "../utils/templateControls";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
+import { getSystemMetadata } from "../config/systemMetadata";
+import { getAllFormIdentCandidates } from "../utils/formIdents";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 
@@ -75,7 +77,9 @@ const ATTRIBUTES_BY_TAG: Record<string, string[]> = {
   ,
   controllabel: ["ControlID"],
   htmllabel: ["ControlID"],
-  controlplaceholder: ["ControlID"]
+  controlplaceholder: ["ControlID"],
+  parameter: ["xsi:type", "Ident", "DataType", "Value", "ConstantType", "LikeType", "MaxLength", "SetDataType"],
+  "dsp:parameter": ["xsi:type", "Ident", "DataType", "Value", "ConstantType", "LikeType", "MaxLength", "SetDataType"]
 };
 
 const CONTROL_TYPES = [
@@ -128,6 +132,14 @@ const DATA_TYPE_CHOICE_LOOKUP_MULTI = "StringList,VarCharList,NumberList,SmallNu
 const INSERT_MODES = ["append", "prepend", "before", "after", "placeholder"];
 const COLOR_CSS = ["danger", "warning", "primary", "info", "success", "dark"];
 const ACTION_START_TYPES = ["BeforeValidation", "AfterValidation", "AfterSave", "AfterPermission"];
+const PARAMETER_TYPES = ["dsp:VariableParameter", "dsp:ValueParameter"];
+const PARAMETER_CONSTANT_TYPES = ["UserID", "UserLanguageID", "UICultureCode"];
+const SQL_CONSTANT_PARAMETERS: Array<{ ident: string; dataType: string; constantType: string }> = [
+  { ident: "UserID", dataType: "Number", constantType: "UserID" },
+  { ident: "UserLanguageID", dataType: "Number", constantType: "UserLanguageID" },
+  { ident: "UICultureCode", dataType: "String", constantType: "UICultureCode" }
+];
+const SUPPRESS_SQL_SUGGEST_COMMAND = "sfpXmlLinter.suppressNextSqlSuggest";
 
 interface TagContext {
   inTag: boolean;
@@ -137,21 +149,36 @@ interface TagContext {
   currentTagFragment: string;
   currentAttributeNames: Set<string>;
   valueAttribute?: string;
+  valuePrefix?: string;
   usingComponentInTag?: string;
   mappingFormIdentInScope?: string;
   formControlTypeInTag?: string;
 }
 
+interface SqlCompletionResult {
+  inSqlContext: boolean;
+  items: vscode.CompletionItem[];
+}
+
 export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
   constructor(private readonly getIndex: IndexAccessor) {}
 
-  async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.CompletionItem[] | undefined> {
+  async provideCompletionItems(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): Promise<vscode.CompletionItem[] | vscode.CompletionList | undefined> {
     if (!documentInConfiguredRoots(document)) {
       return undefined;
     }
 
     const ctx = computeTagContext(document, position);
     if (!ctx.inTag) {
+      const sqlParameterCompletion = this.completeSqlParameterIdents(document, position);
+      if (sqlParameterCompletion.inSqlContext) {
+        // Mark as incomplete so VS Code asks again on each keystroke inside SQL/Command.
+        return new vscode.CompletionList(sqlParameterCompletion.items, true);
+      }
+
       const requiredActionIdents = this.completeRequiredActionIdents(document, position);
       if (requiredActionIdents.length > 0) {
         return requiredActionIdents;
@@ -165,7 +192,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     if (ctx.valueAttribute) {
-      return this.completeAttributeValues(document, ctx);
+      return this.completeAttributeValues(document, position, ctx);
     }
 
     if (ctx.currentTag) {
@@ -173,6 +200,25 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     return undefined;
+  }
+
+  private completeSqlParameterIdents(document: vscode.TextDocument, position: vscode.Position): SqlCompletionResult {
+    const context = computeSqlParameterContext(document, position);
+    if (!context) {
+      return { items: [], inSqlContext: false };
+    }
+
+    const items = asValueItems(context.identifiers, vscode.CompletionItemKind.Variable);
+    for (const item of items) {
+      item.range = context.replaceRange;
+      item.detail = "SFP SQL parameter";
+      const value = typeof item.insertText === "string" ? item.insertText : item.label.toString();
+      item.filterText = buildCaseInsensitiveSqlFilterText(value);
+    }
+
+    items.push(...appendSqlParameterItems(document, context));
+
+    return { items, inSqlContext: true };
   }
 
   private completeRequiredActionIdents(document: vscode.TextDocument, position: vscode.Position): vscode.CompletionItem[] {
@@ -256,7 +302,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     return items;
   }
 
-  private async completeAttributeValues(document: vscode.TextDocument, ctx: TagContext): Promise<vscode.CompletionItem[]> {
+  private async completeAttributeValues(document: vscode.TextDocument, position: vscode.Position, ctx: TagContext): Promise<vscode.CompletionItem[]> {
     const facts = parseDocumentFacts(document);
     const index = this.getIndex(document.uri);
     const tag = (ctx.currentTag ?? "").toLowerCase();
@@ -267,6 +313,10 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     if (attr === "xsi:type" || attr === "type") {
+      if (tag === "parameter" || tag === "dsp:parameter") {
+        return asValueItems(PARAMETER_TYPES, vscode.CompletionItemKind.EnumMember);
+      }
+
       if (tag === "control") {
         return asValueItems(CONTROL_TYPES, vscode.CompletionItemKind.EnumMember);
       }
@@ -293,6 +343,11 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
     if (attr === "actionstart") {
       return asValueItems(ACTION_START_TYPES, vscode.CompletionItemKind.EnumMember);
+    }
+
+    if (attr === "constanttype") {
+      const prefix = getActiveAttributeValuePrefixAtPosition(document, position, "ConstantType") ?? ctx.valuePrefix;
+      return parameterConstantTypeItems(prefix);
     }
 
     if (attr === "formident") {
@@ -816,6 +871,44 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       ];
     }
 
+    if (parentTag === "parameters") {
+      const variable = snippetItem(
+        "var variable parameter",
+        "VariableParameter",
+        `<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="$1" DataType="\${2|${DATA_TYPE_CHOICE_ALL}|}"$0 />`
+      );
+      const value = snippetItem(
+        "val value parameter",
+        "ValueParameter",
+        `<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="$1" DataType="\${2|${DATA_TYPE_CHOICE_ALL}|}" Value="$3"$0 />`
+      );
+      const constantUser = snippetItem(
+        "user usr const constant",
+        "Constant UserID",
+        `<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />$0`
+      );
+      constantUser.sortText = "0000_constant_userid";
+      constantUser.preselect = true;
+      const constantLanguage = snippetItem(
+        "lan language const constant",
+        "Constant LanguageID",
+        `<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />$0`
+      );
+      const constantCulture = snippetItem(
+        "culture ui const constant",
+        "Constant UICultureCode",
+        `<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UICultureCode" DataType="String" ConstantType="UICultureCode" />$0`
+      );
+
+      return [
+        variable,
+        value,
+        constantUser,
+        constantLanguage,
+        constantCulture
+      ];
+    }
+
     return [];
   }
 }
@@ -824,6 +917,34 @@ function asValueItems(values: string[], kind: vscode.CompletionItemKind): vscode
   return values.map((value) => {
     const item = new vscode.CompletionItem(value, kind);
     item.insertText = value;
+    return item;
+  });
+}
+
+function parameterConstantTypeItems(valuePrefix?: string): vscode.CompletionItem[] {
+  const typed = (valuePrefix ?? "").trim().toLowerCase();
+  const preferredOrder = ["UserID", "UserLanguageID", "UICultureCode"];
+  const values =
+    typed.startsWith("user") || typed.startsWith("usr")
+      ? ["UserID"]
+      : preferredOrder;
+
+  return values.map((value, index) => {
+    const item = new vscode.CompletionItem(value, vscode.CompletionItemKind.EnumMember);
+    item.insertText = value;
+    item.sortText = `${index.toString().padStart(3, "0")}_${value}`;
+    if (value === "UserID") {
+      // Prefer exact "user" typing to resolve to UserID first.
+      item.filterText = "user userid";
+    } else if (value === "UserLanguageID") {
+      // Search primarily by "lan"/"language", not by plain "user".
+      item.filterText = "lan language languageid";
+    } else {
+      item.filterText = "culture uiculturecode";
+    }
+    if (value === "UserID") {
+      item.preselect = true;
+    }
     return item;
   });
 }
@@ -845,9 +966,7 @@ function readPackageIdent(document: vscode.TextDocument): string {
 }
 
 function sortedFormIdents(index: WorkspaceIndex): string[] {
-  return [...index.formsByIdent.values()]
-    .map((v) => v.ident)
-    .sort((a, b) => a.localeCompare(b));
+  return getAllFormIdentCandidates(index, getSystemMetadata());
 }
 
 function sortedComponentKeys(index: WorkspaceIndex): string[] {
@@ -908,6 +1027,7 @@ function computeTagContext(document: vscode.TextDocument, position: vscode.Posit
 
   const partialValueMatch = /([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)|'([^']*))$/.exec(fragment);
   const valueAttribute = partialValueMatch ? partialValueMatch[1].toLowerCase() : undefined;
+  const valuePrefix = partialValueMatch ? (partialValueMatch[3] ?? partialValueMatch[4] ?? "") : undefined;
 
   const parentTag = getParentTag(before.slice(0, lastLt));
 
@@ -923,6 +1043,7 @@ function computeTagContext(document: vscode.TextDocument, position: vscode.Posit
     currentTagFragment: fragment,
     currentAttributeNames,
     valueAttribute,
+    valuePrefix,
     usingComponentInTag,
     mappingFormIdentInScope,
     formControlTypeInTag
@@ -995,6 +1116,35 @@ function getOpenButtonMappingFormIdent(beforeCurrentTag: string): string | undef
   }
 
   return stack.length > 0 ? stack[stack.length - 1] : undefined;
+}
+
+function getActiveAttributeValuePrefixAtPosition(
+  document: vscode.TextDocument,
+  position: vscode.Position,
+  attributeName: string
+): string | undefined {
+  const text = document.getText();
+  const offset = document.offsetAt(position);
+  const before = text.slice(0, offset);
+  const lastLt = before.lastIndexOf("<");
+  const lastGt = before.lastIndexOf(">");
+  if (lastLt < 0 || lastLt < lastGt) {
+    return undefined;
+  }
+
+  const fragment = before.slice(lastLt);
+  if (fragment.startsWith("</")) {
+    return undefined;
+  }
+
+  const escaped = attributeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`${escaped}\\s*=\\s*(\"([^\"]*)|'([^']*))$`, "i");
+  const match = regex.exec(fragment);
+  if (!match) {
+    return undefined;
+  }
+
+  return (match[2] ?? match[3] ?? "").trim();
 }
 
 function collectWorkflowControlShareCodeIdents(
@@ -1100,6 +1250,8 @@ function computeRequiredActionStringContext(
 interface OpenTagStackEntry {
   name: string;
   attrs: string;
+  openStart: number;
+  openEnd: number;
 }
 
 function computeOpenTagStack(input: string): OpenTagStackEntry[] {
@@ -1119,11 +1271,427 @@ function computeOpenTagStack(input: string): OpenTagStackEntry[] {
     }
 
     if (!selfClosing) {
-      stack.push({ name, attrs });
+      const openStart = match.index;
+      const openEnd = openStart + match[0].length;
+      stack.push({ name, attrs, openStart, openEnd });
     }
   }
 
   return stack;
+}
+
+interface SqlParameterCompletionContext {
+  replaceRange: vscode.Range;
+  identifiers: string[];
+  typedIdent: string;
+  typedValueLiteral?: string;
+  sqlRegion: XmlTagBlockRegion;
+  parametersRegion?: XmlTagBlockRegion;
+}
+
+interface XmlTagBlockRegion {
+  name: string;
+  openStart: number;
+  openEnd: number;
+  closeStart: number;
+  closeEnd: number;
+}
+
+function computeSqlParameterContext(
+  document: vscode.TextDocument,
+  position: vscode.Position
+): SqlParameterCompletionContext | undefined {
+  const text = document.getText();
+  const offset = document.offsetAt(position);
+  const sqlRegion = findEnclosingSqlRegion(text, offset);
+  if (!sqlRegion) {
+    return undefined;
+  }
+
+  const beforeCursor = text.slice(sqlRegion.openEnd, offset);
+  const parsedExpr = parseSqlParameterExpression(beforeCursor);
+  if (!parsedExpr) {
+    return undefined;
+  }
+
+  const typedPart = parsedExpr.ident;
+  const typedValueLiteral = parsedExpr.valueLiteral;
+  const wholeExpr = parsedExpr.wholeExpression;
+  const replaceStart = offset - (wholeExpr.length - 1);
+
+  const stack = computeOpenTagStack(text.slice(0, sqlRegion.openStart));
+  const parent = findNearestNonSqlParent(stack);
+  if (!parent) {
+    return undefined;
+  }
+
+  const parentCloseStart = findClosingTagStart(text, parent.name, parent.openEnd);
+  if (parentCloseStart === undefined || parentCloseStart <= parent.openEnd) {
+    return undefined;
+  }
+
+  const parentContent = text.slice(parent.openEnd, parentCloseStart);
+  const parametersRegion = findParametersRegion(text, parent.openEnd, parentCloseStart, sqlRegion.closeEnd);
+  const identifiers = parametersRegion
+    ? collectParameterIdents(text.slice(parametersRegion.openEnd, parametersRegion.closeStart))
+    : collectParameterIdents(parentContent);
+
+  return {
+    replaceRange: new vscode.Range(document.positionAt(replaceStart), document.positionAt(offset)),
+    identifiers,
+    typedIdent: typedPart,
+    typedValueLiteral,
+    sqlRegion,
+    parametersRegion
+  };
+}
+
+function parseSqlParameterExpression(beforeCursor: string): { ident: string; valueLiteral?: string; wholeExpression: string } | undefined {
+  const atIndex = beforeCursor.lastIndexOf("@");
+  if (atIndex < 0) {
+    return undefined;
+  }
+
+  const tail = beforeCursor.slice(atIndex);
+  const match = /^@([A-Za-z_][\w]*)(?:==([^\s<>"']*))?$/.exec(tail);
+  if (!match) {
+    return undefined;
+  }
+
+  const ident = match[1] ?? "";
+  const valueLiteral = match[2] ?? undefined;
+  if (!ident) {
+    return undefined;
+  }
+
+  return {
+    ident,
+    valueLiteral,
+    wholeExpression: match[0]
+  };
+}
+
+function appendSqlParameterItems(
+  document: vscode.TextDocument,
+  context: SqlParameterCompletionContext
+): vscode.CompletionItem[] {
+  const items: vscode.CompletionItem[] = [];
+  const existing = new Set(context.identifiers);
+  const typed = context.typedIdent.trim();
+
+  if (isParameterIdent(typed) && !existing.has(typed)) {
+    const variableItem = new vscode.CompletionItem(`@${typed} append as VariableParameter`, vscode.CompletionItemKind.Snippet);
+    variableItem.insertText = typed;
+    variableItem.range = context.replaceRange;
+    variableItem.filterText = buildSqlAppendFilterText(typed, context.typedValueLiteral);
+    variableItem.detail = "Append to <Parameters>";
+    variableItem.sortText = `z1_${typed}`;
+    variableItem.command = { command: SUPPRESS_SQL_SUGGEST_COMMAND, title: "Suppress SQL suggest once" };
+    const variableEdit = createSqlParameterAppendEdit(document, context, buildVariableParameterLine(typed));
+    if (variableEdit) {
+      variableItem.additionalTextEdits = [variableEdit];
+      items.push(variableItem);
+    }
+
+    const parsedValue = parseValueLiteral(context.typedValueLiteral);
+    const valuePreview =
+      context.typedValueLiteral !== undefined
+        ? ` Value="${escapeXmlAttribute(parsedValue.value)}" (${parsedValue.dataType})`
+        : "";
+    const valueItem = new vscode.CompletionItem(`@${typed} append as ValueParameter${valuePreview}`, vscode.CompletionItemKind.Snippet);
+    valueItem.insertText = typed;
+    valueItem.range = context.replaceRange;
+    valueItem.filterText = buildSqlAppendFilterText(typed, context.typedValueLiteral);
+    valueItem.detail = "Append to <Parameters>";
+    valueItem.sortText = `z2_${typed}`;
+    valueItem.command = { command: SUPPRESS_SQL_SUGGEST_COMMAND, title: "Suppress SQL suggest once" };
+    const valueEdit = createSqlParameterAppendEdit(
+      document,
+      context,
+      buildValueParameterLine(typed, parsedValue.value, parsedValue.dataType)
+    );
+    if (valueEdit) {
+      valueItem.additionalTextEdits = [valueEdit];
+      items.push(valueItem);
+    }
+  }
+
+  const typedLower = typed.toLowerCase();
+  for (const constant of SQL_CONSTANT_PARAMETERS) {
+    if (existing.has(constant.ident)) {
+      continue;
+    }
+
+    if (typedLower.length > 0 && !constant.ident.toLowerCase().startsWith(typedLower)) {
+      continue;
+    }
+
+    const item = new vscode.CompletionItem(`@${constant.ident} append as ConstantType`, vscode.CompletionItemKind.Snippet);
+    item.insertText = constant.ident;
+    item.range = context.replaceRange;
+    item.filterText = buildSqlAppendFilterText(constant.ident, context.typedValueLiteral);
+    item.detail = "Append to <Parameters>";
+    item.sortText = `z0_${constant.ident}`;
+    item.command = { command: SUPPRESS_SQL_SUGGEST_COMMAND, title: "Suppress SQL suggest once" };
+    const edit = createSqlParameterAppendEdit(document, context, buildConstantParameterLine(constant.ident, constant.dataType, constant.constantType));
+    if (edit) {
+      item.additionalTextEdits = [edit];
+      items.push(item);
+    }
+  }
+
+  return items;
+}
+
+function findParametersRegion(
+  text: string,
+  parentOpenEnd: number,
+  parentCloseStart: number,
+  anchorOffset: number
+): XmlTagBlockRegion | undefined {
+  const segment = text.slice(parentOpenEnd, parentCloseStart);
+  const openRegex = /<\s*((?:[A-Za-z_][\w.-]*:)?Parameters)\b[^>]*>/gi;
+  const regions: XmlTagBlockRegion[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = openRegex.exec(segment)) !== null) {
+    const name = match[1];
+    const openStart = parentOpenEnd + match.index;
+    const openEnd = openStart + match[0].length;
+    const closeStart = findClosingTagStart(text, name, openEnd);
+    if (closeStart === undefined || closeStart > parentCloseStart) {
+      continue;
+    }
+
+    const closeTagRegex = new RegExp(`<\\s*\\/\\s*${escapeRegex(name)}\\s*>`, "i");
+    const closeMatch = closeTagRegex.exec(text.slice(closeStart));
+    if (!closeMatch) {
+      continue;
+    }
+
+    const closeEnd = closeStart + closeMatch[0].length;
+    regions.push({ name, openStart, openEnd, closeStart, closeEnd });
+  }
+
+  if (regions.length === 0) {
+    return undefined;
+  }
+
+  const afterAnchor = regions
+    .filter((r) => r.openStart >= anchorOffset)
+    .sort((a, b) => a.openStart - b.openStart);
+  if (afterAnchor.length > 0) {
+    return afterAnchor[0];
+  }
+
+  return regions.sort((a, b) => b.openStart - a.openStart)[0];
+}
+
+function createSqlParameterAppendEdit(
+  document: vscode.TextDocument,
+  context: SqlParameterCompletionContext,
+  parameterLine: string
+): vscode.TextEdit | undefined {
+  const eol = document.eol === vscode.EndOfLine.CRLF ? "\r\n" : "\n";
+
+  if (context.parametersRegion) {
+    const closePos = document.positionAt(context.parametersRegion.closeStart);
+    const insertPos = document.lineAt(closePos.line).range.start;
+    const parameterIndent = detectParameterIndent(document, context.parametersRegion);
+    return vscode.TextEdit.insert(insertPos, `${parameterIndent}${parameterLine}${eol}`);
+  }
+
+  const insertPos = document.positionAt(context.sqlRegion.closeEnd);
+  const parentIndent = lineIndentAtOffset(document, context.sqlRegion.openStart);
+  const indentUnit = detectIndentUnit(document);
+  const parameterIndent = `${parentIndent}${indentUnit}`;
+  const newBlock =
+    `${eol}${parentIndent}<Parameters>${eol}` +
+    `${parameterIndent}${parameterLine}${eol}` +
+    `${parentIndent}</Parameters>`;
+  return vscode.TextEdit.insert(insertPos, newBlock);
+}
+
+function detectParameterIndent(document: vscode.TextDocument, region: XmlTagBlockRegion): string {
+  const inside = document.getText(new vscode.Range(document.positionAt(region.openEnd), document.positionAt(region.closeStart)));
+  const existingMatch = /(?:^|\r?\n)([ \t]*)<\s*(?:[A-Za-z_][\w.-]*:)?Parameter\b/m.exec(inside);
+  if (existingMatch) {
+    return existingMatch[1];
+  }
+
+  const closingIndent = lineIndentAtOffset(document, region.closeStart);
+  return `${closingIndent}${detectIndentUnit(document)}`;
+}
+
+function lineIndentAtOffset(document: vscode.TextDocument, offset: number): string {
+  const position = document.positionAt(offset);
+  const line = document.lineAt(position.line).text;
+  const match = /^([ \t]*)/.exec(line);
+  return match?.[1] ?? "";
+}
+
+function detectIndentUnit(document: vscode.TextDocument): string {
+  const editor =
+    vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === document.uri.toString()) ??
+    vscode.window.activeTextEditor;
+  const options = editor?.options;
+  if (options?.insertSpaces) {
+    const size = typeof options.tabSize === "number" ? options.tabSize : 2;
+    return " ".repeat(Math.max(1, size));
+  }
+
+  return "\t";
+}
+
+function isParameterIdent(value: string): boolean {
+  return /^[A-Za-z_][\w]*$/.test(value);
+}
+
+function buildVariableParameterLine(ident: string): string {
+  return `<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="${ident}" DataType="String" />`;
+}
+
+function buildConstantParameterLine(ident: string, dataType: string, constantType: string): string {
+  return `<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="${ident}" DataType="${dataType}" ConstantType="${constantType}" />`;
+}
+
+function buildValueParameterLine(ident: string, value: string, dataType: "Number" | "String"): string {
+  return `<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="${ident}" DataType="${dataType}" Value="${escapeXmlAttribute(value)}" />`;
+}
+
+function parseValueLiteral(literal: string | undefined): { value: string; dataType: "Number" | "String" } {
+  const raw = (literal ?? "").trim();
+  if (!raw) {
+    return { value: "", dataType: "String" };
+  }
+
+  if (/^-?\d+(?:[.,]\d+)?$/.test(raw)) {
+    return { value: raw.replace(",", "."), dataType: "Number" };
+  }
+
+  return { value: raw, dataType: "String" };
+}
+
+function escapeXmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function buildSqlAppendFilterText(ident: string, valueLiteral?: string): string {
+  const base = `@${ident}`;
+  const baseLower = `@${ident.toLowerCase()}`;
+  const plain = ident;
+  const plainLower = ident.toLowerCase();
+  const value = (valueLiteral ?? "").trim();
+  if (!value) {
+    return `${base} ${baseLower} ${plain} ${plainLower}`;
+  }
+
+  return `${base} ${baseLower} ${plain} ${plainLower} ${base}==${value} ${baseLower}==${value.toLowerCase()} ${plain}==${value} ${plainLower}==${value.toLowerCase()} ${value} ${value.toLowerCase()}`;
+}
+
+function buildCaseInsensitiveSqlFilterText(ident: string): string {
+  const base = `@${ident}`;
+  return `${base} @${ident.toLowerCase()} ${ident} ${ident.toLowerCase()}`;
+}
+
+function findEnclosingSqlRegion(text: string, offset: number): XmlTagBlockRegion | undefined {
+  const openRegex = /<\s*((?:[A-Za-z_][\w.-]*:)?(?:SQL|Command))\b[^>]*>/gi;
+  let best: XmlTagBlockRegion | undefined;
+  let match: RegExpExecArray | null;
+  while ((match = openRegex.exec(text)) !== null) {
+    const name = match[1];
+    const openStart = match.index;
+    const openEnd = openStart + match[0].length;
+    if (offset < openEnd) {
+      continue;
+    }
+
+    const closingRegex = new RegExp(`<\\s*\\/\\s*${escapeRegex(name)}\\s*>`, "gi");
+    closingRegex.lastIndex = openEnd;
+    const close = closingRegex.exec(text);
+    if (!close) {
+      continue;
+    }
+
+    const closeStart = close.index;
+    const closeEnd = closeStart + close[0].length;
+    if (offset > closeStart) {
+      continue;
+    }
+
+    if (!best || openStart > best.openStart) {
+      best = { name, openStart, openEnd, closeStart, closeEnd };
+    }
+  }
+
+  return best;
+}
+
+function findNearestNonSqlParent(stack: OpenTagStackEntry[]): OpenTagStackEntry | undefined {
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const name = stripPrefix(stack[i].name).toLowerCase();
+    if (name === "sql" || name === "command") {
+      continue;
+    }
+
+    return stack[i];
+  }
+
+  return undefined;
+}
+
+function findClosingTagStart(text: string, tagName: string, searchFrom: number): number | undefined {
+  const regex = new RegExp(`<\\s*(\\/?)\\s*${escapeRegex(tagName)}\\b([^>]*)>`, "gi");
+  regex.lastIndex = searchFrom;
+
+  let depth = 1;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const isClosing = match[1] === "/";
+    const attrs = match[2] ?? "";
+    const selfClosing = !isClosing && attrs.trim().endsWith("/");
+
+    if (selfClosing) {
+      continue;
+    }
+
+    if (isClosing) {
+      depth--;
+      if (depth === 0) {
+        return match.index;
+      }
+    } else {
+      depth++;
+    }
+  }
+
+  return undefined;
+}
+
+function collectParameterIdents(xmlSegment: string): string[] {
+  const out = new Set<string>();
+  const regex = /<\s*(?:[A-Za-z_][\w.-]*:)?Parameter\b([^>]*)\/?>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(xmlSegment)) !== null) {
+    const ident = extractAttributeValue(match[1] ?? "", "Ident");
+    if (ident) {
+      out.add(ident);
+    }
+  }
+
+  return [...out].sort((a, b) => a.localeCompare(b));
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function stripPrefix(name: string): string {
+  const idx = name.indexOf(":");
+  return idx >= 0 ? name.slice(idx + 1) : name;
 }
 
 function popFromOpenTagStack(stack: OpenTagStackEntry[], closingName: string): void {

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.0.3
+
+- FormIdent and system tables:
+  - `FormIdent`/`MappingFormIdent` now accept system tables (`Account`) and schema-prefixed variants (`dbo.Account`).
+  - Form identifier suggestions now include system tables and `dbo.*` aliases.
+  - Reference search for form identifiers now handles equivalent system-table variants.
+- Ident convention fixes:
+  - Restored/fixed plural lookup handling for `ListBoxControl` and `DualListBoxControl` idents.
+- Parameters and snippets:
+  - Added production snippets for `VariableParameter`, `ValueParameter`, and common constants (`UserID`, `UserLanguageID`, `UICultureCode`).
+  - Improved snippet ordering and matching for parameter workflows.
+- SQL parameter IntelliSense:
+  - `@` suggestions in `SQL`/`Command` now resolve parameters from the local parent scope.
+  - New append actions from SQL suggestions:
+    - `append as VariableParameter`
+    - `append as ValueParameter`
+    - `append as ConstantType`
+  - Supports inline value syntax (`@Param==Value`) for fast ValueParameter creation with inferred `DataType` (`Number`/`String`).
+  - Auto-create `<Parameters>` block when missing and preserve indentation/formatting when appending.
+  - SQL suggestions are now case-insensitive and updated continuously while typing.
+  - Auto-triggered SQL suggestions only activate inside active `@...` tokens (stops after whitespace).
+  - Suppressed immediate re-open of suggestions after confirming append actions.
+
 ## 0.0.2
 
 - Major indexing and responsiveness improvements:

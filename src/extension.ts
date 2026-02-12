@@ -44,6 +44,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const highPriorityValidationSet = new Set<string>();
   const lowPriorityValidationQueue: string[] = [];
   const lowPriorityValidationSet = new Set<string>();
+  let sqlSuggestTriggerTimer: NodeJS.Timeout | undefined;
+  let suppressSqlSuggestUntil = 0;
 
   context.subscriptions.push(diagnostics);
   context.subscriptions.push(buildOutput);
@@ -222,6 +224,50 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       lowPriorityValidationStartTimer = undefined;
       void runValidationWorker();
     }, delayMs);
+  }
+
+  function scheduleSqlSuggestOnTyping(event: vscode.TextDocumentChangeEvent): void {
+    if (Date.now() < suppressSqlSuggestUntil) {
+      return;
+    }
+
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.uri.toString() !== event.document.uri.toString()) {
+      return;
+    }
+
+    if (editor.document.languageId !== "xml") {
+      return;
+    }
+
+    if (event.contentChanges.length !== 1) {
+      return;
+    }
+
+    const change = event.contentChanges[0];
+    if (!change.text || /[\r\n]/.test(change.text)) {
+      return;
+    }
+
+    if (!/[@=A-Za-z0-9_]/.test(change.text)) {
+      return;
+    }
+
+    const startOffset = event.document.offsetAt(change.range.start);
+    const cursorOffset = startOffset + change.text.length;
+    const cursorPos = event.document.positionAt(cursorOffset);
+    if (!shouldAutoTriggerSqlSuggest(event.document, cursorPos)) {
+      return;
+    }
+
+    if (sqlSuggestTriggerTimer) {
+      clearTimeout(sqlSuggestTriggerTimer);
+    }
+
+    sqlSuggestTriggerTimer = setTimeout(() => {
+      sqlSuggestTriggerTimer = undefined;
+      void vscode.commands.executeCommand("editor.action.triggerSuggest");
+    }, 35);
   }
 
   async function validateUri(uri: vscode.Uri): Promise<void> {
@@ -633,6 +679,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
+      scheduleSqlSuggestOnTyping(event);
       pendingContentChangesSinceLastSave.add(event.document.uri.toString());
       validateDocument(event.document);
       if (isUserOpenDocument(event.document.uri)) {
@@ -736,7 +783,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       ":",
       "\"",
       "'",
-      "="
+      "=",
+      "@"
     ),
     vscode.languages.registerReferenceProvider({ language: "xml" }, new SfpXmlReferencesProvider((uri) => getIndexForUri(uri))),
     vscode.languages.registerDefinitionProvider({ language: "xml" }, new SfpXmlDefinitionProvider((uri) => getIndexForUri(uri))),
@@ -753,6 +801,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.suppressNextSqlSuggest", () => {
+      suppressSqlSuggestUntil = Date.now() + 600;
+    }),
     vscode.commands.registerCommand("sfpXmlLinter.buildXmlTemplates", async (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
       const folder = vscode.workspace.workspaceFolders?.[0];
       if (!folder) {
@@ -926,6 +977,86 @@ function maxReindexScope(current: "none" | "bootstrap" | "all", next: "bootstrap
 
 export function deactivate(): void {
   // No-op
+}
+
+function isInsideSqlOrCommandBlock(document: vscode.TextDocument, position: vscode.Position): boolean {
+  return getEnclosingSqlOrCommandRegion(document, position) !== undefined;
+}
+
+function shouldAutoTriggerSqlSuggest(document: vscode.TextDocument, position: vscode.Position): boolean {
+  const region = getEnclosingSqlOrCommandRegion(document, position);
+  if (!region) {
+    return false;
+  }
+
+  const text = document.getText();
+  const offset = document.offsetAt(position);
+  const beforeCursor = text.slice(region.openEnd, offset);
+  const lastAt = beforeCursor.lastIndexOf("@");
+  if (lastAt < 0) {
+    return false;
+  }
+
+  const tail = beforeCursor.slice(lastAt + 1);
+  if (!tail.length) {
+    return true;
+  }
+
+  if (/\s/.test(tail)) {
+    return false;
+  }
+
+  // Allow identifiers and optional inline value marker for @Ident==Value
+  return /^[A-Za-z_][\w]*(?:==[^\s<>"']*)?$/.test(tail);
+}
+
+function getEnclosingSqlOrCommandRegion(
+  document: vscode.TextDocument,
+  position: vscode.Position
+): { openEnd: number; closeStart: number } | undefined {
+  const text = document.getText();
+  const offset = document.offsetAt(position);
+  const openRegex = /<\s*(?:[A-Za-z_][\w.-]*:)?(SQL|Command)\b[^>]*>/gi;
+
+  let lastOpen: RegExpExecArray | undefined;
+  let match: RegExpExecArray | null;
+  while ((match = openRegex.exec(text)) !== null) {
+    if (match.index >= offset) {
+      break;
+    }
+
+    lastOpen = match;
+  }
+
+  if (!lastOpen) {
+    return undefined;
+  }
+
+  const openStart = lastOpen.index;
+  const openEnd = openStart + lastOpen[0].length;
+  if (offset < openEnd) {
+    return undefined;
+  }
+
+  const tagMatch = /<\s*(?:[A-Za-z_][\w.-]*:)?(SQL|Command)\b/i.exec(lastOpen[0]);
+  const tag = (tagMatch?.[1] ?? "").toLowerCase();
+  if (!tag) {
+    return undefined;
+  }
+
+  const closeRegex = new RegExp(`<\\s*\\/\\s*(?:[A-Za-z_][\\w.-]*:)?${tag}\\s*>`, "i");
+  const afterOpen = text.slice(openEnd);
+  const close = closeRegex.exec(afterOpen);
+  if (!close) {
+    return undefined;
+  }
+
+  const closeStart = openEnd + close.index;
+  if (offset > closeStart) {
+    return undefined;
+  }
+
+  return { openEnd, closeStart };
 }
 
 function getUserOpenUris(): vscode.Uri[] {

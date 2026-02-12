@@ -9,7 +9,8 @@ out/
 .vscode/
 
 # exclude example project
-SFPExampleProject/
+SFPExampleProject/**
 
 # misc
 *.log
+Docs/sfpls-v-1-0-1/**

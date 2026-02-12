@@ -18,9 +18,11 @@
       - `no-inline-text-normalize`
     - supports multiple rules in one directive (`@FormatRule:rule-a,rule-b`)
   - Built-in preserve-inner behavior for `SQL`, `SQLCommand`, and `HTMLTemplate` blocks.
+  - Built-in preserve-inner behavior extended to `XMLDescription`.
   - `Command` block is now fully auto-suppressed by default (raw passthrough).
   - Added formatter setting `sfpXmlLinter.formatter.maxConsecutiveBlankLines` (default `2`) to clamp long blank-line runs.
 - Added formatter fixture test suite (`tests/fixtures/formatter`) and runner (`npm run test:formatter`).
+- Added extended formatter regression fixtures (`22`-`27`), including real project examples from `SFPExampleProject`.
 
 ## 0.0.6
 

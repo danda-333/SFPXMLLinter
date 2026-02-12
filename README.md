@@ -82,7 +82,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - `<!-- @FormatRule:no-attr-normalize -->`
     - `<!-- @FormatRule:no-inline-text-normalize -->`
     - Multiple rules in one directive are supported (comma/space separated).
-  - Preserves inner content for `SQL`, `SQLCommand`, and `HTMLTemplate` (reindents leading whitespace only by default).
+  - Preserves inner content for `SQL`, `SQLCommand`, `HTMLTemplate`, and `XMLDescription` (reindents leading whitespace only by default).
   - `Command` is auto-suppressed (no formatting is applied by default unless `@FormatRule:format-inner` is used).
   - Consecutive blank lines are preserved but clamped by `sfpXmlLinter.formatter.maxConsecutiveBlankLines` (default `2`).
 

@@ -171,14 +171,14 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       return undefined;
     }
 
+    const sqlParameterCompletion = this.completeSqlParameterIdents(document, position);
+    if (sqlParameterCompletion.inSqlContext) {
+      // Mark as incomplete so VS Code asks again on each keystroke inside SQL/Command.
+      return new vscode.CompletionList(sqlParameterCompletion.items, true);
+    }
+
     const ctx = computeTagContext(document, position);
     if (!ctx.inTag) {
-      const sqlParameterCompletion = this.completeSqlParameterIdents(document, position);
-      if (sqlParameterCompletion.inSqlContext) {
-        // Mark as incomplete so VS Code asks again on each keystroke inside SQL/Command.
-        return new vscode.CompletionList(sqlParameterCompletion.items, true);
-      }
-
       const requiredActionIdents = this.completeRequiredActionIdents(document, position);
       if (requiredActionIdents.length > 0) {
         return requiredActionIdents;
@@ -1353,16 +1353,13 @@ function parseSqlParameterExpression(beforeCursor: string): { ident: string; val
   }
 
   const tail = beforeCursor.slice(atIndex);
-  const match = /^@([A-Za-z_][\w]*)(?:==([^\s<>"']*))?$/.exec(tail);
+  const match = /^@([A-Za-z_][\w]*)?(?:==([^\s<>"']*))?$/.exec(tail);
   if (!match) {
     return undefined;
   }
 
   const ident = match[1] ?? "";
   const valueLiteral = match[2] ?? undefined;
-  if (!ident) {
-    return undefined;
-  }
 
   return {
     ident,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.4
+
+- SQL IntelliSense stability and UX polish:
+  - Fixed SQL suggestions inside `<![CDATA[ ... ]]>` blocks.
+  - Improved live suggestions for inline value syntax (`@Param==Value`) while typing.
+  - Fixed suggestion ranking/filtering edge cases for lowercase parameter typing.
+  - Prevented repeated auto-popup after confirming SQL append completions.
+  - Limited SQL auto-trigger behavior to active `@...` tokens only.
+
 ## 0.0.3
 
 - FormIdent and system tables:

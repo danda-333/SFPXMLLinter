@@ -1,0 +1,19 @@
+<A1>
+  <!-- formatter special elements -->
+  <HTMLTemplate>
+    <div>
+      <ControlLabel ControlID="Name" />
+    </div>
+  </HTMLTemplate>
+<Command>
+SELECT  9
+  FROM Z
+  </Command>
+  <SQL>
+    SELECT 1
+      FROM X
+  </SQL>
+  <Values>
+    <string>def</string>
+  </Values>
+</A1>

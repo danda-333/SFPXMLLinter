@@ -1,0 +1,12 @@
+<A1>
+				<SQL><![CDATA[ 
+						SELECT
+							gro.ID
+							,gro.[Name]
+						FROM dbo.[Group] AS gro
+						WHERE
+							--gro.[State] = @GroupActiveState
+							AND gro.[Name] LIKE @ApproverGroupID
+						/*ORDER BY gro.[Name] ASC*/
+				]]></SQL>
+</A1>

@@ -1,0 +1,6 @@
+<A1>
+  <SQLCommand>
+@A==1
+    SELECT @A
+  </SQLCommand>
+</A1>

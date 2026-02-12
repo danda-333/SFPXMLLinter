@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_FolderTreeView" LibraryType="View" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		View: Interface pro FolderTree
+	]]></XMLDescription>
+	<Description>
+		
+	</Description>
+	<Command>
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+
+		-- =============================================
+		-- Author:			Aleš Procházka
+		-- Create date: 2026-01-15
+		-- Description:	Interface pro FolderTree
+		-- =============================================
+
+		#MODIFIER# VIEW #NAME#
+		AS
+
+    SELECT
+      fot.Ident AS FolderTreeIdent
+      , fot.ID AS FolderTreeID
+      , fol.[Name] AS FolderName
+      , fol.[State] AS FolderState
+      , fol.FolderGroupSegmentIdent
+      , ISNULL(itsmCom.IsShareAmongAuthors,0) AS IsShareAmongAuthors
+    FROM dbo.FolderTree as fot
+    INNER JOIN dbo.Folder as fol on fol.ID = fot.FolderID
+    LEFT JOIN usr.ITSMCompany as itsmCom on itsmCom.ID = fol.TableID AND fol.[FormIdent] = 'ITSMCompany'
+
+	</Command>
+</Library>

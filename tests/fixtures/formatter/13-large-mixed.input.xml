@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<A1>
+  <B1 xsi:type="X"  a="1"/>
+  <B2>
+    <C1>
+      text
+    </C1>
+    <SQL>
+ SELECT 1
+  FROM T
+    </SQL>
+  </B2>
+</A1>

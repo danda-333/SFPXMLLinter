@@ -7,6 +7,7 @@ export interface SfpXmlLinterSettings {
   resourcesRoots: string[];
   hoverDocsFiles: string[];
   ruleSeverities: Record<string, RuleSeverity>;
+  formatterMaxConsecutiveBlankLines: number;
   templateBuilderMode: "auto" | "typescript" | "powershell";
   powershellScriptPath: string;
   autoBuildOnSave: boolean;
@@ -45,6 +46,7 @@ export function getSettings(): SfpXmlLinterSettings {
   const resourcesRoots = cfg.get<string[]>("resourcesRoots", ["Resources"]);
   const hoverDocsFiles = cfg.get<string[]>("hoverDocsFiles", ["Docs/hover-docs.json", "Docs/hover-docs.team.json"]);
   const rawRules = cfg.get<Record<string, unknown>>("rules", {});
+  const formatterMaxConsecutiveBlankLines = Math.max(0, cfg.get<number>("formatter.maxConsecutiveBlankLines", 2));
 
   const ruleSeverities: Record<string, RuleSeverity> = { ...DEFAULT_RULES };
   for (const [ruleId, value] of Object.entries(rawRules)) {
@@ -66,6 +68,7 @@ export function getSettings(): SfpXmlLinterSettings {
     resourcesRoots,
     hoverDocsFiles,
     ruleSeverities,
+    formatterMaxConsecutiveBlankLines,
     templateBuilderMode,
     powershellScriptPath,
     autoBuildOnSave,

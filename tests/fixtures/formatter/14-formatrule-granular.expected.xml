@@ -1,0 +1,8 @@
+<A1>
+  <!-- @FormatRule:no-type-first,no-inline-text-normalize -->
+  <B1 id="1" xsi:type="X">
+    A   B
+  </B1>
+  <!-- @FormatRule:no-attr-normalize -->
+  <B2   id = "2"   xsi:type = "Y"   />
+</A1>

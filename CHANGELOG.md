@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.0.7
+
+- New tolerant XML formatter implementation (without legacy formatter parser dependency):
+  - Added commands:
+    - `SFP XML Linter: Format Document (Tolerant)`
+    - `SFP XML Linter: Format Selection (Tolerant)`
+  - Recovery-oriented parsing for invalid XML nesting, with stable fallback output.
+  - Default attribute normalization and `type`/`xsi:type` first ordering.
+  - `@FormatRule` support:
+    - `disable` (skip formatting for next nearest node)
+    - `preserve-inner` (preserve inner content formatting)
+    - granular toggles:
+      - `format-inner`
+      - `no-type-first`
+      - `no-attr-normalize`
+      - `no-inline-text-normalize`
+    - supports multiple rules in one directive (`@FormatRule:rule-a,rule-b`)
+  - Built-in preserve-inner behavior for `SQL`, `SQLCommand`, and `HTMLTemplate` blocks.
+  - `Command` block is now fully auto-suppressed by default (raw passthrough).
+  - Added formatter setting `sfpXmlLinter.formatter.maxConsecutiveBlankLines` (default `2`) to clamp long blank-line runs.
+- Added formatter fixture test suite (`tests/fixtures/formatter`) and runner (`npm run test:formatter`).
+
 ## 0.0.6
 
 - Snippet consistency fixes:

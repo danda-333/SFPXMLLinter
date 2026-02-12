@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+  <Section Root="Form" Name="SLACriteriaControls" TargetXPath="//Form/Buttons" Insert="after">
+    <SLACriteriaControls>
+
+      <!-- <Control xsi:type="DropDownListControl" Ident="ITSMPriorityIdent" DataType="Number" TitleResourceKey="ITSMPriorityIdent_ITSM">
+        <DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+          <Columns>
+            <Column Ident="Ident" DataBindType="Value" />
+            <Column Ident="TextValue" DataBindType="Title" />
+          </Columns>
+          <SQL>
+            SELECT dial.Guid, dial.TextValue
+            FROM usr.ITSMPriority AS dial
+            WHERE 
+              dial.LanguageID = @UserLanguageID
+              AND dial.[State] != @DeletedState
+            ORDER BY dial.OrderValue ASC
+          </SQL>
+          <Parameters>
+            <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+            <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+          </Parameters>
+        </DataBind>
+      </Control> -->
+
+      <!-- <Control xsi:type="DropDownListControl" Ident="ITSMScaleIdent" DataType="Number" TitleResourceKey="ITSMScaleIdent_ITSM">
+        <DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+          <Columns>
+            <Column Ident="Ident" DataBindType="Value" />
+            <Column Ident="TextValue" DataBindType="Title" />
+          </Columns>
+          <SQL>
+            SELECT dial.Guid, dial.TextValue
+            FROM usr.ITSMScale AS dial
+            WHERE 
+              dial.LanguageID = @UserLanguageID
+              AND dial.[State] != @DeletedState
+            ORDER BY dial.OrderValue ASC
+          </SQL>
+          <Parameters>
+            <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+            <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+          </Parameters>
+        </DataBind>
+      </Control> -->
+
+    </SLACriteriaControls>
+  </Section>
+
+</Component>

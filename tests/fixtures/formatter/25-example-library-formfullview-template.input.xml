@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_FormFullView" LibraryType="View" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		View: Interface pro všechny segmenty ITSM
+	]]></XMLDescription>
+	<Description>
+		
+	</Description>
+	<Command>
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- =============================================
+-- Author:			Aleš Procházka
+-- Create date: 2026-01-20
+-- Description:	Interface pro všechny segmenty ITSM
+-- =============================================
+
+#MODIFIER# VIEW #NAME#
+AS
+
+SELECT
+	itsmReq.ID AS SourceID
+	, 'ITSMRequest' AS SourceFormIdent
+	, itsmReq.ITSMKey AS ITSMKey
+	, itsmReq.[Subject]
+	, COALESCE(itsmReq.ITSMCategoryLevel5Ident, itsmReq.ITSMCategoryLevel4Ident, itsmReq.ITSMCategoryLevel3Ident, itsmReq.ITSMCategoryLevel2Ident, itsmReq.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMRequest as itsmReq
+WHERE
+	itsmReq.[State] != 0
+
+UNION ALL
+
+SELECT
+	itsmInc.ID AS SourceID
+	, 'ITSMIncident' AS SourceFormIdent
+	, itsmInc.ITSMKey AS ITSMKey
+	, itsmInc.[Subject]
+	, COALESCE(itsmInc.ITSMCategoryLevel5Ident, itsmInc.ITSMCategoryLevel4Ident, itsmInc.ITSMCategoryLevel3Ident, itsmInc.ITSMCategoryLevel2Ident, itsmInc.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMIncident as itsmInc
+WHERE
+	itsmInc.[State] != 0
+
+UNION ALL
+
+SELECT
+	itsmSupReq.ID AS SourceID
+	, 'ITSMSupplierRequest' AS SourceFormIdent
+	, itsmSupReq.ITSMKey AS ITSMKey
+	, itsmSupReq.[Subject]
+	, COALESCE(itsmSupReq.ITSMCategoryLevel5Ident, itsmSupReq.ITSMCategoryLevel4Ident, itsmSupReq.ITSMCategoryLevel3Ident, itsmSupReq.ITSMCategoryLevel2Ident, itsmSupReq.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMSupplierRequest as itsmSupReq
+WHERE
+	itsmSupReq.[State] != 0
+
+UNION ALL
+
+SELECT
+	itsmSecInc.ID AS SourceID
+	, 'ITSMSecurityIncident' AS SourceFormIdent
+	, itsmSecInc.ITSMKey AS ITSMKey
+	, itsmSecInc.[Subject]
+	, COALESCE(itsmSecInc.ITSMCategoryLevel5Ident, itsmSecInc.ITSMCategoryLevel4Ident, itsmSecInc.ITSMCategoryLevel3Ident, itsmSecInc.ITSMCategoryLevel2Ident, itsmSecInc.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMSecurityIncident as itsmSecInc
+WHERE
+	itsmSecInc.[State] != 0
+
+UNION ALL
+
+SELECT
+	itsmCha.ID AS SourceID
+	, 'ITSMChange' AS SourceFormIdent
+	, itsmCha.ITSMKey AS ITSMKey
+	, itsmCha.[Subject]
+	, COALESCE(itsmCha.ITSMCategoryLevel5Ident, itsmCha.ITSMCategoryLevel4Ident, itsmCha.ITSMCategoryLevel3Ident, itsmCha.ITSMCategoryLevel2Ident, itsmCha.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMChange as itsmCha
+WHERE
+	itsmCha.[State] != 0
+
+UNION ALL
+
+SELECT
+	itsmRel.ID AS SourceID
+	, 'ITSMRelease' AS SourceFormIdent
+	, itsmRel.ITSMKey AS ITSMKey
+	, itsmRel.[ReleaseName]
+	, COALESCE(itsmRel.ITSMCategoryLevel5Ident, itsmRel.ITSMCategoryLevel4Ident, itsmRel.ITSMCategoryLevel3Ident, itsmRel.ITSMCategoryLevel2Ident, itsmRel.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMRelease as itsmRel
+WHERE
+	itsmRel.[State] != 0
+
+UNION ALL
+
+SELECT
+	itsmPro.ID AS SourceID
+	, 'ITSMProblem' AS SourceFormIdent
+	, itsmPro.ITSMKey AS ITSMKey
+	, itsmPro.[Subject]
+	, COALESCE(itsmPro.ITSMCategoryLevel5Ident, itsmPro.ITSMCategoryLevel4Ident, itsmPro.ITSMCategoryLevel3Ident, itsmPro.ITSMCategoryLevel2Ident, itsmPro.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMProblem as itsmPro
+WHERE
+	itsmPro.[State] != 0
+
+UNION ALL
+
+SELECT
+	itsmIno.ID AS SourceID
+	, 'ITSMInovation' AS SourceFormIdent
+	, itsmIno.ITSMKey AS ITSMKey
+	, itsmIno.[Subject]
+	, COALESCE(itsmIno.ITSMCategoryLevel5Ident, itsmIno.ITSMCategoryLevel4Ident, itsmIno.ITSMCategoryLevel3Ident, itsmIno.ITSMCategoryLevel2Ident, itsmIno.ITSMCompanyIdent) AS LastFolderTreeIdent
+FROM usr.ITSMInovation as itsmIno
+WHERE
+	itsmIno.[State] != 0
+
+	</Command>
+</Library>

@@ -28,7 +28,9 @@
     "onCommand:sfpXmlLinter.buildXmlTemplatesAll",
     "onCommand:sfpXmlLinter.showBuildQueueLog",
     "onCommand:sfpXmlLinter.rebuildIndex",
-    "onCommand:sfpXmlLinter.workspaceDiagnosticsReport"
+    "onCommand:sfpXmlLinter.workspaceDiagnosticsReport",
+    "onCommand:sfpXmlLinter.formatDocumentTolerant",
+    "onCommand:sfpXmlLinter.formatSelectionTolerant"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -90,6 +92,14 @@
       {
         "command": "sfpXmlLinter.rebuildIndex",
         "title": "SFP XML Linter: Rebuild Full Index"
+      },
+      {
+        "command": "sfpXmlLinter.formatDocumentTolerant",
+        "title": "SFP XML Linter: Format Document (Tolerant)"
+      },
+      {
+        "command": "sfpXmlLinter.formatSelectionTolerant",
+        "title": "SFP XML Linter: Format Selection (Tolerant)"
       }
     ],
     "configuration": {
@@ -157,6 +167,12 @@
           },
           "description": "Per-rule severity mapping. Allowed values: off, warning, error."
         },
+        "sfpXmlLinter.formatter.maxConsecutiveBlankLines": {
+          "type": "number",
+          "default": 2,
+          "minimum": 0,
+          "description": "Maximum number of consecutive blank lines preserved by the formatter."
+        },
         "sfpXmlLinter.templateBuilder.mode": {
           "type": "string",
           "enum": [
@@ -190,6 +206,7 @@
     },
     "configurationDefaults": {
       "[xml]": {
+        "editor.defaultFormatter": "DanielSasek.sfp-xml-linter",
         "editor.quickSuggestions": {
           "other": "on",
           "comments": "off",
@@ -223,6 +240,7 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "test:formatter": "npm run compile && node out/tests/formatter/runFormatterFixtures.js && node out/tests/formatter/runSelectionFormatterTests.js",
     "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",
     "package:vsix": "npx @vscode/vsce package"
   },

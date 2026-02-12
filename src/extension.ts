@@ -15,12 +15,16 @@ import { SfpXmlColorProvider } from "./providers/colorProvider";
 import { globConfiguredXmlFiles } from "./utils/paths";
 import { getSettings } from "./config/settings";
 import { parseDocumentFacts } from "./indexer/xmlFacts";
+import { formatXmlTolerant } from "./formatter";
+import { formatXmlSelectionWithContext } from "./formatter/selection";
+import { FormatterOptions } from "./formatter/types";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const DEBUG_PREFIX = "[SFP-DBG]";
   const diagnostics = vscode.languages.createDiagnosticCollection("sfpXmlLinter");
   const buildOutput = vscode.window.createOutputChannel("SFP XML Linter Build");
   const indexOutput = vscode.window.createOutputChannel("SFP XML Linter Index");
+  const formatterOutput = vscode.window.createOutputChannel("SFP XML Linter Formatter");
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
   const engine = new DiagnosticsEngine();
@@ -50,6 +54,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(diagnostics);
   context.subscriptions.push(buildOutput);
   context.subscriptions.push(indexOutput);
+  context.subscriptions.push(formatterOutput);
 
   function logBuild(message: string): void {
     buildOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
@@ -57,6 +62,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function logIndex(message: string): void {
     indexOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
+  }
+
+  function logFormatter(message: string): void {
+    formatterOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
   }
 
   function formatIndexProgress(event: RebuildIndexProgressEvent): string {
@@ -795,6 +804,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       SfpSqlPlaceholderSemanticProvider.legend
     ),
     vscode.languages.registerColorProvider({ language: "xml" }, new SfpXmlColorProvider()),
+    vscode.languages.registerDocumentFormattingEditProvider({ language: "xml" }, {
+      provideDocumentFormattingEdits(document, options) {
+        const startedAt = Date.now();
+        const formatterOptions = createFormatterOptionsFromFormattingOptions(options, document);
+        const result = formatXmlTolerant(document.getText(), formatterOptions);
+        const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
+        logFormatter(
+          `PROVIDER format document done in ${Date.now() - startedAt} ms (recoveries=${result.recoveries}, invalidNodes=${result.invalidNodes})`
+        );
+        return [vscode.TextEdit.replace(fullRange, result.text)];
+      }
+    }),
+    vscode.languages.registerDocumentRangeFormattingEditProvider({ language: "xml" }, {
+      provideDocumentRangeFormattingEdits(document, range, options) {
+        const startedAt = Date.now();
+        const formatterOptions = createFormatterOptionsFromFormattingOptions(options, document);
+        const result = formatRangeLikeDocument(document, range, formatterOptions);
+        logFormatter(
+          `PROVIDER format range done in ${Date.now() - startedAt} ms (recoveries=${result.recoveries}, invalidNodes=${result.invalidNodes})`
+        );
+        return [vscode.TextEdit.replace(result.range, result.text)];
+      }
+    }),
     vscode.languages.registerCodeActionsProvider({ language: "xml" }, new SfpXmlIgnoreCodeActionProvider(), {
       providedCodeActionKinds: SfpXmlIgnoreCodeActionProvider.providedCodeActionKinds
     })
@@ -951,6 +983,72 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
 
       output.show(true);
+    }),
+    vscode.commands.registerCommand("sfpXmlLinter.formatDocumentTolerant", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("No active editor.");
+        return;
+      }
+
+      if (editor.document.languageId !== "xml") {
+        vscode.window.showInformationMessage("SFP XML Tolerant Formatter works only for XML documents.");
+        return;
+      }
+
+      const startedAt = Date.now();
+      const options = createFormatterOptions(editor.options, editor.document);
+      const result = formatXmlTolerant(editor.document.getText(), options);
+      const fullRange = new vscode.Range(editor.document.positionAt(0), editor.document.positionAt(editor.document.getText().length));
+      await editor.edit((editBuilder) => {
+        editBuilder.replace(fullRange, result.text);
+      });
+      const durationMs = Date.now() - startedAt;
+      logFormatter(`FORMAT document done in ${durationMs} ms (recoveries=${result.recoveries}, invalidNodes=${result.invalidNodes})`);
+      vscode.window.setStatusBarMessage(
+        `SFP XML Formatter: done in ${durationMs} ms (recoveries=${result.recoveries}, invalid=${result.invalidNodes})`,
+        4000
+      );
+    }),
+    vscode.commands.registerCommand("sfpXmlLinter.formatSelectionTolerant", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("No active editor.");
+        return;
+      }
+
+      if (editor.document.languageId !== "xml") {
+        vscode.window.showInformationMessage("SFP XML Tolerant Formatter works only for XML documents.");
+        return;
+      }
+
+      const nonEmptySelections = editor.selections.filter((selection) => !selection.isEmpty);
+      if (nonEmptySelections.length === 0) {
+        vscode.window.showInformationMessage("No text selected.");
+        return;
+      }
+
+      const startedAt = Date.now();
+      const options = createFormatterOptions(editor.options, editor.document);
+      const sortedSelections = [...nonEmptySelections].sort((a, b) => editor.document.offsetAt(b.start) - editor.document.offsetAt(a.start));
+      let totalRecoveries = 0;
+      let totalInvalidNodes = 0;
+      await editor.edit((editBuilder) => {
+        for (const selection of sortedSelections) {
+          const result = formatRangeLikeDocument(editor.document, selection, options);
+          totalRecoveries += result.recoveries;
+          totalInvalidNodes += result.invalidNodes;
+          editBuilder.replace(result.range, result.text);
+        }
+      });
+      const durationMs = Date.now() - startedAt;
+      logFormatter(
+        `FORMAT selection done in ${durationMs} ms (selections=${sortedSelections.length}, recoveries=${totalRecoveries}, invalidNodes=${totalInvalidNodes})`
+      );
+      vscode.window.setStatusBarMessage(
+        `SFP XML Formatter Selection: ${sortedSelections.length} selection(s), ${durationMs} ms`,
+        4000
+      );
     })
   );
 
@@ -961,6 +1059,58 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await rebuildBootstrapIndexAndValidateOpenDocs({ verboseProgress: true });
     scheduleDeferredFullReindex();
   })();
+}
+
+function createFormatterOptions(editorOptions: vscode.TextEditorOptions, document: vscode.TextDocument): FormatterOptions {
+  const settings = getSettings();
+  const tabSize = typeof editorOptions.tabSize === "number" ? editorOptions.tabSize : 2;
+  const insertSpaces = editorOptions.insertSpaces !== false;
+  const indentUnit = insertSpaces ? " ".repeat(tabSize) : "\t";
+  const lineEnding: "\n" | "\r\n" = document.getText().includes("\r\n") ? "\r\n" : "\n";
+  return {
+    indentUnit,
+    lineEnding,
+    tabSize,
+    insertSpaces,
+    maxConsecutiveBlankLines: settings.formatterMaxConsecutiveBlankLines,
+    forceInlineAttributes: true,
+    typeAttributeFirst: true
+  };
+}
+
+function formatRangeLikeDocument(
+  document: vscode.TextDocument,
+  range: vscode.Range,
+  options: FormatterOptions
+): { text: string; recoveries: number; invalidNodes: number; range: vscode.Range } {
+  const source = document.getText();
+  const result = formatXmlSelectionWithContext(source, document.offsetAt(range.start), document.offsetAt(range.end), options);
+  const text = result.text;
+  return {
+    text,
+    recoveries: result.recoveries,
+    invalidNodes: result.invalidNodes,
+    range: new vscode.Range(document.positionAt(result.rangeStart), document.positionAt(result.rangeEnd))
+  };
+}
+
+function createFormatterOptionsFromFormattingOptions(
+  options: vscode.FormattingOptions,
+  document: vscode.TextDocument
+): FormatterOptions {
+  const settings = getSettings();
+  const tabSize = Number.isFinite(options.tabSize) ? Math.max(1, Math.floor(options.tabSize)) : 2;
+  const indentUnit = options.insertSpaces ? " ".repeat(tabSize) : "\t";
+  const lineEnding: "\n" | "\r\n" = document.getText().includes("\r\n") ? "\r\n" : "\n";
+  return {
+    indentUnit,
+    lineEnding,
+    tabSize,
+    insertSpaces: !!options.insertSpaces,
+    maxConsecutiveBlankLines: settings.formatterMaxConsecutiveBlankLines,
+    forceInlineAttributes: true,
+    typeAttributeFirst: true
+  };
 }
 
 function sleep(ms: number): Promise<void> {

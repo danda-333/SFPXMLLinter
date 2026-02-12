@@ -69,6 +69,22 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - Index command:
   - `SFP XML Linter: Rebuild Full Index`
   - Forces full workspace reindex on demand
+- Tolerant formatter commands:
+  - `SFP XML Linter: Format Document (Tolerant)`
+  - `SFP XML Linter: Format Selection (Tolerant)`
+  - Extension is registered as XML format provider (and default formatter via extension configuration defaults).
+  - Handles invalid XML nesting with recovery/fallback behavior.
+  - Supports `@FormatRule` directives:
+    - `<!-- @FormatRule:disable -->`
+    - `<!-- @FormatRule:preserve-inner -->`
+    - `<!-- @FormatRule:format-inner -->`
+    - `<!-- @FormatRule:no-type-first -->`
+    - `<!-- @FormatRule:no-attr-normalize -->`
+    - `<!-- @FormatRule:no-inline-text-normalize -->`
+    - Multiple rules in one directive are supported (comma/space separated).
+  - Preserves inner content for `SQL`, `SQLCommand`, and `HTMLTemplate` (reindents leading whitespace only by default).
+  - `Command` is auto-suppressed (no formatting is applied by default unless `@FormatRule:format-inner` is used).
+  - Consecutive blank lines are preserved but clamped by `sfpXmlLinter.formatter.maxConsecutiveBlankLines` (default `2`).
 
 ## Startup behavior
 
@@ -90,6 +106,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 ```bash
 npm install
 npm run compile
+npm run test:formatter
 ```
 
 Run extension in VS Code with `F5` (Extension Development Host).

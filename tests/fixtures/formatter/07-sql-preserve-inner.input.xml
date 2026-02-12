@@ -1,0 +1,6 @@
+<A1>
+  <SQL>
+      SELECT 1
+        FROM X
+  </SQL>
+</A1>

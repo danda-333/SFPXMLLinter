@@ -503,8 +503,9 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
   }
 
   private snippetElementsForParent(parentTag: string, document: vscode.TextDocument | undefined): vscode.CompletionItem[] {
+    const packageIdent = document ? readPackageIdent(document) : "Package";
+
     if (parentTag === "controls") {
-      const packageIdent = document ? readPackageIdent(document) : "Package";
       return [
         snippetItem(
           "text textbox",
@@ -711,7 +712,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         snippetItem(
           "file",
           "FileControl",
-          `<Control xsi:type="FileControl" Ident="$1FileID" DataType="\${2|Number,Guid,String|}" TitleResourceKey="$1FileID_${packageIdent}" IsReadOnly="\${3|true,false|}" $0/>`
+          `<Control xsi:type="FileControl" Ident="$1" TitleResourceKey="$1_${packageIdent}" IsReadOnly="\${2|true,false|}" $0/>`
         ),
         snippetItem(
           "filegallery",
@@ -828,12 +829,12 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         snippetItem(
           "button",
           "FormButton",
-          `<Button xsi:type="FormButton" Ident="$1Button" TitleResourceKey="$2" IsSave="\${3|true,false|}" IsVisible="\${4|true,false|}" $0/>`
+          `<Button xsi:type="FormButton" Ident="$1Button" TitleResourceKey="$2_${packageIdent}" IsSave="\${3|true,false|}" IsVisible="\${4|true,false|}" $0/>`
         ),
         snippetItem(
           "groupbutton",
           "GroupButton",
-          `<Button xsi:type="GroupButton" Ident="$1GroupButton" TitleResourceKey="$2" IsVisible="\${3|true,false|}">\n\t<Button xsi:type="FormButton" Ident="$4Button" TitleResourceKey="$5" IsSave="\${6|true,false|}" IsVisible="\${7|true,false|}" />\n</Button>$0`
+          `<Button xsi:type="GroupButton" Ident="$1GroupButton" TitleResourceKey="$2_${packageIdent}" IsVisible="\${3|true,false|}">\n\t<Button xsi:type="FormButton" Ident="$4Button" TitleResourceKey="$5_${packageIdent}" IsSave="\${6|true,false|}" IsVisible="\${7|true,false|}" />\n</Button>$0`
         ),
         snippetItem(
           "sharecodebutton",
@@ -985,7 +986,12 @@ function readPackageIdent(document: vscode.TextDocument): string {
   const text = document.getText();
   const match = /<Form\b[^>]*\bPackageIdent\s*=\s*("([^"]*)"|'([^']*)')/i.exec(text);
   const value = (match?.[2] ?? match?.[3] ?? "").trim();
-  return value.length > 0 ? value : "Package";
+  if (!value.length) {
+    return "Package";
+  }
+
+  const normalized = value.replace(/Package$/i, "");
+  return normalized.length > 0 ? normalized : value;
 }
 
 function sortedFormIdents(index: WorkspaceIndex): string[] {

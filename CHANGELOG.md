@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.6
+
+- Snippet consistency fixes:
+  - `TitleResourceKey` snippets now consistently use package suffix derived from `PackageIdent` without `Package` postfix (e.g. `ITSMPackage` -> `_ITSM`).
+  - Updated button snippets to append package suffix in `TitleResourceKey`.
+  - Simplified `FileControl` snippet:
+    - removed `DataType` from default snippet
+    - removed default `FileID` suffix from `Ident` and `TitleResourceKey` template.
+
 ## 0.0.5
 
 - Validation updates:

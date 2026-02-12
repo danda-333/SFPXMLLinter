@@ -34,6 +34,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - `-- @Ignore rule-id`
     - `/* @Ignore rule-id */`
 - Hover on diagnostics (message + rule id)
+- Color preview and picker for hex literals in XML (`#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`)
 - Completion (context-aware foundation):
   - root/child elements
   - attribute names by tag

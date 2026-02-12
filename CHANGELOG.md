@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.2
+
+- Major indexing and responsiveness improvements:
+  - Incremental save refresh for `Form` and `Component` documents.
+  - Faster startup and rebuild behavior with reduced unnecessary full reindexes.
+  - Split index domains (`template` vs `runtime`) to prevent cross-tree symbol collisions.
+- SQL convention diagnostics:
+  - New `sql-convention-equals-spacing` rule for `SQL`/`Command` blocks.
+  - SQL-aware quick fixes (auto spacing fix and SQL inline ignore).
+  - SQL comment-aware parsing for rule evaluation.
+- XML quality-of-life:
+  - Color preview and color picker support for hex color literals in XML.
+  - `Ignore in file` quick fix now preserves XML declaration (`<?xml ...?>`) as first line.
+- Internal stability fixes and diagnostics range accuracy improvements.
+
 ## 0.0.1
 
 - Initial public release of SFP XML Linter.

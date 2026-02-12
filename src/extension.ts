@@ -11,6 +11,7 @@ import { SfpXmlIgnoreCodeActionProvider } from "./providers/ignoreCodeActionProv
 import { SfpXmlRenameProvider } from "./providers/renameProvider";
 import { SfpXmlReferencesProvider } from "./providers/referencesProvider";
 import { SfpSqlPlaceholderSemanticProvider } from "./providers/sqlPlaceholderSemanticProvider";
+import { SfpXmlColorProvider } from "./providers/colorProvider";
 import { globConfiguredXmlFiles } from "./utils/paths";
 import { getSettings } from "./config/settings";
 import { parseDocumentFacts } from "./indexer/xmlFacts";
@@ -745,6 +746,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       new SfpSqlPlaceholderSemanticProvider(),
       SfpSqlPlaceholderSemanticProvider.legend
     ),
+    vscode.languages.registerColorProvider({ language: "xml" }, new SfpXmlColorProvider()),
     vscode.languages.registerCodeActionsProvider({ language: "xml" }, new SfpXmlIgnoreCodeActionProvider(), {
       providedCodeActionKinds: SfpXmlIgnoreCodeActionProvider.providedCodeActionKinds
     })

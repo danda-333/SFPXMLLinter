@@ -72,6 +72,9 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - Index command:
   - `SFP XML Linter: Rebuild Full Index`
   - Forces full workspace reindex on demand
+- Revalidate command:
+  - `SFP XML Linter: Revalidate Workspace (Full)`
+  - Runs full reindex and then revalidates all XML files in configured roots
 - Tolerant formatter commands:
   - `SFP XML Linter: Format Document (Tolerant)`
   - `SFP XML Linter: Format Selection (Tolerant)`
@@ -94,6 +97,31 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - On startup, diagnostics are evaluated only for user-open documents (visible editors / open tabs).
 - Files opened internally by indexer are ignored for diagnostics.
 - Full workspace indexing runs in background (non-blocking startup).
+
+## Incomplete Mode and External Tables
+
+- VS Code setting: `sfpXmlLinter.incompleteMode` (`false` by default)
+  - when enabled, suppresses diagnostics that require unknown `FormIdent` resolution (e.g. `unknown-form-ident`, `unknown-mapping-form-ident`, and dependent `unknown-mapping-ident` cases).
+- External tables can be declared in workspace root file:
+  - `.sfpxmlsetting` (preferred)
+  - `.sfpxmlsettings` (also supported)
+
+Minimal example:
+
+```json
+{
+  "externalTables": {
+    "ExternalTicket": ["ID", "Ident", "Code"],
+    "dbo.LegacyOrder": {
+      "columns": ["ID", "OrderNumber"]
+    }
+  }
+}
+```
+
+Notes:
+- Both `TableName` and `dbo.TableName` are accepted for `FormIdent`.
+- External table columns are used by lookup-ident convention checks (`DropDown`/`AutoComplete`/`ListBox`/`DualListBox`).
 
 ## Index domains
 

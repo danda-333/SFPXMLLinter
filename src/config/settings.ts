@@ -7,6 +7,7 @@ export interface SfpXmlLinterSettings {
   resourcesRoots: string[];
   hoverDocsFiles: string[];
   ruleSeverities: Record<string, RuleSeverity>;
+  incompleteMode: boolean;
   formatterMaxConsecutiveBlankLines: number;
   autoBuildOnSave: boolean;
   componentSaveBuildScope: "dependents" | "full";
@@ -44,6 +45,7 @@ export function getSettings(): SfpXmlLinterSettings {
   const resourcesRoots = cfg.get<string[]>("resourcesRoots", ["Resources"]);
   const hoverDocsFiles = cfg.get<string[]>("hoverDocsFiles", ["Docs/hover-docs.json", "Docs/hover-docs.team.json"]);
   const rawRules = cfg.get<Record<string, unknown>>("rules", {});
+  const incompleteMode = cfg.get<boolean>("incompleteMode", false);
   const formatterMaxConsecutiveBlankLines = Math.max(0, cfg.get<number>("formatter.maxConsecutiveBlankLines", 2));
 
   const ruleSeverities: Record<string, RuleSeverity> = { ...DEFAULT_RULES };
@@ -61,6 +63,7 @@ export function getSettings(): SfpXmlLinterSettings {
     resourcesRoots,
     hoverDocsFiles,
     ruleSeverities,
+    incompleteMode,
     formatterMaxConsecutiveBlankLines,
     autoBuildOnSave,
     componentSaveBuildScope

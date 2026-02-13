@@ -5,7 +5,7 @@ import { WorkspaceIndex } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
-import { getSystemMetadata } from "../config/systemMetadata";
+import { getSystemMetadata, isKnownSystemTableForeignKey } from "../config/systemMetadata";
 import { collectTemplateAvailableControlIdents } from "../utils/templateControls";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 import { maskXmlComments } from "../utils/xmlComments";
@@ -125,10 +125,15 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
+    const settings = getSettings();
     const metadata = getSystemMetadata();
     const candidates = getAllFormIdentCandidates(index, metadata);
     for (const ref of facts.formIdentReferences) {
       if (isKnownFormIdent(ref.formIdent, index, metadata)) {
+        continue;
+      }
+
+      if (settings.incompleteMode) {
         continue;
       }
 
@@ -237,6 +242,7 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
+    const settings = getSettings();
     const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow" ? facts.workflowFormIdent : facts.formIdent;
     if (!owningFormIdent) {
       return;
@@ -257,6 +263,10 @@ export class DiagnosticsEngine {
         const targetFormIdent = mapping.mappingFormIdent;
         const targetForm = targetFormIdent ? index.formsByIdent.get(targetFormIdent) : undefined;
         if (targetForm && targetForm.controls.has(identKey)) {
+          continue;
+        }
+
+        if (settings.incompleteMode && targetFormIdent && !targetForm) {
           continue;
         }
 
@@ -289,10 +299,15 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
+    const settings = getSettings();
     const metadata = getSystemMetadata();
     const candidates = getAllFormIdentCandidates(index, metadata);
     for (const ref of facts.mappingFormIdentReferences) {
       if (isKnownFormIdent(ref.formIdent, index, metadata)) {
+        continue;
+      }
+
+      if (settings.incompleteMode) {
         continue;
       }
 
@@ -505,11 +520,11 @@ export class DiagnosticsEngine {
         : parsed.foreignKey;
 
       if (parsed.targetKind === "system") {
-        if (!metadata.systemTableAllowedForeignKeys.has(normalizedForeignKey)) {
+        if (!isKnownSystemTableForeignKey(metadata, parsed.targetName, normalizedForeignKey)) {
           issues.push({
             ruleId: "ident-convention-lookup-control",
             range: control.range,
-            message: `System table lookup '${control.ident}' should use foreign key 'ID' or 'Ident'.`
+            message: `System table lookup '${control.ident}' should use known system-table column (default 'ID'/'Ident' or configured external columns).`
           });
         }
         continue;

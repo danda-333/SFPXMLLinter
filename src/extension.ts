@@ -440,6 +440,45 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  async function revalidateWorkspaceFull(): Promise<void> {
+    const startedAt = Date.now();
+    logIndex("REVALIDATE START: full reindex + full validation");
+    await queueReindex("all");
+
+    const uris = (await globConfiguredXmlFiles()).filter((uri) => uri.scheme === "file");
+    const total = uris.length;
+    let processed = 0;
+    let reportedPercent = 0;
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "SFP XML Linter: Revalidating workspace",
+        cancellable: false
+      },
+      async (progress) => {
+        for (const uri of uris) {
+          await validateUri(uri);
+          processed++;
+
+          if (processed % 25 === 0 || processed === total) {
+            const nextPercent = total > 0 ? Math.floor((processed / total) * 100) : 100;
+            progress.report({
+              increment: Math.max(0, nextPercent - reportedPercent),
+              message: `${processed}/${total}`
+            });
+            reportedPercent = nextPercent;
+            await sleep(1);
+          }
+        }
+      }
+    );
+
+    const durationMs = Date.now() - startedAt;
+    logIndex(`REVALIDATE DONE: ${processed} files in ${durationMs} ms`);
+    vscode.window.showInformationMessage(`SFP XML Linter: Revalidate done (${processed} files, ${durationMs} ms).`);
+  }
+
   function scheduleDeferredFullReindex(delayMs = 1400): void {
     if (deferredFullReindexTimer) {
       clearTimeout(deferredFullReindexTimer);
@@ -951,6 +990,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await queueReindex("all");
       const durationMs = Date.now() - start;
       vscode.window.showInformationMessage(`SFP XML Linter index rebuilt in ${durationMs} ms.`);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.revalidateWorkspace", async () => {
+      await revalidateWorkspaceFull();
     })
   );
 

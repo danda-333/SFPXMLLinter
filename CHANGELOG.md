@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.9
+
+- Added configurable `sfpXmlLinter.incompleteMode`:
+  - suppresses diagnostics tied to unknown `FormIdent` resolution in incomplete projects.
+- Added workspace external table metadata support:
+  - reads `.sfpxmlsetting` / `.sfpxmlsettings` from workspace root,
+  - supports external tables and optional columns for lookup convention validation.
+- Added command:
+  - `SFP XML Linter: Revalidate Workspace (Full)`
+  - performs full reindex and full revalidation across configured XML roots.
+
 ## 0.0.8
 
 - Template builder updates:

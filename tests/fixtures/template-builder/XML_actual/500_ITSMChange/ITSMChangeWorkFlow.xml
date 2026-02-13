@@ -1,0 +1,941 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMChangeWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMChange" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" />
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning" />
+
+      <!--První stavy-->
+      <State Value="10" TitleResourceKey="Open_ITSM" ColorCssClass="warning" />
+      <State Value="20" TitleResourceKey="SentToCoordinator_ITSM" ColorCssClass="primary" />
+
+      <!--Drobná změna-->
+      <State Value="30" TitleResourceKey="HandedToSupplier_ITSM" ColorCssClass="primary" />
+      <State Value="40" TitleResourceKey="PricingOffer_ITSM" ColorCssClass="primary" />
+      <State Value="50" TitleResourceKey="OfferEvaluation_ITSM" ColorCssClass="warning" />
+      <State Value="60" TitleResourceKey="EvaluationProcess_ITSM" ColorCssClass="primary" />
+      <State Value="70" TitleResourceKey="OfferRejected_ITSM" ColorCssClass="danger" />
+      <State Value="80" TitleResourceKey="ToRealization_ITSM" ColorCssClass="primary" />
+      <State Value="90" TitleResourceKey="Realization_ITSM" ColorCssClass="warning" />
+      <State Value="100" TitleResourceKey="Solved_ITSM" ColorCssClass="success" />
+
+      <!--Normální změna-->
+      <State Value="110" TitleResourceKey="ChangeCheck_ITSM" ColorCssClass="warning" />
+      <State Value="120" TitleResourceKey="PricingOffer_ITSM" ColorCssClass="warning" />
+      <State Value="130" TitleResourceKey="MaterialOfferProcessed_ITSM" ColorCssClass="primary" />
+      <State Value="140" TitleResourceKey="SentToSign_ITSM" ColorCssClass="warning" />
+      <State Value="150" TitleResourceKey="Approved_ITSM" ColorCssClass="primary" />
+      <State Value="160" TitleResourceKey="Realization_ITSM" ColorCssClass="warning" />
+      <State Value="170" TitleResourceKey="SentToAcceptance_ITSM" ColorCssClass="primary" />
+      <State Value="180" TitleResourceKey="NewExtendDeliveryDateChange_ITSM" ColorCssClass="warning" />
+
+      <!--Urgentní změna-->
+      <State Value="190" TitleResourceKey="DraftSolutionPreparation_ITSM" ColorCssClass="primary" />
+      <State Value="200" TitleResourceKey="Realization_ITSM" ColorCssClass="warning" />
+      <State Value="210" TitleResourceKey="Solved_ITSM" ColorCssClass="success" />
+
+      <!--Uzavřeno-->
+      <State Value="220" TitleResourceKey="Closed_ITSM" ColorCssClass="success" />
+    </States>
+  </Definition>
+
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5">
+      <Selectors>
+        <string>.js-howHideCategoryLevel5</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableRequiredControlShare">
+      <Controls>
+        <FormControl Ident="Subject" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+        <FormControl Ident="ReporterAccountID" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="ReporterEmail" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="ReporterPhone" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="Description" IsReadOnly="false" IsRequired="true" />
+        <FormControl Ident="AssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="AssignedAccountID" IsReadOnly="false" />
+
+        <FormControl Ident="PHRequestControlCard" IsVisible="true" />
+
+        <FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false" />
+
+        <FormControl Ident="ITSMChangeManagementProcessCategoryGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMChangeClassificationTypeGuid" IsVisible="true" IsReadOnly="false" />
+
+        <FormControl Ident="TechnicalSpecificationFile" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ContractReferenceNumber" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ContractAuthorityNumber" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ProjectOfficeNumber" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ContractName" IsVisible="true" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" /> -->
+
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="Subject" IsReadOnly="false" />
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+        <FormControl Ident="ReporterAccountID" IsReadOnly="false" />
+        <FormControl Ident="ReporterEmail" IsReadOnly="false" />
+        <FormControl Ident="ReporterPhone" IsReadOnly="false" />
+        <FormControl Ident="Description" IsReadOnly="false" />
+        <FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="SolutionDescription" IsReadOnly="false" />
+        <FormControl Ident="SolutionAditionalInformation" IsReadOnly="false" />
+        <FormControl Ident="AssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="AssignedAccountID" IsReadOnly="false" />
+
+        <FormControl Ident="Communication" IsReadOnly="false" />
+
+        <FormControl Ident="PHContactInformationCard" IsVisible="true" />
+        <!-- PHs -->
+        <FormControl Ident="PHCommunicationCard" IsVisible="true" />
+        <FormControl Ident="PHSolutionCard" IsVisible="true" />
+        <FormControl Ident="PHRequestControlCard" IsVisible="true" />
+        <!-- PHs -->
+        <FormControl Ident="DialogAssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="DialogCommunication" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedAccountID" IsReadOnly="false" />
+        <FormControl Ident="ParentITSMID" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedMyselfGroupID" IsReadOnly="false" />
+
+        <FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false" />
+
+        <FormControl Ident="ITSMChangeManagementProcessCategoryGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMChangeClassificationTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="TechnicalSpecificationFile" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ContractReferenceNumber" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ContractAuthorityNumber" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ProjectOfficeNumber" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ContractName" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="OfferFile" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="PricingFile" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="OrderIssueDate" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="OrderPublishDate" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="DeliveryDate" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ApprovalSubmissionDate" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ApprovalSubmissionInformation" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ApprovalConclusion" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ChangeDeploymentDate" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ChangeDeploymentInformation" IsVisible="true" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes>
+
+  <ActionShareCodes>
+    <!-- <ActionShareCode Ident="BasicRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string></string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                @PaymentTermsIdent = 'Other'
+              , 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="PaymentTermsIdent" DataType="String" />
+            </Parameters>
+          </Condition>
+          <TrueActions><Action xsi:type="Required" ActionStart="BeforeValidation">
+            <Idents>
+              <string>PaymentTermsOther</string>
+            </Idents>
+          </Action>
+          </TrueActions>
+        </Action>
+      </Actions>
+
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="BasicRequiredActionShare" /> -->
+
+    <!-- Email Actions -->
+    <!-- <ActionShareCode Ident="*EmailActionShare">
+      <Actions>
+
+        <Action xsi:type="Email" SubjectResourceKey="*_Email_ITSM" BodyResourceKey="*_Email_ITSM" EmailIdent="*_Email_ITSM" ActionStart="AfterPermission" Ident="*_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="*" />
+          </Recipients>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="SubmitEmailActionShare" /> -->
+
+  </ActionShareCodes>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true" />
+        <Button Ident="SaveAndExitButton" IsVisible="true" />
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendButtonShare">
+      <Buttons>
+        <Button Ident="SendButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="10" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendButtonShare" />  -->
+
+    <ButtonShareCode Ident="AssignCoordinatorButtonShare">
+      <Buttons>
+        <Button Ident="AssignCoordinatorButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssignCoordinatorButtonShare" />  -->
+
+    <ButtonShareCode Ident="SentToProcessButtonShare">
+      <Buttons>
+        <Button Ident="SentToProcessButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL>
+                  SELECT TOP 1 X AS [State]
+                  FROM (VALUES (30), (110), (190)) AS t(X)
+                  ORDER BY NEWID();
+                </SQL>
+              </StateDataSource>
+            </Action>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SentToProcessButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendToPricingOfferButtonShare">
+      <Buttons>
+        <Button Ident="SendToPricingOfferButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToPricingOfferButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendOfferButtonShare">
+      <Buttons>
+        <Button Ident="SendOfferButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendOfferButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendToEvaluationButtonShare">
+      <Buttons>
+        <Button Ident="SendToEvaluationButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="60" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToEvaluationButtonShare" />  -->
+
+    <ButtonShareCode Ident="ReturnOfferButtonShare">
+      <Buttons>
+        <Button Ident="ReturnOfferButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ReturnOfferButtonShare" />  -->
+
+    <ButtonShareCode Ident="ApproveButtonShare">
+      <Buttons>
+        <Button Ident="ApproveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="80" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ApproveButtonShare" />  -->
+
+    <ButtonShareCode Ident="RejectButtonShare">
+      <Buttons>
+        <Button Ident="RejectButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="70" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="RejectButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendToRedoButtonShare">
+      <Buttons>
+        <Button Ident="SendToRedoButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToRedoButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendToRealizationButtonShare">
+      <Buttons>
+        <Button Ident="SendToRealizationButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="90" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToRealizationButtonShare" />  -->
+
+    <ButtonShareCode Ident="SolveButtonShare">
+      <Buttons>
+        <Button Ident="SolveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="100" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolveButtonShare" />  -->
+
+    <ButtonShareCode Ident="BackToRealizationButtonShare">
+      <Buttons>
+        <Button Ident="BackToRealizationButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="80" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="BackToRealizationButtonShare" />  -->
+
+    <ButtonShareCode Ident="CloseButtonShare">
+      <Buttons>
+        <Button Ident="CloseButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="220" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalSendToPricingOfferButtonShare">
+      <Buttons>
+        <Button Ident="SendToPricingOfferButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="120" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalSendToPricingOfferButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalSendOfferButtonShare">
+      <Buttons>
+        <Button Ident="SendOfferButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="130" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalSendOfferButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalInvalidChangeButtonShare">
+      <Buttons>
+        <Button Ident="InvalidChangeButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="220" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalInvalidChangeButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalCancelButtonShare">
+      <Buttons>
+        <Button Ident="CancelButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="220" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalCancelButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalSendToSignButtonShare">
+      <Buttons>
+        <Button Ident="SendToSignButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="140" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalSendToSignButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalApproveButtonShare">
+      <Buttons>
+        <Button Ident="ApproveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="150" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalApproveButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalSendToRealizationButtonShare">
+      <Buttons>
+        <Button Ident="SendToRealizationButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="160" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalSendToRealizationButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalSendToAcceptenceButtonShare">
+      <Buttons>
+        <Button Ident="SendToAcceptenceButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="170" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalSendToAcceptenceButtonShare" />  -->
+
+    <ButtonShareCode Ident="NormalDeliveryDateExtendButtonShare">
+      <Buttons>
+        <Button Ident="DeliveryDateExtendButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="180" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="NormalDeliveryDateExtendButtonShare" />  -->
+
+    <ButtonShareCode Ident="UrgentSendToRealizationButtonShare">
+      <Buttons>
+        <Button Ident="SendToRealizationButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="200" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="UrgentSendToRealizationButtonShare" />  -->
+
+    <ButtonShareCode Ident="UrgentSolveButtonShare">
+      <Buttons>
+        <Button Ident="SolveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="210" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="UrgentSolveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+    <ButtonShareCode Ident="AssignButtonShare">
+			<Buttons>
+				<Button Ident="AssignGroupButton" IsVisible="true" />
+				<Button Ident="AssignToGroupButton" IsVisible="true" />
+				<Button Ident="AssignButton" IsVisible="true" />
+				<Button Ident="AssignMyselfButton" IsVisible="true">
+          <VisibleCondition>
+						<SQL>
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT IIF(
+								(
+									SELECT COUNT(*)
+									FROM dbo.GroupAccount
+									WHERE
+										AccountID = @UserID
+										AND GroupID IN (
+											SELECT GroupID
+											FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+												COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+												, @PermissionIDs
+											)
+										)
+								) > 1,
+								1,
+								0
+							)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+						</Parameters>
+					</VisibleCondition>
+        </Button>
+				<Button Ident="AssignMyselfOneGroupButton" IsVisible="true">
+          <VisibleCondition>
+						<SQL>
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT IIF(
+								(
+									SELECT COUNT(*)
+									FROM dbo.GroupAccount
+									WHERE
+										AccountID = @UserID
+										AND GroupID IN (
+											SELECT GroupID
+											FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+												COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+												, @PermissionIDs
+											)
+										)
+								) = 1,
+								1,
+								0
+							)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+						</Parameters>
+					</VisibleCondition>
+        </Button>
+			</Buttons>
+		</ButtonShareCode><!-- <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />  -->
+
+  </ButtonShareCodes>
+
+  <GlobalActions>
+
+    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+          IF @ITSMKey IS NULL
+          BEGIN
+            DECLARE
+              @CounterIdent VARCHAR(100) = 'CH-',
+              @NextNumber INT
+
+            EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+            UPDATE usr.ITSMChange
+            SET ITSMKey = CONCAT(@CounterIdent, RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+            WHERE ID = @ID
+          END
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+        </Parameters>
+      </DataSource>
+    </Action>
+
+    <Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @IsShowCategoryLevel5 = 1
+            ,1
+            ,0
+          )
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
+        </Parameters>
+      </Condition>
+      <TrueActions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>ITSMCategoryLevel5Ident</string>
+					</Idents>
+				</Action>
+      </TrueActions>
+    </Action>
+
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SendButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+
+    <!--První stavy-->
+    <Step State="10">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="AssignCoordinatorButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="20">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SentToProcessButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+
+    <!--Drobná změn-->
+    <Step State="30">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SentToProcessButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="40">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SendOfferButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="50">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SendToEvaluationButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ReturnOfferButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="60">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="ApproveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="RejectButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="70">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SendToRedoButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="80">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SendToRealizationButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="90">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SolveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="BackToRealizationButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="100">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+
+    <!--Normální změn-->
+    <Step State="110">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="NormalSendToPricingOfferButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="NormalInvalidChangeButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="120">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="NormalSendOfferButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="130">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="NormalCancelButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="NormalSendToSignButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="140">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="NormalApproveButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="150">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="NormalSendToRealizationButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="160">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="NormalSendToAcceptenceButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="NormalDeliveryDateExtendButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="170">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="180">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+
+    <!--Urgentní změn-->
+    <Step State="190">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="UrgentSendToRealizationButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="200">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="UrgentSolveButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="210">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+
+    <!--Uzavřeno-->
+    <Step State="220">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMChange</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+
+  </Steps>
+</WorkFlow>

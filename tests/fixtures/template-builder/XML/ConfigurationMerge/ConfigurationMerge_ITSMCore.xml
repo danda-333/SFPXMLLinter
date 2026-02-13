@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ConfigurationMerge_ITSMCore" PackageIdent="ITSMPackage">
+	<Sections>
+		<Section xsi:type="SegmentSection">
+			<Segments>
+
+				<Segment SegmentType="ITSMRequestSegment" IconCssClass="icon-stack-text" TitleResourceKey="ITSMRequestSegment_ITSM" Url="~/Segment/Index/ITSMRequestSegment" Priority="10" />
+				<Segment SegmentType="ITSMSupplierRequestSegment" IconCssClass="icon-truck" TitleResourceKey="ITSMSupplierRequestSegment_ITSM" Url="~/Segment/Index/ITSMSupplierRequestSegment" Priority="20" />
+				<Segment SegmentType="ITSMIncidentSegment" IconCssClass="icon-wrench3" TitleResourceKey="ITSMIncidentSegment_ITSM" Url="~/Segment/Index/ITSMIncidentSegment" Priority="30" />
+				<Segment SegmentType="ITSMSecurityIncidentSegment" IconCssClass="icon-safe" TitleResourceKey="ITSMSecurityIncidentSegment_ITSM" Url="~/Segment/Index/ITSMSecurityIncidentSegment" Priority="40" />
+
+				<Segment SegmentType="ITSMChangeSegment" IconCssClass="icon-loop" TitleResourceKey="ITSMChangeSegment_ITSM" Url="~/Segment/Index/ITSMChangeSegment" Priority="50" />
+				<Segment SegmentType="ITSMReleaseSegment" IconCssClass="icon-new" TitleResourceKey="ITSMReleaseSegment_ITSM" Url="~/Segment/Index/ITSMReleaseSegment" Priority="60" />
+				<Segment SegmentType="ITSMProblemSegment" IconCssClass="icon-spinner3" TitleResourceKey="ITSMProblemSegment_ITSM" Url="~/Segment/Index/ITSMProblemSegment" Priority="70" />
+
+				<Segment SegmentType="ITSMInovationSegment" IconCssClass="icon-bubble-dots3" TitleResourceKey="ITSMInovationSegment_ITSM" Url="~/Segment/Index/ITSMInovationSegment" Priority="80" />
+
+				<Segment SegmentType="ITSMKnowledgeBaseSegment" IconCssClass="icon-bookmark" TitleResourceKey="ITSMKnowledgeBaseSegment_ITSM" Url="~/Segment/Index/ITSMKnowledgeBaseSegment" Priority="90" />
+
+				<Segment SegmentType="ISToProductionEvidenceSegment" IconCssClass="icon-share2" TitleResourceKey="ISToProductionEvidenceSegment_ITSM" Url="~/Segment/Index/ISToProductionEvidenceSegment" Priority="95" />
+
+				<Segment SegmentType="ITSMSettingSegment" IconCssClass="icon-cog2" TitleResourceKey="ITSMSettingSegment_ITSM" Url="~/Segment/Index/ITSMSettingSegment" Priority="998" />
+
+				<Segment SegmentType="Admin" IconCssClass="icon-cogs" TitleResourceKey="AdminSegment_Admin" Url="~/Segment/Index/Admin">
+					<DefaultMenus>
+						<MenuSegment TitleResourceKey="ITSMCategoryAllView_ITSM" Url="~/Folder/Index/ITSMCommonFolderGroup" Priority="130" GroupTitleResourceKey="ACLGroup_ACL">
+							<AccessPermissions>
+								<string>SuperAdmin</string>
+							</AccessPermissions>
+						</MenuSegment>
+						<MenuSegment TitleResourceKey="ITSMServiceAllView_ITSM" Url="~/Folder/Index/ITSMServiceFolderGroup" Priority="140" GroupTitleResourceKey="ACLGroup_ACL">
+							<AccessPermissions>
+								<string>SuperAdmin</string>
+							</AccessPermissions>
+						</MenuSegment>
+					</DefaultMenus>
+				</Segment>
+
+			</Segments>
+			<FolderGroups>
+
+				<FolderGroupSegment MergeType="Replace" Ident="ITSMCommonFolderGroup" MainFormIdent="ITSMCompany" DefaultFormIdent="ITSMCategory" TitleResourceKey="ITSMCommonFolderGroup_ITSM">
+					<Segments>
+						<string>ITSMChangeSegment</string>
+						<string>ITSMIncidentSegment</string>
+						<string>ITSMInovationSegment</string>
+						<string>ITSMProblemSegment</string>
+						<string>ITSMReleaseSegment</string>
+						<string>ITSMRequestSegment</string>
+						<string>ITSMSecurityIncidentSegment</string>
+						<string>ITSMSettingSegment</string>
+						<string>ITSMSupplierRequestSegment</string>
+					</Segments>
+					<AccessPermissions>
+						<string>SuperAdmin</string>
+					</AccessPermissions>
+					<Permissions>
+						<string>ITSMAuthor</string>
+						<string>ITSMSpecialist</string>
+						<string>ITSMOperator</string>
+						<string>ITSMSupplier</string>
+					</Permissions>
+				</FolderGroupSegment>
+				<FolderGroupSegment Ident="ITSMServiceFolderGroup" MainFormIdent="ITSMService" DefaultFormIdent="ITSMCatalogSheet" TitleResourceKey="ITSMServiceFolderGroup_ITSM">
+					<AccessPermissions>
+						<string>SuperAdmin</string>
+					</AccessPermissions>
+				</FolderGroupSegment>
+
+			</FolderGroups>
+		</Section>
+	</Sections>
+</Configuration>

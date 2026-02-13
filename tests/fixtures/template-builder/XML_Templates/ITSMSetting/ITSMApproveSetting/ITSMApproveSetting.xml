@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" Ident="ITSMApproveSetting" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage">
+	<DataPermissions>
+		<string>ITSMSettingAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SaveAndCloseButton" TitleResourceKey="SaveAndCloseButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false"/>
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-undo2" PlacementType="Top Bottom" />
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="ITSMApproveSettingName" DataType="String" MaxLength="255" TitleResourceKey="ITSMApproveSettingName_ITSM" IsRequired="true" IsReadOnly="true"/>
+		<Control xsi:type="TextAreaControl" Ident="ITSMApproveSettingNameDescription" DataType="String" Rows="3" TitleResourceKey="ITSMApproveSettingNameDescription_ITSM" IsRequired="true" IsReadOnly="true"/>
+
+		<Control xsi:type="SubFormControl" Ident="ITSMApproveSubForm" TextResourceKey="ITSMApproveSubForm_ITSM" FormIdent="ITSMApproveSubForm" IsSortable="true" SortableControlIdent="ApproveOrder" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column xsi:type="SortableColumn" Ident="ApproveOrder" TitleResourceKey="" Width="10" IsDefaultSort="true" SortType="ASC"/>
+					<Column Ident="GroupID" TitleResourceKey="GroupID_ITSM" Width="80" />
+					<Column xsi:type="DeleteColumn" Ident="ID" Width="10"/>
+				</Columns>
+				<SQL>
+					SELECT
+						itsmAppSF.ID
+						, itsmAppSF.ApproveOrder
+						, gro.[Name] as GroupID
+					FROM usr.ITSMApproveSubForm as itsmAppSF
+					INNER JOIN dbo.[Group] as gro on gro.ID = itsmAppSF.GroupID
+					WHERE
+						itsmAppSF.TableID = @ID
+						AND itsmAppSF.FormIdent = @ThisFormIdent
+						AND itsmAppSF.[State] != @DeletedState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="ITSMApproveSetting"/>
+				</Parameters>
+			</DataSource>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformation" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+
+				<style>
+					.no-label > label {
+						display: none !important;
+					}
+
+					.custom-table td,
+					.custom-table th {
+						padding: .15rem .5rem !important;
+					}
+
+					.custom-color-picker .sp-replacer{
+						display: flex;
+						width: 100%;
+					}
+
+					.custom-color-picker .sp-replacer .sp-preview {
+						flex-grow: 1;
+					}
+
+					.custom-table div:nth-child(2) {
+						display: none;
+					}
+
+					.select-bold select {
+						font-weight: bold;
+					}
+				</style>
+
+				<div class="row">
+					<div class="col-md-7">
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#BasicInformationSection_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-4">
+				
+										<div class="form-group">
+											<ControlLabel ControlID="ITSMApproveSettingName"/>
+											<Control ID="ITSMApproveSettingName"/>
+										</div>
+									
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-12">
+				
+										<div class="form-group">
+											<ControlLabel ControlID="ITSMApproveSettingNameDescription"/>
+											<Control ID="ITSMApproveSettingNameDescription"/>
+										</div>
+									
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-5">
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#ITSMApproveStepLabel_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+				
+										<div class="form-group">
+											<Control ID="ITSMApproveSubForm"/>
+										</div>
+									
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

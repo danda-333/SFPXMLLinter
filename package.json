@@ -173,21 +173,6 @@
           "minimum": 0,
           "description": "Maximum number of consecutive blank lines preserved by the formatter."
         },
-        "sfpXmlLinter.templateBuilder.mode": {
-          "type": "string",
-          "enum": [
-            "auto",
-            "typescript",
-            "powershell"
-          ],
-          "default": "auto",
-          "description": "Template builder mode. auto prefers TypeScript implementation and falls back to PowerShell script."
-        },
-        "sfpXmlLinter.templateBuilder.powershellScriptPath": {
-          "type": "string",
-          "default": "SFPExampleProject/Scripts/BuildXmlTemplates.ps1",
-          "description": "Path to legacy BuildXmlTemplates.ps1 script relative to workspace root."
-        },
         "sfpXmlLinter.templateBuilder.autoBuildOnSave": {
           "type": "boolean",
           "default": true,
@@ -241,6 +226,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test:formatter": "npm run compile && node out/tests/formatter/runFormatterFixtures.js && node out/tests/formatter/runSelectionFormatterTests.js",
+    "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js",
+    "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runBuildTemplateFixtures.js",
     "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",
     "package:vsix": "npx @vscode/vsce package"
   },

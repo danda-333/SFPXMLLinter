@@ -1,0 +1,776 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
+		<Button xsi:type="GroupButton" Ident="AssignGroupButton" TitleResourceKey="AssignGroupButton_ITSM" PlacementType="Top Bottom" Color="Primary" IconCssClass="icon-hammer-wrench">
+			<Buttons>
+
+				<Button xsi:type="FormButton" Ident="AssignToGroupButton" TitleResourceKey="AssignToGroupButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignToGroupConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignToGroupConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<Button xsi:type="FormButton" Ident="AssignButton" TitleResourceKey="AssignButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-hammer" IsVisible="false" IsStopRedirect="true" >
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<Button xsi:type="FormButton" Ident="AssignToMeButton" TitleResourceKey="AssignToMeButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+				<Button xsi:type="FormButton" Ident="AssignToMeMultipleGroupButton" TitleResourceKey="AssignToMeMultipleGroupButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignToMeConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignToMeConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+			</Buttons>
+		</Button>
+	</Section>
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="AutoCompleteControl" Ident="AssignedGroupID" DataType="Number" MaxLength="900" TitleResourceKey="AssignedGroupID_ITSM" IsReadOnly="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT TOP(20)
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT 
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+					WHERE [GroupName] LIKE @AssignedGroupID 
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE
+						gro.ID = @AssignedGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDependencyDataBind>
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT 
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+					WHERE GroupID = @AssignedGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" SetDataType="SelectedValueData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDependencyDataBind>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Group" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="Name" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+		<Control xsi:type="AutoCompleteControl" Ident="DialogAssignedGroupID" DataType="Number" MaxLength="900" TitleResourceKey="DialogAssignedGroupID_ITSM" IsCreateColumn="false" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT TOP(20)
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+
+					
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT 
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+					WHERE [GroupName] LIKE @DialogAssignedGroupID 
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE
+						gro.ID = @DialogAssignedGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="AssignedGroupID" />
+				</Columns>
+				<SQL>
+					SELECT @AssignedGroupID AS AssignedGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+				</Parameters>
+			</DefaultDataSource>
+		</Control>
+		<Control xsi:type="AutoCompleteControl" Ident="DialogAssignedToMyGroupID" DataType="Number" MaxLength="900" TitleResourceKey="DialogAssignedToMyGroupID_ITSM" IsCreateColumn="false" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT TOP(20)
+							itsGagvftap.GroupID AS ID
+							,itsGagvftap.[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					) AS itsGagvftap
+					INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT 
+							itsGagvftap.GroupID AS ID
+							,itsGagvftap.[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					) AS itsGagvftap
+					INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
+					WHERE itsGagvftap.[GroupName] LIKE @DialogAssignedToMyGroupID 
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedToMyGroupID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE
+						gro.ID = @DialogAssignedToMyGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedToMyGroupID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="AssignedGroupID" />
+				</Columns>
+				<SQL>
+					SELECT gro.ID AS AssignedGroupID
+					FROM dbo.[Group] AS gro
+					INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = gro.ID AND gra.AccountID = @UserID
+					WHERE gro.ID = @AssignedGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDataSource>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="AssignedAccountID" DataType="Number" TitleResourceKey="AssignedAccountID_ITSM" IsReadOnly="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT TOP(20)
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>AssignedGroupID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						acc.FullName LIKE @AssignedAccountID
+						AND gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.ID = @AssignedAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDependencyDataBind>
+				<Dependencies>
+					<string>AssignedGroupID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						acc.ID = @AssignedAccountID
+						AND gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="Number" SetDataType="SelectedValueData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DefaultDependencyDataBind>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+		<Control xsi:type="AutoCompleteControl" Ident="DialogAssignedAccountID" DataType="Number" TitleResourceKey="DialogAssignedAccountID_ITSM" IsCreateColumn="false" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT TOP(20)
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						gas.GroupID = @DialogAssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>DialogAssignedGroupID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						acc.FullName LIKE @DialogAssignedAccountID
+						AND gas.GroupID = @DialogAssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.ID = @DialogAssignedAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="AssignedAccountID" />
+				</Columns>
+				<SQL>
+					SELECT @AssignedAccountID AS AssignedAccountID 
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="Number"/>
+				</Parameters>
+			</DefaultDataSource>
+			<DefaultDependencyDataBind>
+				<Dependencies>
+					<string>DialogAssignedGroupID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						acc.ID = @DialogAssignedAccountID
+						AND gas.GroupID = @DialogAssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedAccountID" DataType="Number" SetDataType="SelectedValueData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DefaultDependencyDataBind>
+		</Control>
+
+		<Control xsi:type="PlaceHolderControl" Ident="AssignedCardPlaceHolder" IsVisible="false"/>
+	</Section>
+
+	<Section Root="Form" Name="Sections" TargetXPath="//Form/Sections" Insert="append">
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignToGroupConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignToGroupConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignToGroupConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignToGroupConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogAssignedGroupID" />
+							<Control ID="DialogAssignedGroupID" />
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogAssignedGroupID" />
+							<Control ID="DialogAssignedGroupID" />
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogAssignedAccountID" />
+							<Control ID="DialogAssignedAccountID" />
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignToMeConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignToMeConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignToMeConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignToMeConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogAssignedToMyGroupID" />
+							<Control ID="DialogAssignedToMyGroupID" />
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<Control ID="AssignedCardPlaceHolder">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="card">
+						<div class="card-header bg-white header-elements-inline">
+							<h6 class="card-title">[#RequestControl_ITSM#]</h6>
+							<div class="header-elements">
+								<div class="list-icons">
+									<a class="list-icons-item" data-action="collapse" />
+								</div>
+							</div>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="AssignedGroupID" />
+										<Control ID="AssignedGroupID" />
+									</div>
+								</div> 
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="AssignedAccountID" />
+										<Control ID="AssignedAccountID" />
+									</div>
+								</div> 
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</Control><!-- Karta Å˜Ã­zenÃ­ poÅ¾adavku -->
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="ShowAssigneeControlShare">
+			<Controls>
+				<FormControl Ident="AssignedGroupID" IsVisible="true" />
+				<FormControl Ident="AssignedAccountID" IsVisible="true" />
+				<FormControl Ident="AssignedCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowAssigneeControlShare" /> -->
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+		
+		<!-- Assignee controls updates-->
+		<ActionShareCode Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare">
+			<Actions>
+
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogAssignedGroupID</string>
+          </Idents>
+        </Action>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_GroupOnlyFromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @DialogAssignedGroupID
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Update_FromDialog_ActionShare">
+			<Actions>
+
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogAssignedGroupID</string>
+            <string>DialogAssignedAccountID</string>
+          </Idents>
+        </Action>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_FromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @DialogAssignedGroupID
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="AssignedAccountID_FromDialog_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @DialogAssignedAccountID
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedAccountID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Clear_ActionShare">
+			<Actions>
+				<Action xsi:type="SetValue" Ident="AssignedGroupID" Value="" ActionStart="AfterValidation" />
+				<Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Clear_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Update_ToMe_ActionShare">
+			<Actions>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMe_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT TOP(1)
+									itsGagvftap.GroupID
+							FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+									COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+									@PermissionIDs
+							) AS itsGagvftap
+							INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMe_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @UserID
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Update_ToMeMultipleGroup_ActionShare">
+			<Actions>
+
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogAssignedToMyGroupIDAssignedGroupID</string>
+          </Idents>
+        </Action>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @DialogAssignedToMyGroupIDAssignedGroupID
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedToMyGroupIDAssignedGroupID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @UserID
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMyGroup_ActionShare" /> -->
+		
+	</Section>
+
+</Component>

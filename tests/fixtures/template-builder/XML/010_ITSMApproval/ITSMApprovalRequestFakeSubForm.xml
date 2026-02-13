@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMApprovalRequestFakeSubForm" IsSubForm="true" SegmentType="ITSMRequestSegment" PackageIdent="ITSMPackage" MainIdent="ITSMApproval">
+	<DataPermissions>
+    <string>ITSMRequest</string>
+  </DataPermissions>
+  <CreatePermissions>
+    <string>ITSMRequest</string>
+  </CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150" />
+
+		<Control xsi:type="TextBoxControl" Ident="ApproveOrder" DataType="Number" TitleResourceKey="ApproveOrder_ITSM" IsFakeReadOnly="true" />
+
+		<Control xsi:type="DropDownListControl" Ident="ApproverType" DataType="String" TitleResourceKey="ApproverType_ITSM" Default="Group">
+			<ListItems>
+				<ListItem TitleResourceKey="Group_ITSM" Value="Group" />
+				<ListItem TitleResourceKey="Account_ITSM" Value="Account" />
+			</ListItems>
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ApproverTypeValue" DataType="String" TitleResourceKey="ApproverTypeValue_ITSM" IsCreateColumn="false">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>ApproverType</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ApproverTypeValue" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT @ApproverType AS ApproverTypeValue
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverType" DataType="String" MaxLength="200" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="ApproverGroupID" DataType="Number" TitleResourceKey="ApproverGroupID_ITSM" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT TOP(20)
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE gro.[State] = @GroupActiveState
+					ORDER BY gro.[Name] ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE
+						gro.[State] = @GroupActiveState
+						AND gro.[Name] LIKE @ApproverGroupID
+					ORDER BY gro.[Name] ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverGroupID" DataType="String" MaxLength="200" LikeType="Both" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE gro.ID = @ApproverGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverGroupID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="ApproverAccountID" DataType="Number" TitleResourceKey="ApproverAccountID_ITSM" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT TOP(20)
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.[State] = @AccountActiveState
+					ORDER BY acc.FullName ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE
+						acc.[State] = @AccountActiveState
+						AND acc.FullName LIKE @ApproverAccountID
+					ORDER BY acc.FullName ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverAccountID" DataType="String" MaxLength="200" LikeType="Both" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.ID = @ApproverAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-3">
+						<div class="form-group">
+							<ControlLabel ControlID="ApproveOrder" />
+							<Control ID="ApproveOrder" />
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="form-group">
+							<ControlLabel ControlID="ApproverType" />
+							<Control ID="ApproverType" />
+						</div>
+						<div class="form-group d-none">
+							<ControlLabel ControlID="ApproverTypeValue" />
+							<Control ID="ApproverTypeValue" />
+						</div>
+					</div>
+				</div>
+				<div class="row js-showIfApprovaTypeGroup">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="ApproverGroupID" />
+							<Control ID="ApproverGroupID" />
+						</div>
+					</div>
+				</div>
+				<div class="row js-showIfApprovaTypeAccount">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="ApproverAccountID" />
+							<Control ID="ApproverAccountID" />
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="CommunicationControl" Ident="Communication" Height="400" DataType="String" IsVisible="false" IsReadOnly="true" TitleResourceKey="Communication_ITSM">
+			<SettingPermissions>
+				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="Zadavatel" IconCssClass="icon-user" ColorCssClass="blue-600">
+					<VisiblePermissions>
+						<string>Creator</string>
+					</VisiblePermissions>
+				</SettingPermission>
+			</SettingPermissions>
+			<Settings>
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+			</Settings>
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="CommunicationControl" Ident="DialogCommunication" Height="400" DataType="String" IsReadOnly="true" TitleResourceKey="Communication_ITSM">
+			<SettingPermissions>
+				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="ITSMAuthor_ITSM" IconCssClass="icon-user" ColorCssClass="blue-600">
+					<VisiblePermissions>
+						<string>Creator</string>
+					</VisiblePermissions>
+				</SettingPermission>
+			</SettingPermissions>
+			<Settings>
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+			</Settings>
+		</Control>
+
+		<Control xsi:type="CommunicationListControl" Ident="CommunicationList" TitleResourceKey="CommunicationList_ITSM" CommunicationControlIdent="Communication" IsVisible="false" />
+
+		<Control xsi:type="PlaceHolderControl" Ident="CommunicationCardPlaceHolder" IsVisible="false"/>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<Control ID="CommunicationCardPlaceHolder">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="card">
+						<div class="card-header bg-white header-elements-inline">
+							<h6 class="card-title">[#Communication_ITSM#]</h6>
+							<div class="header-elements">
+								<div class="list-icons">
+									<a class="list-icons-item" data-action="collapse" />
+								</div>
+							</div>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<Control ID="Communication" />
+									</div>
+								</div>
+								<div class="col-md-12">
+									<div class="form-group">
+										<Control ID="CommunicationList" />
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</Control>
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="ShowCommunicationControlShare">
+			<Controls>
+
+				<FormControl Ident="CommunicationList" IsVisible="true" />
+				<FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
+
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableCommunicationControlShare">
+			<Controls>
+
+				<FormControl Ident="Communication" IsVisible="true" IsReadOnly="false"/>
+				<FormControl Ident="CommunicationList" IsVisible="true" />
+				<FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
+
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
+		
+	</Section>
+	
+</Component>

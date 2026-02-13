@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMPlannedShutdownWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMPlannedShutdown" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning"/> <!--New-->
+      <State Value="2" TitleResourceKey="Saved_ITSM" ColorCssClass="primary"/> <!--Saved-->  
+    </States>
+  </Definition>
+
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5" >
+      <Selectors>
+        <string>.js-howHideCategoryLevel5</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="Subject" IsReadOnly="false" />
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+        <FormControl Ident="ReporterAccountID" IsReadOnly="false" />
+        <FormControl Ident="ReporterEmail" IsReadOnly="false" />
+        <FormControl Ident="ReporterPhone" IsReadOnly="false" />
+        <FormControl Ident="Description" IsReadOnly="false" />
+        <FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="SolutionDescription" IsReadOnly="false" />
+        <FormControl Ident="SolutionAditionalInformation" IsReadOnly="false" />
+        <FormControl Ident="AssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="AssignedAccountID" IsReadOnly="false" />
+
+        <FormControl Ident="Communication" IsReadOnly="false" />
+
+        <FormControl Ident="PHContactInformationCard" IsVisible="true" />
+        <!-- PHs -->
+        <FormControl Ident="PHCommunicationCard" IsVisible="true" />
+        <FormControl Ident="PHSolutionCard" IsVisible="true" />
+        <FormControl Ident="PHRequestControlCard" IsVisible="true" />
+        <!-- PHs -->
+        <FormControl Ident="DialogAssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="DialogCommunication" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedAccountID" IsReadOnly="false" />
+        <FormControl Ident="ParentITSMID" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedMyselfGroupID" IsReadOnly="false" />
+        <FormControl Ident="DateTimeFrom" IsReadOnly="false" />
+        <FormControl Ident="DateTimeTo" IsReadOnly="false" />
+
+        <FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes> 
+
+  <ActionShareCodes>
+    <!-- <ActionShareCode Ident="BasicRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string></string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                @PaymentTermsIdent = 'Other'
+              , 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="PaymentTermsIdent" DataType="String"  />
+            </Parameters>
+          </Condition>
+          <TrueActions><Action xsi:type="Required" ActionStart="BeforeValidation">
+            <Idents>
+              <string>PaymentTermsOther</string>
+            </Idents>
+          </Action>
+          </TrueActions>
+        </Action>
+      </Actions>
+
+      
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="BasicRequiredActionShare" /> -->
+
+    <!-- Email Actions -->
+    <!-- <ActionShareCode Ident="*EmailActionShare">
+      <Actions>
+
+        <Action xsi:type="Email" SubjectResourceKey="*_Email_ITSM" BodyResourceKey="*_Email_ITSM" EmailIdent="*_Email_ITSM" ActionStart="AfterPermission" Ident="*_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="*"/>
+          </Recipients>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="SubmitEmailActionShare" /> -->
+
+  </ActionShareCodes> 
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+            <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+              <DataSource>
+                <SQL>
+                  DECLARE 
+                    @CounterIdent VARCHAR(100) = 'PS-',
+                    @NextNumber INT
+
+                  EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+                  UPDATE usr.ITSMPlannedShutdown
+                  SET ITSMKey = CONCAT(@CounterIdent, RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+                  WHERE ID = @ID
+                </SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />                  
+                </Parameters>
+              </DataSource>
+            </Action>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+    <ButtonShareCode Ident="AssignButtonShare">
+			<Buttons>
+				<Button Ident="AssignGroupButton" IsVisible="true"/>
+				<Button Ident="AssignToTeamButton" IsVisible="true"/>
+				<Button Ident="AssignButton" IsVisible="true"/>
+				<Button Ident="AssignMyselfButton" IsVisible="true">
+          <VisibleCondition>
+						<SQL>
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT IIF(
+								(
+									SELECT COUNT(*) 
+									FROM dbo.GroupAccount 
+									WHERE
+										AccountID = @UserID 
+										AND GroupID IN (
+											SELECT GroupID
+											FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+												COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+												, @PermissionIDs
+											)
+										)
+								) > 1, 
+								1, 
+								0
+							)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />		
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>								
+						</Parameters>
+					</VisibleCondition>
+        </Button>
+				<Button Ident="AssignMyselfOneGroupButton" IsVisible="true">
+          <VisibleCondition>
+						<SQL>
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT IIF(
+								(
+									SELECT COUNT(*) 
+									FROM dbo.GroupAccount 
+									WHERE
+										AccountID = @UserID 
+										AND GroupID IN (
+											SELECT GroupID
+											FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+												COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+												, @PermissionIDs
+											)
+										)
+								) = 1, 
+								1, 
+								0
+							)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />		
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>					
+						</Parameters>
+					</VisibleCondition>
+        </Button>
+			</Buttons>
+		</ButtonShareCode><!-- <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />  -->
+
+  </ButtonShareCodes> 
+
+  <GlobalActions>
+
+    <!-- <Action xsi:type="ActionTrigger" Ident="*" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"  />
+        </Parameters>
+      </DataSource>
+    </Action> -->
+
+
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMPlannedShutdown</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMPlannedShutdown</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Saved-->
+    
+  </Steps>
+</WorkFlow>

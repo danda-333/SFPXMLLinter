@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_RequestGetNextState" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: Vrací stav do kterého by měl požadavek přejít (pro přeskakování volitelných stavů)
+	]]></XMLDescription>
+	<Description>
+		
+	</Description>
+	<Command>
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+		
+		-- =============================================
+		-- Author:			Daniel Šašek
+		-- Create date: 2023-12-01
+		-- Description:	Vrací stav do kterého by měl požadavek přejít (pro přeskakování volitelných stavů)
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(	
+			@State INT
+			,@ITSMRequestID INT
+			,@UserID INT
+		)
+		RETURNS INT
+		AS 
+		BEGIN
+
+			DECLARE @FolderTreeIdent VARCHAR(900)
+			SELECT @FolderTreeIdent = COALESCE(itsReq.ITSMCategoryLevel5Ident, itsReq.ITSMCategoryLevel4Ident, itsReq.ITSMCategoryLevel3Ident, itsReq.ITSMCategoryLevel2Ident, itsReq.ITSMCompanyIdent)
+			FROM ITSMRequest AS itsReq
+			WHERE itsReq.ID = @ITSMRequestID
+
+			DECLARE
+				@ITSMState_Deleted INT = 0 -- Deleted : Smazáno
+				,@ITSMState_New INT = 1 -- New : Nový
+				,@ITSMState_Categorization INT = 10 -- Categorization : Kategorizace
+				,@ITSMState_InputControlByOperator INT = 20 -- InputControlByOperator : Kontrola vstupu operatorem
+				,@ITSMState_ReturnedForMoreInfo INT = 30 -- ReturnedForMoreInfo : Vráceno k doplneni
+				,@ITSMState_ApprovalBySupervisor INT = 40 -- ApprovalBySupervisor : Schválení nadřízeným
+				,@ITSMState_RejectedBySupervisor INT = 50 -- RejectedBySupervisor : Zamítnuto nadřízeným
+				,@ITSMState_ApprovalAssignedToTeam INT = 60 -- ApprovalAssignedToTeam : Přiděleno týmu schvalovatelů
+				,@ITSMState_ApproverAssigned INT = 70 -- ApproverAssigned : Přiděleno schvalovateli
+				,@ITSMState_ApprovalInternallySuspended INT = 80 -- ApprovalInternallySuspended : Schvalení pozastaveno - SLA Beží
+				,@ITSMState_ApprovalSuspendedForReview INT = 90 -- ApprovalSuspendedForReview : Schvalení pozastaveno - Ke kontrole
+				,@ITSMState_ApprovalSuspended INT = 100 -- ApprovalSuspended : Schvalení pozastaveno - SLA Neběží
+				,@ITSMState_SolutionAssignedToTeam INT = 110 -- SolutionAssignedToTeam : Přiděleno řešitelskému týmu
+				,@ITSMState_SolutionAssigned INT = 120 -- SolutionAssigned : Přiděleno řešiteli
+				,@ITSMState_SolutionInternallySuspended INT = 130 -- SolutionInternallySuspended : Řešení pozastaveno - SLA Běží
+				,@ITSMState_SolutionSuspendedForReview INT = 140 -- SolutionSuspendedForReview : Řešení pozastaveno - Ke kontrole
+				,@ITSMState_SolutionSuspended INT = 150 -- SolutionSuspended : Řešení pozastaveno - SLA Neběží
+				,@ITSMState_ResolvedForReview INT = 155 -- ResolvedForReview : Vyřešeno - Ke kontrole
+				,@ITSMState_Resolved INT = 160 -- Resolved : Vyřešeno
+				,@ITSMState_SolutionRejected INT = 170 -- SolutionRejected : Řešení zamítnuto
+				,@ITSMState_Closed INT = 200 -- Closed : Uzavřeno
+
+			DECLARE @PermissionIDs dbo.ListNVarchar100Type
+			INSERT INTO @PermissionIDs VALUES ('ITSMOperator')
+
+			/* Kontrola vstupu operátorem => Schválení nadřízeným => Přiděleno týmu schvalovatelů => Přiděleno řešitelskému týmu */
+			IF @State = @ITSMState_InputControlByOperator BEGIN
+				IF (
+					EXISTS(
+						SELECT NULL
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND itsCat.IsOperatorReviewMandatory = 1
+						WHERE fot.Ident = @FolderTreeIdent
+					)
+					AND NOT EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission (@UserID, 'ITSMCommonFolderGroup', @PermissionIDs)
+						WHERE FolderTreeIdent = @FolderTreeIdent
+					)
+				) BEGIN
+					RETURN @ITSMState_InputControlByOperator
+				END ELSE BEGIN
+					SET @State = @ITSMState_ApprovalBySupervisor
+				END
+
+			END 
+
+			IF @State = @ITSMState_ApprovalBySupervisor BEGIN
+				IF EXISTS(
+					SELECT NULL
+					FROM dbo.FolderTree AS fot
+					INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+					INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND itsCat.IsSuperiorApprove = 1
+					WHERE fot.Ident = @FolderTreeIdent
+				) BEGIN
+					RETURN @ITSMState_ApprovalBySupervisor
+				END ELSE BEGIN
+					SET @State = @ITSMState_ApprovalAssignedToTeam
+				END
+
+			END
+
+			IF @State = @ITSMState_ApprovalAssignedToTeam BEGIN
+
+				IF EXISTS(
+					SELECT NULL
+					FROM usr.ITSMApproval AS itsApp
+					WHERE
+						itsApp.FormIdent = 'ITSMRequest'
+						AND itsApp.TableID = @ITSMRequestID
+						AND itsApp.[State] != 0
+				) BEGIN
+					RETURN @ITSMState_ApprovalAssignedToTeam
+				END ELSE BEGIN
+					RETURN @ITSMState_SolutionAssignedToTeam
+				END
+
+			END
+
+			/* Schvalení pozastaveno - Ke kontrole => Schvalení pozastaveno - SLA Neběží */
+			IF @State = @ITSMState_ApprovalSuspendedForReview BEGIN
+
+				IF (
+					EXISTS(
+						SELECT NULL
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND itsCat.IsOperatorReviewMandatory = 1
+						WHERE fot.Ident = @FolderTreeIdent
+					)
+					AND NOT EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission (@UserID, 'ITSMCommonFolderGroup', @PermissionIDs)
+						WHERE FolderTreeIdent = @FolderTreeIdent
+					) 
+				) BEGIN
+					RETURN @ITSMState_ApprovalSuspendedForReview
+				END ELSE BEGIN
+					RETURN @ITSMState_ApprovalSuspended
+				END
+
+			END
+
+			/* Řešení pozastaveno - Ke kontrole => Řešení pozastaveno - SLA Neběží */
+			IF @State = @ITSMState_SolutionSuspendedForReview BEGIN
+
+				IF (
+					EXISTS(
+						SELECT NULL
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND itsCat.IsOperatorReviewMandatory = 1
+						WHERE fot.Ident = @FolderTreeIdent
+					)
+					AND NOT EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission (@UserID, 'ITSMCommonFolderGroup', @PermissionIDs)
+						WHERE FolderTreeIdent = @FolderTreeIdent
+					) 
+				) BEGIN
+					RETURN @ITSMState_SolutionSuspendedForReview
+				END ELSE BEGIN
+					RETURN @ITSMState_SolutionSuspended
+				END
+
+			END
+
+			/* Vyřešeno - Ke kontrole => Vyřešeno */
+			IF @State = @ITSMState_ResolvedForReview BEGIN
+
+				IF (
+					EXISTS(
+						SELECT NULL
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND itsCat.IsOperatorReviewMandatory = 1
+						WHERE fot.Ident = @FolderTreeIdent
+					)
+					AND NOT EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission (@UserID, 'ITSMCommonFolderGroup', @PermissionIDs)
+						WHERE FolderTreeIdent = @FolderTreeIdent
+					) 
+				) BEGIN
+					RETURN @ITSMState_ResolvedForReview
+				END ELSE BEGIN
+					RETURN @ITSMState_Resolved
+				END
+
+			END
+
+			/* Řešení zamítnuto - Přiděleno řešitelskému týmu */
+			IF @State = @ITSMState_SolutionRejected BEGIN
+
+				IF EXISTS(
+					SELECT NULL
+					FROM dbo.FolderTree AS fot
+					INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+					INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND itsCat.IsOperatorReviewMandatory = 1
+					WHERE fot.Ident = @FolderTreeIdent
+				) BEGIN
+					RETURN @ITSMState_SolutionRejected
+				END ELSE BEGIN
+					RETURN @ITSMState_SolutionAssignedToTeam
+				END
+
+			END
+
+			RETURN @State
+		
+		END
+
+	</Command>
+</Library>

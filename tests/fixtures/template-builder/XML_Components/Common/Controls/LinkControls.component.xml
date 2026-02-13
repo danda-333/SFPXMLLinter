@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="AutoCompleteControl" Ident="Parent{{FormIdent}}ID" DataType="Number" TitleResourceKey="Parent{{FormIdent}}ID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="ITSMTitle" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator'), ('ITSMAuthor');
+
+					SELECT 
+						itsm.SourceID AS ID
+						,CONCAT(itsm.ITSMKey,' - ',itsm.[Subject]) AS [ITSMTitle]
+					FROM usr.ITSM_FormFullView AS itsm
+					WHERE 
+						(
+							itsm.ITSMKey LIKE @Parent{{FormIdent}}ID
+							OR
+							itsm.[Subject] LIKE @Parent{{FormIdent}}ID
+						)
+						AND itsm.SourceID != ISNULL(@ID, -1)
+						AND itsm.SourceFormIdent = @SourceFormIdent
+						AND itsm.LastFolderTreeIdent IN (
+							SELECT FolderTreeIdent
+							FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID, @FolderGroupSegmentIdent, @PermissionIDs)
+						)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SourceFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Parent{{FormIdent}}ID" DataType="String" LikeType="Both" MaxLength="200"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="ITSMTitle" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					SELECT 
+						itsm.SourceID AS ID
+						,CONCAT(itsm.ITSMKey,' - ',itsm.[Subject]) AS [ITSMTitle]
+					FROM usr.ITSM_FormFullView AS itsm
+					WHERE 
+						itsm.SourceID = @Parent{{FormIdent}}ID
+						AND itsm.SourceFormIdent = @SourceFormIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Parent{{FormIdent}}ID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SourceFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+		<!--/HelpControls-->
+
+		<!-- SubForm propojenÃ½ch poÅ¾adavkÅ¯ / datagrid-->
+		<Control xsi:type="SubFormControl" Ident="ITSMLinkSubform" TextResourceKey="ITSMLinkSubform_ITSM" FormIdent="ITSMLinkSubform" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true" IsVisible="false" IsImmediatelySave="true">
+			<DataSource>
+				<Dependencies>
+					<string>ITSMLinkSubform</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID" IsPrimaryKey="true" IsVisible="false"/>
+					<Column Ident="SourceITSMID" TitleResourceKey="SourceITSMID_ITSM" Width="30"/>
+					<Column Ident="ITSMLinkTypeGuid" TitleResourceKey="ITSMLinkTypeGuid_ITSM" Width="40"/>
+					<Column Ident="TargetITSMID" TitleResourceKey="TargetITSMID_ITSM" Width="30"/>
+				</Columns>
+				<SQL>
+					DECLARE @ThisID_ITSM VARCHAR(255) = usr.GetResourceText('ThisID_ITSM', @UserLanguageID);
+
+					SELECT 
+						itsmLinSbf.ID
+						,itsmLit.TextValue AS ITSMLinkTypeIdent
+						,IIF(itsmS.SourceID = @ID, @ThisID_ITSM,
+							CONCAT('&lt;a href="/Form/Detail/', itsmS.[SourceFormIdent], '/', itsmS.[SourceID], '"&gt;', itsmS.[ITSMKey], '&lt;/a&gt;')
+						) AS SourceITSMID
+						,IIF(itsmT.SourceID = @ID, @ThisID_ITSM, 
+							CONCAT('&lt;a href="/Form/Detail/', itsmT.[SourceFormIdent], '/', itsmT.[SourceID], '"&gt;', itsmT.[ITSMKey], '&lt;/a&gt;')
+						) AS TargetITSMID
+					FROM usr.ITSMLinkSubform AS itsmLinSbf
+					INNER JOIN usr.ITSM_FormFullView AS itsmS ON itsmS.SourceID = itsmLinSbf.SourceITSMID AND itsmS.SourceFormIdent = itsmLinSbf.FormIdent
+					INNER JOIN usr.ITSM_FormFullView AS itsmT ON itsmT.SourceID = itsmLinSbf.TargetITSMID AND itsmT.SourceFormIdent = itsmLinSbf.FormIdent
+					INNER JOIN usr.ITSMLinkType AS itsmLit ON itsmLit.Guid = itsmLinSbf.ITSMLinkTypeGuid AND itsmLit.LanguageID = @UserLanguageID
+					WHERE 
+						itsmLinSbf.[State] != @DeletedState 
+						AND (itsmLinSbf.SourceITSMID = @ID OR itsmLinSbf.TargetITSMID = @ID)
+						AND itsmLinSbf.FormIdent = @FormIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="100" Value="{{FormIdent}}" />
+				</Parameters>
+			</DataSource>
+		</Control>
+
+		<Control xsi:type="DataGridControl" Ident="SubITSMDataGrid" TitleResourceKey="SubITSMDataGrid_ITSM" IsVisible="false" RowHeight="60" IsBackRedirect="true">
+			
+			<!-- @Ignore unknown-form-ident -->
+			<DataSource FormIdent="{{FormIdent}}">
+				<DataPermissions>
+					<string>ITSMAuthor</string>
+					<string>ITSMOperator</string>
+					<string>ITSMSpecialist</string>
+					<string>ITSMAssigned</string>
+					<string>Creator</string>
+				</DataPermissions>
+				<Columns>
+					<Column Ident="ITSMCategoryLevel3Ident" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" TableAlterIdent="tbl" Width="10">
+						<SQL>
+							ftvCat3.[FolderName] AS ITSMCategoryLevel3Ident
+						</SQL>
+					</Column>
+					<Column Ident="ITSMCategoryLevel4Ident" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" TableAlterIdent="tbl" Width="8">
+						<SQL>
+							ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
+						</SQL>
+					</Column>
+					<!-- @Ignore unknown-form-ident -->
+					<Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="{{FormIdent}}" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+						<SQL>
+							itsReq.[State]
+						</SQL>
+					</Column>
+					<Column Ident="ITSMGeneralResolutionMethodTypeGuid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl" Width="10">
+						<SQL>
+							genResMetTyp.TextValue AS ITSMGeneralResolutionMethodTypeGuid
+						</SQL>
+					</Column>
+					<Column Ident="Link" TitleResourceKey="ITSMKey_ITSM" TableAlterIdent="tbl" Width="8" IsClickable="false" >
+						<SQL>
+							CONCAT('<a href="/Form/Detail/{{FormIdent}}/', itsReq.[ID], '">', itsReq.[ITSMKey], '</a>') AS Link
+						</SQL>
+					</Column>
+					<Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="10" TableAlterIdent="tbl">
+						<SQL>
+							itsReq.[Subject]
+						</SQL>
+					</Column>
+					<Column Ident="AssignedConcat" TitleResourceKey="AssignedConcat_ITSM" TableAlterIdent="tbl" Width="10">
+						<SQL>
+							STUFF(CONCAT(
+								', ' + accAssigned.FullName 
+								,', (' + @Group_ITSM + ') ' + groAssigned.[Name]
+							),1,2,'') AS AssignedConcat
+						</SQL>
+					</Column>
+					<Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" TableAlterIdent="tbl" Width="10">
+						<SQL>
+							accReporter.FullName AS ReporterAccountID
+						</SQL>
+					</Column>
+					<Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" Width="7" DataType="DateTime">
+						<SQL>
+							itsReq.CreateDate
+						</SQL>
+					</Column>
+					<Column Ident="LastUpdate" TitleResourceKey="LastUpdate_ITSM" TableAlterIdent="tbl" Width="7" DataType="DateTime" IsDefaultSort="true" SortType="DESC">
+						<SQL>
+							itsReq.LastUpdate
+						</SQL>
+					</Column>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" TableAlterIdent="tbl" IsVisible="false" DataType="Number"/>
+				</Columns>
+				<Froms>
+					<dsf:From Ident="ftvCat3">
+						<dsf:Columns>
+							<dsf:string>ITSMCategoryLevel3Ident</dsf:string>
+						</dsf:Columns>
+						<dsf:SQL>
+							LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat3 ON ftvCat3.FolderTreeIdent = itsReq.ITSMCategoryLevel3Ident
+						</dsf:SQL>
+					</dsf:From>
+					<dsf:From Ident="ftvCat4">
+						<dsf:Columns>
+							<dsf:string>ITSMCategoryLevel4Ident</dsf:string>
+						</dsf:Columns>
+						<dsf:SQL>
+							LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat4 ON ftvCat4.FolderTreeIdent = itsReq.ITSMCategoryLevel4Ident
+						</dsf:SQL>
+					</dsf:From>
+					<dsf:From Ident="groAssigned">
+						<dsf:Columns>
+							<dsf:string>AssignedConcat</dsf:string>
+							<dsf:string>AssignedGroupID</dsf:string>
+							<dsf:string>AssignedAccountID</dsf:string>
+						</dsf:Columns>
+						<dsf:SQL>
+							LEFT JOIN dbo.[Group] AS groAssigned ON groAssigned.ID = itsReq.AssignedGroupID
+							LEFT JOIN dbo.Account AS accAssigned ON accAssigned.ID = itsReq.AssignedAccountID
+						</dsf:SQL>
+					</dsf:From>
+					<dsf:From Ident="accReporter">
+						<dsf:Columns>
+							<dsf:string>ReporterAccountID</dsf:string>
+						</dsf:Columns>
+						<dsf:SQL>
+							LEFT JOIN dbo.Account AS accReporter ON accReporter.ID = itsReq.ReporterAccountID
+						</dsf:SQL>
+					</dsf:From>
+					<dsf:From Ident="genResMetTyp">
+						<dsf:Columns>
+							<dsf:string>ITSMGeneralResolutionMethodTypeGuid</dsf:string>
+						</dsf:Columns>
+						<dsf:SQL>
+							LEFT JOIN usr.ITSMGeneralResolutionMethodType AS genResMetTyp ON genResMetTyp.Ident = itsReq.ITSMGeneralResolutionMethodTypeGuid AND genResMetTyp.LanguageID = @UserLanguageID
+						</dsf:SQL>
+					</dsf:From>
+					<dsf:From Ident="ftvCom">
+						<dsf:Columns>
+							<dsf:string>ITSMCompanyIdent</dsf:string>
+						</dsf:Columns>
+						<dsf:SQL>
+							INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+						</dsf:SQL>
+					</dsf:From>
+				</Froms>
+				<SQL>
+					DECLARE @Group_ITSM VARCHAR(255) = usr.GetResourceText('Group_ITSM', @UserLanguageID);
+
+					SELECT 
+							itsReq.ID
+							,'{{FormIdent}}' AS FormIdent  
+							#ADDCOLUMN#
+					FROM usr.{{FormIdent}} AS itsReq   
+					#ADDFROM#
+					WHERE
+							itsReq.[State] != @DeletedState 
+							AND itsReq.Parent{{FormIdent}}ID = @ID  
+							AND #PERMISSION[{{FormIdent}}(itsReq)]#
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+				</Parameters>
+			</DataSource>
+		</Control>
+	</Section>
+
+	<Section Root="Form" Name="ITSMLinkSection" TargetXPath="//Form/Sections" Insert="append">
+		<Section Root="Form" xsi:type="ContentSection" Ident="ITSMLinkSection" TitleResourceKey="ITSMLink_ITSM" IconCssClass="icon-link">
+			<HTMLTemplate>
+				<style>
+					.no-label > label {
+						display: none !important;
+					}
+				</style>
+
+				<div class="row">
+					<div class="col-md-12">
+
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#ITSMLinkSubform_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse"></a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="ITSMLinkSubform" />
+											<Control ID="ITSMLinkSubform" />
+										</div>
+									</div>
+								</div>
+
+							</div>
+						</div>
+
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#ITSMStructure_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse"></a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+
+								<div class="row">
+									<div class="col-md-4">
+										<div class="form-group">
+											<ControlLabel ControlID="Parent{{FormIdent}}ID" />
+											<Control ID="Parent{{FormIdent}}ID" />
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group datagrid-no-scroll">
+											<Control ID="SubITSMDataGrid" />
+										</div>
+									</div>
+								</div>
+
+							</div>
+						</div>
+
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="ShowLinkControlShare">
+			<Controls>
+				<FormControl Ident="Parent{{FormIdent}}ID" IsVisible="true" />
+				<FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+				<FormControl Ident="ITSMLinkSubform" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> -->
+
+		<ControlShareCode Ident="EnableLinkControlShare">
+			<Controls>
+				<FormControl Ident="Parent{{FormIdent}}ID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+				<FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> -->
+		
+	</Section>
+	
+</Component>

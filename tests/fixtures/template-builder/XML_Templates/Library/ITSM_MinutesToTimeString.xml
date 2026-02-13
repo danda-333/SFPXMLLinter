@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_MinutesToTimeString" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: Konvertuje minuty na časový řetězec
+	]]></XMLDescription>
+	<Description>
+		
+	</Description>
+	<Command>
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+		
+		-- =============================================
+		-- Author:			Daniel Šašek
+		-- Create date: 2023-12-01
+		-- Description:	Konvertuje minuty na časový řetězec
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(	
+			@Minutes INT
+			,@Format VARCHAR(15)
+		)
+		RETURNS VARCHAR(15)
+		AS 
+		BEGIN
+
+			IF @Minutes IS NULL
+				RETURN NULL
+
+			IF @Format = 'TimeUnits'
+				RETURN CONCAT(IIF(@Minutes < 0, '-', ''), ABS(@Minutes) / 60, 'h ', ABS(@Minutes) % 60, 'm')	
+
+			RETURN CONCAT(IIF(@Minutes < 0, '-', ''), ABS(@Minutes) / 60, ':', FORMAT(ABS(@Minutes) % 60, '00'))	
+
+		
+		END
+
+	</Command>
+</Library>

@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" Ident="ITSMSupplierContract" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage">
+	<DataPermissions>
+		<string>ITSMSettingAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SaveAndCloseButton" TitleResourceKey="SaveAndCloseButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false"/>
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-undo2" PlacementType="Top Bottom" />
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="ContractName" DataType="String" MaxLength="255" TitleResourceKey="ContractName_ITSM" IsRequired="true" IsReadOnly="true"/>
+
+		<Control xsi:type="AutoCompleteControl" Ident="ITSMSupplierOrganizationEntityGuid" DataType="Guid" TitleResourceKey="ITSMSupplierOrganizationEntityGuid_ITSM" IsRequired="true" IsReadOnly="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT TOP 20
+						supOrgEnt.Guid
+						, supOrgEnt.TextValue
+					FROM usr.ITSMSupplierOrganizationEntity as supOrgEnt
+					WHERE
+						[State] != @DeletedState
+						AND IsActive = @StateOne
+						AND NOT EXISTS(
+							SELECT NULL
+							FROM usr.ITSMSupplierContract as itsmSupCon
+							WHERE
+								itsmSupCon.ITSMSupplierOrganizationEntityGuid = supOrgEnt.Guid
+								AND itsmSupCon.[State] != @DeletedState
+						)
+					ORDER BY supOrgEnt.ID ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						supOrgEnt.Guid
+						, supOrgEnt.TextValue
+					FROM usr.ITSMSupplierOrganizationEntity as supOrgEnt
+					WHERE
+						supOrgEnt.[State] != @DeletedState
+						AND supOrgEnt.IsActive = @StateOne
+						AND supOrgEnt.TextValue LIKE @ITSMSupplierOrganizationEntityGuid
+						AND NOT EXISTS(
+							SELECT NULL
+							FROM usr.ITSMSupplierContract as itsmSupCon
+							WHERE
+								itsmSupCon.ITSMSupplierOrganizationEntityGuid = supOrgEnt.Guid
+								AND itsmSupCon.[State] != @DeletedState
+						)
+					ORDER BY supOrgEnt.TextValue ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMSupplierOrganizationEntityGuid" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						Guid
+						, TextValue
+					FROM usr.ITSMSupplierOrganizationEntity
+					WHERE
+						Guid = @ITSMSupplierOrganizationEntityGuid
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMSupplierOrganizationEntityGuid" DataType="Guid"/>
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="ContractDateFrom" DataType="Date" TitleResourceKey="ContractDateFrom_ITSM" IsReadOnly="true" IsRequired="true"/>
+		<Control xsi:type="TextBoxControl" Ident="ContractDateTo" DataType="Date" TitleResourceKey="ContractDateTo_ITSM" IsReadOnly="true"/>
+
+		<Control xsi:type="FormDialogControl" Ident="ITSMSupplierContractServiceFormDialogOpen" CreateButtonTitleResourceKey="AddITSMSupplierContractServiceButton_ITSM" FormIdent="ITSMSupplierContractServiceFormDialog">
+			<Actions>
+				<Action xsi:type="GenerateSubForm" ControlIdent="ITSMSupplierContractSubForm" ActionStart="BeforeValidation" >
+					<DataSource>
+						<Columns>
+							<Column Ident="ServiceFolderTreeIdent" DataBindType="Value"/>
+							<Column Ident="ServiceFolderTreeIdentName" DataBindType="Title" ParentColumnIdent="ServiceFolderTreeIdent"/>
+						</Columns>
+						<SQL>
+							SELECT
+								ft.Ident AS ServiceFolderTreeIdent
+								,STUFF(
+									(
+										SELECT ' → ' + ftv.FolderName
+										FROM (
+											SELECT TOP (LEN(ft.Ident) / 7)
+											ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+											FROM sys.objects
+										) x
+										INNER JOIN dbo.FolderTreeView as ftv on ftv.Ident = LEFT(ft.Ident,(7*n))
+										
+
+										FOR XML PATH('')
+								), 1, 3, '') AS ServiceFolderTreeIdentName
+							FROM dbo.FolderTree as ft
+							INNER JOIN dbo.Folder as f on f.ID = ft.FolderID AND f.[State] = @StateOne 
+							WHERE
+								f.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+								AND ft.[Ident] IN (SELECT ID FROM @ServiceFolderTreeIdent)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ServiceFolderTreeIdent" DataType="VarCharList"/>
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1"/>
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMServiceFolderGroup"/>
+						</Parameters>
+					</DataSource>
+				</Action>
+			</Actions>
+		</Control>
+
+		<Control xsi:type="SubFormControl" Ident="ITSMSupplierContractSubForm" TextResourceKey="ITSMSupplierContractSubForm_ITSM" FormIdent="ITSMSupplierContractSubForm" IsSortable="true" SortableControlIdent="ApproveOrder" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column Ident="ServiceFolderTreeIdent" TitleResourceKey="ServiceFolderTreeIdent_ITSM" Width="70" />
+					<Column Ident="ServicePrice" TitleResourceKey="ServicePrice_ITSM" Width="20" />
+					<Column xsi:type="DeleteColumn" Ident="ID" Width="10"/>
+				</Columns>
+				<SQL>
+					SELECT
+						itsmSupConSF.ID
+						,STUFF(
+							(
+								SELECT ' → ' + ftv.FolderName
+								FROM (
+									SELECT TOP (LEN(itsmSupConSF.ServiceFolderTreeIdent) / 7)
+									ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+									FROM sys.objects
+								) x
+								INNER JOIN dbo.FolderTreeView as ftv on ftv.Ident = LEFT(itsmSupConSF.ServiceFolderTreeIdent,(7*n))
+								
+
+								FOR XML PATH('')
+						), 1, 3, '') AS ServiceFolderTreeIdent
+						, itsmSupConSF.ServicePrice
+					FROM usr.ITSMSupplierContractSubForm as itsmSupConSF
+					WHERE
+						itsmSupConSF.TableID = @ID
+						AND itsmSupConSF.FormIdent = @ThisFormIdent
+						AND itsmSupConSF.[State] != @DeletedState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="ITSMSupplierContract"/>
+				</Parameters>
+			</DataSource>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformation" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+
+				<style>
+					.no-label > label {
+						display: none !important;
+					}
+
+					.custom-table td,
+					.custom-table th {
+						padding: .15rem .5rem !important;
+					}
+
+					.custom-color-picker .sp-replacer{
+						display: flex;
+						width: 100%;
+					}
+
+					.custom-color-picker .sp-replacer .sp-preview {
+						flex-grow: 1;
+					}
+
+					.custom-table div:nth-child(2) {
+						display: none;
+					}
+
+					.select-bold select {
+						font-weight: bold;
+					}
+
+					a.js-subFormAdd[data-formident="ITSMSupplierContractSubForm"] {
+						display:none !important;
+					}
+				</style>
+
+				<div class="row">
+					<div class="col-md-9">
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#BasicInformationSection_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+
+								<div class="row">
+									<div class="col-md-8">
+										<div class="form-group">
+											<ControlLabel ControlID="ContractName"/>
+											<Control ID="ContractName"/>
+										</div>
+									</div>
+								</div>
+
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<Control ID="ITSMSupplierContractSubForm"/>
+										</div>
+									</div>
+								</div>
+
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<Control ID="ITSMSupplierContractServiceFormDialogOpen"/>
+										</div>
+									</div>
+								</div>
+
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#ContractSettingLabel_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="ITSMSupplierOrganizationEntityGuid"/>
+											<Control ID="ITSMSupplierOrganizationEntityGuid"/>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="ContractDateFrom"/>
+											<Control ID="ContractDateFrom"/>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="ContractDateTo"/>
+											<Control ID="ContractDateTo"/>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

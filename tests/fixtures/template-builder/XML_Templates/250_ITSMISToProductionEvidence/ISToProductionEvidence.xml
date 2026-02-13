@@ -1,0 +1,834 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ISToProductionEvidence" SegmentType="ISToProductionEvidenceSegment" PackageIdent="ITSMPackage" xIsDebug="true">
+	<DataPermissions>
+		<string>ISToProductionEvidence</string>
+		<string>ISToProductionEvidenceAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ISToProductionEvidence</string>
+		<string>ISToProductionEvidenceAdmin</string>
+	</CreatePermissions>
+	<Settings>
+		<Setting xsi:type="PageSetting">
+			<DataSource>
+				<SQL>
+					DECLARE @NewISToProductionEvidence_Title_ITSM NVARCHAR(255) = usr.GetResourceText('NewISToProductionEvidence_Title_ITSM', @UserLanguageID)
+
+					SELECT ISNULL(CAST((
+						SELECT CAST(itsReq.[ID] AS NVARCHAR) + ' ' + itsReq.SystemName
+						FROM usr.ISToProductionEvidence AS itsReq
+						WHERE itsReq.ID = @ID
+					) AS NVARCHAR(MAX)), @NewISToProductionEvidence_Title_ITSM) AS Title
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+				</Parameters>
+			</DataSource>
+		</Setting>
+	</Settings>
+	<Buttons>
+
+		<Button xsi:type="FormButton" Ident="SubmitButton" TitleResourceKey="SubmitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="BackToOperationButton" TitleResourceKey="BackToOperationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-previous2" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="OperationStartedButton" TitleResourceKey="OperationStartedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="OperationClosedButton" TitleResourceKey="OperationClosedButton_ITSM" IsSave="true" PlacementType="Top Bottom" Color="#777" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="SaveAndExitButton" TitleResourceKey="SaveAndExitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-undo2" />
+
+	</Buttons>
+	<SLACriteriaControls>
+
+		<!-- <Control xsi:type="DropDownListControl" Ident="ITSMPriorityIdent" DataType="Number" TitleResourceKey="ITSMPriorityIdent_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT dial.Guid, dial.TextValue
+					FROM usr.ITSMPriority AS dial
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+		</Control> -->
+
+		<!-- <Control xsi:type="DropDownListControl" Ident="ITSMScaleIdent" DataType="Number" TitleResourceKey="ITSMScaleIdent_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT dial.Guid, dial.TextValue
+					FROM usr.ITSMScale AS dial
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+		</Control> -->
+
+	</SLACriteriaControls>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemName" DataType="String" TitleResourceKey="SystemName_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control><!-- Název systému, zkratka -->
+
+		<Control xsi:type="TextAreaControl" Ident="SystemDescription" DataType="String" Rows="5" TitleResourceKey="SystemDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control><!-- Popis systému -->
+
+		<Control xsi:type="DropDownListControl" Ident="SupplierOrganizationEntityGuid" DataType="String" TitleResourceKey="SupplierOrganizationEntityGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						dial.Guid,
+						dial.TextValue
+					FROM usr.ITSMSupplierOrganizationEntity AS dial 
+					WHERE 
+						dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL>
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSupplierOrganizationEntity AS dial 
+							WHERE 
+								dial.[State] != 0
+								AND CAST(dial.Guid AS VARCHAR(MAX)) = @Value
+					)
+				</SQL>
+			</TimeLineDataBind>
+		</Control><!-- Dodavatel -->
+
+		<Control xsi:type="TextBoxControl" Ident="SupplierOrganizationEntityAddress" DataType="String" TitleResourceKey="SupplierOrganizationEntityAddress_ITSM" IsReadOnly="true" >
+			<TimeLineDataBind TransformType="Copy" />
+		</Control><!-- Adresa dodavatele -->
+
+		<Control xsi:type="TextBoxControl" Ident="ContractNumber" DataType="String" TitleResourceKey="ContractNumber_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMSupplierContractID" DataType="String" TitleResourceKey="ITSMSupplierContractID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>SupplierOrganizationEntityGuid</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="ContractName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						dial.ID,
+						dial.ContractName
+					FROM usr.ITSMSupplierContract AS dial 
+					WHERE 
+						dial.[State] != @DeletedState
+						AND dial.ITSMSupplierOrganizationEntityGuid = @SupplierOrganizationEntityGuid
+					ORDER BY dial.ID ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SupplierOrganizationEntityGuid" DataType="String" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL>
+					SET @Result = (
+						SELECT dial.ContractName
+						FROM usr.ITSMSupplierContract AS dial 
+							WHERE 
+								dial.[State] != 0
+								AND CAST(dial.ID AS VARCHAR(MAX)) = @Value
+					)
+				</SQL>
+			</TimeLineDataBind>
+		</Control><!-- Smlouva -->
+		
+		<Control xsi:type="TextBoxControl" Ident="TechnicalGarant" DataType="String" TitleResourceKey="TechnicalGarant_ITSM" IsReadOnly="true" >
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="MaterialGarant" DataType="String" TitleResourceKey="MaterialGarant_ITSM" IsReadOnly="true" >
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="Surveillance" DataType="String" TitleResourceKey="Surveillance_ITSM" IsReadOnly="true" >
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IncreasedMonitoring" DataType="String" TitleResourceKey="IncreasedMonitoring_ITSM" IsReadOnly="true" >
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="TicketSendingForm" DataType="String" TitleResourceKey="TicketSendingForm_ITSM" IsReadOnly="true" >
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SolverTeam" DataType="String" TitleResourceKey="SolverTeam_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemDocumentation" DataType="String" TitleResourceKey="SystemDocumentation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="DocumentationLocation" DataType="String" TitleResourceKey="DocumentationLocation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemHandoverDate" DataType="DateTime" TitleResourceKey="SystemHandoverDate_ITSM" IsReadOnly="true" >
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="TraindeEmployees" DataType="String" Rows="5" TitleResourceKey="TraindeEmployees_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="FileControl" Ident="FileList" TitleResourceKey="FileList_ITSM" RenderType="FormExtension" IsShowDeleteButton="true" FormExtensionIdent="ISToProductionEvidenceFileExtension" IsReadOnly="true" /><!-- Přílohy -->
+
+
+
+		<Control xsi:type="TextBoxControl" Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" DataType="String"/>
+
+
+    <Control xsi:type="CommunicationControl" Ident="Communication" Height="400" DataType="String" IsReadOnly="true" TitleResourceKey="Communication_ITSM">
+      <SettingPermissions>
+        <SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="Zadavatel" IconCssClass="icon-user" ColorCssClass="blue-600">
+          <VisiblePermissions>
+            <string>Creator</string>
+          </VisiblePermissions>
+        </SettingPermission>
+        <SettingPermission Ident="ISToProductionEvidenceAdmin" IsChecked="true" TitleResourceKey="Administrátor" IconCssClass="icon-user" ColorCssClass="orange-600">
+          <VisiblePermissions>
+            <string>ISToProductionEvidenceAdmin</string>
+          </VisiblePermissions>
+        </SettingPermission>
+      </SettingPermissions>
+      <Settings>
+        <fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+        <fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Right" Permission="ISToProductionEvidenceAdmin" />
+      </Settings>
+    </Control><!-- Komunikace -->
+
+    <Control xsi:type="CommunicationListControl" Ident="CommunicationList" TitleResourceKey="CommunicationList_ITSM" CommunicationControlIdent="Communication" />
+
+		<Control xsi:type="HTMLContentViewControl" Ident="ISToProductionEvidenceInfoHTMLContentView" IsRazorEngine="true">
+			<Sources>
+				<DataSource Ident="Main">
+					<Columns>
+						<Column Ident="SLAState" />
+						<Column Ident="SLADate" />
+						<Column Ident="SLASpentTime" />
+						<Column Ident="SLASpentPercent" />
+						<Column Ident="SLARemainingTime" />
+						<Column Ident="SLARemainingPercent" />
+						<Column Ident="CalendarName" />
+						<Column Ident="SLAActiveClass" />
+						<Column Ident="SLAName" />
+						<Column xsi:type="WorkFlowStateColumn" Ident="State" IsColor="true" FormIdent="ISToProductionEvidence" />
+					</Columns>
+					<SQL>
+						-- ===================================================================
+						-- POPIS: Dotaz pro načtení SLA informací pro ITSM Request
+						-- Vypočítává aktuální stav SLA, strávený a zbývající čas
+						-- ===================================================================
+						
+						-- -------------------------------------------------------------------
+						-- KROK 1: Deklarace proměnných pro lokalizované texty stavů SLA
+						-- Načítají se překlady podle jazyka uživatele z resource tabulky
+						-- -------------------------------------------------------------------
+						DECLARE 
+							-- Text pro aktivní SLA (probíhá odpočet času)
+							@SLAStateActive_ITSM VARCHAR(255) = usr.GetResourceText('SLAStateActive_ITSM', @UserLanguageID)
+							-- Text pro pozastavené SLA (čas se nepočítá)
+							,@SLAStatePaused_ITSM VARCHAR(255) = usr.GetResourceText('SLAStatePaused_ITSM', @UserLanguageID)
+							-- Text pro SLA po termínu (deadline byl překročen)
+							,@SLAStateAfterTime_ITSM VARCHAR(255) = usr.GetResourceText('SLAStateAfterTime_ITSM', @UserLanguageID)
+							-- Text pro případ, kdy SLA není nastaveno
+							,@SLANotSet_ITSM VARCHAR(255) = usr.GetResourceText('SLANotSet_ITSM', @UserLanguageID)
+							-- Text pro úspěšně ukončené SLA (splněno v termínu)
+							,@SLAStateEndedOK_ITSM VARCHAR(255) = usr.GetResourceText('SLAStateEndedOK_ITSM', @UserLanguageID)
+
+						-- -------------------------------------------------------------------
+						-- KROK 2: Hlavní SELECT vrací všechny potřebné informace o SLA
+						-- -------------------------------------------------------------------
+						SELECT 
+							-- ---------------------------------------------------------------
+							-- Dynamické určení textového stavu SLA podle aktuální situace
+							-- Kontroluje kombinaci stavu requestu a stavu SLA procesu
+							-- ---------------------------------------------------------------
+							CASE 
+								-- Pokud je request uzavřen/zrušen a SLA bylo aktivní/pozastavené -> Splněno OK
+								WHEN req.[State] IN (@ClosedState, @CanceledState) AND slac.[State] IN (0,1) THEN @SLAStateEndedOK_ITSM
+								-- State 0: SLA aktivní (běží odpočet)
+								WHEN slac.[State] = 0 THEN @SLAStateActive_ITSM
+								-- State 1: SLA pozastavené (čas se nepočítá)
+								WHEN slac.[State] = 1 THEN @SLAStatePaused_ITSM
+								-- State 2: SLA po termínu (deadline překročen)
+								WHEN slac.[State] = 2 THEN @SLAStateAfterTime_ITSM
+								-- Jinak: SLA není nastaveno
+								ELSE @SLANotSet_ITSM
+							END AS SLAState
+							
+							-- ---------------------------------------------------------------
+							-- Základní SLA údaje z vypočítaných hodnot (slac subquery)
+							-- ---------------------------------------------------------------
+							,slac.FinishTime AS SLADate                    -- Odhadovaný čas dokončení SLA
+							,slac.TimeSpent AS SLASpentTime                -- Strávený čas (formátovaný)
+							,slac.PercentSpent AS SLASpentPercent          -- Procento stráveného času
+							,slac.TimeRemain AS SLARemainingTime           -- Zbývající čas (formátovaný)
+							,slac.PercentRemain AS SLARemainingPercent     -- Procento zbývajícího času
+							,ISNULL(slac.CalendarName, N'-') AS CalendarName  -- Název kalendáře nebo '-'
+							,ISNULL(slac.SLAName, N'-') AS SLAName         -- Název SLA nebo '-'
+							
+							-- ---------------------------------------------------------------
+							-- Určení CSS třídy pro barevné rozlišení stavu SLA
+							-- bg-success=zelená, bg-warning=žlutá, bg-primary=modrá, 
+							-- bg-danger=červená, bg-grey=šedá
+							-- ---------------------------------------------------------------
+							,CASE 
+								-- Zelená: Request ukončen a SLA splněno včas
+								WHEN req.[State] IN (@ClosedState, @CanceledState) AND slac.[State] IN (0,1) THEN 'bg-success'
+								-- Žlutá: SLA aktivní (běží)
+								WHEN slac.[State] = 0 THEN 'bg-warning'
+								-- Modrá: SLA pozastavené
+								WHEN slac.[State] = 1 THEN 'bg-primary'
+								-- Červená: SLA po termínu
+								WHEN slac.[State] = 2 THEN 'bg-danger'
+								-- Šedá: SLA není nastaveno
+								ELSE 'bg-grey'
+							END AS SLAActiveClass
+							
+							-- Aktuální stav workflow requestu
+							,req.[State]
+
+						-- -------------------------------------------------------------------
+						-- KROK 3: FROM - Hlavní tabulka ISToProductionEvidence
+						-- -------------------------------------------------------------------
+						FROM usr.ISToProductionEvidence AS req
+						
+						-- -------------------------------------------------------------------
+						-- KROK 4: OUTER APPLY - Výběr nejnovějších SLA procesů
+						-- Pro každé unikátní SLAID vybere nejnovější záznam podle CreateDate
+						-- ROW_NUMBER() zajistí očíslování záznamů v rámci každého SLAID
+						-- -------------------------------------------------------------------
+						OUTER APPLY (
+							SELECT 
+								slap.*  -- Všechny sloupce z SLAProcess
+								-- Přiřadí pořadové číslo: 1 = nejnovější záznam pro dané SLAID
+								,ROW_NUMBER() OVER (PARTITION BY slap.SLAID ORDER BY slap.CreateDate DESC) AS RowNum
+							FROM dbo.SLAProcess AS slap
+							WHERE 
+								slap.TableID = req.ID                -- Vazba na konkrétní request
+								AND slap.FormIdent = 'ISToProductionEvidence'   -- Pouze pro ITSM Request
+								AND slap.IsOutCriteria = 0           -- Pouze záznamy splňující kritéria SLA
+						) AS slapRanked
+						
+						-- -------------------------------------------------------------------
+						-- KROK 5: CROSS APPLY - Filtrování pouze nejnovějšího SLA procesu
+						-- Vybere pouze záznam s RowNum = 1 (nejnovější)
+						-- CROSS APPLY zajistí, že pokud neexistuje záznam, řádek se nevyhodnotí
+						-- -------------------------------------------------------------------
+						CROSS APPLY (
+							SELECT TOP(1) * 
+							FROM (
+								SELECT * FROM dbo.SLAProcess WHERE ID = slapRanked.ID
+							) x
+							WHERE slapRanked.RowNum = 1
+						) AS slap
+						
+						-- -------------------------------------------------------------------
+						-- KROK 6: LEFT JOIN - Připojení SLA definice
+						-- Načte nastavení SLA (celkový čas, název, kalendář)
+						-- -------------------------------------------------------------------
+						LEFT JOIN dbo.SLA AS sla ON sla.ID = slap.SLAID
+						
+						-- -------------------------------------------------------------------
+						-- KROK 7: LEFT JOIN - Připojení SLA dne (pracovní doba)
+						-- Načte pracovní hodiny pro aktuální den v týdnu
+						-- TicketWeekDay vrací číslo dne v týdnu z LastRun
+						-- -------------------------------------------------------------------
+						LEFT JOIN dbo.SLADay AS slad ON slad.SLAID = sla.ID AND slad.[Day] = usr.TicketWeekDay(slap.LastRun)
+						
+						-- -------------------------------------------------------------------
+						-- KROK 8: OUTER APPLY - Výpočet přidaného času od posledního běhu
+						-- Vypočítá, kolik minut uplynulo od LastRun v rámci pracovní doby
+						-- -------------------------------------------------------------------
+						OUTER APPLY (
+							-- Spočítá rozdíl mezi začátkem a koncem časového rozmezí
+							SELECT DATEDIFF(MINUTE, MAX(DateTimeFrom), MIN(DateTimeTo)) AS AddTime
+							FROM (
+								-- První rozmezí: Od začátku pracovní doby do konce pracovní doby daného dne
+								-- Zkombinuje datum LastRun s časovými údaji z SLADay
+								SELECT 
+									CAST(CAST(slap.LastRun AS DATE) AS DATETIME) + CAST(slad.TimeFrom AS DATETIME) AS DateTimeFrom, 
+									CAST(CAST(slap.LastRun AS DATE) AS DATETIME) + CAST(slad.TimeTo AS DATETIME) AS DateTimeTo
+								UNION ALL
+								-- Druhé rozmezí: Od LastRun do aktuálního času (max 10 minut napřed)
+								-- IIF omezí výpočet na max 10 minut do budoucna
+								SELECT 
+									slap.LastRun, 
+									IIF(DATEDIFF(MINUTE, slap.LastRun, GETDATE()) > 10, 
+										DATEADD(MINUTE, 10, slap.LastRun), 
+										GETDATE())
+							) AS timeRange
+						) AS timeSpan
+						
+						-- -------------------------------------------------------------------
+						-- KROK 9: OUTER APPLY - Výpočet skutečně stráveného času
+						-- Přičte nově uplynulý čas (AddTime) k již zaznamenaném času (SpendTime)
+						-- -------------------------------------------------------------------
+						OUTER APPLY (
+							-- Pokud je AddTime záporný (např. mimo pracovní dobu), použije se 0
+							SELECT slap.SpendTime + IIF(timeSpan.AddTime > 0, timeSpan.AddTime, 0) AS SpentTime
+						) AS realTime
+						
+						-- -------------------------------------------------------------------
+						-- KROK 10: OUTER APPLY - Výpočet zbývajícího času a procent
+						-- Vypočítá, kolik času zbývá a jaká procenta času byla spotřebována
+						-- -------------------------------------------------------------------
+						OUTER APPLY (
+							SELECT
+								-- Zbývající čas = Celkový čas SLA - Strávený čas
+								sla.FinishTime - realTime.SpentTime AS RemainTime
+								-- Procento stráveného času (celé číslo)
+								,CAST((CAST(100 AS FLOAT) / sla.FinishTime) * realTime.SpentTime AS INT) AS PercentSpend
+								-- Procento zbývajícího času (100% - strávené%)
+								,100 - CAST((CAST(100 AS FLOAT) / sla.FinishTime) * realTime.SpentTime AS INT) AS PercentRemain
+						) AS slaComp
+						
+						-- -------------------------------------------------------------------
+						-- KROK 11: OUTER APPLY - Formátování výsledných hodnot
+						-- Převádí minuty na čitelný formát (např. "2h 30m")
+						-- Agreguje všechny finální hodnoty pro výstup
+						-- -------------------------------------------------------------------
+						OUTER APPLY (
+							SELECT
+								-- Převede minuty na formátovaný text (např. "2h 30m")
+								usr.TicketMinutesToTimeString(realTime.SpentTime, 'TimeUnits') AS TimeSpent
+								,usr.TicketMinutesToTimeString(slaComp.RemainTime, 'TimeUnits') AS TimeRemain
+								,usr.TicketMinutesToTimeString(sla.FinishTime, 'TimeUnits') AS TimeTotal
+								-- Přenese vypočítané procentuální hodnoty
+								,slaComp.PercentSpend AS PercentSpent
+								,slaComp.PercentRemain
+								-- Odhadované datum a čas dokončení SLA
+								,slap.EstimateEndDate AS FinishTime
+								-- Základní údaje o SLA
+								,sla.[Name] AS SLAName
+								,sla.[CalendarName] AS CalendarName
+								-- Aktuální stav SLA procesu (0=Aktivní, 1=Pozastaveno, 2=Po termínu)
+								,slap.[State]
+						) AS slac
+						
+						-- -------------------------------------------------------------------
+						-- KROK 12: WHERE - Finální filtrace
+						-- Vybere pouze konkrétní request podle @ID a pouze nejnovější SLA proces
+						-- -------------------------------------------------------------------
+						WHERE req.ID = @ID AND slapRanked.RowNum = 1
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						
+						<!-- Workflow stavy pro ISToProductionEvidence -->
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="130" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="CanceledState" DataType="Number" Value="140" />
+					</Parameters>
+				</DataSource>
+			</Sources>
+				<HTMLTemplate>
+					<style>
+						#sfpFormMainHeader.card-header {
+							padding: 0 !important;
+							margin-top: -0.9rem !important;
+							margin-right: -0.9rem !important;
+						}
+					</style>
+
+					@{
+						// Kolekce dat z datasource "Main"
+						var main = Model?.Data?.Main;
+
+						// State chceme zobrazit jen jednou před kartami
+						// => vezmeme ho z prvního řádku (pokud existuje)
+						object state = null;
+
+						if (main != null)
+						{
+							foreach (var x in main)
+							{
+								state = x.State;
+								break;
+							}
+						}
+					}
+
+					@* Karty se State na stejném řádku *@
+					<div class="row p-0 m-0" style="display:flex; justify-content: flex-end;">
+						@* State jako první prvek na řádku *@
+						@if (state != null)
+						{
+							<div class="col-auto p-0 mr-2" style="font-size: 14px;">
+								<span class="font-weight-semibold">[#State_ITSM#]:</span>
+								@state
+							</div>
+						}
+
+						@* Karty *@
+						@if (main != null)
+						{
+							foreach (var item in main)
+							{
+								<div class="col-xl-4 p-0" style="margin-right: 5px;">
+									<div class="row p-0 m-0">
+										<div class="col-12 m-0 p-0" style="line-height: 2.05rem;">
+											<div class="card-body @item.SLAActiveClass m-0">
+												<div class="d-flex">
+													<h3 class="font-weight-semibold mb-0 font-size-lg">@item.SLAState</h3>
+													<div class="list-icons ml-auto">
+														@item.SLADate
+													</div>
+												</div>
+
+												<div>
+													<div class="d-flex line-height-sm">
+														<strong>@item.SLAName</strong>
+													</div>
+
+													<div class="d-flex line-height-sm">
+														[#SLASpent_ITSM#]:<div class="ml-auto"></div>@item.SLASpentTime &bull; @(item.SLASpentPercent)%
+													</div>
+
+													<div class="d-flex line-height-sm">
+														[#SLARemaining_ITSM#]:<div class="ml-auto"></div>@item.SLARemainingTime &bull; @(item.SLARemainingPercent)%
+													</div>
+												</div>
+											</div>
+
+											<div class="progress bg-white" style="height: 0.375rem; border-radius: 0;">
+												<div class="progress-bar bg-success" style="width: @(item.SLASpentPercent)%">
+													<span class="sr-only">@(item.SLASpentPercent)% To end</span>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							}
+						}
+					</div>
+				</HTMLTemplate>
+		</Control>
+
+		<!-- PHs -->
+    <Control xsi:type="PlaceHolderControl" Ident="PHSupplierInformationCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHEmployeesCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHCommunicationCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHAttachmentsCard"  IsVisible="false"/>
+		<!-- PHs -->
+
+	</Controls>
+	<Components>
+		<Component ComponentIdent="TimeLineComponent" Ident="TimeLine"/>
+	</Components>
+	<Sections>
+		<Section xsi:type="HeaderSection" Ident="HeaderSection">
+			<HTMLTemplate>
+				<div class="p-0 m-0 w-100">
+					<div class="row p-0 m-0">
+						<div class="col-xl-6 d-flex mt-2 pl-0">
+							<span style="font-size: large;">
+								<a href="~/Form/Detail/ISToProductionEvidence/[%ACTUALFORM.ID%]">[%ACTUALFORM.SystemName%]</a> [%ACTUALFORM.SystemName%] | [%ACTUALFORM.ITSMKey%] | [@WORKFLOWSTATE@]
+								<small class="d-block text-muted ml-0 font-size-sm">
+									[#Created_ITSM#]: [%dbo.Account(ID).FullName(ACTUALFORM.AccountID)%] [%ACTUALFORM.CreateDate%], 
+									[#Updated_ITSM#]: [%dbo.Account(ID).FullName(ACTUALFORM.LastUpdateAccountID)%] [%ACTUALFORM.LastUpdate%]
+								</small>
+							</span>
+						</div>
+						<div class="col-xl-6 pl-0 mt-2">
+
+							<Control ID="ISToProductionEvidenceInfoHTMLContentView" />
+							<!-- <input type="hidden" name="TicketTimesheetCreateForm"></input> -->
+
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+				<div class="row">
+
+					<div class="col-md-9"><!-- Levý sloupec -->
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="form-group">
+									<ControlLabel ControlID="SystemName" />
+									<Control ID="SystemName" />
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-md-12">
+								<div class="form-group">
+									<ControlLabel ControlID="SystemDescription" />
+									<Control ID="SystemDescription" />
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-md-12">
+								<div class="form-group">
+									<ControlLabel ControlID="TraindeEmployees" />
+									<Control ID="TraindeEmployees" />
+								</div>
+							</div>
+						</div>
+						<Control ID="PHCommunicationCard">
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#Communication_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse" />
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<Control ID="Communication" />
+												</div>
+											</div>
+											<div class="col-md-12">
+												<div class="form-group">
+													<Control ID="CommunicationList" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						</Control>
+
+					</div><!-- //Levý sloupec -->
+
+					<div class="col-md-3"><!-- Pravý sloupec -->
+
+						<Control ID="PHSupplierInformationCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SupplierInformation_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="SupplierOrganizationEntityGuid" />
+														<Control ID="SupplierOrganizationEntityGuid" />
+													</div>
+												</div> 
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="SupplierOrganizationEntityAddress" />
+														<Control ID="SupplierOrganizationEntityAddress" />
+													</div>
+												</div> 
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ContractNumber" />
+														<Control ID="ContractNumber" />
+													</div>
+												</div> 
+											</div> 
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSupplierContractID" />
+														<Control ID="ITSMSupplierContractID" />
+													</div>
+												</div> 
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control><!-- Karta dodavatele -->
+
+						<Control ID="PHEmployeesCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#EmployeesCard_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="TechnicalGarant" />
+														<Control ID="TechnicalGarant" />
+													</div>
+												</div> 
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="MaterialGarant" />
+														<Control ID="MaterialGarant" />
+													</div>
+												</div> 
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="Surveillance" />
+														<Control ID="Surveillance" />
+													</div>
+												</div> 
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="IncreasedMonitoring" />
+														<Control ID="IncreasedMonitoring" />
+													</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="TicketSendingForm" />
+															<Control ID="TicketSendingForm" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="SolverTeam" />
+															<Control ID="SolverTeam" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="SystemDocumentation" />
+															<Control ID="SystemDocumentation" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="DocumentationLocation" />
+															<Control ID="DocumentationLocation" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="SystemHandoverDate" />
+															<Control ID="SystemHandoverDate" />
+														</div>
+							</div>
+						</Control><!--Osoby za příjemce -->
+
+						<Control ID="PHAttachmentsCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#Atachments_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="FileList" />
+														<Control ID="FileList" />
+													</div>
+												</div> 
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control><!-- Karta Vyřešení -->
+
+					</div><!-- //Pravý sloupec -->
+
+				</div>
+				
+				<!--HelpControls-->
+				<div class="row d-none">
+					<Control ID="IsShowCategoryLevel5"/>
+					<Control ID="ITSMKey"/>
+					<Control ID="ThisFormIdent"/>
+				</div>
+				<!--HelpControls-->
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM"  IconCssClass="icon-history">
+			<HTMLTemplate>
+				<fieldset>
+          <div class="row">
+            <div class="col-md-12">
+              <Component ID="TimeLine"/>
+            </div>
+          </div>         
+        </fieldset>	
+			</HTMLTemplate>
+		</Section>
+
+	</Sections>
+</Form>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
+		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true" />
+	</Section>
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="SubFormControl" Ident="ITSMApprovalRequestFakeSubForm" TextResourceKey="ITSMApprovalRequestFakeSubForm_ITSM" FormIdent="ITSMApprovalRequestFakeSubForm" IsSortable="true" SortableControlIdent="ApproveOrder" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column xsi:type="SortableColumn" Ident="ApproveOrder" Width="10" IsDefaultSort="true" SortType="ASC"/>
+					<Column xsi:type="ToolBarColumn" Ident="Approver" TitleResourceKey="Approver_ITSM" Width="80" IsClickable="true">
+						<HTMLTemplate>
+							[IF('Group'=='[%ApproverTypeValue%]')]
+								[%ApproverGroupID%]
+							[/IF]
+							[IF('Account'=='[%ApproverTypeValue%]')]
+								[%ApproverAccountID%]
+							[/IF]
+						</HTMLTemplate>
+					</Column>
+					<Column xsi:type="DeleteColumn" Ident="ID" Width="10"/>
+
+					<Column Ident="ApproverTypeValue" IsVisible="false"/>
+					<Column Ident="ApproverGroupID" IsVisible="false"/>
+					<Column Ident="ApproverAccountID" IsVisible="false"/>
+				</Columns>
+				<SQL>
+					SELECT
+						itsApp.ID
+						,itsApp.ApproveOrder
+						,itsApp.ApproverType AS ApproverTypeValue
+						,approverGro.[Name] AS ApproverGroupID
+						,approverAcc.FullName AS ApproverAccountID
+					FROM usr.ITSMApproval AS itsApp
+					LEFT JOIN dbo.[Group] AS approverGro on approverGro.ID = itsApp.ApproverGroupID
+					LEFT JOIN dbo.[Account] AS approverAcc on approverAcc.ID = itsApp.ApproverAccountID
+					WHERE
+						itsApp.TableID = @ID
+						AND itsApp.FormIdent = @ThisFormIdent
+						AND itsApp.[State] != @DeletedState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+				</Parameters>
+			</DataSource>
+		</Control>
+
+		<Control xsi:type="PlaceHolderControl" Ident="ApproverSubFormCardPlaceHolder" IsVisible="false"/>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<Control ID="ApproverSubFormCardPlaceHolder">
+			<script nonce="[@SCRIPTTOKENNONCE@]">
+				window.addEventListener('DOMContentLoaded', ()=> {
+					$(".js-subFormList").on("click", "tbody tr[data-id] td.js-not-clickable", nameSpaceSubFormComponent.Detail)
+				});
+			</script>
+			<div class="row">
+				<div class="col-md-12">
+					<div class="card">
+						<div class="card-header bg-white header-elements-inline">
+							<h6 class="card-title">[#ApproverSubForm_ITSM#]</h6>
+							<div class="header-elements">
+								<div class="list-icons">
+									<a class="list-icons-item" data-action="collapse" />
+								</div>
+							</div>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="ITSMApprovalRequestFakeSubForm" />
+										<Control ID="ITSMApprovalRequestFakeSubForm" />
+									</div>
+								</div> 
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</Control><!-- Karta Å˜Ã­zenÃ­ poÅ¾adavku -->
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="EnableApprovalControlShare">
+			<Controls>
+				<FormControl Ident="ApproverSubFormCardPlaceHolder" IsVisible="true" />
+				<FormControl Ident="ITSMApprovalRequestFakeSubForm" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableApprovalControlShare" /> -->
+		
+	</Section>
+	
+</Component>

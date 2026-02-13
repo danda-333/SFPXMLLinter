@@ -67,7 +67,7 @@ const ATTRIBUTES_BY_TAG: Record<string, string[]> = {
     "MappingFormIdent"
   ],
   section: ["xsi:type", "Ident", "Name", "Title", "TitleResourceKey", "TargetXPath", "Insert", "Root"],
-  using: ["Component", "Name", "Section"],
+  using: ["Component", "Name", "Section", "Insert"],
   sectionoverride: ["Name", "TargetXPath", "Insert", "Root"],
   state: ["Value", "Title", "TitleResourceKey", "ColorCssClass"],
   action: ["xsi:type", "Ident", "State", "ActionStart"]

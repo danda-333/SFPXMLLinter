@@ -8,8 +8,6 @@ export interface SfpXmlLinterSettings {
   hoverDocsFiles: string[];
   ruleSeverities: Record<string, RuleSeverity>;
   formatterMaxConsecutiveBlankLines: number;
-  templateBuilderMode: "auto" | "typescript" | "powershell";
-  powershellScriptPath: string;
   autoBuildOnSave: boolean;
   componentSaveBuildScope: "dependents" | "full";
 }
@@ -55,11 +53,6 @@ export function getSettings(): SfpXmlLinterSettings {
     }
   }
 
-  const templateBuilderMode = cfg.get<"auto" | "typescript" | "powershell">("templateBuilder.mode", "auto");
-  const powershellScriptPath = cfg.get<string>(
-    "templateBuilder.powershellScriptPath",
-    "SFPExampleProject/Scripts/BuildXmlTemplates.ps1"
-  );
   const autoBuildOnSave = cfg.get<boolean>("templateBuilder.autoBuildOnSave", true);
   const componentSaveBuildScope = cfg.get<"dependents" | "full">("templateBuilder.componentSaveBuildScope", "dependents");
 
@@ -69,8 +62,6 @@ export function getSettings(): SfpXmlLinterSettings {
     hoverDocsFiles,
     ruleSeverities,
     formatterMaxConsecutiveBlankLines,
-    templateBuilderMode,
-    powershellScriptPath,
     autoBuildOnSave,
     componentSaveBuildScope
   };

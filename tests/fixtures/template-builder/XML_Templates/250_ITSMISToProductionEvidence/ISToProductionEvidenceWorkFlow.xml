@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ISToProductionEvidenceWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ISToProductionEvidence" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="sfp bg-orange"/> <!--New-->
+      <State Value="2" TitleResourceKey="Concept_ITSM" ColorCssClass="primary"/> <!--Concept-->  
+
+      <State Value="3" TitleResourceKey="Open_ITSM" ColorCssClass="warning"/> <!--Open-->  
+      <State Value="4" TitleResourceKey="OperationStarted_ITSM" ColorCssClass="success"/> <!--OperationStarted-->  
+      <State Value="5" TitleResourceKey="OperationClosed_ITSM" ColorCssClass="sfp bg-grey"/> <!--OperationClosed-->  
+    </States>
+  </Definition>
+
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5" >
+      <Selectors>
+        <string>.js-howHideCategoryLevel5</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="SystemName" IsReadOnly="false" />
+        <FormControl Ident="SystemDescription" IsReadOnly="false" />
+        <FormControl Ident="SupplierOrganizationEntityGuid" IsReadOnly="false" />
+        <FormControl Ident="SupplierOrganizationEntityAddress" IsReadOnly="false" />
+        <FormControl Ident="ContractNumber" IsReadOnly="false" />
+        <FormControl Ident="ITSMSupplierContractID" IsReadOnly="false" />
+        <FormControl Ident="TechnicalGarant" IsReadOnly="false" />
+        <FormControl Ident="MaterialGarant" IsReadOnly="false" />
+        <FormControl Ident="FileList" IsReadOnly="false" />
+        <FormControl Ident="TraindeEmployees" IsReadOnly="false" />
+        <FormControl Ident="Surveillance" IsReadOnly="false" />
+        <FormControl Ident="IncreasedMonitoring" IsReadOnly="false" />
+        <FormControl Ident="TicketSendingForm" IsReadOnly="false" />
+        <FormControl Ident="SolverTeam" IsReadOnly="false" />
+        <FormControl Ident="SystemDocumentation" IsReadOnly="false" />
+        <FormControl Ident="DocumentationLocation" IsReadOnly="false" />
+        <FormControl Ident="SystemHandoverDate" IsReadOnly="false" />
+
+
+        <FormControl Ident="Communication" IsReadOnly="false" />
+
+        <!-- PHs -->
+        <FormControl Ident="PHSupplierInformationCard" IsVisible="true" />
+        <FormControl Ident="PHEmployeesCard" IsVisible="true" />
+        <FormControl Ident="PHAttachmentsCard" IsVisible="true" />
+
+        <FormControl Ident="PHCommunicationCard" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+
+    <ControlShareCode Ident="DisableAllControlShare">
+      <Controls>
+        <FormControl Ident="SystemName" IsReadOnly="true" />
+        <FormControl Ident="SystemDescription" IsReadOnly="true" />
+        <FormControl Ident="SupplierOrganizationEntityGuid" IsReadOnly="true" />
+        <FormControl Ident="SupplierOrganizationEntityAddress" IsReadOnly="true" />
+        <FormControl Ident="ContractNumber" IsReadOnly="true" />
+        <FormControl Ident="ITSMSupplierContractID" IsReadOnly="true" />
+        <FormControl Ident="TechnicalGarant" IsReadOnly="true" />
+        <FormControl Ident="MaterialGarant" IsReadOnly="true" />
+        <FormControl Ident="FileList" IsReadOnly="true" />
+        <FormControl Ident="TraindeEmployees" IsReadOnly="true" />
+        <FormControl Ident="Surveillance" IsReadOnly="true" />
+        <FormControl Ident="IncreasedMonitoring" IsReadOnly="true" />
+        <FormControl Ident="TicketSendingForm" IsReadOnly="true" />
+        <FormControl Ident="SolverTeam" IsReadOnly="true" />
+        <FormControl Ident="SystemDocumentation" IsReadOnly="true" />
+        <FormControl Ident="DocumentationLocation" IsReadOnly="true" />
+        <FormControl Ident="SystemHandoverDate" IsReadOnly="true" />
+
+
+        <FormControl Ident="Communication" IsReadOnly="false" />
+
+        <!-- PHs -->
+        <FormControl Ident="PHSupplierInformationCard" IsVisible="true" />
+        <FormControl Ident="PHEmployeesCard" IsVisible="true" />
+        <FormControl Ident="PHAttachmentsCard" IsVisible="true" />
+
+        <FormControl Ident="PHCommunicationCard" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" /> -->
+  </ControlShareCodes> 
+
+  <ActionShareCodes>
+    <!-- <ActionShareCode Ident="BasicRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string></string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                @PaymentTermsIdent = 'Other'
+              , 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="PaymentTermsIdent" DataType="String"  />
+            </Parameters>
+          </Condition>
+          <TrueActions><Action xsi:type="Required" ActionStart="BeforeValidation">
+            <Idents>
+              <string>PaymentTermsOther</string>
+            </Idents>
+          </Action>
+          </TrueActions>
+        </Action>
+      </Actions>
+
+      
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="BasicRequiredActionShare" /> -->
+
+    <!-- Email Actions -->
+    <!-- <ActionShareCode Ident="*EmailActionShare">
+      <Actions>
+
+        <Action xsi:type="Email" SubjectResourceKey="*_Email_ITSM" BodyResourceKey="*_Email_ITSM" EmailIdent="*_Email_ITSM" ActionStart="AfterPermission" Ident="*_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="*"/>
+          </Recipients>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="SubmitEmailActionShare" /> -->
+
+  </ActionShareCodes> 
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SubmitFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SubmitButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="3" ActionStart="AfterSave" />
+            <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+              <DataSource>
+                <SQL>
+                  DECLARE 
+                    @CounterIdent VARCHAR(100) = 'E-',
+                    @NextNumber INT
+
+                  EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+                  UPDATE usr.ISToProductionEvidence
+                  SET ITSMKey = CONCAT(@CounterIdent, RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+                  WHERE ID = @ID
+                </SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />                  
+                </Parameters>
+              </DataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SubmitFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+            <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+              <DataSource>
+                <SQL>
+                  DECLARE 
+                    @CounterIdent VARCHAR(100) = 'E-',
+                    @NextNumber INT
+
+                  EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+                  UPDATE usr.ISToProductionEvidence
+                  SET ITSMKey = CONCAT(@CounterIdent, RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+                  WHERE ID = @ID
+                </SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />                  
+                </Parameters>
+              </DataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />   
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+  </ButtonShareCodes> 
+
+  <GlobalActions>
+
+    <!-- <Action xsi:type="ActionTrigger" Ident="*" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"  />
+        </Parameters>
+      </DataSource>
+    </Action> -->
+
+
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidence</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SubmitFirstStateButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidence</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SubmitFirstStateButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Saved-->
+    <Step State="3">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidence</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidenceAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+            <Button Ident="OperationStartedButton" IsVisible="true">
+              <Actions>
+                <Action xsi:type="ChangeState" State="4" ActionStart="AfterSave" />
+                <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+              </Actions>
+            </Button>
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Open-->
+    <Step State="4">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidence</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidenceAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+            <Button Ident="OperationClosedButton" IsVisible="true">
+              <Actions>
+                <Action xsi:type="ChangeState" State="5" ActionStart="AfterSave" />
+                <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+              </Actions>
+            </Button>
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--OperationStarted-->
+    <Step State="5">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidence</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ISToProductionEvidenceAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button Ident="BackToOperationButton" IsVisible="true">
+              <Actions>
+                <Action xsi:type="ChangeState" State="4" ActionStart="AfterSave" />
+                <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+              </Actions>
+            </Button>
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--OperationClosed-->
+    
+  </Steps>
+</WorkFlow>

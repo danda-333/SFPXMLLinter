@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMApproveSubForm" IsSubForm="true" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage">
+	<DataPermissions>
+    <string>ITSMSettingAdmin</string>
+  </DataPermissions>
+  <CreatePermissions>
+    <string>ITSMSettingAdmin</string>
+  </CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150" />
+
+		<Control xsi:type="TextBoxControl" Ident="ApproveOrder" DataType="Number" TitleResourceKey="ApproveOrder_ITSM" IsFakeReadOnly="true" />
+
+		<Control xsi:type="AutoCompleteControl" Ident="GroupID" DataType="Number" TitleResourceKey="GroupID_ITSM" IsReadOnly="true" IsRequired="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						ID
+						, [Name]
+					FROM dbo.[Group]
+					WHERE
+						[State] = @ActiveState
+						AND [Name] LIKE @GroupID
+					ORDER BY [Name] ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="GroupID" DataType="String" MaxLength="200" LikeType="Both" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						ID
+						, [Name]
+					FROM dbo.[Group]
+					WHERE
+						ID = @GroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="GroupID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-3">
+						<div class="form-group">
+							<ControlLabel ControlID="ApproveOrder" />
+							<Control ID="ApproveOrder" />
+						</div>
+					</div>
+					<div class="col-md-9">
+						<div class="form-group">
+							<ControlLabel ControlID="GroupID" />
+							<Control ID="GroupID" />
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

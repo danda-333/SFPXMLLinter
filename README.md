@@ -62,7 +62,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - add SQL inline ignore (`/* @Ignore sql-convention-equals-spacing */`)
 - Build command:
   - `SFP XML Linter: Build XML Templates`
-  - TypeScript builder hook + fallback to legacy PowerShell script (`BuildXmlTemplates.ps1`)
+  - Native TypeScript `BuildXmlTemplates` builder (no PowerShell fallback)
 - Report command:
   - `SFP XML Linter: Workspace Diagnostics Report`
   - Prints diagnostics summary and per-rule counts to output channel

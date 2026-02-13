@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMOptionalFieldSettingAllView" SegmentType="ITSMSettingSegment" TitleResourceKey="ITSMOptionalFieldSettingAllView_ITSM" GroupTitleResourceKey="ITSMSettingGroup_ITSM" Priority="110" CountColorCssClass="primary" PackageIdent="ITSMPackage"> 
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Volitelná pole
+  	]]>
+	</XMLDescription>
+  <AccessPermissions>
+    <string>ITSMSettingAdmin</string>
+  </AccessPermissions>
+
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMOptionalFieldSettingButton" FormIdent="ITSMOptionalFieldSetting" TitleResourceKey="NewITSMOptionalFieldSettingButton_ITSM" />
+  </Buttons>
+
+  <DataSource FormIdent="ITSMOptionalFieldSetting">
+    <DataPermissions>
+      <string>ITSMSettingAdmin</string>
+    </DataPermissions>
+    <Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" DataType="Number" />
+      <Column Ident="OptionalFieldSettingName" TitleResourceKey="OptionalFieldSettingName_ITSM" Width="30" />
+      <Column Ident="OptionalFieldSettingDescription" TitleResourceKey="OptionalFieldSettingDescription_ITSM" Width="70" />
+    </Columns>
+    <SQL>
+      SELECT
+        dialSetting.ID
+        , dialSetting.OptionalFieldSettingName
+        , dialSetting.OptionalFieldSettingDescription
+      FROM usr.ITSMOptionalFieldSetting AS dialSetting
+      WHERE
+       dialSetting.[State] != @DeletedState
+    </SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+    </Parameters>
+  </DataSource>
+
+  <CountDataSource>
+    <SQL>
+      SELECT COUNT(dialSetting.ID)
+      FROM usr.ITSMOptionalFieldSetting AS dialSetting
+      WHERE
+       dialSetting.[State] != @DeletedState
+    </SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="IsActive" DataType="Number" Value="1" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Statuses" DataType="NumberList" />
+    </Parameters>
+  </CountDataSource>
+</DataView>

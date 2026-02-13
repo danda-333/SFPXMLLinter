@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="PageSetting" TargetXPath="//Form/Settings" Insert="append">
+		<Setting xsi:type="PageSetting">
+			<DataSource>
+				<SQL>
+					DECLARE @New{{FormIdent}}_Title_ITSM NVARCHAR(255) = usr.GetResourceText('New{{FormIdent}}_Title_ITSM', @UserLanguageID)
+
+					SELECT ISNULL(CAST((
+						SELECT CONCAT([ITSMKey] , ' ' , LEFT(itsReq.Subject, 20))
+						FROM usr.{{FormIdent}} AS itsReq
+						WHERE itsReq.ID = @ID
+					) AS NVARCHAR(MAX)), @New{{FormIdent}}_Title_ITSM) AS Title
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+				</Parameters>
+			</DataSource>
+		</Setting>
+	</Section>
+	
+</Component>

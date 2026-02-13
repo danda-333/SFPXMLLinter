@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMSecurityIncidentRootCauseTypeSetting" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage"> 
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Příčina bezpečnostního incidentu
+  	]]>
+	</XMLDescription>
+  <DataPermissions>
+    <string>ITSMSettingAdmin</string> <!-- Static -->
+  </DataPermissions>
+
+  <CreatePermissions>
+    <string>ITSMSettingAdmin</string>
+  </CreatePermissions>
+
+  <Buttons>
+    <Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+    <Button xsi:type="FormButton" Ident="SaveWithoutValidationButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsSystem="true" />
+    <Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-undo2" />
+  </Buttons>
+
+  <Controls>
+    <Control xsi:type="HiddenControl" Ident="ExternalKey" DataType="String" MaxLength="255" />
+    <Control xsi:type="HiddenControl" Ident="Guid" DataType="Guid" />
+
+    <Control xsi:type="CheckBoxControl" Ident="IsActive" DataType="Bool" TitleResourceKey="IsActive_ITSM" LabelPlacementType="Right" Default="1" IsReadOnly="true" />
+    <Control xsi:type="TextBoxControl" Ident="OrderValue" DataType="Number" TitleResourceKey="OrderValue_ITSM" IsReadOnly="true" />
+    <Control xsi:type="TextBoxControl" Ident="FunctionalKey" DataType="String" TitleResourceKey="FunctionalKey_ITSM" IsReadOnly="true" />
+
+		<Control xsi:type="InlineSubFormControl" Ident="ITSMSecurityIncidentRootCauseType" TextResourceKey="ITSMSecurityIncidentRootCauseType_ITSM" FormIdent="ITSMSecurityIncidentRootCauseType" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column Ident="LanguageID" TitleResourceKey="LanguageID_ITSM" Width="20" />
+					<Column Ident="TextValue" TitleResourceKey="TextValue_ITSM" Width="80" />
+				</Columns>
+				<SQL>
+					SELECT
+						ISNULL(dial.ID, (ROW_NUMBER() OVER (ORDER BY dial.ID ASC)) * -1) AS ID,
+						dial.TextValue,
+						lan.ID AS LanguageID
+					FROM dbo.[Language] AS lan
+					LEFT JOIN (
+						SELECT
+							dial.ID,
+							dial.TextValue,
+							dial.LanguageID
+						FROM usr.ITSMSecurityIncidentRootCauseTypeSetting AS dialSetting
+						LEFT JOIN usr.ITSMSecurityIncidentRootCauseType AS dial
+							ON dial.[State] != @DeletedState
+							AND dial.Guid = dialSetting.Guid
+						WHERE dialSetting.ID = @ID
+					) AS dial
+						ON dial.LanguageID = lan.ID
+					ORDER BY lan.ID ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+				</Parameters>
+			</DataSource>
+		</Control>
+
+		<Control xsi:type="TimeLineControl" Ident="TimeLine" TitleResourceKey="TimeLine_ITSM" SortType="DESC">
+			<HistoryTypes>
+				<string>Create</string>
+				<string>ChangeState</string>
+			</HistoryTypes>
+		</Control>
+	</Controls>
+
+	<Sections>
+		<Section xsi:type="HeaderSection" Ident="HeaderSection">
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<h3>ID: [%ACTUALFORM.ID%] | [%ACTUALFORM.AccountID%] | GUID: [%ACTUALFORM.Guid%] </h3>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM">
+			<HTMLTemplate>
+
+				<style>
+					.no-label > label {
+						display: none !important;
+					}
+
+					.custom-table td,
+					.custom-table th {
+						padding: .15rem .5rem !important;
+					}
+
+					.custom-color-picker .sp-replacer{
+						display: flex;
+						width: 100%;
+					}
+
+					.custom-color-picker .sp-replacer .sp-preview {
+						flex-grow: 1;
+					}
+
+					.custom-table div:nth-child(2) {
+						display: none;
+					}
+
+					.select-bold select {
+						font-weight: bold;
+					}
+				</style>
+
+				<div class="row">
+					<div class="col-md-9">
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#LanguageMutations_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+				
+										<div class="form-group custom-table">
+											<Control ID="ITSMSecurityIncidentRootCauseType" />
+										</div>
+									
+									</div>
+								</div>
+							</div>
+						</div>
+
+					</div>
+					<div class="col-md-3">
+
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#Setting_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="OrderValue" />
+											<Control ID="OrderValue" />
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="FunctionalKey" />
+											<Control ID="FunctionalKey" />
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group no-label">
+											<Control ID="IsActive" />
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="Setting" />
+											<Control ID="Setting" />
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+					</div>
+				</div>			
+
+				<div class="row d-none">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Guid" />
+							<Control ID="Guid" />
+						</div>
+					</div>
+				</div>	
+
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ContentSection" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM" IconCssClass="icon-history">
+			<HTMLTemplate>
+				<fieldset>
+					<div class="row">
+						<div class="col-md-12">
+							<Control ID="TimeLine" />
+						</div>
+					</div>
+				</fieldset>
+			</HTMLTemplate>
+		</Section> <!-- TimeLine -->
+	</Sections>
+</Form>

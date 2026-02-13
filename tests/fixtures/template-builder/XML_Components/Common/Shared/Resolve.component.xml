@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
+		<Button xsi:type="FormButton" Ident="ResolveButton" TitleResourceKey="ResolveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark-circle" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="ResolveConfirmFormDialog" ConfirmFormDialogSectionIdent="ResolveConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
+	</Section>
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="DropDownListControl" Ident="ITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMGeneralResolutionMethodType AS dial
+					INNER JOIN usr.ITSMGeneralResolutionMethodTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<!--<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL>
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMGeneralResolutionMethodType AS dial
+							INNER JOIN usr.ITSMGeneralResolutionMethodTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				</SQL>
+			</TimeLineDataBind>-->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSMGeneralResolutionMethodType" KeyColumnIdent="Guid" KeyColumnDataType="UNIQUEIDENTIFIER" TitleColumnIdent="TextValue" TitleColumnDataType="VARCHAR(255)" LanguageIDColumnIdent="LanguageID"/>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="DialogITSMGeneralResolutionMethodTypeGuid_ITSM" >
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+					<Column Ident="Selected" DataBindType="Selected" />
+				</Columns>
+				<SQL>
+					SELECT 
+						dialsetting.Guid
+						,dial.TextValue
+						,IIF(dialsetting.Guid = @ITSMGeneralResolutionMethodTypeGuid, 1, 0) AS Selected
+					FROM usr.ITSMGeneralResolutionMethodType AS dial
+					INNER JOIN usr.ITSMGeneralResolutionMethodTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMGeneralResolutionMethodTypeGuid" DataType="Guid"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="SolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="DialogSolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsCreateColumn="false">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="SolutionDescription" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT @SolutionDescription AS SolutionDescription
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SolutionDescription" DataType="String"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="SolutionAditionalInformation" DataType="String" Rows="3" TitleResourceKey="SolutionAditionalInformation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="DialogSolutionAditionalInformation" DataType="String" Rows="3" TitleResourceKey="SolutionAditionalInformation_ITSM" IsCreateColumn="false">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="SolutionAditionalInformation" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT @SolutionAditionalInformation AS SolutionAditionalInformation
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SolutionAditionalInformation" DataType="String"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="PlaceHolderControl" Ident="GeneralResolutionCardPlaceHolder" IsVisible="false"/>
+	</Section>
+
+	<Section Root="Form" Name="Sections" TargetXPath="//Form/Sections" Insert="append">
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="ResolveConfirmFormDialogSection" CloseButtonTitleResourceKey="ResolveConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="ResolveConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ResolveConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMGeneralResolutionMethodTypeGuid" />
+							<Control ID="DialogITSMGeneralResolutionMethodTypeGuid" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogSolutionDescription" />
+							<Control ID="DialogSolutionDescription" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogSolutionAditionalInformation" />
+							<Control ID="DialogSolutionAditionalInformation" />
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<Control ID="GeneralResolutionCardPlaceHolder">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="card">
+						<div class="card-header bg-white header-elements-inline">
+							<h6 class="card-title">[#Solution_ITSM#]</h6>
+							<div class="header-elements">
+								<div class="list-icons">
+									<a class="list-icons-item" data-action="collapse" />
+								</div>
+							</div>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="ITSMGeneralResolutionMethodTypeGuid" />
+										<Control ID="ITSMGeneralResolutionMethodTypeGuid" />
+									</div>
+								</div> 
+							</div>
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="SolutionDescription" />
+										<Control ID="SolutionDescription" />
+									</div>
+								</div> 
+							</div>
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="SolutionAditionalInformation" />
+										<Control ID="SolutionAditionalInformation" />
+									</div>
+								</div> 
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</Control><!-- Karta VyÅ™eÅ¡enÃ­ -->
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="ShowResolutionControlShare">
+			<Controls>
+				<FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" />
+				<FormControl Ident="SolutionDescription" IsVisible="true" />
+				<FormControl Ident="SolutionAditionalInformation" IsVisible="true" />
+				<FormControl Ident="GeneralResolutionCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" /> -->
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+		
+		<!-- Resolution controls updates-->
+		<ActionShareCode Ident="Resolution_Update_FromDialog_ActionShare">
+			<Actions>
+
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogITSMGeneralResolutionMethodTypeGuid</string>
+            <string>DialogSolutionDescription</string>
+          </Idents>
+        </Action>
+
+				<Action xsi:type="ActionValue" Ident="ITSMGeneralResolutionMethodTypeGuid_Update_FromDialog_Action" ControlIdent="ITSMGeneralResolutionMethodTypeGuid" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @DialogITSMGeneralResolutionMethodTypeGuid
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="SolutionDescription_Update_FromDialog_Action" ControlIdent="SolutionDescription" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @DialogSolutionDescription
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogSolutionDescription" DataType="String" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="SolutionAditionalInformation_Update_FromDialog_Action" ControlIdent="SolutionAditionalInformation" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT @DialogSolutionAditionalInformation
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogSolutionAditionalInformation" DataType="String" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Update_FromDialog_ActionShare" /> -->
+		<ActionShareCode Ident="Resolution_Clear_ActionShare">
+			<Actions>
+				<Action xsi:type="SetValue" Ident="ITSMGeneralResolutionMethodTypeGuid" Value="" ActionStart="AfterValidation" />
+				<Action xsi:type="SetValue" Ident="SolutionDescription" Value="" ActionStart="AfterValidation" />
+				<Action xsi:type="SetValue" Ident="SolutionAditionalInformation" Value="" ActionStart="AfterValidation" />
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Clear_ActionShare" /> -->
+		<ActionShareCode Ident="Resolution_Update_ToCanceled_ActionShare">
+			<Actions>
+
+				<Action xsi:type="ActionValue" Ident="ITSMGeneralResolutionMethodTypeGuid_Update_ToCanceled_Action" ControlIdent="ITSMGeneralResolutionMethodTypeGuid" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL>
+							SELECT TOP(1) Guid
+							FROM usr.ITSMGeneralResolutionMethodTypeSetting
+							WHERE FunctionalKey = 'Canceled'
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="SetValue" Ident="SolutionDescription" Value="" ActionStart="AfterValidation" />
+				<Action xsi:type="SetValue" Ident="SolutionAditionalInformation" Value="" ActionStart="AfterValidation" />
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Update_ToCanceled_ActionShare" /> -->
+		
+	</Section>
+	
+</Component>

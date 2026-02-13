@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="AutoCompleteControl" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCompanyIdent_ITSM" IsRequired="true" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+					SELECT
+						itsmFolPer.FolderTreeIdent AS Ident
+						, itsmFolPer.FolderName AS [Name]
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					WHERE
+						itsmFolPer.FolderLevel = @Level
+						AND itsmFolPer.FolderName LIKE @ITSMCompanyIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						fot.Ident
+						, fol.[Name]
+					FROM dbo.Folder AS fol
+					INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+					WHERE
+						fot.Ident = @ITSMCompanyIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</SelectedDataBind>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSM_FolderTreeView" KeyColumnIdent="FolderTreeIdent" KeyColumnDataType="VARCHAR(900)" TitleColumnIdent="FolderName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM" IsShowRequired="true" IsReadOnly="true" IsAutoSelectFirst="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+					SELECT
+						itsmFolPer.FolderTreeIdent AS Ident
+						, itsmFolPer.FolderName AS [Name]
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					WHERE
+						itsmFolPer.FolderLevel = @Level
+						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCompanyIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="2" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</DataBind>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSM_FolderTreeView" KeyColumnIdent="FolderTreeIdent" KeyColumnDataType="VARCHAR(900)" TitleColumnIdent="FolderName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" IsShowRequired="true" IsReadOnly="true" IsAutoSelectFirst="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>ITSMCategoryLevel2Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+					SELECT
+						itsmFolPer.FolderTreeIdent AS Ident
+						, itsmFolPer.FolderName AS [Name]
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					WHERE
+						itsmFolPer.FolderLevel = @Level
+						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel2Ident
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="3" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</DataBind>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSM_FolderTreeView" KeyColumnIdent="FolderTreeIdent" KeyColumnDataType="VARCHAR(900)" TitleColumnIdent="FolderName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" IsShowRequired="true" IsReadOnly="true" IsAutoSelectFirst="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>ITSMCategoryLevel3Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+					SELECT
+						itsmFolPer.FolderTreeIdent AS Ident
+						, itsmFolPer.FolderName AS [Name]
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					WHERE
+						itsmFolPer.FolderLevel = @Level
+						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel3Ident
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="4" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</DataBind>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSM_FolderTreeView" KeyColumnIdent="FolderTreeIdent" KeyColumnDataType="VARCHAR(900)" TitleColumnIdent="FolderName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" IsShowRequired="true" IsReadOnly="true" IsAutoSelectFirst="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+					SELECT
+						itsmFolPer.FolderTreeIdent AS Ident
+						, itsmFolPer.FolderName AS [Name]
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					WHERE
+						itsmFolPer.FolderLevel = @Level
+						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel4Ident
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="5" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</DataBind>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSM_FolderTreeView" KeyColumnIdent="FolderTreeIdent" KeyColumnDataType="VARCHAR(900)" TitleColumnIdent="FolderName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IsShowCategoryLevel5" DataType="Number" TitleResourceKey="IsShowCategoryLevel5_ITSM" IsCreateColumn="false" IsFakeReadOnly="true">
+			<DataBind>
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsShowCategoryLevel5" DataBindType="Value"/>
+				</Columns>
+				<SQL>
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+					SELECT
+						IIF(
+							EXISTS(
+								SELECT NULL
+								FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs)
+								WHERE
+									FolderLevel = @Level
+									AND ParentFolderTreeIdent = @ITSMCategoryLevel4Ident
+							)
+							, 1
+							, 0
+						) AS IsShowCategoryLevel5
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="5" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<div class="row">
+			<div class="col-md-3">
+				<div class="form-group">
+					<ControlLabel ControlID="ITSMCompanyIdent" />
+					<Control ID="ITSMCompanyIdent" />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<ControlLabel ControlID="ITSMCategoryLevel2Ident" />
+					<Control ID="ITSMCategoryLevel2Ident" />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<ControlLabel ControlID="ITSMCategoryLevel3Ident" />
+					<Control ID="ITSMCategoryLevel3Ident" />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<ControlLabel ControlID="ITSMCategoryLevel4Ident" />
+					<Control ID="ITSMCategoryLevel4Ident" />
+				</div>
+			</div>
+			<div class="col-md-3 js-howHideCategoryLevel5" style="display:none;">
+				<div class="form-group">
+					<ControlLabel ControlID="ITSMCategoryLevel5Ident" />
+					<Control ID="ITSMCategoryLevel5Ident" />
+				</div>
+			</div>
+		</div>
+
+		<div class="d-none">
+			<Control ID="IsShowCategoryLevel5"/>
+		</div>
+	</Section>
+
+	<Section Root="WorkFlow" Name="ShowHide" TargetXPath="//WorkFlow/GlobalJavaScripts" Insert="append">
+		<JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5" >
+			<Selectors>
+				<string>.js-howHideCategoryLevel5</string>
+			</Selectors>
+			<ShowValues>
+				<string>1</string>
+			</ShowValues>
+		</JavaScript>
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="EnableCategoryControlShare">
+			<Controls>
+				<FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" /> -->
+		
+	</Section>
+	
+</Component>

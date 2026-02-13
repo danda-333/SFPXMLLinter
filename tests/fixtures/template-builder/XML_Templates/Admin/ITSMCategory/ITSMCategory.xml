@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" Ident="ITSMCategory" FormType="Folder" SegmentType="Admin" FolderGroupSegmentIdent="ITSMCommonFolderGroup" PackageIdent="ITSMPackage">
+	<DataPermissions>
+		<string>SuperAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>SuperAdmin</string>
+	</CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false"/><!-- Uložit -->
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2"><!-- Smazat -->
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+	</Buttons>
+	<Controls>
+		<Control xsi:type="HiddenControl" Ident="ParentFolderTreeID" DataType="Number" IsCreateColumn="false">
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="ParentFolderTreeID"/>
+				</Columns>
+				<SQL>
+
+					IF(@ID IS NOT NULL)
+					BEGIN
+						SELECT fot.ParentFolderTreeID AS ParentFolderTreeID
+						FROM usr.ITSMCategory AS itsmCat
+						INNER JOIN dbo.Folder AS fol ON fol.TableID = itsmCat.ID AND fol.FormIdent  = 'ITSMCategory'
+						INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+						WHERE itsmCat.ID = @ID
+					END
+					ELSE
+					BEGIN
+						SELECT ISNULL(@ParentFolderTreeID, @FolderTreeID) AS ParentFolderTreeID
+					END
+
+
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+				</Parameters>
+			</DefaultDataSource>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="Name" DataType="String" MaxLength="255" TitleResourceKey="Name_ITSM" IsShowRequired="true" IsReadOnly="true" IsVisible="false" IsFullText="true"/>
+		<Control xsi:type="SwitchControl" Ident="Active" DataType="Bool" Default="1" TitleResourceKey="IsActive_ITSM" IsRequired="true" IsReadOnly="true" />
+		<Control xsi:type="ShareMainFolderControl" Ident="ShareMainFolder" DataType="NumberList" ErrorMessageResourceKey="ShareMainFolderError_ITSM" TitleResourceKey="ShareMainFolder_ITSM" IsRequired="true" IsReadOnly="true" />
+		<Control xsi:type="FolderPermissionControl" Ident="FolderPermission" DataType="NumberList" TitleResourceKey="Access_ITSM" IsReadOnly="true" />
+
+		<Control xsi:type="TextBoxControl" Ident="CategoryName" DataType="String" MaxLength="255" TitleResourceKey="CategoryName_ITSM" IsShowRequired="true" IsReadOnly="true" IsVisible="false"/>
+
+    <Control xsi:type="AutoCompleteControl" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMServiceIdent_ITSM" IsShowRequired="true" IsReadOnly="true" IsVisible="false">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+
+					SELECT 
+						fotItsmSer.Ident
+						, itsmSer.[Name] 
+					FROM usr.ITSMService AS itsmSer
+					INNER JOIN dbo.Folder AS folItsmSer ON folItsmSer.TableID = itsmSer.ID AND folItsmSer.FormIdent = 'ITSMService'	AND folItsmSer.[State] = @FolderActiveState
+					INNER JOIN dbo.FolderTree AS fotItsmSer ON fotItsmSer.FolderID = folItsmSer.ID
+					LEFT JOIN (
+						SELECT ItsmSubParent.*
+						FROM dbo.FolderTree AS fotParent
+						INNER JOIN dbo.FolderTree AS fotSubParent ON fotSubParent.Ident LIKE fotParent.Ident + '%' AND fotSubParent.[Level] = 3
+						INNER JOIN dbo.Folder AS folSubParent	ON folSubParent.ID = fotSubParent.FolderID AND folSubParent.[State] = @FolderActiveState
+						INNER JOIN usr.ITSMCategory AS ItsmSubParent ON ItsmSubParent.ID = folSubParent.TableID AND ItsmSubParent.ID != ISNULL(@ID, 0)
+						WHERE
+							fotParent.ID = @ParentFolderTreeID
+					) AS ItsmSubParent ON ItsmSubParent.ITSMServiceIdent = fotItsmSer.Ident
+					WHERE 
+						itsmSer.[State] != @DeletedState
+						AND ItsmSubParent.ID IS NULL
+						AND (
+							itsmSer.[Name] COLLATE SQL_Latin1_General_CP1253_CI_AI LIKE @ITSMServiceIdent COLLATE SQL_Latin1_General_CP1253_CI_AI
+							OR @ITSMServiceIdent IS NULL
+						)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						fotItsmSer.Ident
+						, itsmSer.[Name] 
+					FROM usr.ITSMService AS itsmSer
+					INNER JOIN dbo.Folder AS folItsmSer ON folItsmSer.TableID = itsmSer.ID AND folItsmSer.FormIdent = 'ITSMService'
+					INNER JOIN dbo.FolderTree AS fotItsmSer ON fotItsmSer.FolderID = folItsmSer.ID
+					WHERE 
+						fotItsmSer.Ident = @ITSMServiceIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+    
+    <Control xsi:type="AutoCompleteControl" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCatalogSheetIdent_ITSM" IsShowRequired="true" IsReadOnly="true" IsVisible="false">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<Dependency ControlID="ParentFolderTreeID" />
+				</Dependencies>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+
+					SELECT 
+						fotItsmCas.Ident
+						, folItsmCas.[Name]
+					FROM dbo.FolderTree AS fotParent
+					INNER JOIN dbo.Folder AS folParent ON folParent.ID = fotParent.FolderID AND folParent.FormIdent = 'ITSMCategory'
+					INNER JOIN usr.ITSMCategory AS itsmCatParent ON itsmCatParent.ID = folParent.TableID
+					INNER JOIN dbo.FolderTree AS fotParentService ON fotParentService.Ident = ISNULL(itsmCatParent.ITSMCatalogSheetIdent,itsmCatParent.ITSMServiceIdent)
+					INNER JOIN dbo.FolderTree AS fotItsmCas ON fotItsmCas.Ident LIKE fotParentService.Ident + '%' AND fotItsmCas.ID != fotParentService.ID
+					INNER JOIN dbo.Folder AS folItsmCas ON folItsmCas.ID = fotItsmCas.FolderID AND folItsmCas.[State] = @FolderActiveState AND fotItsmCas.[Level] = (fotParent.[Level] - 1)
+					LEFT JOIN (
+						SELECT 
+							ticItsmSubParent.*
+						FROM dbo.FolderTree AS fotParent
+						INNER JOIN dbo.Folder AS folParent ON folParent.ID = fotParent.FolderID AND folParent.FormIdent = 'ITSMCategory'
+						LEFT JOIN dbo.FolderTree AS fotItsmCatSubParent ON fotItsmCatSubParent.Ident LIKE fotParent.Ident + '%' AND fotItsmCatSubParent.ID != fotParent.ID
+						LEFT JOIN dbo.Folder AS folItsmCatSubParent ON folItsmCatSubParent.ID = fotItsmCatSubParent.FolderID AND folItsmCatSubParent.[State] = @FolderActiveState
+						INNER JOIN usr.ITSMCategory AS ticItsmSubParent ON ticItsmSubParent.ID = folItsmCatSubParent.TableID AND ticItsmSubParent.ID != ISNULL(@ID, 0)
+						WHERE 
+							fotParent.ID = @ParentFolderTreeID
+					) AS ticItsmSubParent ON ticItsmSubParent.ITSMCatalogSheetIdent = fotItsmCas.Ident
+					WHERE 
+						fotParent.ID = @ParentFolderTreeID
+						AND ticItsmSubParent.ID IS NULL
+						AND (
+							folItsmCas.[Name] COLLATE SQL_Latin1_General_CP1253_CI_AI LIKE @ITSMCatalogSheetIdent COLLATE SQL_Latin1_General_CP1253_CI_AI
+							OR @ITSMCatalogSheetIdent IS NULL
+						)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						fotItsmSubSer.Ident
+						, itsmSubSer.[Name]
+					FROM usr.ITSMCatalogSheet AS itsmSubSer
+					INNER JOIN dbo.Folder AS folItsmSubSer ON folItsmSubSer.TableID = itsmSubSer.ID AND folItsmSubSer.FormIdent = 'ITSMCatalogSheet'
+					INNER JOIN dbo.FolderTree AS fotItsmSubSer ON fotItsmSubSer.FolderID = folItsmSubSer.ID
+					WHERE 
+						fotItsmSubSer.Ident = @ITSMCatalogSheetIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IsFinalFolderTree" DataType="Number" TitleResourceKey="IsFinalFolderTree_ITSM" IsFakeReadOnly="true" IsCreateColumn="false">
+			<DataBind>
+				<Dependencies>
+					<string>ITSMCatalogSheetIdent</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsFinalFolderTree" DataBindType="Value"/>
+				</Columns>
+				<SQL>
+					SELECT IIF(
+						NOT EXISTS(
+							SELECT NULL
+							FROM dbo.FolderTree AS fot
+							INNER JOIN dbo.FolderTree AS subFot ON subFot.ParentFolderTreeID = fot.ID
+							INNER JOIN dbo.Folder AS subFol ON subFol.ID = subFot.FolderID AND subFol.[State] = @FolderActiveState
+							WHERE
+								fot.Ident = @ITSMCatalogSheetIdent
+						) 
+						AND @ITSMCatalogSheetIdent IS NOT NULL
+						,1
+						,0
+					) AS IsFinalFolderTree
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />					
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMOptionalFieldDialID" DataType="Number" TitleResourceKey="ITSMOptionalFieldDialID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="OptionalFieldSettingName" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					SELECT
+						ID
+						, OptionalFieldSettingName
+					FROM usr.ITSMOptionalFieldSetting
+					WHERE
+						[State] != @DeletedState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMApproveSettingID" DataType="Number" TitleResourceKey="ITSMApproveSettingID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="ITSMApproveSettingName" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					SELECT
+						ID
+						, ITSMApproveSettingName
+					FROM usr.ITSMApproveSetting
+					WHERE
+						[State] != @DeletedState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="CheckBoxControl" Ident="IsSuperiorApprove" DataType="Bool" TitleResourceKey="IsSuperiorApprove_ITSM" LabelPlacementType="Right" IsReadOnly="true"/>
+		<Control xsi:type="CheckBoxControl" Ident="IsOperatorReviewMandatory" DataType="Bool" TitleResourceKey="IsOperatorReviewMandatory_ITSM" LabelPlacementType="Right" IsReadOnly="true"/>
+				
+		<Control xsi:type="IconControl" Ident="DashboardIcon" TitleResourceKey="Company_DashboardIcon_ITSM" IsReadOnly="true"/>
+		
+		<Control xsi:type="ColorPickerControl" Ident="Color" DataType="String" TitleResourceKey="Color_ITSM" IsReadOnly="true"/>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+
+				<style>
+					.form-group:empty {
+						display: none;
+					}
+					.form-group:blank{
+						display: none;
+					}
+					.form-group:-moz-only-whitespace {
+						display: none;
+					}
+					.form-group:not(:has(*)) {
+						display: none;
+					}
+					
+					.hide-if-no-label:not(:has(label)) {
+						display: none;
+					}
+				</style>
+
+				<div class="row d-none">
+					<div class="col-md-3">
+						<div class="form-group">
+							<Control ID="ParentFolderTreeID"/>
+							<Control ID="IsFinalFolderTree"/>
+							<Control ID="ID"/>
+							<Control ID="Name"/>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-8">
+						<div class="form-group">
+							<ControlLabel ControlID="CategoryName"/>
+							<Control ID="CategoryName"/>
+							<ControlLabel ControlID="ITSMServiceIdent"/>
+							<Control ID="ITSMServiceIdent"/>
+							<ControlLabel ControlID="ITSMCatalogSheetIdent"/>
+							<Control ID="ITSMCatalogSheetIdent"/>
+						</div>
+					</div>
+          <div class="col-md-4">
+						<div class="form-group">
+							<Control ID="Active"/>
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+          <div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="DashboardIcon"/>
+							<Control ID="DashboardIcon"/>
+						</div>
+					</div>
+          <div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Color"/>
+							<Control ID="Color"/>
+						</div>
+					</div>
+				</div>
+
+				<div class="row js-showIfIsFinalFolderTree" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ITSMOptionalFieldDialID"/>
+							<Control ID="ITSMOptionalFieldDialID"/>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ITSMApproveSettingID"/>
+							<Control ID="ITSMApproveSettingID"/>
+						</div>
+					</div>
+				</div>
+
+				<div class="row js-showIfIsFinalFolderTree">
+          <div class="col-md-4">
+						<div class="form-group">
+							<Control ID="IsSuperiorApprove"/>
+						</div>
+					</div>
+          <div class="col-md-4">
+						<div class="form-group">
+							<Control ID="IsOperatorReviewMandatory"/>
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="PermissionSection" TitleResourceKey="PermissionSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+				 <div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="FolderPermission"/>
+						</div>
+					</div>
+				</div>   
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="ShareMainFolderSection" TitleResourceKey="ShareMainFolderSection_ITSM" IconCssClass="icon-share3">
+			<HTMLTemplate>
+				 <div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="ShareMainFolder"/>
+						</div>
+					</div>
+				</div>       
+      </HTMLTemplate>
+		</Section>
+	</Sections>
+	<!-- <Indexes>
+		<Index Ident="IX_ITSMCategory_Name">	
+			<Columns>
+				<fi:Column Ident="Name" />
+			</Columns>
+		</Index>
+		<Index Ident="IX_ITSMCategory_ITSMServiceIdent">	
+			<Columns>
+				<fi:Column Ident="ITSMServiceIdent" />
+			</Columns>
+		</Index>
+	</Indexes> -->
+</Form> 

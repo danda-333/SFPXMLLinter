@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" Ident="ITSMKnowledgeBaseDashboardView" SegmentType="ITSMKnowledgeBaseSegment" ViewType="ContentView" Priority="12" TitleResourceKey="ITSMKnowledgeBaseDashboardView_ITSM" GroupTitleResourceKey="ITSMKnowledgeBaseOverview_ITSM" DefaultFilterIdent="ITSMKnowledgeBaseDashboardFilter" ShareFilterIdent="ITSMKnowledgeBaseDashboardFilter" IsRazorEngine="true" PackageIdent="ITSMPackage">
+	<AccessPermissions>
+		<string>ITSMKnowledgeBase</string>
+	</AccessPermissions>
+	<ExternalCssRelativePaths>
+		<string>~/AppAsset/Packages/ITSM/Styles/WikiDashboardView.css</string>
+	</ExternalCssRelativePaths>
+	<Buttons>
+		<!-- <Button xsi:type="LinkButton" Ident="HomeButton" TitleResourceKey="" IconCssClass="icon-home2" Color="#2196F3" Url="~/ContentView/Index/ITSMKnowledgeBaseDashboardView"/> -->
+	</Buttons>
+	<Sections>
+		<Section xsi:type="ContentSourceSection">
+			<DataSources>
+				<DataSource Ident="Category">
+					<DataPermissions>
+						<string>ITSMKnowledgeBaseReaderFolder</string>
+						<string>ITSMKnowledgeBaseEditorFolder</string>
+						<string>SuperAdmin</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="Ident"/>
+						<Column Ident="FolderTreeID"/>
+						<Column Ident="Name"/>
+						<Column Ident="Icon"/>
+						<Column Ident="Color"/>
+						<!-- <Column Ident="Description"/> -->
+						<Column Ident="Level"/>
+						<Column Ident="ParentFolderTreeID"/>
+					</Columns>
+					<SQL>
+						DECLARE @FilterLen INT = LEN('#FILTER[FilterSet]#');
+
+						SELECT 
+							ft.Ident
+							, ft.ID as FolderTreeID
+							, w.[Name]
+							,NULL as Icon -- ITSMCompany nemá sloupec DashboardIcon
+							,'#702082' as Color -- ITSMCompany nemá sloupec Color
+							,NULL as Description
+							,0 AS OrderNumber
+							, 1 as Level
+							, NULL as ParentFolderTreeID
+							, (
+								SELECT COUNT(ID)
+								FROM usr.ITSMKnowledgeBase as wk
+								WHERE
+									wk.[State] != @DeletedState
+									AND wk.FolderIdent LIKE ft.Ident + '%'
+									AND #PERMISSION[ITSMKnowledgeBase(wk)]# #FILTER[WikiCategory]#
+							) AS ITSMKnowledgeBaseCount
+						FROM dbo.FolderTree ft
+						INNER JOIN dbo.Folder fol ON fol.ID = ft.FolderID AND fol.[State] = @ActiveState AND fol.FormIdent = @FormIdentFolder
+						INNER JOIN usr.ITSMCompany w ON w.ID = fol.TableID
+						WHERE
+							w.[State] != @DeletedState
+							AND EXISTS(
+								SELECT NULL
+								FROM dbo.AccountPermissionView as apv
+								WHERE
+									apv.ID = @UserID
+									AND apv.Ident = ft.Ident
+									AND apv.PermissionID IN (@PermissionReader,@PermissionEditor)
+							)
+							AND @FilterLen <= 0 #FILTER[Category]#
+						UNION
+						SELECT 
+							ft.Ident
+							, ft.ID as FolderTreeID
+							, w.[Name]
+							,w.DashboardIcon as Icon
+							--,NULL as Icon -- zakomentováno kvůli chybějícímu sloupci
+							,ISNULL(w.Color,'#702082') as Color
+							--,'#702082' as Color -- zakomentováno kvůli chybějícímu sloupci
+							--, w.[Note]
+							,NULL as Description -- zakomentováno kvůli chybějícímu sloupci
+							, 0 AS OrderNumber
+							, ft.Level
+							, ft.ParentFolderTreeID as ParentFolderTreeID
+							, (
+								SELECT COUNT(ID)
+								FROM usr.ITSMKnowledgeBase as wk
+								WHERE
+									wk.[State] != @DeletedState
+									AND wk.FolderIdent LIKE ft.Ident + '%'
+									AND #PERMISSION[ITSMKnowledgeBase(wk)]# #FILTER[WikiCategory]#
+							) AS ITSMKnowledgeBaseCount
+						FROM dbo.FolderTree ft
+						INNER JOIN dbo.Folder fol ON fol.ID = ft.FolderID AND fol.[State] = @ActiveState AND fol.FormIdent = @FormIdentCategory
+						INNER JOIN usr.ITSMCategory w ON w.ID = fol.TableID
+						WHERE
+							w.[State] != @DeletedState
+							AND EXISTS(
+								SELECT NULL
+								FROM dbo.AccountPermissionView as apv
+								WHERE
+									apv.ID = @UserID
+									AND apv.Ident = ft.Ident
+									AND apv.PermissionID IN (@PermissionReader,@PermissionEditor)
+							)
+							AND LEN(ft.Ident) = LEN(@CurrentCategoryIdent) + 7
+							AND @FilterLen >= 1 #FILTER[SubCategory]#
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdentFolder" DataType="String" MaxLength="50" Value="ITSMCompany" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdentCategory" DataType="String" MaxLength="50" Value="ITSMCategory" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="PermissionReader" DataType="String" MaxLength="50" Value="SuperAdmin" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="PermissionEditor" DataType="String" MaxLength="50" Value="ITSMSpecialist" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="900"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					</Parameters>
+				</DataSource>
+				
+				<DataSource Ident="ITSMKnowledgeBase">
+					<DataPermissions>
+						<string>ITSMKnowledgeBaseReaderFolder</string>
+						<string>ITSMKnowledgeBaseEditorFolder</string>
+						<string>SuperAdmin</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="ID"/>
+						<Column Ident="Title"/>
+						<Column Ident="CreateDate"/>
+						<Column Ident="FullName"/>
+					</Columns>
+					<SQL>
+						DECLARE @FilterLen INT = LEN('#FILTER[FilterSet]#');
+
+						SELECT
+							wk.ID
+							, IIF(
+								@UserLanguageID = 1
+								,ISNULL(wk.TitleCZ, wk.TitleEN)
+								,ISNULL(wk.TitleEN, wk.TitleCZ)
+							) AS Title
+							, FORMAT(wk.CreateDate,'dd.MM.yyyy') AS CreateDate
+							, acc.FullName
+						FROM usr.ITSMKnowledgeBase as wk
+						LEFT JOIN dbo.[Account] AS acc ON acc.[ID] = wk.[AccountID]
+						WHERE
+							wk.[State] != @DeletedState
+							AND (
+								(
+									@FilterLen <= 0 AND wk.FolderIdent IS NULL
+								)
+								OR
+								(
+									@FilterLen >= 1 AND #PERMISSION[ITSMKnowledgeBase(wk)]#
+								)
+							) #FILTER[ITSMKnowledgeBase]#
+						ORDER BY wk.CreateDate DESC
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					</Parameters>
+				</DataSource>
+				
+				<DataSource Ident="TitleHeader">
+					<DataPermissions>
+						<string>ITSMKnowledgeBaseReaderFolder</string>
+						<string>ITSMKnowledgeBaseEditorFolder</string>
+						<string>SuperAdmin</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="ITSMKnowledgeBaseCount"/>
+						<Column Ident="WithoutCategoryClass"/>
+						<Column Ident="CategoryClass"/>
+					</Columns>
+					<SQL>
+						DECLARE @FilterLen INT = LEN('#FILTER[FilterSet]#');
+						DECLARE @CurrentLevel INT = LEN(ISNULL(@CurrentCategoryIdent,''))/7;
+
+						SELECT
+							COUNT(wk.ID) AS ITSMKnowledgeBaseCount
+							, IIF(@FilterLen <= 0,'','d-none') AS WithoutCategoryClass
+							, IIF(@FilterLen <= 0,'d-none','') AS CategoryClass
+							, IIF(
+								@CurrentLevel = 1
+								,'ITSMKnowledgeBaseDashboardView'
+								,CONCAT('ITSMKnowledgeBaseDashboardView?filter=CurrentCategoryIdent:',LEFT(@CurrentCategoryIdent,(@CurrentLevel - 1) * 7))
+							) AS PreviousLink
+							, IIF(@CurrentLevel = 0,'d-none','') AS PreviousClass
+						FROM usr.ITSMKnowledgeBase as wk
+						LEFT JOIN dbo.[Account] AS acc ON acc.[ID] = wk.[AccountID]
+						WHERE
+							wk.[State] != @DeletedState
+							AND (
+								(
+									@FilterLen <= 0 AND wk.FolderIdent IS NULL
+								)
+								OR
+								(
+									@FilterLen >= 1 AND #PERMISSION[ITSMKnowledgeBase(wk)]#
+								)
+							) #FILTER[ITSMKnowledgeBase]#
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="900"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource>
+				
+				<DataSource Ident="BreadCrumb">
+					<DataPermissions>
+						<string>ITSMKnowledgeBaseReaderFolder</string>
+						<string>ITSMKnowledgeBaseEditorFolder</string>
+						<string>SuperAdmin</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="Ident"/>
+						<Column Ident="Name"/>
+						<Column Ident="Level"/>
+						<Column Ident="ParentFolderTreeID"/>
+					</Columns>
+					<SQL>
+						/*#FILTER[FilterSet]#*/
+
+						WITH FolderTreeBreadCrumb AS (
+							SELECT
+								ft.Ident
+								, f.[Name]
+								, ft.Level
+								, ft.ParentFolderTreeID
+							FROM dbo.FolderTree AS ft
+							INNER JOIN dbo.Folder AS f ON f.ID = ft.FolderID
+							WHERE
+								ft.Ident = @CurrentCategoryIdent
+							
+							UNION ALL
+
+							SELECT
+								ft.Ident
+								, f.[Name]
+								, ft.Level
+								, ft.ParentFolderTreeID
+							FROM FolderTreeBreadCrumb AS fb
+							INNER JOIN dbo.FolderTree as ft on ft.ID = fb.ParentFolderTreeID
+							INNER JOIN dbo.Folder AS f ON f.ID = ft.FolderID
+						)
+
+						SELECT *
+						FROM FolderTreeBreadCrumb
+						ORDER BY Level ASC
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="900"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource>
+			</DataSources>
+		</Section>
+	</Sections>
+	<HTMLTemplate>
+		@*@model SFP.Common.Models.RazorEngines.ViewModelRazorEngine*@
+
+		@{
+			var category = (List<dynamic>)Model.Data.Category;
+			var ITSMKnowledgeBase = (List<dynamic>)Model.Data.ITSMKnowledgeBase;
+			var breadcrumb = (List<dynamic>)Model.Data.BreadCrumb;
+		}
+
+		@functions {
+
+			void RenderCategory(List<dynamic> category)
+			{
+				foreach(var cat in category){
+					<div class="col-md-3 d-flex">
+						<div class="card-lmtl4 custom-flex-grow">
+							<div class="card-body-lmtl4">
+								<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView?filter=CurrentCategoryIdent:@cat.Ident" class="d-flex align-items-center text-center text-start-lmtl4 custom-text-color">
+									<i class="@cat.Icon lh-1-lmtl4 rounded-pill-lmtl4 bg-opacity-10-lmtl4 p-2 me-3-lmtl4 mb-3 mb-0-lmtl4" style="background-color: @cat.Color; color: white;"></i>
+
+									<div class="flex-fill">
+										<h6 class="mb-0">@cat.Name</h6>
+									</div>
+								</a>
+								
+								<span class="badge badge-pill custom-position" style="background-color:@cat.Color; color:white;">
+									@cat.ITSMKnowledgeBaseCount
+								</span>
+							</div>
+						</div>
+					</div>
+				}
+			}
+
+			void RenderITSMKnowledgeBase(List<dynamic> ITSMKnowledgeBase)
+			{
+				foreach(var wik in ITSMKnowledgeBase){
+					<div class="col-md-4 d-flex">
+						<div class="card-lmtl4 card-body-lmtl4 custom-flex-grow">
+							<div class="d-flex">
+								<div class="me-3">
+									<a href="~/Form/Detail/ITSMKnowledgeBase/@wik.ID"><i class="ph-file text-primary-lmtl4 ph-2x mt-1 me-3-lmtl4"></i></a>
+								</div>
+
+								<div class="flex-fill">
+									<h6 class="mb-0"><a href="~/Form/Detail/ITSMKnowledgeBase/@wik.ID">@wik.Title</a></h6>
+									@wik.CreateDate @wik.FullName
+								</div>
+							</div>
+						</div>
+					</div>
+				}
+			}
+
+			void RenderBreadCrumb(List<dynamic> breadcrumb)
+			{
+				<div class="row">
+					<div class="col-md-12">
+						<div class="d-flex">
+							<div class="breadcrumb-lmtl4">
+								<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView" class="breadcrumb-item-lmtl4 py-2-lmtl4"><i class="ph-house me-1-lmtl4 custom-breadCrumbIcon"></i></a>
+								@{
+									foreach(var bread in breadcrumb){
+										<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView?filter=CurrentCategoryIdent:@bread.Ident" class="breadcrumb-item-lmtl4 py-2-lmtl4  custom-breadCrumbText">@bread.Name</a>
+									}
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+			}
+
+		}
+
+		@{
+			RenderBreadCrumb(breadcrumb.ToList());
+		}
+
+		<div class="row mb-2">
+			<div class="col-md-12">
+				<ul class="nav-lmtl4 nav-tabs-lmtl4 nav-tabs-underline-lmtl4">
+					<li class="nav-item-lmtl4">
+						<span class="nav-link-lmtl4 active-lmtl4 custom-headerCategory">
+							<i class="ph-monitor me-2-lmtl4 custom-headerIcon"></i> @Resx["CategoryTitle_ITSM"]
+						</span>
+					</li>
+					<li class="nav-item-lmtl4 ms-auto-lmtl4 @Model.SingleObject(Model.Data.TitleHeader).PreviousClass">
+						<a href="~/ContentView/Index/@Model.SingleObject(Model.Data.TitleHeader).PreviousLink" class="btn-lmtl4 btn-light-lmtl4 "><i class="ph-arrow-elbow-left-up"></i></a>
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="row">
+			@{
+				RenderCategory(category.ToList()); 
+			}
+		</div>
+
+		<div class="row mb-2 @Model.SingleObject(Model.Data.TitleHeader).CategoryClass">
+			<div class="col-md-12">
+				<ul class="nav-lmtl4 nav-tabs-lmtl4 nav-tabs-underline-lmtl4 custom-underlineDanger">
+					<li class="nav-item-lmtl4">
+						<span class="nav-link-lmtl4 active-lmtl4 custom-headerITSMKnowledgeBase">
+							<i class="ph-image me-2-lmtl4 custom-headerIcon"></i> @Resx["ITSMKnowledgeBaseCategoryTitle_ITSM"] <span class="badge badge-pill bg-primary-lmtl4 ms-2-lmtl4">@Model.SingleObject(Model.Data.TitleHeader).ITSMKnowledgeBaseCount</span>
+						</span>
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="row mb-2 @Model.SingleObject(Model.Data.TitleHeader).WithoutCategoryClass">
+			<div class="col-md-12">
+				<ul class="nav-lmtl4 nav-tabs-lmtl4 nav-tabs-underline-lmtl4 custom-underlineDanger">
+					<li class="nav-item-lmtl4">
+						<span class="nav-link-lmtl4 active-lmtl4 custom-headerWithout">
+							<i class="ph-image me-2-lmtl4 custom-headerIcon"></i> @Resx["WithoutCategoryTitle_ITSM"] <span class="badge badge-pill bg-primary-lmtl4 ms-2-lmtl4">@Model.SingleObject(Model.Data.TitleHeader).ITSMKnowledgeBaseCount</span>
+						</span>
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="row">
+			@{
+				RenderITSMKnowledgeBase(ITSMKnowledgeBase.ToList()); 
+			}
+		</div>
+		
+		<style>
+			.icon-home2{
+				margin-right: 0rem !important;
+			}
+			/* Subcategory card pro dashboard view (vnořená v hlavní kategorii) */
+			.subcategory-card {
+				border-left: 3px solid #6c757d;
+				padding-left: 8px;
+				background: #f8f9fa;
+			}
+			.subcategory-card h6 {
+				font-size: 0.95em;
+			}
+			/* Subcategory card pro single view (samostatná karta vedle sebe) */
+			.subcategory-card-single-view {
+				border: 1px solid #dee2e6;
+				border-radius: 4px;
+				padding: 15px;
+				background: #fff;
+				min-height: 150px;
+			}
+			.subcategory-card-single-view h6 {
+				font-size: 1em;
+			}
+		</style>
+	</HTMLTemplate>
+</DataView>

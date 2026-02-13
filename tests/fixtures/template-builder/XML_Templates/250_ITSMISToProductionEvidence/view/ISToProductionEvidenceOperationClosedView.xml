@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ISToProductionEvidenceOperationClosedView" SegmentType="ISToProductionEvidenceSegment" TitleResourceKey="ISToProductionEvidenceOperationClosedView_ITSM" XGroupTitleResourceKey="ISToProductionEvidenceGroup_ITSM" Priority="130" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ISToProductionEvidenceFilter" ShareFilterIdent="ISToProductionEvidenceFilter" CountColorCssClass="primary" PackageIdent="ITSMPackage">
+  <AccessPermissions>
+    <string>ISToProductionEvidence</string>
+    <string>ISToProductionEvidenceAdmin</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true"/>
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewISToProductionEvidenceButton" FormIdent="ISToProductionEvidence" TitleResourceKey="NewISToProductionEvidenceButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ISToProductionEvidence">
+    <DataPermissions>
+      <string>ISToProductionEvidence</string>
+      <string>ISToProductionEvidenceAdmin</string>
+    </DataPermissions>
+		<Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number"/>
+      <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.ITSMKey
+        </SQL>
+      </Column>
+      <Column Ident="SystemName" TitleResourceKey="SystemName_ITSM" Width="20" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.[SystemName]
+        </SQL>
+      </Column>
+      <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ISToProductionEvidence" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.State
+        </SQL>
+      </Column>
+      <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" Width="10" DataType="DateTime">
+        <SQL>
+          itsReq.CreateDate
+        </SQL>
+      </Column>
+      <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" Width="15">
+        <SQL>
+          accCreator.FullName AS AccountID
+        </SQL>
+      </Column>
+      <Column Ident="SystemDescription" TitleResourceKey="SystemDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SystemDescription]
+        </SQL>
+      </Column>
+      <Column Ident="SupplierOrganizationEntityGuid" TitleResourceKey="SupplierOrganizationEntityGuid_ITSM" TableAlterIdent="tbl" Width="15">
+        <SQL>
+          supOrg.[TextValue] AS SupplierOrganizationEntityGuid
+        </SQL>
+      </Column>
+      <Column Ident="SupplierOrganizationEntityAddress" TitleResourceKey="SupplierOrganizationEntityAddress_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SupplierOrganizationEntityAddress]
+        </SQL>
+      </Column>
+      <Column Ident="ContractNumber" TitleResourceKey="ContractNumber_ITSM" TableAlterIdent="tbl" Width="10">
+        <SQL>
+          itsReq.[ContractNumber]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSupplierContractID" TitleResourceKey="ITSMSupplierContractID_ITSM" TableAlterIdent="tbl" Width="10">
+        <SQL>
+          supCon.[ContractName] AS ITSMSupplierContractID
+        </SQL>
+      </Column>
+      <Column Ident="TechnicalGarant" TitleResourceKey="TechnicalGarant_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[TechnicalGarant]
+        </SQL>
+      </Column>
+      <Column Ident="MaterialGarant" TitleResourceKey="MaterialGarant_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[MaterialGarant]
+        </SQL>
+      </Column>
+      <Column Ident="Surveillance" TitleResourceKey="Surveillance_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[Surveillance]
+        </SQL>
+      </Column>
+      <Column Ident="IncreasedMonitoring" TitleResourceKey="IncreasedMonitoring_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[IncreasedMonitoring]
+        </SQL>
+      </Column>
+      <Column Ident="TicketSendingForm" TitleResourceKey="TicketSendingForm_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[TicketSendingForm]
+        </SQL>
+      </Column>
+      <Column Ident="SolverTeam" TitleResourceKey="SolverTeam_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SolverTeam]
+        </SQL>
+      </Column>
+      <Column Ident="SystemDocumentation" TitleResourceKey="SystemDocumentation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SystemDocumentation]
+        </SQL>
+      </Column>
+      <Column Ident="DocumentationLocation" TitleResourceKey="DocumentationLocation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[DocumentationLocation]
+        </SQL>
+      </Column>
+      <Column Ident="SystemHandoverDate" TitleResourceKey="SystemHandoverDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
+        <SQL>
+          itsReq.[SystemHandoverDate]
+        </SQL>
+      </Column>
+      <Column Ident="TraindeEmployees" TitleResourceKey="TraindeEmployees_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[TraindeEmployees]
+        </SQL>
+      </Column>
+		</Columns>
+    <Froms>
+      <dsf:From Ident="supOrg">
+        <dsf:Columns>
+          <dsf:string>SupplierOrganizationEntityGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSupplierOrganizationEntity AS supOrg ON supOrg.Guid = itsReq.SupplierOrganizationEntityGuid AND supOrg.[State] != 0
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="supCon">
+        <dsf:Columns>
+          <dsf:string>ITSMSupplierContractID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSupplierContract AS supCon ON supCon.ID = itsReq.ITSMSupplierContractID AND supCon.[State] != 0
+        </dsf:SQL>
+      </dsf:From>
+    </Froms>
+		<SQL>
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT 
+            itsReq.ID
+            #ADDCOLUMN#
+          FROM usr.ISToProductionEvidence AS itsReq
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+          #ADDFROM#
+          WHERE
+            itsReq.[State] = @OperationClosedState
+            AND #PERMISSION[ISToProductionEvidence(itsReq)]#
+            #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    </SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="OperationClosedState" DataType="Number" Value="5" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" /> 
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL>
+      SELECT COUNT(itsReq.ID)
+      FROM usr.ISToProductionEvidence AS itsReq
+      WHERE
+        itsReq.[State] = @OperationClosedState
+        AND #PERMISSION[ISToProductionEvidence(itsReq)]#
+        #FILTER#
+    </SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="OperationClosedState" DataType="Number" Value="5" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <Columns>
+          <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" DataType="Number"/>
+          <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.ITSMKey
+            </SQL>
+          </Column>
+          <Column Ident="SystemName" TitleResourceKey="SystemName_ITSM" Width="20" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SystemName]
+            </SQL>
+          </Column>
+          <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ISToProductionEvidence" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.State
+            </SQL>
+          </Column>
+          <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" DataType="DateTime">
+            <SQL>
+              itsReq.CreateDate
+            </SQL>
+          </Column>
+          <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accCreator.FullName AS AccountID
+            </SQL>
+          </Column>
+          <Column Ident="SystemDescription" TitleResourceKey="SystemDescription_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SystemDescription]
+            </SQL>
+          </Column>
+          <Column Ident="SupplierOrganizationEntityGuid" TitleResourceKey="SupplierOrganizationEntityGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              supOrg.[TextValue] AS SupplierOrganizationEntityGuid
+            </SQL>
+          </Column>
+          <Column Ident="SupplierOrganizationEntityAddress" TitleResourceKey="SupplierOrganizationEntityAddress_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SupplierOrganizationEntityAddress]
+            </SQL>
+          </Column>
+          <Column Ident="ContractNumber" TitleResourceKey="ContractNumber_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[ContractNumber]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSupplierContractID" TitleResourceKey="ITSMSupplierContractID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              supCon.[ContractName] AS ITSMSupplierContractID
+            </SQL>
+          </Column>
+          <Column Ident="TechnicalGarant" TitleResourceKey="TechnicalGarant_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[TechnicalGarant]
+            </SQL>
+          </Column>
+          <Column Ident="MaterialGarant" TitleResourceKey="MaterialGarant_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[MaterialGarant]
+            </SQL>
+          </Column>
+          <Column Ident="Surveillance" TitleResourceKey="Surveillance_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Surveillance]
+            </SQL>
+          </Column>
+          <Column Ident="IncreasedMonitoring" TitleResourceKey="IncreasedMonitoring_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[IncreasedMonitoring]
+            </SQL>
+          </Column>
+          <Column Ident="TicketSendingForm" TitleResourceKey="TicketSendingForm_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[TicketSendingForm]
+            </SQL>
+          </Column>
+          <Column Ident="SolverTeam" TitleResourceKey="SolverTeam_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SolverTeam]
+            </SQL>
+          </Column>
+          <Column Ident="SystemDocumentation" TitleResourceKey="SystemDocumentation_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SystemDocumentation]
+            </SQL>
+          </Column>
+          <Column Ident="DocumentationLocation" TitleResourceKey="DocumentationLocation_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[DocumentationLocation]
+            </SQL>
+          </Column>
+          <Column Ident="SystemHandoverDate" TitleResourceKey="SystemHandoverDate_ITSM" TableAlterIdent="tbl" DataType="DateTime">
+            <SQL>
+              itsReq.[SystemHandoverDate]
+            </SQL>
+          </Column>
+          <Column Ident="TraindeEmployees" TitleResourceKey="TraindeEmployees_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[TraindeEmployees]
+            </SQL>
+          </Column>
+        </Columns>
+        <Froms>
+          <dsf:From Ident="supOrg">
+            <dsf:Columns>
+              <dsf:string>SupplierOrganizationEntityGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSupplierOrganizationEntity AS supOrg ON supOrg.Guid = itsReq.SupplierOrganizationEntityGuid AND supOrg.[State] != 0
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="supCon">
+            <dsf:Columns>
+              <dsf:string>ITSMSupplierContractID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSupplierContract AS supCon ON supCon.ID = itsReq.ITSMSupplierContractID AND supCon.[State] != 0
+            </dsf:SQL>
+          </dsf:From>
+        </Froms>
+        <SQL>
+          SELECT 
+            itsReq.ID
+            #ADDCOLUMN#
+          FROM usr.ISToProductionEvidence AS itsReq
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+          #ADDFROM#
+          WHERE
+            itsReq.[State] = @OperationClosedState
+            AND #PERMISSION[ISToProductionEvidence(itsReq)]#
+            #FILTER#
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="OperationClosedState" DataType="Number" Value="5" />
+        </Parameters>
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

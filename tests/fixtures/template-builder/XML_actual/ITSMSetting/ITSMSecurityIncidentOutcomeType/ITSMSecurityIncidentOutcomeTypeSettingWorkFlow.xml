@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMSecurityIncidentOutcomeTypeSettingWorkFlow" FormIdent="ITSMSecurityIncidentOutcomeTypeSetting" PackageIdent="ITSMPackage">
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Účinek bezpečnostního incidentu
+  	]]>
+	</XMLDescription>
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" /> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning" /> <!--New-->
+      <State Value="2" TitleResourceKey="Saved_ITSM" ColorCssClass="primary" /> <!--Saved-->
+    </States>
+  </Definition>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="IsActive" IsReadOnly="false" />
+        <FormControl Ident="OrderValue" IsReadOnly="false" />
+        <FormControl Ident="FunctionalKey" IsReadOnly="false" />
+        <FormControl Ident="ITSMSecurityIncidentOutcomeType" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes>
+
+  <ActionShareCodes>
+    <ActionShareCode Ident="BasicValidationActionShare">
+      <Actions>
+        <Action xsi:type="GlobalValidation" ActionStart="BeforeValidation" ErrorMessageResourceKey="TranslationHasToBeCreatedForAllLanguagesJustOnce_Error_ITSM">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                EXISTS (
+                  SELECT COUNT(dial.LanguageID)
+                  FROM dbo.[Language] AS lan
+                  LEFT JOIN @ITSMSecurityIncidentOutcomeType AS dial
+                    ON dial.LanguageID = lan.ID
+                  WHERE lan.[State] = @LanguageActiveState
+                  GROUP BY lan.ID
+                  HAVING COUNT(dial.LanguageID) != 1
+                ),
+                0,
+                1
+              )
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Date" />
+              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="LanguageActiveState" DataType="Number" Value="1" />
+              <dsp:Parameter xsi:type="dsp:TableParameter" Ident="ITSMSecurityIncidentOutcomeType" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+            </Parameters>
+          </Condition>
+          <ControlIdents>
+            <string>ITSMSecurityIncidentOutcomeType</string>
+          </ControlIdents>
+        </Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" /> -->
+  </ActionShareCodes>
+
+  <ButtonShareCodes>
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" />
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="SaveWithoutValidationButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" />
+          </Actions>
+        </Button>
+        <Button Ident="SaveWithoutValidationButton" IsVisible="true" />
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+  </ButtonShareCodes>
+
+  <GlobalActions>
+    <Action xsi:type="ActionTrigger" Ident="SetIdent" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+          IF EXISTS (
+            SELECT NULL
+            FROM usr.ITSMSecurityIncidentOutcomeTypeSetting
+            WHERE ID = @ID
+              AND Guid IS NULL
+          )
+          BEGIN
+            UPDATE dialSetting
+            SET Guid = NEWID()
+            FROM usr.ITSMSecurityIncidentOutcomeTypeSetting AS dialSetting
+            WHERE dialSetting.ID = @ID
+          END
+
+          UPDATE dial
+          SET Guid = dialSetting.Guid
+          FROM usr.ITSMSecurityIncidentOutcomeTypeSetting AS dialSetting
+          INNER JOIN usr.ITSMSecurityIncidentOutcomeType AS dial
+            ON dial.TableID = dialSetting.ID
+            AND dial.FormIdent = 'ITSMSecurityIncidentOutcomeTypeSetting'
+          WHERE dialSetting.ID = @ID
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+        </Parameters>
+      </DataSource>
+    </Action>
+
+    <Action xsi:type="ActionTrigger" Ident="UpdateDial" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+          UPDATE dial
+          SET
+            IsActive = dialSetting.IsActive,
+            OrderValue = dialSetting.OrderValue
+          FROM usr.ITSMSecurityIncidentOutcomeTypeSetting AS dialSetting
+          INNER JOIN usr.ITSMSecurityIncidentOutcomeType AS dial
+            ON dial.Guid = dialSetting.Guid
+          WHERE dialSetting.ID = @ID
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+        </Parameters>
+      </DataSource>
+    </Action>
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSettingAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSettingAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Saved-->
+  </Steps>
+</WorkFlow>

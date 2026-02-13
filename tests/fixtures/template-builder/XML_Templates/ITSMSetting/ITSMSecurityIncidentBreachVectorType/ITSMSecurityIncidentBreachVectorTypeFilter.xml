@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Filter xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMSecurityIncidentBreachVectorTypeFilter" PackageIdent="ITSMPackage"> 
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Typ průniku bezpečnostního incidentu
+  	]]>
+	</XMLDescription>
+  <Controls>
+
+  <Control xsi:type="ListBoxControl" Ident="Statuses" DataType="NumberList" TitleResourceKey="Statuses_ITSM" >
+    <ListItems>
+      <ListItem TitleResourceKey="Active_ITSM" Value="1" />
+      <ListItem TitleResourceKey="Inactive_ITSM" Value="0" />
+    </ListItems>
+  </Control>
+
+  </Controls>
+
+  <ExtensionControls>
+
+  </ExtensionControls>
+  <!--  <FullText>
+    <FilterConditions>
+      <DataSource>
+        <SQL>
+          (
+            CONTAINS(tic.*, @FullTextRaw)
+            OR
+            EXISTS(
+              SELECT NULL
+              FROM usr.TicketType
+              WHERE Ident = tic.TicketTypeIdent AND LanguageID = @UserLanguageID AND CONTAINS(usr.TicketType.TextValue, @FullTextRaw)
+            )
+            OR
+            EXISTS(
+              SELECT NULL
+              FROM usr.PriorityType
+              WHERE Ident = tic.PriorityTypeIdent AND LanguageID = @UserLanguageID AND CONTAINS(usr.PriorityType.TextValue, @FullTextRaw)
+            )
+          )
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FullTextRaw" ConstantType="FullText" DataType="String" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+        </Parameters>
+      </DataSource>
+    </FilterConditions>
+  </FullText> -->
+
+  <!-- <SelectedRow>
+    <FilterConditions>
+    <DataSource>
+    <SQL>
+      tic.ID IN (SELECT ID FROM @SelectedRow)
+    </SQL>
+    <Parameters>
+    <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedRow" ConstantType="SelectedRow" DataType="NumberList" />
+    </Parameters>
+    </DataSource> 
+    </FilterConditions>
+    </SelectedRow> -->
+</Filter>

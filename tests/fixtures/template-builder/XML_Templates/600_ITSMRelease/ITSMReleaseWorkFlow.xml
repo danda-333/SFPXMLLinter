@@ -1,0 +1,1174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMReleaseWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMRelease" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="primary"/> <!--New-->
+
+      <State Value="10" TitleResourceKey="OpenRelease_ITSM" ColorCssClass="primary"/> <!--New-->
+      <State Value="20" TitleResourceKey="PrepareDeploymentPlan_ITSM" ColorCssClass="primary"/> <!--New-->
+      <State Value="30" TitleResourceKey="ForMyTeamApproval_ITSM" ColorCssClass="warning"/> <!--New-->
+      <State Value="40" TitleResourceKey="ForMyApproval_ITSM" ColorCssClass="warning"/> <!--New-->
+      <State Value="50" TitleResourceKey="SecuringShutdown_ITSM" ColorCssClass="warning"/> <!--New-->
+      <State Value="60" TitleResourceKey="ReadyForDeployment_ITSM" ColorCssClass="primary"/> <!--New-->
+      <State Value="70" TitleResourceKey="ForTesting_ITSM" ColorCssClass="warning"/> <!--New-->
+      <State Value="80" TitleResourceKey="RollbackDecision_ITSM" ColorCssClass="primary"/> <!--New-->
+      <State Value="90" TitleResourceKey="ForRollbackExecution_ITSM" ColorCssClass="warning"/> <!--New-->
+      <State Value="100" TitleResourceKey="Evaluation_ITSM" ColorCssClass="success"/> <!--New-->
+      <State Value="110" TitleResourceKey="Closed_ITSM" ColorCssClass="success"/> <!--New-->
+    </States>
+  </Definition>
+
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5" >
+      <Selectors>
+        <string>.js-showHideCategoryLevel5</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideTrainingDateTime" ControlIdent="IsTrainingRequired" >
+      <Selectors>
+        <string>.js-showHideTrainingDateTime</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideRollbackDateTime" ControlIdent="IsRollback" >
+      <Selectors>
+        <string>.js-showHideRollbackDateTime</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+        <FormControl Ident="ReporterAccountID" IsReadOnly="false" />
+        <FormControl Ident="ReporterEmail" IsReadOnly="false" />
+        <FormControl Ident="ReporterPhone" IsReadOnly="false" />
+
+        <FormControl Ident="Communication" IsVisible="true" />
+
+        <FormControl Ident="PHContactInformationCard" IsVisible="true" />
+        <!-- PHs -->
+        <FormControl Ident="PHCommunicationCard" IsVisible="true" />
+        <!-- PHs -->
+        <FormControl Ident="ParentITSMID" IsReadOnly="false" />
+
+        <FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false" />
+
+        <FormControl Ident="ReleaseName" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ReleaseManagerID" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMChangeID" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMReleaseClassificationCategoryGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMReleaseDeploymentTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ReleaseScheduleFile" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="DeploymentPlanFile" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMReleaseApprovalDecisionResultGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ApprovalJustification" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ApprovalDateTime" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="RequestForShutdown" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ShutdownStartDateTime" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ShutdownEndDateTime" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="DeploymentDescription" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="DeploymentDateTime" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMReleaseTestSummaryConclusionGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMReleaseTestExecutionResultGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="TestingResultDescription" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="TestingEndDateTime" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="IsTrainingRequired" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="TrainingDateTime" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="IsRollback" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="RollbackJustification" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="RollbackDateTime" IsVisible="true" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+
+    <ControlShareCode Ident="EnableRequiredControlShare">
+      <Controls>
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false"/>
+        <FormControl Ident="ReporterAccountID" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ReporterEmail" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ReporterPhone" IsReadOnly="false" IsRequired="true"/>
+
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+        <FormControl Ident="ParentITSMID" IsReadOnly="false"/>
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false"/>
+
+        <FormControl Ident="ReleaseName" IsVisible="true" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ReleaseManagerID" IsVisible="true" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMChangeID" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMReleaseClassificationCategoryGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMReleaseDeploymentTypeGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ReleaseScheduleFile" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="DeploymentPlanFile" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" /> -->
+
+    <ControlShareCode Ident="EnableManagerControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+        <FormControl Ident="ParentITSMID" IsReadOnly="false"/>
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false"/>
+
+        <FormControl Ident="ReleaseName" IsVisible="true" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ReleaseManagerID" IsVisible="true" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMChangeID" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMReleaseClassificationCategoryGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMReleaseDeploymentTypeGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ReleaseScheduleFile" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="DeploymentPlanFile" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableManagerControlShare" /> -->
+
+    <ControlShareCode Ident="EnableOperatorControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+        <FormControl Ident="ParentITSMID" IsReadOnly="false"/>
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false"/>
+
+        <FormControl Ident="PHShutdown" IsVisible="true"/>
+        <FormControl Ident="RequestForShutdown" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ShutdownStartDateTime" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ShutdownEndDateTime" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableOperatorControlShare" /> -->
+
+    <ControlShareCode Ident="EnableSupplierDeployControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+
+        <FormControl Ident="PHShutdown" IsVisible="true"/>
+        <FormControl Ident="PHDeployment" IsVisible="true"/>
+        <FormControl Ident="DeploymentDescription" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="DeploymentDateTime" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierDeployControlShare" /> -->
+
+    <ControlShareCode Ident="EnableSupplierTestingControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+
+        <FormControl Ident="PHShutdown" IsVisible="true"/>
+        <FormControl Ident="PHDeployment" IsVisible="true"/>
+        <FormControl Ident="PHTesting" IsVisible="true"/>
+        <FormControl Ident="ITSMReleaseTestSummaryConclusionGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMReleaseTestExecutionResultGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="TestingResultDescription" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="TestingEndDateTime" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="IsTrainingRequired" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="TrainingDateTime" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierTestingControlShare" /> -->
+
+    <ControlShareCode Ident="EnableManagerRollbackControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+
+        <FormControl Ident="PHShutdown" IsVisible="true"/>
+        <FormControl Ident="PHDeployment" IsVisible="true"/>
+        <FormControl Ident="PHTesting" IsVisible="true"/>
+        <FormControl Ident="PHRollback" IsVisible="true"/>
+        <FormControl Ident="IsRollback" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="RollbackJustification" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableManagerRollbackControlShare" /> -->
+
+    <ControlShareCode Ident="EnableSupplierRollbackControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+
+        <FormControl Ident="PHShutdown" IsVisible="true"/>
+        <FormControl Ident="PHDeployment" IsVisible="true"/>
+        <FormControl Ident="PHTesting" IsVisible="true"/>
+        <FormControl Ident="PHRollback" IsVisible="true"/>
+        <FormControl Ident="RollbackDateTime" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierRollbackControlShare" /> -->
+
+    <ControlShareCode Ident="EnableCommunicatonControlShare">
+      <Controls>
+        <FormControl Ident="PHCommunicationCard" IsVisible="true"/>
+        <FormControl Ident="Communication" IsVisible="true"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" /> -->
+
+    <ControlShareCode Ident="ShowContactInfoControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" /> -->
+
+    <ControlShareCode Ident="ShowShutdownControlShare">
+      <Controls>
+        <FormControl Ident="PHShutdown" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" /> -->
+
+    <ControlShareCode Ident="ShowDeploymentControlShare">
+      <Controls>
+        <FormControl Ident="PHDeployment" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" /> -->
+
+    <ControlShareCode Ident="ShowTestingControlShare">
+      <Controls>
+        <FormControl Ident="PHTesting" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" /> -->
+
+    <ControlShareCode Ident="ShowRollbackControlShare">
+      <Controls>
+        <FormControl Ident="PHRollback" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" /> -->
+  </ControlShareCodes> 
+
+  <ActionShareCodes>
+
+    <ActionShareCode Ident="ReleasePlanRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>ITSMReleaseClassificationCategoryGuid</string>
+						<string>ITSMReleaseDeploymentTypeGuid</string>
+						<string>ITSMOperationalEnvironmentTypeGuid</string>
+						<string>ReleaseScheduleFile</string>
+						<string>DeploymentPlanFile</string>
+					</Idents>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="ReleasePlanRequiredActionShare" />-->
+
+    <ActionShareCode Ident="ShutdownRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>RequestForShutdown</string>
+						<string>ShutdownStartDateTime</string>
+						<string>ShutdownEndDateTime</string>
+					</Idents>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="ShutdownRequiredActionShare" />-->
+
+    <ActionShareCode Ident="DeployRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>DeploymentDescription</string>
+						<string>DeploymentDateTime</string>
+					</Idents>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="DeployRequiredActionShare" />-->
+
+    <ActionShareCode Ident="TestingSuccessRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>ITSMReleaseTestSummaryConclusionGuid</string>
+						<string>ITSMReleaseTestExecutionResultGuid</string>
+						<string>TestingEndDateTime</string>
+					</Idents>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="TestingRequiredActionShare" />-->
+
+    <ActionShareCode Ident="TestingFailRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>ITSMReleaseTestSummaryConclusionGuid</string>
+						<string>ITSMReleaseTestExecutionResultGuid</string>
+						<string>TestingResultDescription</string>
+						<string>TestingEndDateTime</string>
+					</Idents>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="TestingRequiredActionShare" />-->
+
+    <ActionShareCode Ident="RollbackRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>IsRollback</string>
+					</Idents>
+				</Action>
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                @IsRollback = 1
+                ,1
+                ,0
+              )
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsRollback" DataType="Number"/>
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>RollbackJustification</string>
+              </Idents>
+            </Action>
+          </TrueActions>
+        </Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="RollbackRequiredActionShare" />-->
+
+    <ActionShareCode Ident="RollbackStateActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="AfterSave">
+					<Idents>
+						<string>IsRollback</string>
+					</Idents>
+				</Action>
+        <Action xsi:type="IF" ActionStart="AfterSave">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                @IsRollback = 1
+                ,1
+                ,0
+              )
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsRollback" DataType="Number"/>
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="ChangeState" State="90" ActionStart="AfterSave" />
+          </TrueActions>
+          <FalseActions>
+            <Action xsi:type="ChangeState" State="100" ActionStart="AfterSave" />
+          </FalseActions>
+        </Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="RollbackStateActionShare" />-->
+
+    <ActionShareCode Ident="RollbackNotificationDecisionActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="AfterPermission">
+					<Idents>
+						<string>IsRollback</string>
+					</Idents>
+				</Action>
+        <Action xsi:type="IF" ActionStart="AfterSave">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                @IsRollback = 1
+                ,1
+                ,0
+              )
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsRollback" DataType="Number"/>
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="ShareCode" Ident="ToRollbackExecutionNotificationActionShare" />
+          </TrueActions>
+        </Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="RollbackNotificationDecisionActionShare" />-->
+
+    <ActionShareCode Ident="RollbackExecuteRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>RollbackDateTime</string>
+					</Idents>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!--<Action xsi:type="ShareCode" Ident="RollbackExecuteRequiredActionShare" />-->
+
+    <!--Notifikace-->
+
+    <ActionShareCode Ident="OpenReleaseNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="OpenReleaseITSMReleaseSubject_Email_ITSM" BodyResourceKey="OpenReleaseITSMReleaseBody_Email_ITSM" EmailIdent="OpenReleaseITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="OpenReleaseITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMReleaseManager"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="OpenReleaseITSMRelease_Alert_ITSM" MessageResourceKey="OpenReleaseITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="OpenReleaseITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMReleaseManager"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="OpenReleaseNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="ToApprovalNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="ToApprovalITSMReleaseSubject_Email_ITSM" BodyResourceKey="ToApprovalITSMReleaseBody_Email_ITSM" EmailIdent="ToApprovalITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="ToApprovalITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="TODO"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="ToApprovalITSMRelease_Alert_ITSM" MessageResourceKey="ToApprovalITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="ToApprovalITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="TODO"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ToApprovalNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="AssignedApprovalNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="AssignedApprovalITSMReleaseSubject_Email_ITSM" BodyResourceKey="AssignedApprovalITSMReleaseBody_Email_ITSM" EmailIdent="AssignedApprovalITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="AssignedApprovalITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="TODO"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="AssignedApprovalITSMRelease_Alert_ITSM" MessageResourceKey="AssignedApprovalITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="AssignedApprovalITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="TODO"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="AssignedApprovalNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="ApprovalRejectedNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="ApprovalRejectedITSMReleaseSubject_Email_ITSM" BodyResourceKey="ApprovalRejectedITSMReleaseBody_Email_ITSM" EmailIdent="ApprovalRejectedITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="ApprovalRejectedITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="TODO"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="ApprovalRejectedITSMRelease_Alert_ITSM" MessageResourceKey="ApprovalRejectedITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="ApprovalRejectedITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="TODO"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ApprovalRejectedNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="BackToRevisionNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="BackToRevisionITSMReleaseSubject_Email_ITSM" BodyResourceKey="BackToRevisionITSMReleaseBody_Email_ITSM" EmailIdent="BackToRevisionITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="BackToRevisionITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMReleaseManager"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="BackToRevisionITSMRelease_Alert_ITSM" MessageResourceKey="BackToRevisionITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="BackToRevisionITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMReleaseManager"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="BackToRevisionNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="SetUpShutdownNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="SetUpShutdownITSMReleaseSubject_Email_ITSM" BodyResourceKey="SetUpShutdownITSMReleaseBody_Email_ITSM" EmailIdent="SetUpShutdownITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="SetUpShutdownITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMOperator"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="SetUpShutdownITSMRelease_Alert_ITSM" MessageResourceKey="SetUpShutdownITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="SetUpShutdownITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMOperator"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SetUpShutdownNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="ToDeployNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="ToDeployITSMReleaseSubject_Email_ITSM" BodyResourceKey="ToDeployITSMReleaseBody_Email_ITSM" EmailIdent="ToDeployITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="ToDeployITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplier"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="ToDeployITSMRelease_Alert_ITSM" MessageResourceKey="ToDeployITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="ToDeployITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplier"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ToDeployNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="TestingSuccessfulNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="TestingSuccessfulITSMReleaseSubject_Email_ITSM" BodyResourceKey="TestingSuccessfulITSMReleaseBody_Email_ITSM" EmailIdent="TestingSuccessfulITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="TestingSuccessfulITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMReleaseManager"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="TestingSuccessfulITSMRelease_Alert_ITSM" MessageResourceKey="TestingSuccessfulITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="TestingSuccessfulITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMReleaseManager"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="TestingSuccessfulNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="TestingFailedNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="TestingFailedITSMReleaseSubject_Email_ITSM" BodyResourceKey="TestingFailedITSMReleaseBody_Email_ITSM" EmailIdent="TestingFailedITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="TestingFailedITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMReleaseManager"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="TestingFailedITSMRelease_Alert_ITSM" MessageResourceKey="TestingFailedITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="TestingFailedITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMReleaseManager"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="TestingFailedNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="ToRollbackExecutionNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="ToRollbackExecutionITSMReleaseSubject_Email_ITSM" BodyResourceKey="ToRollbackExecutionITSMReleaseBody_Email_ITSM" EmailIdent="ToRollbackExecutionITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="ToRollbackExecutionITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplier"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="ToRollbackExecutionITSMRelease_Alert_ITSM" MessageResourceKey="ToRollbackExecutionITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="ToRollbackExecutionITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplier"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ToRollbackExecutionNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="RollbackExecutedNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="RollbackExecutedITSMReleaseSubject_Email_ITSM" BodyResourceKey="RollbackExecutedITSMReleaseBody_Email_ITSM" EmailIdent="RollbackExecutedITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="RollbackExecutedITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMReleaseManager"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="RollbackExecutedITSMRelease_Alert_ITSM" MessageResourceKey="RollbackExecutedITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="RollbackExecutedITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMReleaseManager"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="RollbackExecutedNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="ReleaseClosedNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="ReleaseClosedITSMReleaseSubject_Email_ITSM" BodyResourceKey="ReleaseClosedITSMReleaseBody_Email_ITSM" EmailIdent="ReleaseClosedITSMRelease_Email_ITSM" ActionStart="AfterPermission" Ident="ReleaseClosedITSMRelease_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMReleaseReporter"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="ReleaseClosedITSMRelease_Alert_ITSM" MessageResourceKey="ReleaseClosedITSMReleaseMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="ReleaseClosedITSMRelease_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMReleaseReporter"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ReleaseClosedNotificationActionShare" /> -->
+
+  </ActionShareCodes> 
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true"/>
+        <Button Ident="SaveAndExitButton" IsVisible="true"/>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />-->
+    
+    <ButtonShareCode Ident="SubmitButtonShare">
+      <Buttons>
+        <Button Ident="SubmitButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="OpenReleaseNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="10" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="SubmitButtonShare" />-->
+    
+    <ButtonShareCode Ident="ConfirmCoordinatorButtonShare">
+      <Buttons>
+        <Button Ident="ConfirmCoordinatorButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="ConfirmCoordinatorButtonShare" />-->
+    
+    <ButtonShareCode Ident="SendToApprovalButtonShare">
+      <Buttons>
+        <Button Ident="SendToApprovalButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ReleasePlanRequiredActionShare" />
+            <Action xsi:type="ShareCode" Ident="ToApprovalNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="SendToApprovalButtonShare" />-->
+    
+    <ButtonShareCode Ident="ApprovalAssignControlButtonShare">
+      <Buttons>
+        <Button Ident="TakoOverApprovalButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="AssignApprovalButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="AssignedApprovalNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="ApprovalAssignControlButtonShare" />-->
+    
+    <ButtonShareCode Ident="ApprovalApproveControlButtonShare">
+      <Buttons>
+        <Button Ident="ApproveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="SetUpShutdownNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="RejectButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ApprovalRejectedNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="100" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="BackToRevisionButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BackToRevisionNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="ApprovalApproveControlButtonShare" />-->
+    
+    <ButtonShareCode Ident="SendToSupplierButtonShare">
+      <Buttons>
+        <Button Ident="SendToSupplierButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ToDeployNotificationActionShare" />
+            <Action xsi:type="ShareCode" Ident="ShutdownRequiredActionShare" />
+            <Action xsi:type="ChangeState" State="60" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="SendToSupplierButtonShare" />-->
+    
+    <ButtonShareCode Ident="DeployedButtonShare">
+      <Buttons>
+        <Button Ident="DeployedButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="DeployRequiredActionShare" />
+            <Action xsi:type="ChangeState" State="70" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="DeployedButtonShare" />-->
+    
+    <ButtonShareCode Ident="TestingControlButtonShare">
+      <Buttons>
+        <Button Ident="TestingSuccesfullButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="TestingSuccessfulNotificationActionShare" />
+            <Action xsi:type="ShareCode" Ident="TestingSuccessRequiredActionShare" />
+            <Action xsi:type="ChangeState" State="100" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="TestingFailureButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="TestingFailedNotificationActionShare" />
+            <Action xsi:type="ShareCode" Ident="TestingFailRequiredActionShare" />
+            <Action xsi:type="ChangeState" State="80" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="TestingControlButtonShare" />-->
+    
+    <ButtonShareCode Ident="RollbackDecisionButtonShare">
+      <Buttons>
+        <Button Ident="RollbackDecisionButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="RollbackNotificationDecisionActionShare" />
+            <Action xsi:type="ShareCode" Ident="RollbackRequiredActionShare" />
+            <Action xsi:type="ShareCode" Ident="RollbackStateActionShare" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="RollbackDecisionButtonShare" />-->
+    
+    <ButtonShareCode Ident="RollbackExecutedButtonShare">
+      <Buttons>
+        <Button Ident="RollbackExecutedButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="RollbackExecutedNotificationActionShare" />
+            <Action xsi:type="ShareCode" Ident="RollbackExecuteRequiredActionShare" />
+            <Action xsi:type="ChangeState" State="100" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="RollbackExecutedButtonShare" />-->
+    
+    <ButtonShareCode Ident="CloseButtonShare">
+      <Buttons>
+        <Button Ident="CloseButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ReleaseClosedNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="110" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />-->
+
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />-->
+
+  </ButtonShareCodes> 
+
+  <GlobalActions>
+
+    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+          IF @ITSMKey IS NULL
+          BEGIN
+            DECLARE 
+              @CounterIdent VARCHAR(100) = 'REL-',
+              @NextNumber INT
+
+            EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+            UPDATE usr.ITSMRelease
+            SET ITSMKey = CONCAT(@CounterIdent, RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+            WHERE ID = @ID
+          END
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" MaxLength="50"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />                  
+        </Parameters>
+      </DataSource>
+    </Action>
+
+    <Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @IsShowCategoryLevel5 = 1
+            ,1
+            ,0
+          )
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number"/>
+        </Parameters>
+      </Condition>
+      <TrueActions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>ITSMCategoryLevel5Ident</string>
+					</Idents>
+				</Action>
+      </TrueActions>
+    </Action>
+
+    <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMRelease</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SubmitButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="10">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMReleaseManager</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ConfirmCoordinatorButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableManagerControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="20">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMReleaseManager</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SendToApprovalButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableManagerControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <!--TODO-->
+    <Step State="30">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMReleaseManager</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ApprovalAssignControlButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="40">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMReleaseManager</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ApprovalApproveControlButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <!--/TODO-->
+    <Step State="50">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMReleaseManager</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SendToSupplierButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableOperatorControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="60">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMReleaseManager</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeployedButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierDeployControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="70">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMReleaseManager</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="TestingControlButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierTestingControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="80">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMReleaseManager</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="RollbackDecisionButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableManagerRollbackControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="90">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMReleaseManager</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="RollbackExecutedButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierRollbackControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="100">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMReleaseManager</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="110">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMOperator</string>
+            <string>ITSMReleaseReporter</string>
+            <string>ITSMReleaseSharedReporter</string>
+            <string>ITSMReleaseManager</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInfoControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    
+  </Steps>
+</WorkFlow>

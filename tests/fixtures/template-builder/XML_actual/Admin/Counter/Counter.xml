@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="Counter" SegmentType="Admin" PackageIdent="CounterPackage">
+	<DataPermissions>
+		<string>Counter</string> <!-- Static -->
+	</DataPermissions>
+	<CreatePermissions>
+		<string>Counter</string>
+	</CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_Counter" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_Counter" IconCssClass="icon-undo2" />
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="Ident" DataType="String" TitleResourceKey="Ident_Counter" IsRequired="true" IsReadOnly="true" />
+		<Control xsi:type="TextBoxControl" Ident="NextNumber" DataType="String" TitleResourceKey="NextNumber_Counter" IsRequired="true" IsReadOnly="true" Default="1" />
+
+		<Control xsi:type="TimeLineControl" Ident="TimeLine" TitleResourceKey="TimeLine_Counter" SortType="DESC">
+			<HistoryTypes>
+				<string>Create</string>
+				<string>ChangeState</string>
+			</HistoryTypes>
+			<StepStates></StepStates>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="HeaderSection" Ident="HeaderSection">
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<h3>ID: [%ACTUALFORM.ID%] | [%ACTUALFORM.AccountID%] </h3>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_Counter" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-12">
+
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#BasicInformations_Counter#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-6">
+
+										<div class="form-group">
+											<ControlLabel ControlID="Ident" />
+											<Control ID="Ident" />
+										</div>
+
+									</div>
+									<div class="col-md-6">
+
+										<div class="form-group">
+											<ControlLabel ControlID="CurrentNumber" />
+											<Control ID="CurrentNumber" />
+										</div>
+
+									</div>
+								</div>
+							</div>
+						</div>
+
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_Counter" IconCssClass="icon-history">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-12">
+						<Control ID="TimeLine" />
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

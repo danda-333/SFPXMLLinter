@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMCategoryWorkFlow" FormIdent="ITSMCategory" StartState="1" DeleteState="0" PackageIdent="ITSMPackage" >
+	<Definition>
+		<States>
+			<State Value="0" TitleResourceKey="Deleted_ITSM" />
+			<State Value="1" TitleResourceKey="New_ITSM" />
+			<State Value="2" TitleResourceKey="Saved_ITSM" />
+		</States>
+	</Definition>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="Name" IsReadOnly="false" IsVisible="true"/>
+        <FormControl Ident="ITSMOptionalFieldDialID" IsReadOnly="false"/>
+        <FormControl Ident="ITSMApproveSettingID" IsReadOnly="false"/>
+        <FormControl Ident="IsSuperiorApprove" IsReadOnly="false"/>
+        <FormControl Ident="IsOperatorReviewMandatory" IsReadOnly="false"/>
+        <FormControl Ident="Active" IsReadOnly="false" />
+        <FormControl Ident="ShareMainFolder" IsReadOnly="false" />
+        <FormControl Ident="FolderPermission" IsReadOnly="false" />
+        <FormControl Ident="DashboardIcon" IsReadOnly="false" />
+        <FormControl Ident="Color" IsReadOnly="false" />
+        
+        <FormControl xsi:type="IFControl">
+          <Condition>
+            <SQL>
+              DECLARE @CurrentLevel int 
+
+              SELECT TOP 1 @CurrentLevel = [Level]
+              FROM dbo.FolderTree 
+              WHERE ID = @ParentFolderTreeID
+
+              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
+                SET @CurrentLevel = @CurrentLevel + 1;
+
+                /*DECLARE @Msg NVARCHAR(1000) = 'CurrentLevel: ' + CAST(@CurrentLevel AS VARCHAR(10))
+                ;THROW 50000, @Msg, 1;*/
+              END
+
+             
+              
+              SELECT IIF(@CurrentLevel = 2, 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+            </Parameters>
+          </Condition>
+          <TrueControls>
+            <FormControl Ident="CategoryName" IsReadOnly="false" IsVisible="true" IsRequired="true"/>
+          </TrueControls>
+        </FormControl>
+
+        <FormControl xsi:type="IFControl">
+          <Condition>
+            <SQL>
+              DECLARE @CurrentLevel int 
+
+              SELECT TOP 1 @CurrentLevel = [Level] 
+              FROM dbo.FolderTree 
+              WHERE ID = @ParentFolderTreeID
+
+              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
+                SET @CurrentLevel = @CurrentLevel + 1
+              END
+              
+              SELECT IIF(@CurrentLevel = 3, 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+            </Parameters>
+          </Condition>
+          <TrueControls>
+            <FormControl Ident="ITSMServiceIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
+          </TrueControls>
+        </FormControl>
+
+        <FormControl xsi:type="IFControl">
+          <Condition>
+            <SQL>
+              DECLARE @CurrentLevel int 
+
+              SELECT TOP 1 @CurrentLevel = [Level] 
+              FROM dbo.FolderTree 
+              WHERE ID = @ParentFolderTreeID
+
+              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
+                SET @CurrentLevel = @CurrentLevel + 1
+              END
+              
+              SELECT IIF(@CurrentLevel IN (4,5), 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+            </Parameters>
+          </Condition>
+          <TrueControls>
+            <FormControl Ident="ITSMCatalogSheetIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
+          </TrueControls>
+        </FormControl>
+
+        <FormControl xsi:type="IFControl">
+          <Condition>
+            <SQL>
+              DECLARE @CurrentLevel int 
+
+              SELECT TOP 1 @CurrentLevel = [Level] 
+              FROM dbo.FolderTree 
+              WHERE ID = @ParentFolderTreeID
+
+              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
+                SET @CurrentLevel = @CurrentLevel + 1
+              END
+              
+              SELECT IIF(@CurrentLevel IN (4,5), 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+            </Parameters>
+          </Condition>
+          <TrueControls>
+            <FormControl Ident="ITSMCatalogSheetIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
+          </TrueControls>
+        </FormControl>
+
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes> 
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+  </ButtonShareCodes> 
+
+  <GlobalActions>
+
+    <Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @CategoryName IS NOT NULL
+          , 1, 0)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryName" DataType="String"/>
+        </Parameters>
+      </Condition>
+      <TrueActions>
+
+        <Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
+          <DataSource>
+            <SQL>
+              SELECT
+                @CategoryName
+            </SQL>
+            <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryName" DataType="String"/>
+            </Parameters>
+          </DataSource>
+        </Action>
+  
+      </TrueActions>
+    </Action>
+
+    <Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @ITSMServiceIdent IS NOT NULL
+          , 1, 0)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" />
+        </Parameters>
+      </Condition>
+      <TrueActions>
+
+        <Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
+          <DataSource>
+            <SQL>
+              SELECT
+                itsmSer.[Name]
+              FROM usr.ITSMService AS itsmSer
+              INNER JOIN dbo.Folder AS folItsmSer ON folItsmSer.TableID = itsmSer.ID AND folItsmSer.FormIdent = 'ITSMService'
+              INNER JOIN dbo.FolderTree AS fotItsmSer ON fotItsmSer.FolderID = folItsmSer.ID
+              WHERE 
+                fotItsmSer.Ident = @ITSMServiceIdent
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" />
+            </Parameters>
+          </DataSource>
+        </Action>
+  
+      </TrueActions>
+    </Action>
+
+    <Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @ITSMCatalogSheetIdent IS NOT NULL
+          , 1, 0)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" />
+        </Parameters>
+      </Condition>
+      <TrueActions>
+
+        <Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
+          <DataSource>
+            <SQL>
+              SELECT 
+                itsmSubSer.[Name]
+              FROM usr.ITSMCatalogSheet AS itsmSubSer
+              INNER JOIN dbo.Folder AS folItsmSubSer ON folItsmSubSer.TableID = itsmSubSer.ID AND folItsmSubSer.FormIdent = 'ITSMCatalogSheet'
+              INNER JOIN dbo.FolderTree AS fotITSMubSer ON fotITSMubSer.FolderID = folItsmSubSer.ID
+              WHERE 
+                fotITSMubSer.Ident = @ITSMCatalogSheetIdent
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" />
+            </Parameters>
+          </DataSource>
+        </Action>
+  
+      </TrueActions>
+      <FalseActions>
+      
+      </FalseActions>
+    </Action>
+
+    <Action xsi:type="Required" ActionStart="BeforeValidation">
+      <Idents>
+        <string>Name</string>
+      </Idents>
+    </Action>
+
+  </GlobalActions>
+
+
+	<Steps>
+		<Step State="1">
+			<Groups>
+				<Group>
+					<Permissions>
+						<string>SuperAdmin</string>
+					</Permissions>
+					<Buttons>
+						<Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+					</Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+				</Group>
+			</Groups>
+		</Step>
+		<Step State="2">
+			<Groups>
+				<Group>
+					<Permissions>
+						<string>SuperAdmin</string>
+					</Permissions>
+					<Buttons>
+						<Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+						<Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+					</Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+				</Group>
+			</Groups>
+		</Step>
+	</Steps>
+</WorkFlow> 

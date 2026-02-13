@@ -1,0 +1,256 @@
+<Filter xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ISToProductionEvidenceFilter" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" PackageIdent="ITSMPackage">
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemName" DataType="String" MaxLength="255" TitleResourceKey="SystemName_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[SystemName] LIKE '%' + @SystemName + '%'
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="TextBoxControl" Ident="ITSMKey" DataType="String" MaxLength="50" TitleResourceKey="ITSMKey_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[ITSMKey] LIKE '%' + @ITSMKey + '%'
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="ListBoxControl" Ident="State" DataType="NumberList" TitleResourceKey="State_ITSM">
+      <DataBind>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value"/>
+					<Column Ident="TitleResourceKey" IsTranslate="true" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					SELECT
+						[Value]
+						, TitleResourceKey
+					FROM dbo.GetWorkFlowState('ISToProductionEvidenceWorkFlow')
+					WHERE
+						[Value] NOT IN (0,1)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="WorkFlowIdent" DataType="String" Value="ISToProductionEvidenceWorkFlow" />
+				</Parameters>
+			</DataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[State] IN (SELECT ID FROM @State) 
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="DropDownListControl" Ident="SupplierOrganizationEntityGuid" DataType="String" TitleResourceKey="SupplierOrganizationEntityGuid_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						dial.Guid,
+						dial.TextValue
+					FROM usr.SupplierOrganizationEntity AS dial 
+					WHERE 
+						dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+				</Parameters>
+			</DataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[SupplierOrganizationEntityGuid] = @SupplierOrganizationEntityGuid
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="AccountID" DataType="Number" TitleResourceKey="AccountID_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="FullName" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					SELECT 
+						ID,
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						FullName LIKE @AccountID
+						AND [State] = @ActiveState
+					ORDER BY FullName ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="String" LikeType="Both"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+          <Column Ident="ID" DataBindType="Value" />
+          <Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						ID, 
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						ID = @AccountID
+				</SQL>
+				<Parameters>          
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>           
+				</Parameters>     
+			</SelectedDataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[AccountID] = @AccountID
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="CreateDateFrom" DataType="Date" TitleResourceKey="CreateDateFrom_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            CAST(itsReq.[CreateDate] AS DATE) >= @CreateDateFrom
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="CreateDateTo" DataType="Date" TitleResourceKey="CreateDateTo_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            CAST(itsReq.[CreateDate] AS DATE) <= @CreateDateTo
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+    
+	</Controls>
+	<ExtensionControls>
+
+		<Control xsi:type="TextBoxControl" Ident="ContractNumber" DataType="String" MaxLength="100" TitleResourceKey="ContractNumber_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[ContractNumber] LIKE '%' + @ContractNumber + '%'
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMSupplierContractID" DataType="Number" TitleResourceKey="ITSMSupplierContractID_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>SupplierOrganizationEntityGuid</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="ContractName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						dial.ID,
+						dial.ContractName
+					FROM usr.ITSMSupplierContract AS dial 
+					WHERE 
+						dial.[State] != @DeletedState
+						AND (@SupplierOrganizationEntityGuid IS NULL OR dial.SupplierOrganizationEntityGuid = @SupplierOrganizationEntityGuid)
+					ORDER BY dial.ID ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SupplierOrganizationEntityGuid" DataType="String" />
+				</Parameters>
+			</DataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[ITSMSupplierContractID] = @ITSMSupplierContractID
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="TechnicalGarant" DataType="String" MaxLength="255" TitleResourceKey="TechnicalGarant_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[TechnicalGarant] LIKE '%' + @TechnicalGarant + '%'
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="TextBoxControl" Ident="MaterialGarant" DataType="String" MaxLength="255" TitleResourceKey="MaterialGarant_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[MaterialGarant] LIKE '%' + @MaterialGarant + '%'
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="TextBoxControl" Ident="Surveillance" DataType="String" MaxLength="255" TitleResourceKey="Surveillance_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[Surveillance] LIKE '%' + @Surveillance + '%'
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SolverTeam" DataType="String" MaxLength="255" TitleResourceKey="SolverTeam_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            itsReq.[SolverTeam] LIKE '%' + @SolverTeam + '%'
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemHandoverDateFrom" DataType="Date" TitleResourceKey="SystemHandoverDateFrom_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            CAST(itsReq.[SystemHandoverDate] AS DATE) >= @SystemHandoverDateFrom
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemHandoverDateTo" DataType="Date" TitleResourceKey="SystemHandoverDateTo_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL>
+            CAST(itsReq.[SystemHandoverDate] AS DATE) <= @SystemHandoverDateTo
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+	</ExtensionControls>
+
+</Filter>

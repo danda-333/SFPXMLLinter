@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMCatalogSheetWorkFlow" FormIdent="ITSMCatalogSheet" StartState="1" DeleteState="0" PackageIdent="ITSMPackage">
+	<Definition>
+		<States>
+			<State Value="0" TitleResourceKey="Deleted_ITSM" />
+			<State Value="1" TitleResourceKey="New_ITSM" />
+			<State Value="2" TitleResourceKey="Saved_ITSM" />
+		</States>
+	</Definition>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="Name" IsReadOnly="false" />
+        <FormControl Ident="Active" IsReadOnly="false" />
+        <FormControl Ident="ShareMainFolder" IsReadOnly="false" />
+        <FormControl Ident="FolderPermission" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+  </ButtonShareCodes>
+
+  <GlobalActions>
+
+    <Action xsi:type="IF" ActionStart="AfterSave">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @Name != @NameOld AND @Name IS NOT NULL AND @NameOld IS NOT NULL
+          , 1, 0)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Name" DataType="String" MaxLength="255" SetDataType="ActualData" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="NameOld" AlterIdent="Name" DataType="String" MaxLength="255" SetDataType="OldData" />
+        </Parameters>
+      </Condition>
+      <TrueActions>
+
+        <Action xsi:type="ActionTrigger" Ident="UpdateCatalogSheetName" ActionStart="AfterSave">
+          <DataSource>
+            <SQL>
+
+              UPDATE itsmCat
+              SET itsmCat.[Name] = itsmCatShe.Name
+              FROM usr.ITSMCatalogSheet as itsmCatShe
+              INNER JOIN dbo.Folder as f on f.TableID = itsmCatShe.ID AND f.FormIdent = @ITSMCatalogSheet AND f.[State] = @StateOne
+              INNER JOIN dbo.FolderTree as ft on ft.FolderID = f.ID
+              INNER JOIN usr.ITSMCategory as itsmCat on itsmCat.ITSMCatalogSheetIdent = ft.Ident AND itsmCat.[State] != @DeletedState
+              WHERE
+                itsmCatShe.ID = @ID
+
+              UPDATE fCat
+              SET fCat.[Name] = itsmCatShe.Name
+              FROM usr.ITSMCatalogSheet as itsmCatShe
+              INNER JOIN dbo.Folder as f on f.TableID = itsmCatShe.ID AND f.FormIdent = @ITSMCatalogSheet AND f.[State] = @StateOne
+              INNER JOIN dbo.FolderTree as ft on ft.FolderID = f.ID
+              INNER JOIN usr.ITSMCategory as itsmCat on itsmCat.ITSMCatalogSheetIdent = ft.Ident AND itsmCat.[State] != @DeletedState
+              INNER JOIN dbo.Folder as fCat on fCat.TableID = itsmCat.ID AND fCat.FormIdent = @ITSMCategory AND fCat.[State] = @StateOne
+              WHERE
+                itsmCatShe.ID = @ID
+
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
+              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ITSMCatalogSheet" DataType="String" Value="ITSMCatalogSheet" />
+              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ITSMCategory" DataType="String" Value="ITSMCategory" />
+            </Parameters>
+          </DataSource>
+        </Action>
+
+        <Action xsi:type="ClearCache" Ident="ClearCache" ActionStart="AfterSave">
+          <ClearTypes>
+            <string>Folder </string>
+          </ClearTypes>
+        </Action>
+
+      </TrueActions>
+    </Action>
+
+  </GlobalActions>
+
+	<Steps>
+		<Step State="1">
+			<Groups>
+				<Group>
+					<Permissions>
+						<string>SuperAdmin</string>
+					</Permissions>
+					<Buttons>
+						<Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+					</Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+				</Group>
+			</Groups>
+		</Step>
+		<Step State="2">
+			<Groups>
+				<Group>
+					<Permissions>
+						<string>SuperAdmin</string>
+					</Permissions>
+					<Buttons>
+						<Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+						<Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+					</Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+				</Group>
+			</Groups>
+		</Step>
+	</Steps>
+</WorkFlow>

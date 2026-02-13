@@ -1,0 +1,1425 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMSecurityIncidentAllView" SegmentType="ITSMSecurityIncidentSegment" TitleResourceKey="ITSMSecurityIncidentAllView_ITSM" XGroupTitleResourceKey="ITSMSecurityIncidentGroup_ITSM" Priority="100" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMSecurityIncidentFilter" ShareFilterIdent="ITSMSecurityIncidentFilter" CountColorCssClass="primary" PackageIdent="ITSMPackage">
+  <AccessPermissions>
+    <string>ITSMSecurityIncident</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true" />
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMSecurityIncidentButton" FormIdent="ITSMSecurityIncident" TitleResourceKey="NewITSMSecurityIncidentButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMSecurityIncident">
+    <DataPermissions>
+      <string>ITSMSecurityIncidentReporter</string>
+      <string>ITSMSpecialist</string>
+      <string>ITSMOperator</string>
+    </DataPermissions>
+		<Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number" />
+      <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.ITSMKey
+        </SQL>
+      </Column>
+      <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="20" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.[Subject]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCompanyIdent" TitleResourceKey="ITSMCompanyIdent_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCom.[FolderName] AS ITSMCompanyIdent
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel2Ident" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCat2.[FolderName] AS ITSMCategoryLevel2Ident
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel3Ident" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCat3.[FolderName] AS ITSMCategoryLevel3Ident
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel4Ident" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
+        </SQL>
+      </Column>
+      <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMSecurityIncident" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.State
+        </SQL>
+      </Column>
+      <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
+        <SQL>
+          itsReq.CreateDate
+        </SQL>
+      </Column>
+      <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accCreator.FullName AS AccountID
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          ftvCat5.[FolderName] AS ITSMCategoryLevel5Ident
+        </SQL>
+      </Column>
+      <Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accRep.[FullName] AS ReporterAccountID
+        </SQL>
+      </Column>
+      <Column Ident="ReporterEmail" TitleResourceKey="ReporterEmail_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[ReporterEmail]
+        </SQL>
+      </Column>
+      <Column Ident="ReporterPhone" TitleResourceKey="ReporterPhone_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[ReporterPhone]
+        </SQL>
+      </Column>
+      <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[Description]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMGeneralResolutionMethodTypeGuid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          genResMetTyp.[TextValue] AS ITSMGeneralResolutionMethodTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="SolutionDescription" TitleResourceKey="SolutionDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SolutionDescription]
+        </SQL>
+      </Column>
+      <Column Ident="SolutionAditionalInformation" TitleResourceKey="SolutionAditionalInformation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SolutionAditionalInformation]
+        </SQL>
+      </Column>
+
+      <Column Ident="ITSMSecurityIncidentTypeCodeGuid" TitleResourceKey="ITSMSecurityIncidentTypeCodeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncTypCod.[TextValue] AS ITSMSecurityIncidentTypeCodeGuid
+        </SQL>
+      </Column>
+      <Column Ident="AnalysisJustification" TitleResourceKey="AnalysisJustification_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[AnalysisJustification]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentUrgencyCategoryGuid" TitleResourceKey="ITSMSecurityIncidentUrgencyCategoryGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncUrgCat.[TextValue] AS ITSMSecurityIncidentUrgencyCategoryGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentImpactCategoryGuid" TitleResourceKey="ITSMSecurityIncidentImpactCategoryGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncImpCat.[TextValue] AS ITSMSecurityIncidentImpactCategoryGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentPriorityLevelGuid" TitleResourceKey="ITSMSecurityIncidentPriorityLevelGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncPriLev.[TextValue] AS ITSMSecurityIncidentPriorityLevelGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentResponseProcedureTypeGuid" TitleResourceKey="ITSMSecurityIncidentResponseProcedureTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncResProTyp.[TextValue] AS ITSMSecurityIncidentResponseProcedureTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="AnalysisSecurityIncident" TitleResourceKey="AnalysisSecurityIncident_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[AnalysisSecurityIncident]
+        </SQL>
+      </Column>
+      <Column Ident="IncidentWorkCode" TitleResourceKey="IncidentWorkCode_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[IncidentWorkCode]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentClassificationTypeGuid" TitleResourceKey="ITSMSecurityIncidentClassificationTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncClaTyp.[TextValue] AS ITSMSecurityIncidentClassificationTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentAffectedUserCountGuid" TitleResourceKey="ITSMSecurityIncidentAffectedUserCountGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncAffUseCou.[TextValue] AS ITSMSecurityIncidentAffectedUserCountGuid
+        </SQL>
+      </Column>
+      <Column Ident="AffectedSystems" TitleResourceKey="AffectedSystems_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[AffectedSystems]
+        </SQL>
+      </Column>
+      <Column Ident="Confidentiality" TitleResourceKey="Confidentiality_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[Confidentiality]
+        </SQL>
+      </Column>
+      <Column Ident="Integrity" TitleResourceKey="Integrity_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[Integrity]
+        </SQL>
+      </Column>
+      <Column Ident="Availability" TitleResourceKey="Availability_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[Availability]
+        </SQL>
+      </Column>
+      <Column Ident="IsAffectedOperatingSystem" TitleResourceKey="IsAffectedOperatingSystem_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsAffectedOperatingSystem],'false') AS IsAffectedOperatingSystem
+        </SQL>
+      </Column>
+      <Column Ident="IsAffectedSoftware" TitleResourceKey="IsAffectedSoftware_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsAffectedSoftware],'false') AS IsAffectedSoftware
+        </SQL>
+      </Column>
+      <Column Ident="IsAffectedInternalNetwork" TitleResourceKey="IsAffectedInternalNetwork_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsAffectedInternalNetwork],'false') AS IsAffectedInternalNetwork
+        </SQL>
+      </Column>
+      <Column Ident="IsAffectedServices" TitleResourceKey="IsAffectedServices_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsAffectedServices],'false') AS IsAffectedServices
+        </SQL>
+      </Column>
+      <Column Ident="IsAffectedInformation" TitleResourceKey="IsAffectedInformation_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsAffectedInformation],'false') AS IsAffectedInformation
+        </SQL>
+      </Column>
+      <Column Ident="IsAffectedVIS" TitleResourceKey="IsAffectedVIS_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsAffectedVIS],'false') AS IsAffectedVIS
+        </SQL>
+      </Column>
+      <Column Ident="IsOrganizationalDifficulties" TitleResourceKey="IsOrganizationalDifficulties_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsOrganizationalDifficulties],'false') AS IsOrganizationalDifficulties
+        </SQL>
+      </Column>
+      <Column Ident="IsDataCompromise" TitleResourceKey="IsDataCompromise_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsDataCompromise],'false') AS IsDataCompromise
+        </SQL>
+      </Column>
+      <Column Ident="IsFinancialLoss" TitleResourceKey="IsFinancialLoss_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsFinancialLoss],'false') AS IsFinancialLoss
+        </SQL>
+      </Column>
+      <Column Ident="IsThreatToPersonalInformation" TitleResourceKey="IsThreatToPersonalInformation_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsThreatToPersonalInformation],'false') AS IsThreatToPersonalInformation
+        </SQL>
+      </Column>
+      <Column Ident="IsInabilityToFulfillObligation" TitleResourceKey="IsInabilityToFulfillObligation_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsInabilityToFulfillObligation],'false') AS IsInabilityToFulfillObligation
+        </SQL>
+      </Column>
+      <Column Ident="IsInabilityToContinueOperations" TitleResourceKey="IsInabilityToContinueOperations_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsInabilityToContinueOperations],'false') AS IsInabilityToContinueOperations
+        </SQL>
+      </Column>
+      <Column Ident="IsInvasionOfPrivacy" TitleResourceKey="IsInvasionOfPrivacy_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsInvasionOfPrivacy],'false') AS IsInvasionOfPrivacy
+        </SQL>
+      </Column>
+      <Column Ident="IsThreatToReputation" TitleResourceKey="IsThreatToReputation_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsThreatToReputation],'false') AS IsThreatToReputation
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentRootCauseTypeGuid" TitleResourceKey="ITSMSecurityIncidentRootCauseTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncRooCauTyp.[TextValue] AS ITSMSecurityIncidentRootCauseTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ReactiveMeasure" TitleResourceKey="ReactiveMeasure_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[ReactiveMeasure]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentAffectedInformationClassGuid" TitleResourceKey="ITSMSecurityIncidentAffectedInformationClassGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncAffInfCla.[TextValue] AS ITSMSecurityIncidentAffectedInformationClassGuid
+        </SQL>
+      </Column>
+      <Column Ident="IncidentTechnicalDescription" TitleResourceKey="IncidentTechnicalDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[IncidentTechnicalDescription]
+        </SQL>
+      </Column>
+      <Column Ident="Risks" TitleResourceKey="Risks_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[Risks]
+        </SQL>
+      </Column>
+      <Column Ident="StateOfCoping" TitleResourceKey="StateOfCoping_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[StateOfCoping]
+        </SQL>
+      </Column>
+      <Column Ident="AffectedSystemsCount" TitleResourceKey="AffectedSystemsCount_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[AffectedSystemsCount]
+        </SQL>
+      </Column>
+      <Column Ident="AffectedUsersCount" TitleResourceKey="AffectedUsersCount_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[AffectedUsersCount]
+        </SQL>
+      </Column>
+      <Column Ident="HostOrIP" TitleResourceKey="HostOrIP_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[HostOrIP]
+        </SQL>
+      </Column>
+      <Column Ident="HostFunction" TitleResourceKey="HostFunction_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[HostFunction]
+        </SQL>
+      </Column>
+      <Column Ident="SequenceNumber" TitleResourceKey="SequenceNumber_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SequenceNumber]
+        </SQL>
+      </Column>
+      <Column Ident="IsImmediateCorrectiveAction" TitleResourceKey="IsImmediateCorrectiveAction_ITSM" TableAlterIdent="tbl" IsTranslate="true" IsOptional="true">
+        <SQL>
+          ISNULL(itsReq.[IsImmediateCorrectiveAction],'false') AS IsImmediateCorrectiveAction
+        </SQL>
+      </Column>
+      <Column Ident="ImmediateCorrectiveActionDateTime" TitleResourceKey="ImmediateCorrectiveActionDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[ImmediateCorrectiveActionDateTime]
+        </SQL>
+      </Column>
+      <Column Ident="ImmediateCorrectiveActionRequestorID" TitleResourceKey="ImmediateCorrectiveActionRequestorID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accImmCorActReq.[FullName] AS ImmediateCorrectiveActionRequestorID
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentControlTypeGuid" TitleResourceKey="ITSMSecurityIncidentControlTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncIncConTyp.[TextValue] AS ITSMSecurityIncidentControlTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentControlStatusGuid" TitleResourceKey="ITSMSecurityIncidentControlStatusGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncConSta.[TextValue] AS ITSMSecurityIncidentControlStatusGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentControlPriorityGuid" TitleResourceKey="ITSMSecurityIncidentControlPriorityGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncConPri.[TextValue] AS ITSMSecurityIncidentControlPriorityGuid
+        </SQL>
+      </Column>
+      <Column Ident="SecuriyIncidentDescription" TitleResourceKey="SecuriyIncidentDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SecuriyIncidentDescription]
+        </SQL>
+      </Column>
+      <Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accAsg.FullName AS [AssignedAccountID]
+        </SQL>
+      </Column>
+      <Column Ident="SecurityIncidentTask" TitleResourceKey="SecurityIncidentTask_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SecurityIncidentTask]
+        </SQL>
+      </Column>
+      <Column Ident="SecurityIncidentCreateDateTime" TitleResourceKey="SecurityIncidentCreateDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SecurityIncidentCreateDateTime]
+        </SQL>
+      </Column>
+      <Column Ident="SecurityIncidentSolveDateTime" TitleResourceKey="SecurityIncidentSolveDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SecurityIncidentSolveDateTime]
+        </SQL>
+      </Column>
+      <Column Ident="RelatedSequenceNumber" TitleResourceKey="RelatedSequenceNumber_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[RelatedSequenceNumber]
+        </SQL>
+      </Column>
+      <Column Ident="SecurityIncidentRequestorID" TitleResourceKey="SecurityIncidentRequestorID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accSecIncReq.[FullName] AS SecurityIncidentRequestorID
+        </SQL>
+      </Column>
+      <Column Ident="SecurityIncidentOutput" TitleResourceKey="SecurityIncidentOutput_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SecurityIncidentOutput]
+        </SQL>
+      </Column>
+      <Column Ident="CSIRTTeamConveningDateTime" TitleResourceKey="CSIRTTeamConveningDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[CSIRTTeamConveningDateTime]
+        </SQL>
+      </Column>
+      <Column Ident="CSIRTNegotiationResult" TitleResourceKey="CSIRTNegotiationResult_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[CSIRTNegotiationResult]
+        </SQL>
+      </Column>
+      <Column Ident="SERTTeamConveningDateTime" TitleResourceKey="SERTTeamConveningDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SERTTeamConveningDateTime]
+        </SQL>
+      </Column>
+      <Column Ident="SERTNegotiationResult" TitleResourceKey="SERTNegotiationResult_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[SERTNegotiationResult]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentBreachVectorTypeGuid" TitleResourceKey="ITSMSecurityIncidentBreachVectorTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncBreVecTyp.[TextValue] AS ITSMSecurityIncidentBreachVectorTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentThreatActorTypeGuid" TitleResourceKey="ITSMSecurityIncidentThreatActorTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncThrActTyp.[TextValue] AS ITSMSecurityIncidentThreatActorTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentLogicalIntrusionTypeGuid" TitleResourceKey="ITSMSecurityIncidentLogicalIntrusionTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncLogIntTyp.[TextValue] AS ITSMSecurityIncidentLogicalIntrusionTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentKeyBusinessImpactTypeGuid" TitleResourceKey="ITSMSecurityIncidentKeyBusinessImpactTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncKeyBusImpTyp.[TextValue] AS ITSMSecurityIncidentKeyBusinessImpactTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentOutcomeTypeGuid" TitleResourceKey="ITSMSecurityIncidentOutcomeTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncOutTyp.[TextValue] AS ITSMSecurityIncidentOutcomeTypeGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentTheftCategoryGuid" TitleResourceKey="ITSMSecurityIncidentTheftCategoryGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncTheCat.[TextValue] AS ITSMSecurityIncidentTheftCategoryGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentFailureCategoryGuid" TitleResourceKey="ITSMSecurityIncidentFailureCategoryGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncFaiCat.[TextValue] AS ITSMSecurityIncidentFailureCategoryGuid
+        </SQL>
+      </Column>
+      <Column Ident="CauseOfTheIncidentInformation" TitleResourceKey="CauseOfTheIncidentInformation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[CauseOfTheIncidentInformation]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMSecurityIncidentResolutionMethodTypeGuid" TitleResourceKey="ITSMSecurityIncidentResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          secIncResMetTyp.[TextValue] AS ITSMSecurityIncidentResolutionMethodTypeGuid
+        </SQL>
+      </Column>
+		</Columns>
+    <Froms>
+      <dsf:From Ident="ftvCat2">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel2Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat2 ON ftvCat2.FolderTreeIdent = itsReq.ITSMCategoryLevel2Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat3">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel3Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat3 ON ftvCat3.FolderTreeIdent = itsReq.ITSMCategoryLevel3Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat4">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel4Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat4 ON ftvCat4.FolderTreeIdent = itsReq.ITSMCategoryLevel4Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat5">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel5Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat5 ON ftvCat5.FolderTreeIdent = itsReq.ITSMCategoryLevel5Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accRep">
+        <dsf:Columns>
+          <dsf:string>ReporterAccountID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.Account as accRep on accRep.ID = itsReq.ReporterAccountID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accAsg">
+        <dsf:Columns>
+          <dsf:string>AssignedAccountID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.Account as accAsg on accAsg.ID = itsReq.AssignedAccountID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="genResMetTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMGeneralResolutionMethodTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMGeneralResolutionMethodType as genResMetTyp on genResMetTyp.Guid = itsReq.ITSMGeneralResolutionMethodTypeGuid AND genResMetTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncTypCod">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentTypeCodeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentTypeCode as secIncTypCod on secIncTypCod.Guid = itsReq.ITSMSecurityIncidentTypeCodeGuid AND secIncTypCod.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncUrgCat">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentUrgencyCategoryGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentUrgencyCategory as secIncUrgCat on secIncUrgCat.Guid = itsReq.ITSMSecurityIncidentUrgencyCategoryGuid AND secIncUrgCat.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncPriLev">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentPriorityLevelGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentPriorityLevel as secIncPriLev on secIncPriLev.Guid = itsReq.ITSMSecurityIncidentPriorityLevelGuid AND secIncPriLev.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncResProTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentResponseProcedureTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentResponseProcedureType as secIncResProTyp on secIncResProTyp.Guid = itsReq.ITSMSecurityIncidentResponseProcedureTypeGuid AND secIncResProTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncClaTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentClassificationTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentClassificationType as secIncClaTyp on secIncClaTyp.Guid = itsReq.ITSMSecurityIncidentClassificationTypeGuid AND secIncClaTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncAffUseCou">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentAffectedUserCountGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentAffectedUserCount as secIncAffUseCou on secIncAffUseCou.Guid = itsReq.ITSMSecurityIncidentAffectedUserCountGuid AND secIncAffUseCou.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncRooCauTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentRootCauseTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentRootCauseType as secIncRooCauTyp on secIncRooCauTyp.Guid = itsReq.ITSMSecurityIncidentRootCauseTypeGuid AND secIncRooCauTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncAffInfCla">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentAffectedInformationClassGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentAffectedInformationClass as secIncAffInfCla on secIncAffInfCla.Guid = itsReq.ITSMSecurityIncidentAffectedInformationClassGuid AND secIncAffInfCla.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accImmCorActReq">
+        <dsf:Columns>
+          <dsf:string>ImmediateCorrectiveActionRequestorID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.Account as accImmCorActReq on accImmCorActReq.ID = itsReq.ImmediateCorrectiveActionRequestorID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncIncConTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentControlTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentControlType as secIncIncConTyp on secIncIncConTyp.Guid = itsReq.ITSMSecurityIncidentControlTypeGuid AND secIncIncConTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncConSta">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentControlStatusGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentControlStatus as secIncConSta on secIncConSta.Guid = itsReq.ITSMSecurityIncidentControlStatusGuid AND secIncConSta.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncConPri">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentControlPriorityGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentControlPriority as secIncConPri on secIncConPri.Guid = itsReq.ITSMSecurityIncidentControlPriorityGuid AND secIncConPri.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accSecIncReq">
+        <dsf:Columns>
+          <dsf:string>SecurityIncidentRequestorID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.Account as accSecIncReq on accSecIncReq.ID = itsReq.SecurityIncidentRequestorID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncBreVecTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentBreachVectorTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentBreachVectorType as secIncBreVecTyp on secIncBreVecTyp.Guid = itsReq.ITSMSecurityIncidentBreachVectorTypeGuid AND secIncBreVecTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncThrActTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentThreatActorTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentThreatActorType as secIncThrActTyp on secIncThrActTyp.Guid = itsReq.ITSMSecurityIncidentThreatActorTypeGuid AND secIncThrActTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncLogIntTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentLogicalIntrusionTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentLogicalIntrusionType as secIncLogIntTyp on secIncLogIntTyp.Guid = itsReq.ITSMSecurityIncidentLogicalIntrusionTypeGuid AND secIncLogIntTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncKeyBusImpTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentKeyBusinessImpactTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentKeyBusinessImpactType as secIncKeyBusImpTyp on secIncKeyBusImpTyp.Guid = itsReq.ITSMSecurityIncidentKeyBusinessImpactTypeGuid AND secIncKeyBusImpTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncOutTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentOutcomeTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentOutcomeType as secIncOutTyp on secIncOutTyp.Guid = itsReq.ITSMSecurityIncidentOutcomeTypeGuid AND secIncOutTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncTheCat">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentTheftCategoryGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentTheftCategory as secIncTheCat on secIncTheCat.Guid = itsReq.ITSMSecurityIncidentTheftCategoryGuid AND secIncTheCat.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncFaiCat">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentFailureCategoryGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentFailureCategory as secIncFaiCat on secIncFaiCat.Guid = itsReq.ITSMSecurityIncidentFailureCategoryGuid AND secIncFaiCat.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncResMetTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentResolutionMethodTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentResolutionMethodType as secIncResMetTyp on secIncResMetTyp.Guid = itsReq.ITSMSecurityIncidentResolutionMethodTypeGuid AND secIncResMetTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="secIncImpCat">
+        <dsf:Columns>
+          <dsf:string>ITSMSecurityIncidentImpactCategoryGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSecurityIncidentImpactCategory as secIncImpCat on secIncImpCat.Guid = itsReq.ITSMSecurityIncidentImpactCategoryGuid AND secIncImpCat.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+    </Froms>
+		<SQL>
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT
+            itsReq.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMSecurityIncident AS itsReq
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+          #ADDFROM#
+          WHERE
+            itsReq.[State] != @DeletedState
+            AND (
+              (
+                ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMSecurityIncident(itsReq)|ITSMSecurityIncidentReporter|]#
+              )
+              OR
+              (
+                ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMSecurityIncident(itsReq)|ITSMSecurityIncidentReporter,ITSMAuthor|]#
+              )
+              OR
+              (
+                #PERMISSION[ITSMSecurityIncident(itsReq)]#
+              )
+            ) #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    </SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" />
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL>
+      SELECT COUNT(itsReq.ID)
+      FROM usr.ITSMSecurityIncident AS itsReq
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+      WHERE
+        itsReq.[State] != @DeletedState
+        AND (
+          (
+            ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMSecurityIncident(itsReq)|ITSMSecurityIncidentReporter|]#
+          )
+          OR
+          (
+            ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMSecurityIncident(itsReq)|ITSMSecurityIncidentReporter,ITSMAuthor|]#
+          )
+          OR
+          (
+            #PERMISSION[ITSMSecurityIncident(itsReq)]#
+          )
+        ) #FILTER#
+    </SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <Columns>
+          <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" DataType="Number" />
+          <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="25" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Subject]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.ITSMKey
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCompanyIdent" TitleResourceKey="ITSMCompanyIdent_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCom.[FolderName] AS ITSMCompanyIdent
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel2Ident" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat2.[FolderName] AS ITSMCategoryLevel2Ident
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel3Ident" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat3.[FolderName] AS ITSMCategoryLevel3Ident
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel4Ident" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
+            </SQL>
+          </Column>
+          <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMSecurityIncident" TitleResourceKey="State_ITSM" IsColor="true" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.State
+            </SQL>
+          </Column>
+          <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" DataType="DateTime">
+            <SQL>
+              itsReq.CreateDate
+            </SQL>
+          </Column>
+          <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accCreator.FullName AS AccountID
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat5.[FolderName] AS ITSMCategoryLevel5Ident
+            </SQL>
+          </Column>
+          <Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accRep.[FullName] AS ReporterAccountID
+            </SQL>
+          </Column>
+          <Column Ident="ReporterEmail" TitleResourceKey="ReporterEmail_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[ReporterEmail]
+            </SQL>
+          </Column>
+          <Column Ident="ReporterPhone" TitleResourceKey="ReporterPhone_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[ReporterPhone]
+            </SQL>
+          </Column>
+          <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Description]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMGeneralResolutionMethodTypeGuid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              genResMetTyp.[TextValue] AS ITSMGeneralResolutionMethodTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="SolutionDescription" TitleResourceKey="SolutionDescription_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SolutionDescription]
+            </SQL>
+          </Column>
+          <Column Ident="SolutionAditionalInformation" TitleResourceKey="SolutionAditionalInformation_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SolutionAditionalInformation]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentTypeCodeGuid" TitleResourceKey="ITSMSecurityIncidentTypeCodeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncTypCod.[TextValue] AS ITSMSecurityIncidentTypeCodeGuid
+            </SQL>
+          </Column>
+          <Column Ident="AnalysisJustification" TitleResourceKey="AnalysisJustification_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[AnalysisJustification]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentUrgencyCategoryGuid" TitleResourceKey="ITSMSecurityIncidentUrgencyCategoryGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncUrgCat.[TextValue] AS ITSMSecurityIncidentUrgencyCategoryGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentImpactCategoryGuid" TitleResourceKey="ITSMSecurityIncidentImpactCategoryGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncImpCat.[TextValue] AS ITSMSecurityIncidentImpactCategoryGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentPriorityLevelGuid" TitleResourceKey="ITSMSecurityIncidentPriorityLevelGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncPriLev.[TextValue] AS ITSMSecurityIncidentPriorityLevelGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentResponseProcedureTypeGuid" TitleResourceKey="ITSMSecurityIncidentResponseProcedureTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncResProTyp.[TextValue] AS ITSMSecurityIncidentResponseProcedureTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="AnalysisSecurityIncident" TitleResourceKey="AnalysisSecurityIncident_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[AnalysisSecurityIncident]
+            </SQL>
+          </Column>
+          <Column Ident="IncidentWorkCode" TitleResourceKey="IncidentWorkCode_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[IncidentWorkCode]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentClassificationTypeGuid" TitleResourceKey="ITSMSecurityIncidentClassificationTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncClaTyp.[TextValue] AS ITSMSecurityIncidentClassificationTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentAffectedUserCountGuid" TitleResourceKey="ITSMSecurityIncidentAffectedUserCountGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncAffUseCou.[TextValue] AS ITSMSecurityIncidentAffectedUserCountGuid
+            </SQL>
+          </Column>
+          <Column Ident="AffectedSystems" TitleResourceKey="AffectedSystems_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[AffectedSystems]
+            </SQL>
+          </Column>
+          <Column Ident="Confidentiality" TitleResourceKey="Confidentiality_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Confidentiality]
+            </SQL>
+          </Column>
+          <Column Ident="Integrity" TitleResourceKey="Integrity_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Integrity]
+            </SQL>
+          </Column>
+          <Column Ident="Availability" TitleResourceKey="Availability_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Availability]
+            </SQL>
+          </Column>
+          <Column Ident="IsAffectedOperatingSystem" TitleResourceKey="IsAffectedOperatingSystem_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsAffectedOperatingSystem],'false') AS IsAffectedOperatingSystem
+            </SQL>
+          </Column>
+          <Column Ident="IsAffectedSoftware" TitleResourceKey="IsAffectedSoftware_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsAffectedSoftware],'false') AS IsAffectedSoftware
+            </SQL>
+          </Column>
+          <Column Ident="IsAffectedInternalNetwork" TitleResourceKey="IsAffectedInternalNetwork_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsAffectedInternalNetwork],'false') AS IsAffectedInternalNetwork
+            </SQL>
+          </Column>
+          <Column Ident="IsAffectedServices" TitleResourceKey="IsAffectedServices_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsAffectedServices],'false') AS IsAffectedServices
+            </SQL>
+          </Column>
+          <Column Ident="IsAffectedInformation" TitleResourceKey="IsAffectedInformation_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsAffectedInformation],'false') AS IsAffectedInformation
+            </SQL>
+          </Column>
+          <Column Ident="IsAffectedVIS" TitleResourceKey="IsAffectedVIS_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsAffectedVIS],'false') AS IsAffectedVIS
+            </SQL>
+          </Column>
+          <Column Ident="IsOrganizationalDifficulties" TitleResourceKey="IsOrganizationalDifficulties_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsOrganizationalDifficulties],'false') AS IsOrganizationalDifficulties
+            </SQL>
+          </Column>
+          <Column Ident="IsDataCompromise" TitleResourceKey="IsDataCompromise_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsDataCompromise],'false') AS IsDataCompromise
+            </SQL>
+          </Column>
+          <Column Ident="IsFinancialLoss" TitleResourceKey="IsFinancialLoss_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsFinancialLoss],'false') AS IsFinancialLoss
+            </SQL>
+          </Column>
+          <Column Ident="IsThreatToPersonalInformation" TitleResourceKey="IsThreatToPersonalInformation_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsThreatToPersonalInformation],'false') AS IsThreatToPersonalInformation
+            </SQL>
+          </Column>
+          <Column Ident="IsInabilityToFulfillObligation" TitleResourceKey="IsInabilityToFulfillObligation_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsInabilityToFulfillObligation],'false') AS IsInabilityToFulfillObligation
+            </SQL>
+          </Column>
+          <Column Ident="IsInabilityToContinueOperations" TitleResourceKey="IsInabilityToContinueOperations_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsInabilityToContinueOperations],'false') AS IsInabilityToContinueOperations
+            </SQL>
+          </Column>
+          <Column Ident="IsInvasionOfPrivacy" TitleResourceKey="IsInvasionOfPrivacy_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsInvasionOfPrivacy],'false') AS IsInvasionOfPrivacy
+            </SQL>
+          </Column>
+          <Column Ident="IsThreatToReputation" TitleResourceKey="IsThreatToReputation_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsThreatToReputation],'false') AS IsThreatToReputation
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentRootCauseTypeGuid" TitleResourceKey="ITSMSecurityIncidentRootCauseTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncRooCauTyp.[TextValue] AS ITSMSecurityIncidentRootCauseTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ReactiveMeasure" TitleResourceKey="ReactiveMeasure_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[ReactiveMeasure]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentAffectedInformationClassGuid" TitleResourceKey="ITSMSecurityIncidentAffectedInformationClassGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncAffInfCla.[TextValue] AS ITSMSecurityIncidentAffectedInformationClassGuid
+            </SQL>
+          </Column>
+          <Column Ident="IncidentTechnicalDescription" TitleResourceKey="IncidentTechnicalDescription_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[IncidentTechnicalDescription]
+            </SQL>
+          </Column>
+          <Column Ident="Risks" TitleResourceKey="Risks_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Risks]
+            </SQL>
+          </Column>
+          <Column Ident="StateOfCoping" TitleResourceKey="StateOfCoping_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[StateOfCoping]
+            </SQL>
+          </Column>
+          <Column Ident="AffectedSystemsCount" TitleResourceKey="AffectedSystemsCount_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[AffectedSystemsCount]
+            </SQL>
+          </Column>
+          <Column Ident="AffectedUsersCount" TitleResourceKey="AffectedUsersCount_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[AffectedUsersCount]
+            </SQL>
+          </Column>
+          <Column Ident="HostOrIP" TitleResourceKey="HostOrIP_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[HostOrIP]
+            </SQL>
+          </Column>
+          <Column Ident="HostFunction" TitleResourceKey="HostFunction_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[HostFunction]
+            </SQL>
+          </Column>
+          <Column Ident="SequenceNumber" TitleResourceKey="SequenceNumber_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SequenceNumber]
+            </SQL>
+          </Column>
+          <Column Ident="IsImmediateCorrectiveAction" TitleResourceKey="IsImmediateCorrectiveAction_ITSM" TableAlterIdent="tbl" IsTranslate="true">
+            <SQL>
+              ISNULL(itsReq.[IsImmediateCorrectiveAction],'false') AS IsImmediateCorrectiveAction
+            </SQL>
+          </Column>
+          <Column Ident="ImmediateCorrectiveActionDateTime" TitleResourceKey="ImmediateCorrectiveActionDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[ImmediateCorrectiveActionDateTime]
+            </SQL>
+          </Column>
+          <Column Ident="ImmediateCorrectiveActionRequestorID" TitleResourceKey="ImmediateCorrectiveActionRequestorID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accImmCorActReq.[FullName] AS ImmediateCorrectiveActionRequestorID
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentControlTypeGuid" TitleResourceKey="ITSMSecurityIncidentControlTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncIncConTyp.[TextValue] AS ITSMSecurityIncidentControlTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentControlStatusGuid" TitleResourceKey="ITSMSecurityIncidentControlStatusGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncConSta.[TextValue] AS ITSMSecurityIncidentControlStatusGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentControlPriorityGuid" TitleResourceKey="ITSMSecurityIncidentControlPriorityGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncConPri.[TextValue] AS ITSMSecurityIncidentControlPriorityGuid
+            </SQL>
+          </Column>
+          <Column Ident="SecuriyIncidentDescription" TitleResourceKey="SecuriyIncidentDescription_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SecuriyIncidentDescription]
+            </SQL>
+          </Column>
+          <Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accAsg.FullName AS [AssignedAccountID]
+            </SQL>
+          </Column>
+          <Column Ident="SecurityIncidentTask" TitleResourceKey="SecurityIncidentTask_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SecurityIncidentTask]
+            </SQL>
+          </Column>
+          <Column Ident="SecurityIncidentCreateDateTime" TitleResourceKey="SecurityIncidentCreateDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SecurityIncidentCreateDateTime]
+            </SQL>
+          </Column>
+          <Column Ident="SecurityIncidentSolveDateTime" TitleResourceKey="SecurityIncidentSolveDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SecurityIncidentSolveDateTime]
+            </SQL>
+          </Column>
+          <Column Ident="RelatedSequenceNumber" TitleResourceKey="RelatedSequenceNumber_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[RelatedSequenceNumber]
+            </SQL>
+          </Column>
+          <Column Ident="SecurityIncidentRequestorID" TitleResourceKey="SecurityIncidentRequestorID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accSecIncReq.[FullName] AS SecurityIncidentRequestorID
+            </SQL>
+          </Column>
+          <Column Ident="SecurityIncidentOutput" TitleResourceKey="SecurityIncidentOutput_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SecurityIncidentOutput]
+            </SQL>
+          </Column>
+          <Column Ident="CSIRTTeamConveningDateTime" TitleResourceKey="CSIRTTeamConveningDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[CSIRTTeamConveningDateTime]
+            </SQL>
+          </Column>
+          <Column Ident="CSIRTNegotiationResult" TitleResourceKey="CSIRTNegotiationResult_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[CSIRTNegotiationResult]
+            </SQL>
+          </Column>
+          <Column Ident="SERTTeamConveningDateTime" TitleResourceKey="SERTTeamConveningDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SERTTeamConveningDateTime]
+            </SQL>
+          </Column>
+          <Column Ident="SERTNegotiationResult" TitleResourceKey="SERTNegotiationResult_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[SERTNegotiationResult]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentBreachVectorTypeGuid" TitleResourceKey="ITSMSecurityIncidentBreachVectorTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncBreVecTyp.[TextValue] AS ITSMSecurityIncidentBreachVectorTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentThreatActorTypeGuid" TitleResourceKey="ITSMSecurityIncidentThreatActorTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncThrActTyp.[TextValue] AS ITSMSecurityIncidentThreatActorTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentLogicalIntrusionTypeGuid" TitleResourceKey="ITSMSecurityIncidentLogicalIntrusionTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncLogIntTyp.[TextValue] AS ITSMSecurityIncidentLogicalIntrusionTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentKeyBusinessImpactTypeGuid" TitleResourceKey="ITSMSecurityIncidentKeyBusinessImpactTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncKeyBusImpTyp.[TextValue] AS ITSMSecurityIncidentKeyBusinessImpactTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentOutcomeTypeGuid" TitleResourceKey="ITSMSecurityIncidentOutcomeTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncOutTyp.[TextValue] AS ITSMSecurityIncidentOutcomeTypeGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentTheftCategoryGuid" TitleResourceKey="ITSMSecurityIncidentTheftCategoryGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncTheCat.[TextValue] AS ITSMSecurityIncidentTheftCategoryGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentFailureCategoryGuid" TitleResourceKey="ITSMSecurityIncidentFailureCategoryGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncFaiCat.[TextValue] AS ITSMSecurityIncidentFailureCategoryGuid
+            </SQL>
+          </Column>
+          <Column Ident="CauseOfTheIncidentInformation" TitleResourceKey="CauseOfTheIncidentInformation_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[CauseOfTheIncidentInformation]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMSecurityIncidentResolutionMethodTypeGuid" TitleResourceKey="ITSMSecurityIncidentResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              secIncResMetTyp.[TextValue] AS ITSMSecurityIncidentResolutionMethodTypeGuid
+            </SQL>
+          </Column>
+        </Columns>
+        <Froms>
+          <dsf:From Ident="ftvCat2">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel2Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat2 ON ftvCat2.FolderTreeIdent = itsReq.ITSMCategoryLevel2Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat3">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel3Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat3 ON ftvCat3.FolderTreeIdent = itsReq.ITSMCategoryLevel3Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat4">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel4Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat4 ON ftvCat4.FolderTreeIdent = itsReq.ITSMCategoryLevel4Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat5">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel5Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat5 ON ftvCat5.FolderTreeIdent = itsReq.ITSMCategoryLevel5Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accRep">
+            <dsf:Columns>
+              <dsf:string>ReporterAccountID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.Account as accRep on accRep.ID = itsReq.ReporterAccountID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accAsg">
+            <dsf:Columns>
+              <dsf:string>AssignedAccountID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.Account as accAsg on accAsg.ID = itsReq.AssignedAccountID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="genResMetTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMGeneralResolutionMethodTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMGeneralResolutionMethodType as genResMetTyp on genResMetTyp.Guid = itsReq.ITSMGeneralResolutionMethodTypeGuid AND genResMetTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncTypCod">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentTypeCodeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentTypeCode as secIncTypCod on secIncTypCod.Guid = itsReq.ITSMSecurityIncidentTypeCodeGuid AND secIncTypCod.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncUrgCat">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentUrgencyCategoryGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentUrgencyCategory as secIncUrgCat on secIncUrgCat.Guid = itsReq.ITSMSecurityIncidentUrgencyCategoryGuid AND secIncUrgCat.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncPriLev">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentPriorityLevelGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentPriorityLevel as secIncPriLev on secIncPriLev.Guid = itsReq.ITSMSecurityIncidentPriorityLevelGuid AND secIncPriLev.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncResProTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentResponseProcedureTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentResponseProcedureType as secIncResProTyp on secIncResProTyp.Guid = itsReq.ITSMSecurityIncidentResponseProcedureTypeGuid AND secIncResProTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncClaTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentClassificationTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentClassificationType as secIncClaTyp on secIncClaTyp.Guid = itsReq.ITSMSecurityIncidentClassificationTypeGuid AND secIncClaTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncAffUseCou">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentAffectedUserCountGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentAffectedUserCount as secIncAffUseCou on secIncAffUseCou.Guid = itsReq.ITSMSecurityIncidentAffectedUserCountGuid AND secIncAffUseCou.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncRooCauTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentRootCauseTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentRootCauseType as secIncRooCauTyp on secIncRooCauTyp.Guid = itsReq.ITSMSecurityIncidentRootCauseTypeGuid AND secIncRooCauTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncAffInfCla">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentAffectedInformationClassGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentAffectedInformationClass as secIncAffInfCla on secIncAffInfCla.Guid = itsReq.ITSMSecurityIncidentAffectedInformationClassGuid AND secIncAffInfCla.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accImmCorActReq">
+            <dsf:Columns>
+              <dsf:string>ImmediateCorrectiveActionRequestorID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.Account as accImmCorActReq on accImmCorActReq.ID = itsReq.ImmediateCorrectiveActionRequestorID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncIncConTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentControlTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentControlType as secIncIncConTyp on secIncIncConTyp.Guid = itsReq.ITSMSecurityIncidentControlTypeGuid AND secIncIncConTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncConSta">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentControlStatusGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentControlStatus as secIncConSta on secIncConSta.Guid = itsReq.ITSMSecurityIncidentControlStatusGuid AND secIncConSta.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncConPri">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentControlPriorityGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentControlPriority as secIncConPri on secIncConPri.Guid = itsReq.ITSMSecurityIncidentControlPriorityGuid AND secIncConPri.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accSecIncReq">
+            <dsf:Columns>
+              <dsf:string>SecurityIncidentRequestorID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.Account as accSecIncReq on accSecIncReq.ID = itsReq.SecurityIncidentRequestorID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncBreVecTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentBreachVectorTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentBreachVectorType as secIncBreVecTyp on secIncBreVecTyp.Guid = itsReq.ITSMSecurityIncidentBreachVectorTypeGuid AND secIncBreVecTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncThrActTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentThreatActorTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentThreatActorType as secIncThrActTyp on secIncThrActTyp.Guid = itsReq.ITSMSecurityIncidentThreatActorTypeGuid AND secIncThrActTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncLogIntTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentLogicalIntrusionTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentLogicalIntrusionType as secIncLogIntTyp on secIncLogIntTyp.Guid = itsReq.ITSMSecurityIncidentLogicalIntrusionTypeGuid AND secIncLogIntTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncKeyBusImpTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentKeyBusinessImpactTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentKeyBusinessImpactType as secIncKeyBusImpTyp on secIncKeyBusImpTyp.Guid = itsReq.ITSMSecurityIncidentKeyBusinessImpactTypeGuid AND secIncKeyBusImpTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncOutTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentOutcomeTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentOutcomeType as secIncOutTyp on secIncOutTyp.Guid = itsReq.ITSMSecurityIncidentOutcomeTypeGuid AND secIncOutTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncTheCat">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentTheftCategoryGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentTheftCategory as secIncTheCat on secIncTheCat.Guid = itsReq.ITSMSecurityIncidentTheftCategoryGuid AND secIncTheCat.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncFaiCat">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentFailureCategoryGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentFailureCategory as secIncFaiCat on secIncFaiCat.Guid = itsReq.ITSMSecurityIncidentFailureCategoryGuid AND secIncFaiCat.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncResMetTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentResolutionMethodTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentResolutionMethodType as secIncResMetTyp on secIncResMetTyp.Guid = itsReq.ITSMSecurityIncidentResolutionMethodTypeGuid AND secIncResMetTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="secIncImpCat">
+            <dsf:Columns>
+              <dsf:string>ITSMSecurityIncidentImpactCategoryGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMSecurityIncidentImpactCategory as secIncImpCat on secIncImpCat.Guid = itsReq.ITSMSecurityIncidentImpactCategoryGuid AND secIncImpCat.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+        </Froms>
+        <SQL>
+
+          SELECT
+            itsReq.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMSecurityIncident AS itsReq
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+          #ADDFROM#
+          WHERE
+            itsReq.[State] != @DeletedState
+            AND (
+              (
+                ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMSecurityIncident(itsReq)|ITSMSecurityIncidentReporter|]#
+              )
+              OR
+              (
+                ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMSecurityIncident(itsReq)|ITSMSecurityIncidentReporter,ITSMAuthor|]#
+              )
+              OR
+              (
+                #PERMISSION[ITSMSecurityIncident(itsReq)]#
+              )
+            ) #FILTER#
+
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+        </Parameters>
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

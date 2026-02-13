@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings"
+  Ident="ITSMKnowledgeBaseCategorizedView" SegmentType="ITSMKnowledgeBaseSegment" TitleResourceKey="ITSMKnowledgeBaseCategorizedView_ITSM" GroupTitleResourceKey="ITSMKnowledgeBaseOverview_ITSM" Priority="25" MenuType="Tree" FolderGroupSegmentIdent="ITSMCommonFolderGroup" IsFolderTreePermission="true" PackageIdent="ITSMPackage">
+	<ExternalCssRelativePaths>
+		<string>~/AppAsset/Packages/ITSM/Styles/WikiCategorizedView.css</string>
+	</ExternalCssRelativePaths>
+	<AccessPermissions>
+		<string>ITSMKnowledgeBaseReaderFolder</string>
+		<string>ITSMKnowledgeBaseEditorFolder</string>
+		<string>SuperAdmin</string>
+	</AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:MenuFolderTreeSetting" IsFilter="true" IsExpandTree="false" ExpandLevel="1" IsFolderTreePermission="true"/>
+
+		<dvs:Setting xsi:type="dvs:FolderTreeSetting">
+			<dvs:Items>
+				<dvs:FolderTreeItemSetting ControlIdent="FolderIdent" Level="0"></dvs:FolderTreeItemSetting>
+			</dvs:Items>
+		</dvs:Setting>
+	</Settings>
+	<Buttons>
+		<Button xsi:type="LinkButton" Ident="AddITSMKnowledgeBaseButton" FormIdent="ITSMKnowledgeBase" TitleResourceKey="AddITSMKnowledgeBaseButton_ITSM" IsUrlExtend="true">
+			<AccessPermissions>
+				<string>ITSMKnowledgeBaseReaderFolder</string>
+				<string>ITSMKnowledgeBaseEditorFolder</string>
+				<string>SuperAdmin</string>
+			</AccessPermissions>
+		</Button>
+
+	</Buttons>
+	<DataSource FormIdent="ITSMKnowledgeBase">
+		<DataPermissions>
+			<string>ITSMKnowledgeBaseReaderFolder</string>
+			<string>ITSMKnowledgeBaseEditorFolder</string>
+			<string>SuperAdmin</string>
+		</DataPermissions>
+		<Columns>
+			<Column Ident="ID" TitleResourceKey="ID" IsPrimaryKey="true" IsVisible="false" Width="10"/>
+			<Column Ident="Name" TitleResourceKey="Name_ITSM" Width="30"/>
+			<Column Ident="Content" TitleResourceKey="Content_ITSM" Width="70"/>
+			<!-- <Column xsi:type="BadgeColumn" ColorCssClassColumnIdent="IsActiveColor" IsTranslate="true" Ident="IsActive" TitleResourceKey="IsActive_ITSM" Width="10" /> -->
+		</Columns>
+		<SQL>
+
+			SELECT
+				wik.ID
+				,IIF(@UserLanguageID = 1, TitleCZ, ISNULL(TitleEN, TitleCZ)) AS Name
+				,IIF(@UserLanguageID = 1, ContentCZ, ISNULL(ContentEN, ContentCZ)) AS Content
+			FROM
+				usr.ITSMKnowledgeBase AS wik
+			WHERE
+				wik.FolderIdent = @FolderIdent
+				AND wik.[State] != @DeletedState
+				AND #PERMISSION[ITSMKnowledgeBase(wik)]#
+				
+    </SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderIdent" ConstantType="MenuFolderTreeIdent" DataType="VarChar" MaxLength="900" LikeType="None" />
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+			
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Bool" Value="1" />
+		</Parameters>
+	</DataSource>
+</DataView>

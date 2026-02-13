@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Filter xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMKnowledgeBaseDashboardFilter" IsOnlyQueryString="true" IsShowButton="false" IsShowSelected="false" PackageIdent="ITSMPackage">
+  <Controls>
+
+    <Control xsi:type="AutoCompleteControl" Ident="CurrentCategoryIdent" DataType="String" TitleResourceKey="CurrentCategoryIdent_ITSM">
+      <EmptyDataBind>
+        <Columns>
+          <Column Ident="Ident" DataBindType="Value" />
+          <Column Ident="Name" DataBindType="Title" />
+        </Columns>
+        <SQL>
+          SELECT
+            ft.Ident
+            , f.[Name]
+          FROM dbo.FolderTree ft
+          INNER JOIN dbo.Folder as f on f.Id = ft.FolderID AND f.FormIdent IN (@Category, @Company) AND f.[State] = @ActiveState
+          ORDER BY
+            f.[Name] ASC
+
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Bool" Value="1" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Company" DataType="String" MaxLength="50" Value="ITSMCompany" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Category" DataType="String" MaxLength="50" Value="ITSMCategory" />
+        </Parameters>
+      </EmptyDataBind>
+      <DataBind DefaultTitleResourceKey="SelectValue">
+        <Columns>
+          <Column Ident="Ident" DataBindType="Value" />
+          <Column Ident="Name" DataBindType="Title" />
+        </Columns>
+        <SQL>
+
+          SELECT
+            ft.Ident
+            , f.[Name]
+          FROM dbo.FolderTree ft
+          INNER JOIN dbo.Folder as f on f.Id = ft.FolderID AND f.FormIdent IN (@Category, @Company) AND f.[State] = @ActiveState
+          WHERE
+            f.Name COLLATE SQL_Latin1_General_CP1253_CI_AI like @CurrentCategoryIdent
+          ORDER BY
+            f.[Name] ASC
+
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Bool" Value="1" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Company" DataType="String" MaxLength="50" Value="ITSMCompany" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Category" DataType="String" MaxLength="50" Value="ITSMCategory" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="200" LikeType="Both" />
+        </Parameters>
+      </DataBind>
+      <SelectedDataBind>
+        <Columns>
+          <Column Ident="Ident" DataBindType="Value" />
+          <Column Ident="Name" DataBindType="Title" />
+        </Columns>
+        <SQL>
+          SELECT
+            ft.Ident
+            , f.[Name]
+          FROM dbo.FolderTree ft
+          INNER JOIN dbo.Folder f ON f.ID = ft.FolderID
+          WHERE
+            ft.Ident = @CurrentCategoryIdent
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" />
+        </Parameters>
+      </SelectedDataBind>
+      <FilterConditions>
+        <DataSource GroupIdent="FilterSet">
+          <SQL>
+            1 = 1
+          </SQL>
+        </DataSource>
+        <DataSource GroupIdent="Category">
+          <SQL>
+            1 = 1
+          </SQL>
+        </DataSource>
+        <DataSource GroupIdent="WikiCategory">
+          <SQL>
+            1 = 1
+          </SQL>
+        </DataSource>
+        <DataSource GroupIdent="ITSMKnowledgeBase">
+          <SQL>
+            wk.FolderIdent = @CurrentCategoryIdent
+          </SQL>
+        </DataSource>
+        <DataSource GroupIdent="SubCategory">
+          <SQL>
+            ft.Ident LIKE @CurrentCategoryIdent + '%' AND ft.Ident != @CurrentCategoryIdent
+          </SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+  </Controls>
+  <FullText>
+    <FilterConditions>
+      <DataSource GroupIdent="ITSMKnowledgeBase">
+        <SQL>
+          CONTAINS(wk.*, @FullTextRaw)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FullTextRaw" ConstantType="FullText" DataType="String"></dsp:Parameter>
+        </Parameters>
+      </DataSource>
+      <DataSource GroupIdent="ITSMKnowledgeBaseCategory">
+        <SQL>
+          CONTAINS(wk.*, @FullTextRaw)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FullTextRaw" ConstantType="FullText" DataType="String"></dsp:Parameter>
+        </Parameters>
+      </DataSource>
+    </FilterConditions>
+  </FullText>
+</Filter>

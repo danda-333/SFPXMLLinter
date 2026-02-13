@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="HiddenControl" Ident="ITSMKey" DataType="String" MaxLenght="255"/>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<div class="row d-none">
+			<Control ID="ITSMKey"/>
+		</div>
+	</Section>
+
+	<Section Root="WorkFlow" Name="GlobalActions" TargetXPath="//WorkFlow/GlobalActions" Insert="prepend">
+
+		<Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+			<DataSource>
+				<SQL>
+					IF @ITSMKey IS NULL
+					BEGIN
+						DECLARE 
+							@CounterIdent VARCHAR(100) = 'ITSM_{{KeyPrefix}}',
+							@NextNumber INT
+
+						EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+						UPDATE usr.[{{FormIdent}}]
+						SET ITSMKey = CONCAT('{{KeyPrefix}}-', RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+						WHERE ID = @ID
+					END
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
+				</Parameters>
+			</DataSource>
+		</Action>
+		
+	</Section>
+
+</Component>

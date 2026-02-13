@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_GetSLAComputes" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: Vrací výpočty SLA pro daný záznam
+	]]></XMLDescription>
+	<Description>
+		
+	</Description>
+	<Command>
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+		
+		-- =============================================
+		-- Author:			Daniel Šašek
+		-- Create date: 2024-11-01
+		-- Description:	
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(
+			@TableID INT
+			,@FormIdent VARCHAR(100)
+			,@Limit INT
+		)
+		RETURNS @ReturnTable TABLE
+		(
+			TimeSpent VARCHAR(20)
+			,TimeRemain VARCHAR(20)
+			,TimeTotal VARCHAR(20)
+			,PercentSpent INT
+			,PercentRemain INT
+			,FinishTime DATETIME
+			,SLAName VARCHAR(255)
+			,SLAType VARCHAR(255)
+			,SLATypePriority INT
+			,CalendarName VARCHAR(255)
+			,[State] INT
+			,[SLAStatus] VARCHAR(255)
+			,[SLAStatusColorCssClass] VARCHAR(255)
+		)
+		AS 
+		BEGIN
+
+			IF @Limit IS NULL
+				SET @Limit = 999
+
+			INSERT INTO @ReturnTable
+			(
+				TimeSpent
+				,TimeRemain
+				,TimeTotal
+				,PercentSpent
+				,PercentRemain
+				,FinishTime
+				,SLAName
+				,SLAType
+				,SLATypePriority
+				,CalendarName
+				,[State]
+				,[SLAStatus]
+				,[SLAStatusColorCssClass]
+			)
+			SELECT 
+				usr.TicketMinutesToTimeString(slap.SpendTime, 'TimeUnits') AS TimeSpent
+				,usr.TicketMinutesToTimeString(slaComp.RemainTime, 'TimeUnits') AS TimeRemain
+				,usr.TicketMinutesToTimeString(sla.FinishTime, 'TimeUnits') AS TimeTotal
+				,slaComp.PercentSpend AS PercentSpent
+				,slaComp.PercentRemain
+				,slap.EstimateEndDate AS FinishTime
+				,sla.[Name] AS SLAName
+				,slaComp.[Type] AS SLAType
+				,slaComp2.[TypePriority] AS SLATypePriority
+				,sla.[CalendarName] AS CalendarName
+				,slap.[State]
+				,slaComp.[Status] AS SLAStatus
+				,slaComp2.[StatusColorCssClass] AS SLAStatusColor
+			FROM (
+				SELECT TOP(@Limit) *
+				FROM dbo.SLAProcess AS slap
+				WHERE 
+					slap.TableID = @TableID
+					AND slap.FormIdent = @FormIdent
+					AND slap.IsOutCriteria = 0
+				ORDER BY slap.CreateDate DESC
+			) AS slap
+			LEFT JOIN dbo.SLA AS sla ON sla.ID = slap.SLAID
+			LEFT JOIN dbo.SLADay AS slad ON slad.SLAID = sla.ID AND slad.[Day] = usr.TicketWeekDay(slap.LastRun)
+			LEFT JOIN usr.ITSM_GetWorkFlowState (@FormIdent) AS itsGwfs ON itsGwfs.[Value] = slap.[WorkFlowState]
+			OUTER APPLY (
+				SELECT
+					sla.FinishTime - slap.SpendTime AS RemainTime
+					,CAST((CAST(100 AS FLOAT) / sla.FinishTime) * slap.SpendTime AS INT) AS PercentSpend
+					,100 - CAST((CAST(100 AS FLOAT) / sla.FinishTime) * slap.SpendTime AS INT) AS PercentRemain
+					,CASE 
+						WHEN sla.[Name] LIKE 'TTR | %'
+							THEN 'TTR'
+						WHEN sla.[name] LIKE 'TTO | %'
+							THEN 'TTO'
+						ELSE 'Other'
+					END AS [Type]
+					,CASE
+						WHEN slap.[State] = 2
+							THEN 'Exceeded'
+						WHEN itsGwfs.IsOutOfSLA = 'true'
+							THEN 'Ended'
+						WHEN slap.[State] = 0
+							THEN 'Running'
+						WHEN slap.[State] = 1
+							THEN 'Paused'
+					END AS [Status]
+			) AS slaComp
+			OUTER APPLY (
+				SELECT 
+					CASE slaComp.[Type]
+						WHEN 'TTO' THEN 1
+						WHEN 'TTR' THEN 2
+						ELSE 999
+					END AS TypePriority
+				,CASE slaComp.[Status]
+					WHEN 'Exceeded'
+						THEN 'danger'
+					WHEN 'Ended' 
+						THEN 'success'
+					WHEN 'Running' 
+						THEN 'warning'
+					WHEN 'Paused' 
+						THEN 'grey'
+				END AS [StatusColorCssClass]
+			) AS slaComp2
+			
+
+			RETURN
+		END
+
+	</Command>
+</Library>

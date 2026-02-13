@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="FolderTreeSetting" TargetXPath="//Form/Settings" Insert="append">
+		<Setting xsi:type="FolderTreeSetting">
+			<Items>
+				<FolderTreeItemSetting ControlIdent="ITSMCompanyIdent" Level="1" />
+				<FolderTreeItemSetting ControlIdent="ITSMCategoryLevel2Ident" Level="2" />
+				<FolderTreeItemSetting ControlIdent="ITSMCategoryLevel3Ident" Level="3" />
+				<FolderTreeItemSetting ControlIdent="ITSMCategoryLevel4Ident" Level="4" />
+				<FolderTreeItemSetting ControlIdent="ITSMCategoryLevel5Ident" Level="5" />
+			</Items>
+		</Setting>
+	</Section>
+	
+</Component>

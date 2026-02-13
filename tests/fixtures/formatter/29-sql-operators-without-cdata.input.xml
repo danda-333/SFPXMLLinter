@@ -1,0 +1,23 @@
+<Filter xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ITSMRequestFilter" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" PackageIdent="ITSMPackage">
+	<Controls>
+		<Control xsi:type="TextBoxControl" Ident="CreateDateFrom" DataType="Date" TitleResourceKey="CreateDateFrom_ITSM">
+			<FilterConditions>
+				<DataSource>
+					<SQL>
+						CAST(itsReq.[CreateDate] AS DATE) >= @CreateDateFrom
+					</SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="CreateDateTo" DataType="Date" TitleResourceKey="CreateDateTo_ITSM">
+			<FilterConditions>
+				<DataSource>
+					<SQL>
+						CAST(itsReq.[CreateDate] AS DATE) <= @CreateDateTo
+					</SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
+	</Controls>
+</Filter>

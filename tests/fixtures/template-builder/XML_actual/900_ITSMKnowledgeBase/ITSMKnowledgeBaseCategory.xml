@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMKnowledgeBaseCategory" FormType="Folder" SegmentType="ITSMKnowledgeBaseSegment" FolderGroupSegmentIdent="ITSMCommonFolderGroup" PackageIdent="ITSMPackage">
+	<DataPermissions>
+		<string>ITSMKnowledgeBaseAdmin</string>
+		<string>ITSMKnowledgeBaseCategoryEditorFolder</string>
+		<string>TicketAuthor</string>
+		<string>SuperAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMKnowledgeBaseAdmin</string>
+		<string>ITSMKnowledgeBaseCategoryEditorFolder</string>
+		<string>TicketAuthor</string>
+		<string>SuperAdmin</string>
+	</CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" />
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Warning" IsVisible="false" IconCssClass="icon-eraser2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle" DescriptionResourceKey="DeleteDialogDescription" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="BackButton" Ident="Back" TitleResourceKey="BackButton" IconCssClass="icon-comment-discussion" />
+	</Buttons>
+	<Controls>
+		<Control xsi:type="TextBoxControl" Ident="Name" DataType="String" MaxLength="255" IsRequired="true" TitleResourceKey="Name_ITSM" IsReadOnly="true" />
+		<Control xsi:type="SwitchControl" Ident="Active" DataType="Bool" Default="1" IsRequired="true" TitleResourceKey="Active_ITSM" IsReadOnly="true" />
+		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" MaxLength="255" IsRequired="true" TitleResourceKey="Description_ITSM" IsReadOnly="true" />
+		<Control xsi:type="TextBoxControl" Ident="OrderNumber" DataType="Number" Default="0" TitleResourceKey="OrderNumber_ITSM" IsReadOnly="true" />
+		<Control xsi:type="IconControl" Ident="Icon" DataType="String" IsRequired="true" TitleResourceKey="Icon_ITSM" IsReadOnly="true" />
+		<Control xsi:type="ColorPickerControl" Ident="Color" DataType="String" IsRequired="true" TitleResourceKey="Color_ITSM" IsReadOnly="true" />
+
+		<Control xsi:type="SwitchControl" Ident="IsShowOnDashboard" TitleResourceKey="ShowOnDashboard_ITSM" Default="0" IsReadOnly="true" />
+		<Control xsi:type="SwitchControl" Ident="IsShowInQuickLinks" TitleResourceKey="ShowInQuickLinks_ITSM" Default="0" IsReadOnly="true" />
+		<Control xsi:type="SwitchControl" Ident="IsShowToAll" TitleResourceKey="ShowToAll_ITSM" Default="0" IsReadOnly="true" />
+
+		<Control xsi:type="FolderPermissionControl" Ident="FolderPermissionSetting" DataType="NumberList" TitleResourceKey="Permission_ITSM" IsReadOnly="true" />
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" TitleResourceKey="CategoryOverview_ITSM" IconCssClass="icon-newspaper" Ident="CategoryOverview">
+			<HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-6">
+						<div class="form-group">
+							<ControlLabel ControlID="Name" />
+							<Control ID="Name" />
+						</div>
+					</div>
+					<div class="col-md-6">
+						<div class="form-group">
+							<Control ID="Active" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="OrderNumber" />
+							<Control ID="OrderNumber" />
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Icon" />
+							<Control ID="Icon" />
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Color" />
+							<Control ID="Color" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="Description" />
+							<Control ID="Description" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<Control ID="IsShowOnDashboard" />
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="form-group">
+							<Control ID="IsShowInQuickLinks" />
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="form-group">
+							<Control ID="IsShowToAll" />
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ContentSection" TitleResourceKey="PermissionSettingSection_ITSM" IconCssClass="icon-user-plus" Ident="PermissionSettingSection">
+			<HTMLTemplate>
+				 <div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="FolderPermissionSetting" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+
+	</Sections>
+</Form>

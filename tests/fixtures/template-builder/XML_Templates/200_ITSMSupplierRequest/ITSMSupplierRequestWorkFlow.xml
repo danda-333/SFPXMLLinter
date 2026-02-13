@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMSupplierRequestWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMSupplierRequest" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/>
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="primary"/>
+      <State Value="10" TitleResourceKey="SentToSupplier_ITSM" ColorCssClass="primary"/>
+      <State Value="20" TitleResourceKey="ToCompleteInformation_ITSM" ColorCssClass="primary"/>
+      <State Value="30" TitleResourceKey="InProgress_ITSM" ColorCssClass="warning"/>
+      <State Value="40" TitleResourceKey="Suspended_ITSM" ColorCssClass="info"/>
+      <State Value="50" TitleResourceKey="Resolved_ITSM" ColorCssClass="success"/>
+      <State Value="60" TitleResourceKey="Closed_ITSM" ColorCssClass="success"/>
+    </States>
+  </Definition>
+
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5" >
+      <Selectors>
+        <string>.js-howHideCategoryLevel5</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideIncident" ControlIdent="ITSMSupplierRequestClassificationTypeFunctionalKey" >
+      <Selectors>
+        <string>.js-showHideIncident</string>
+      </Selectors>
+      <ShowValues>
+        <string>Incident</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="Subject" IsReadOnly="false" />
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+        <FormControl Ident="ReporterAccountID" IsReadOnly="false" />
+        <FormControl Ident="ReporterEmail" IsReadOnly="false" />
+        <FormControl Ident="ReporterPhone" IsReadOnly="false" />
+        <FormControl Ident="Description" IsReadOnly="false" />
+        <FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="SolutionDescription" IsReadOnly="false" />
+        <FormControl Ident="SolutionAditionalInformation" IsReadOnly="false" />
+        <FormControl Ident="Communication" IsVisible="true" />
+        <!-- <FormControl Ident="AssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="AssignedAccountID" IsReadOnly="false" /> -->
+
+        <FormControl Ident="PHContactInformationCard" IsVisible="true" />
+        <FormControl Ident="PHCommunicationCard" IsVisible="true" />
+        <FormControl Ident="PHSolutionCard" IsVisible="true" />
+        <!-- <FormControl Ident="PHRequestControlCard" IsVisible="true" />
+        <FormControl Ident="DialogAssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="DialogCommunication" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedAccountID" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedMyselfGroupID" IsReadOnly="false" /> -->
+
+        <FormControl Ident="ITSMSupplierRequestClassificationTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="ITSMIncidentClassificationTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsReadOnly="false" />
+
+        <FormControl Ident="ParentITSMID" IsReadOnly="false" />
+        <FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+
+    <ControlShareCode Ident="EnableRequiredControlShare">
+      <Controls>
+        <FormControl Ident="Subject" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false"/>
+        <FormControl Ident="ReporterAccountID" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ReporterEmail" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ReporterPhone" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="Description" IsReadOnly="false" IsRequired="true"/>
+
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+        <FormControl Ident="ParentITSMID" IsReadOnly="false"/>
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false"/>
+
+        <FormControl Ident="ITSMSupplierRequestClassificationTypeGuid" IsVisible="true" IsReadOnly="false" IsRequired="true"/>
+        <FormControl Ident="ITSMIncidentClassificationTypeGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" /> -->
+
+    <ControlShareCode Ident="EnableBasicControlShare">
+      <Controls>
+        <FormControl Ident="Subject" IsRequired="true"/>
+        <FormControl Ident="ITSMCompanyIdent" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsRequired="true"/>
+        <FormControl Ident="ITSMCategoryLevel5Ident"/>
+        <FormControl Ident="ReporterAccountID" IsRequired="true"/>
+        <FormControl Ident="ReporterEmail" IsRequired="true"/>
+        <FormControl Ident="ReporterPhone" IsRequired="true"/>
+        <FormControl Ident="Description" IsRequired="true"/>
+
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+
+        <FormControl Ident="ITSMSupplierRequestClassificationTypeGuid" IsVisible="true" IsRequired="true"/>
+        <FormControl Ident="ITSMIncidentClassificationTypeGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" /> -->
+
+    <ControlShareCode Ident="EnableSolveControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true"/>
+        <FormControl Ident="PHSolutionCard" IsVisible="true"/>
+
+        <FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="SolutionDescription" IsVisible="true" IsReadOnly="false"/>
+        <FormControl Ident="SolutionAditionalInformation" IsVisible="true" IsReadOnly="false"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSolveControlShare" /> -->
+
+    <ControlShareCode Ident="EnableCommunicatonControlShare">
+      <Controls>
+        <FormControl Ident="PHCommunicationCard" IsVisible="true"/>
+        <FormControl Ident="Communication" IsVisible="true"/>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" /> -->
+
+    <ControlShareCode Ident="ShowCommunicatonControlShare">
+      <Controls>
+        <FormControl Ident="PHCommunicationCard" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicatonControlShare" /> -->
+
+    <ControlShareCode Ident="ShowContactInformationControlShare">
+      <Controls>
+        <FormControl Ident="PHContactInformationCard" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" /> -->
+
+    <ControlShareCode Ident="ShowSolutionCardControlShare">
+      <Controls>
+        <FormControl Ident="PHSolutionCard" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowSolutionCardControlShare" /> -->
+  </ControlShareCodes> 
+
+  <ActionShareCodes>
+
+    <ActionShareCode Ident="SolveRequiredActionShare">
+      <Actions>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>ITSMGeneralResolutionMethodTypeGuid</string>
+						<string>SolutionDescription</string>
+					</Idents>
+				</Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SolveRequiredActionShare" /> -->
+
+    <!--Notifikace-->
+
+    <ActionShareCode Ident="SubmitNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="SubmitITSMSupplierRequestSubject_Email_ITSM" BodyResourceKey="SubmitITSMSupplierRequestBody_Email_ITSM" EmailIdent="SubmitITSMSupplierRequest_Email_ITSM" ActionStart="AfterPermission" Ident="SubmitITSMSupplierRequest_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplier"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="SubmitITSMSupplierRequest_Alert_ITSM" MessageResourceKey="SubmitITSMSupplierRequestMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="SubmitITSMSupplierRequest_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplier"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SubmitNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="BackToReporterNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="BackToReporterITSMSupplierRequestSubject_Email_ITSM" BodyResourceKey="BackToReporterITSMSupplierRequestBody_Email_ITSM" EmailIdent="BackToReporterITSMSupplierRequest_Email_ITSM" ActionStart="AfterPermission" Ident="BackToReporterITSMSupplierRequest_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplierRequestReporter"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="BackToReporterITSMSupplierRequest_Alert_ITSM" MessageResourceKey="BackToReporterITSMSupplierRequestMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="BackToReporterITSMSupplierRequest_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplierRequestReporter"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="BackToReporterNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="SuspendNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="SuspendITSMSupplierRequestSubject_Email_ITSM" BodyResourceKey="SuspendITSMSupplierRequestBody_Email_ITSM" EmailIdent="SuspendITSMSupplierRequest_Email_ITSM" ActionStart="AfterPermission" Ident="SuspendITSMSupplierRequest_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplierRequestReporter"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="SuspendITSMSupplierRequest_Alert_ITSM" MessageResourceKey="SuspendITSMSupplierRequestMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="SuspendITSMSupplierRequest_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplierRequestReporter"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SuspendNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="ReplyNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="ReplyITSMSupplierRequestSubject_Email_ITSM" BodyResourceKey="ReplyITSMSupplierRequestBody_Email_ITSM" EmailIdent="ReplyITSMSupplierRequest_Email_ITSM" ActionStart="AfterPermission" Ident="ReplyITSMSupplierRequest_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplier"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="ReplyITSMSupplierRequest_Alert_ITSM" MessageResourceKey="ReplyITSMSupplierRequestMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="ReplyITSMSupplierRequest_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplier"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ReplyNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="SolvedNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="SolvedITSMSupplierRequestSubject_Email_ITSM" BodyResourceKey="SolvedITSMSupplierRequestBody_Email_ITSM" EmailIdent="SolvedITSMSupplierRequest_Email_ITSM" ActionStart="AfterPermission" Ident="SolvedITSMSupplierRequest_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplierRequestReporter"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="SolvedITSMSupplierRequest_Alert_ITSM" MessageResourceKey="SolvedITSMSupplierRequestMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="SolvedITSMSupplierRequest_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplierRequestReporter"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SolvedNotificationActionShare" /> -->
+
+    <ActionShareCode Ident="ComplaintNotificationActionShare">
+      <Actions>
+        <Action xsi:type="Email" SubjectResourceKey="ComplaintITSMSupplierRequestSubject_Email_ITSM" BodyResourceKey="ComplaintITSMSupplierRequestBody_Email_ITSM" EmailIdent="ComplaintITSMSupplierRequest_Email_ITSM" ActionStart="AfterPermission" Ident="ComplaintITSMSupplierRequest_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="ITSMSupplier"/>
+          </Recipients>
+        </Action>
+				<Action xsi:type="Alert" Ident="ComplaintITSMSupplierRequest_Alert_ITSM" MessageResourceKey="ComplaintITSMSupplierRequestMessage_Alert_ITSM" IconCssClass="icon-enter" IconColor="#F4511E" AlertIdent="ComplaintITSMSupplierRequest_Alert_ITSM" ActionStart="AfterPermission" IsStopSendActionCreator="true">
+					<Recipients>
+						<Recipient SourceType="Permission" Value="ITSMSupplier"/>
+					</Recipients>
+				</Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ComplaintNotificationActionShare" /> -->
+
+  </ActionShareCodes> 
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SubmitButtonShare">
+      <Buttons>
+        <Button Ident="SubmitButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="SubmitNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="10" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SubmitButtonShare" />  -->
+    
+    <ButtonShareCode Ident="BackToReporterButtonShare">
+      <Buttons>
+        <Button Ident="BackToReporterButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BackToReporterNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="BackToReporterButtonShare" />  -->
+    
+    <ButtonShareCode Ident="SupplierAcceptButtonShare">
+      <Buttons>
+        <Button Ident="SupplierAcceptButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SupplierAcceptButtonShare" />  -->
+    
+    <ButtonShareCode Ident="SuspendButtonShare">
+      <Buttons>
+        <Button Ident="SuspendButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="SuspendNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SuspendButtonShare" />  -->
+    
+    <ButtonShareCode Ident="ReplyButtonShare">
+      <Buttons>
+        <Button Ident="ReplyButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ReplyNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ReplyButtonShare" />  -->
+    
+    <ButtonShareCode Ident="SolvedButtonShare">
+      <Buttons>
+        <Button Ident="SolvedButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="SolveRequiredActionShare" />
+            <Action xsi:type="ShareCode" Ident="SolvedNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolvedButtonShare" />  -->
+    
+    <ButtonShareCode Ident="ComplaintButtonShare">
+      <Buttons>
+        <Button Ident="ComplaintButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ComplaintNotificationActionShare" />
+            <Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ComplaintButtonShare" />  -->
+    
+    <ButtonShareCode Ident="CloseButtonShare">
+      <Buttons>
+        <Button Ident="CloseButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="60" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />  -->
+
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true"/>
+        <Button Ident="SaveAndExitButton" IsVisible="true"/>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+    <!-- <ButtonShareCode Ident="AssignButtonShare">
+			<Buttons>
+				<Button Ident="AssignGroupButton" IsVisible="true"/>
+				<Button Ident="AssignToGroupButton" IsVisible="true"/>
+				<Button Ident="AssignButton" IsVisible="true"/>
+				<Button Ident="AssignMyselfButton" IsVisible="true">
+          <VisibleCondition>
+						<SQL>
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT IIF(
+								(
+									SELECT COUNT(*) 
+									FROM dbo.GroupAccount 
+									WHERE
+										AccountID = @UserID 
+										AND GroupID IN (
+											SELECT GroupID
+											FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+												COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+												, @PermissionIDs
+											)
+										)
+								) > 1, 
+								1, 
+								0
+							)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />		
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>								
+						</Parameters>
+					</VisibleCondition>
+        </Button>
+				<Button Ident="AssignMyselfOneGroupButton" IsVisible="true">
+          <VisibleCondition>
+						<SQL>
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT IIF(
+								(
+									SELECT COUNT(*) 
+									FROM dbo.GroupAccount 
+									WHERE
+										AccountID = @UserID 
+										AND GroupID IN (
+											SELECT GroupID
+											FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+												COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+												, @PermissionIDs
+											)
+										)
+								) = 1, 
+								1, 
+								0
+							)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />		
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>					
+						</Parameters>
+					</VisibleCondition>
+        </Button>
+			</Buttons>
+		</ButtonShareCode> --> <!-- <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />  -->
+
+  </ButtonShareCodes> 
+
+  <GlobalActions>
+
+    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+          IF @ITSMKey IS NULL
+          BEGIN
+            DECLARE 
+              @CounterIdent VARCHAR(100) = 'SR-',
+              @NextNumber INT
+
+            EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+            UPDATE usr.ITSMSupplierRequest
+            SET ITSMKey = CONCAT(@CounterIdent, RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+            WHERE ID = @ID
+          END
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />                  
+        </Parameters>
+      </DataSource>
+    </Action>
+
+    <Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @IsShowCategoryLevel5 = 1
+            ,1
+            ,0
+          )
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number"/>
+        </Parameters>
+      </Condition>
+      <TrueActions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>ITSMCategoryLevel5Ident</string>
+					</Idents>
+				</Action>
+      </TrueActions>
+    </Action>
+
+    <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequest</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SubmitButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="10">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestReporter</string>
+            <string>ITSMSupplierRequestSharedReporter</string>
+            <string>ITSMOperator</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="BackToReporterButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SupplierAcceptButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="20">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestSharedReporter</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestReporter</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ReplyButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="30">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestReporter</string>
+            <string>ITSMSupplierRequestSharedReporter</string>
+            <string>ITSMOperator</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SuspendButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SolvedButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSolveControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="40">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestSharedReporter</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestReporter</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ReplyButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="50">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestSharedReporter</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSolutionCardControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestReporter</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ComplaintButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSolutionCardControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="60">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSupplierRequestReporter</string>
+            <string>ITSMSupplierRequestSharedReporter</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicatonControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSolutionCardControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    
+  </Steps>
+</WorkFlow>

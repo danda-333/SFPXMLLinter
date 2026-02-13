@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" Ident="ITSMSupplierContractServiceFormDialog" TitleResourceKey="ITSMSupplierContractServiceFormDialog_ITSM" SegmentType="ITSMSettingSegment" IsCreateTable="false" Width="1280" IsSubForm="true" PackageIdent="ITSMPackage">
+  <DataPermissions>
+    <string>ITSMSettingAdmin</string>
+  </DataPermissions>
+  <CreatePermissions>
+    <string>ITSMSettingAdmin</string>
+  </CreatePermissions>
+  <Buttons>
+    <Button xsi:type="BackButton" Ident="Back" TitleResourceKey="Back_ITSM" IconCssClass="icon-cross2" />
+  </Buttons>
+
+  <Controls>
+
+    <Control xsi:type="TreeSelectBoxControl" Ident="ServiceFolderTreeIdent" ContentHeight="420" DataType="VarCharList" TitleResourceKey="ServiceFolderTreeIdent_ITSM" IsExpanded="true" NotSelectedTitleResourceKey="NotSelected_ITSM" SelectedTitleResourceKey="Selected_ITSM">
+      <DataSource>
+        <Columns>
+          <Column Ident="Guid" TitleResourceKey="Guid_ITSM" DataBindType="Value" IsVisible="false" />
+          <Column Ident="Name" TitleResourceKey="Name_ITSM" Width="80" DataBindType="Title" />
+          <Column Ident="ParentIdent" TitleResourceKey="ParentIdent_ITSM" DataBindType="ParentIdent" IsVisible="false" />
+			    <Column Ident="IsSelectable" Title="IsSelectable" DataBindType="Selectable" IsVisible="false" />
+        </Columns>
+        <SQL>
+          SELECT
+            ft.Ident
+            , f.[Name]
+            , ftPar.Ident AS ParentIdent
+            , IIF(
+              NOT EXISTS(
+                SELECT NULL
+                FROM dbo.FolderTree
+                WHERE
+                  Ident LIKE ft.Ident + '%' AND Ident != ft.Ident
+              )
+              ,1
+              ,0
+            ) AS IsSelectable
+          FROM dbo.FolderTree as ft
+          INNER JOIN dbo.Folder as f on f.ID = ft.FolderID AND f.[State] = @StateOne
+          LEFT JOIN dbo.FolderTree as ftPar on ftPar.ID = ft.ParentFolderTreeID
+          WHERE
+            f.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+          ORDER BY ft.Ident
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMServiceFolderGroup" />
+        </Parameters>
+      </DataSource>
+    </Control>
+
+  </Controls>
+
+  <Sections>
+    <Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM">
+      <HTMLTemplate>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="ServiceFolderTreeIdent" />
+						</div>
+					</div>
+				</div>
+
+      </HTMLTemplate>
+    </Section>
+  </Sections>
+</Form>

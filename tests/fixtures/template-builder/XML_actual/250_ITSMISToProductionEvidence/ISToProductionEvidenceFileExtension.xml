@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ISToProductionEvidenceFileExtension" SegmentType="ISToProductionEvidenceSegment" PackageIdent="ITSMPackage" FormType="FileExtension">
+	<DataPermissions>
+		<string>ISToProductionEvidence</string>
+		<string>ISToProductionEvidenceAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ISToProductionEvidence</string>
+		<string>ISToProductionEvidenceAdmin</string>
+	</CreatePermissions>
+
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="FileName" DataType="String" TitleResourceKey="FileName_ITSM" />
+		<Control xsi:type="TextBoxControl" Ident="FileType" DataType="String" TitleResourceKey="FileType_ITSM" />
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" TitleResourceKey="BasicInfo" Ident="BasicInfo">
+      <HTMLTemplate>
+        <fieldset>
+          <div class="row">
+            <div class="col-md-8">
+              <div class="form-group">
+									<ControlLabel ControlID="FileName" />
+                <Control ID="FileName" />
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="form-group">
+									<ControlLabel ControlID="FileType" />
+                <Control ID="FileType" />
+              </div>
+            </div>
+          </div>
+        </fieldset>
+      </HTMLTemplate>
+    </Section>
+    <Section xsi:type="RenderItemSection" Ident="RenderItem">
+      <HTMLTemplate>
+        <div class="mt-1">[#FileName_ITSM#]: [%ACTUALFORM.FileName%]</div>
+        <div class="mt-1">[#FileType_ITSM#]: [%ACTUALFORM.FileType%]</div>
+
+				<div class="row">
+					<div class="col-md-8">
+						<div class="form-group">
+								<ControlLabel ControlID="FileName" />
+							<Control ID="FileName" />
+						</div>
+					</div>
+					<div class="col-md-8">
+						<div class="form-group">
+								<ControlLabel ControlID="FileType" />
+							<Control ID="FileType" />
+						</div>
+					</div>
+				</div>
+      </HTMLTemplate>
+    </Section>
+
+	</Sections>
+</Form>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMLinkSubformWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMLinkSubform" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning"/> <!--New-->
+      <State Value="2" TitleResourceKey="Saved_ITSM" ColorCssClass="primary"/> <!--Saved-->  
+    </States>
+  </Definition>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="ITSMLinkTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="SourceITSMID" IsReadOnly="false" />
+        <FormControl Ident="TargetITSMID" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes> 
+
+  <GlobalActions>
+    <Action xsi:type="GlobalValidation" ActionStart="BeforeValidation" ErrorMessageResourceKey="OneITSMIDHasToBeParentID_Error_ITSM">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            (IIF(@SourceITSMID = -1, ISNULL(@ID, -1), @SourceITSMID) != ISNULL(@ID, -1) AND IIF(@TargetITSMID = -1, ISNULL(@ID, -1), @TargetITSMID) = ISNULL(@ID, -1))
+            OR
+            (IIF(@SourceITSMID = -1, ISNULL(@ID, -1), @SourceITSMID) = ISNULL(@ID, -1) AND IIF(@TargetITSMID = -1, ISNULL(@ID, -1) , @TargetITSMID) != ISNULL(@ID, -1))
+            OR
+            (IIF(@SourceITSMID = -1, ISNULL(@ID, -1), @SourceITSMID) = ISNULL(@ID, -1) AND IIF(@TargetITSMID = -1, ISNULL(@ID, -1) , @TargetITSMID) = ISNULL(@ID, -1))
+          , 1, 0)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetITSMID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceITSMID" DataType="Number" />
+        </Parameters>
+      </Condition>
+      <ControlIdents>
+        <string>ID</string>
+      </ControlIdents>
+    </Action>
+
+    <Action xsi:type="GlobalValidation" ActionStart="BeforeValidation" ErrorMessageResourceKey="ITSMIDsCantBeSame_Error_ITSM">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            @SourceITSMID = @TargetITSMID
+          , 0, 1)
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetITSMID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceITSMID" DataType="Number" />
+        </Parameters>
+      </Condition>
+      <ControlIdents>
+        <string>ID</string>
+      </ControlIdents>
+    </Action>
+  </GlobalActions>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+
+            <Action xsi:type="ActionTrigger" Ident="UpdateTargetID" ActionStart="AfterSave"> 
+              <DataSource> 
+                <SQL> 
+                  IF(@SourceITSMID = -1)
+                  BEGIN
+                    UPDATE usr.ITSMLinkSubform SET SourceITSMID = @TableID WHERE ID = @ID
+                  END
+
+                  IF(@TargetITSMID = -1)
+                  BEGIN
+                    UPDATE usr.ITSMLinkSubform SET TargetITSMID = @TableID WHERE ID = @ID
+                  END
+                </SQL> 
+                <Parameters> 
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <!-- <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentID" AlterIdent="ID" DataType="Number" SetDataType="ParentData"/> -->
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TableID" DataType="Number"/>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceITSMID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetITSMID" DataType="Number" />
+                </Parameters> 
+              </DataSource> 
+            </Action>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+  </ButtonShareCodes> 
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMRequest</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="TimeLine" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMRequest</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Saved-->
+    
+  </Steps>
+</WorkFlow>

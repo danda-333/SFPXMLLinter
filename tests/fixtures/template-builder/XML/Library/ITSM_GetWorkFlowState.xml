@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_GetWorkFlowState" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: Vrací výpočty SLA pro daný záznam
+	]]></XMLDescription>
+	<Description>
+
+	</Description>
+	<Command>
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+
+		-- =============================================
+		-- Author:			Daniel Šašek
+		-- Create date: 2024-11-01
+		-- Description:
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(
+			@Ident nvarchar(100)
+		)
+		RETURNS @RetVal TABLE
+		(
+			[Value] int
+			,[Title] nvarchar(100)
+			,[TitleResourceKey] nvarchar(100)
+			,[ColorCssClass] varchar(100)
+			,[IsOutOfSLA] varchar(10)
+		)
+		AS
+		BEGIN
+			DECLARE @XML xml
+
+			SELECT TOP 1
+				@XML = CAST(REPLACE([XML], '', '') as xml)
+			FROM dbo.XMLDefinition
+			WHERE Ident = @Ident AND [Type] = 'WorkFlow'
+			ORDER BY ID DESC
+
+			INSERT INTO @RetVal([Value], [Title], [TitleResourceKey], [ColorCssClass], [IsOutOfSLA])
+			SELECT
+				T.N.value('@Value', 'int') as [Value]
+				,T.N.value('@Title', 'nvarchar(100)') as [Title]
+				,T.N.value('@TitleResourceKey', 'nvarchar(100)') as [TitleResourceKey]
+				,T.N.value('@ColorCssClass', 'varchar(100)') as [ColorCssClass]
+				,T.N.value('@IsOutOfSLA', 'varchar(10)') as [IsOutOfSLA]
+			FROM
+				@XML.nodes('WorkFlow/Definition/States/State') as T(N)
+
+			RETURN
+		END
+
+	</Command>
+</Library>

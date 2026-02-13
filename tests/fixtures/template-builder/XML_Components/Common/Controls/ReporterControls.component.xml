@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="AutoCompleteControl" Ident="ReporterAccountID" DataType="Number" TitleResourceKey="ReporterAccountID_ITSM" IsVisible="false" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="FullName" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					SELECT 
+						ID,
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						FullName LIKE @ReporterAccountID
+						AND [State] = @ActiveState
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="String" LikeType="Both"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						ID, 
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						ID = @ReporterAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number"/>
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="ReporterAccountID" />
+				</Columns>
+				<SQL>
+					SELECT @UserID AS ReporterAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDataSource>
+			<!-- @Ignore unknown-form-ident -->
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="ReporterEmail" DataType="String" TitleResourceKey="ReporterEmail_ITSM" IsVisible="false" IsReadOnly="true">
+			<DataBind>
+				<Dependencies>
+					<string>ReporterAccountID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ReporterEmail" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT Email AS ReporterEmail
+					FROM dbo.Account
+					WHERE ID = @ReporterAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IsReporterEmailDifferent" DataType="Number" TitleResourceKey="IsReporterEmailDifferent_ITSM" IsVisible="false" IsReadOnly="true" IsCreateColumn="false" IsRefresh="true">
+			<DataBind>
+				<Dependencies>
+					<string>ReporterEmail</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsReporterEmailDifferent" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT IIF(
+						ISNULL((
+							SELECT Email
+							FROM dbo.Account
+							WHERE ID = @ReporterAccountID
+						), '') != ISNULL(@ReporterEmail, '')
+					,1,0) AS IsReporterEmailDifferent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterEmail" DataType="String" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="ReporterPhone" DataType="String" TitleResourceKey="ReporterPhone_ITSM" IsVisible="false" IsReadOnly="true">
+			<DataBind >
+				<Dependencies>
+					<string>ReporterAccountID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ReporterPhone" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT Phone AS ReporterPhone
+					FROM dbo.Account
+					WHERE ID = @ReporterAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IsReporterPhoneDifferent" DataType="Number" TitleResourceKey="IsReporterPhoneDifferent_ITSM" IsVisible="false" IsReadOnly="true" IsCreateColumn="false">
+			<DataBind>
+				<Dependencies>
+					<string>ReporterPhone</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsReporterPhoneDifferent" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT IIF(
+						ISNULL((
+							SELECT Phone
+							FROM dbo.Account
+							WHERE ID = @ReporterAccountID
+						), '') != ISNULL(@ReporterPhone, '')
+					,1,0) AS IsReporterPhoneDifferent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterPhone" DataType="String" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="PlaceHolderControl" Ident="ReporterInformationCardPlaceHolder" IsVisible="false"/>
+		<Control xsi:type="PlaceHolderControl" Ident="ReporterEmailDifferentPlaceHolder" IsVisible="false"/>
+		<Control xsi:type="PlaceHolderControl" Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="false"/>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<Control ID="ReporterInformationCardPlaceHolder">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="card">
+						<div class="card-header bg-white header-elements-inline">
+							<h6 class="card-title">[#ReporterInformation_ITSM#]</h6>
+							<div class="header-elements">
+								<div class="list-icons">
+									<a class="list-icons-item" data-action="collapse" />
+								</div>
+							</div>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="ReporterAccountID" />
+										<Control ID="ReporterAccountID" />
+									</div>
+								</div> 
+							</div>
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="ReporterEmail" />
+										<Control ID="ReporterEmail" />
+									</div>
+								</div> 
+							</div>
+							<Control ID="ReporterEmailDifferentPlaceHolder">
+								<div class="row d-none">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="IsReporterEmailDifferent" />
+											<Control ID="IsReporterEmailDifferent" />
+										</div>
+									</div> 
+								</div>
+								<div class="row js-showIfReporterEmailDifferent" style="display: none;">
+									<div class="col-md-12">
+										<div class="alert-lmtl4 alert-info-lmtl4">
+											[#ReporterEmailDifferent_Information_ITSM#]
+											<i class="ph-info float-end-lmtl4 ms-2-lmtl4"></i>
+										</div>
+									</div> 
+								</div>
+							</Control>
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="ReporterPhone" />
+										<Control ID="ReporterPhone" />
+									</div>
+								</div> 
+							</div>
+							<Control ID="ReporterPhoneDifferentPlaceHolder">
+								<div class="row d-none">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="IsReporterPhoneDifferent" />
+											<Control ID="IsReporterPhoneDifferent" />
+										</div>
+									</div> 
+								</div>
+								<div class="row js-showIfReporterPhoneDifferent" style="display: none;">
+									<div class="col-md-12">
+										<div class="alert-lmtl4 alert-info-lmtl4">
+											[#ReporterPhoneDifferent_Information_ITSM#]
+											<i class="ph-info float-end-lmtl4 ms-2-lmtl4"></i>
+										</div>
+									</div> 
+								</div>
+							</Control>
+						</div>
+					</div>
+				</div>
+			</div>
+		</Control><!-- Karta kontaktnÃ­ch ÃºdajÅ¯ -->
+	</Section>
+
+	<Section Root="WorkFlow" Name="ShowHide" TargetXPath="//WorkFlow/GlobalJavaScripts" Insert="append">
+		<JavaScript xsi:type="ShowHide" Ident="ShowIfReporterEmailDifferent" ControlIdent="IsReporterEmailDifferent" >
+			<Selectors>
+				<string>.js-showIfReporterEmailDifferent</string>
+			</Selectors>
+			<ShowValues>
+				<string>1</string>
+			</ShowValues>
+		</JavaScript>
+		
+		<JavaScript xsi:type="ShowHide" Ident="ShowIfReporterPhoneDifferent" ControlIdent="IsReporterPhoneDifferent" >
+			<Selectors>
+				<string>.js-showIfReporterPhoneDifferent</string>
+			</Selectors>
+			<ShowValues>
+				<string>1</string>
+			</ShowValues>
+		</JavaScript>
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="ShowReporterContanctInfoDiffControlShare">
+			<Controls>
+				<FormControl Ident="IsReporterEmailDifferent" IsVisible="true" />
+				<FormControl Ident="IsReporterPhoneDifferent" IsVisible="true" />
+				<FormControl Ident="ReporterEmailDifferentPlaceHolder" IsVisible="true" />
+				<FormControl Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" /> -->
+		
+		<ControlShareCode Ident="ShowReporterInformationControlShare">
+			<Controls>
+				<FormControl Ident="ReporterAccountID" IsVisible="true" />
+				<FormControl Ident="ReporterEmail" IsVisible="true" />
+				<FormControl Ident="ReporterPhone" IsVisible="true" />
+				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableReporterInformationControlShare">
+			<Controls>
+				<FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" /> -->
+		
+	</Section>
+	
+</Component>

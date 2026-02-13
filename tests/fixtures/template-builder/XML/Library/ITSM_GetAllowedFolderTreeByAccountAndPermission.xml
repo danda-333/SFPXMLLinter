@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_GetAllowedFolderTreeByAccountAndPermission" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: Interface pro načítání naplánovaných aktivit
+	]]></XMLDescription>
+	<Description>
+
+	</Description>
+	<Command>
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+
+		-- =============================================
+		-- Author:			Daniel Šašek
+		-- Create date: 2023-12-01
+		-- Description:	Interface pro načítání naplánovaných aktivit
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(
+			@AccountID INT,
+			@FolderGroupSegmentIdent VARCHAR(100),
+  		@PermissionIDs dbo.ListNVarchar100Type READONLY
+		)
+		RETURNS TABLE
+		AS
+		RETURN (
+
+				WITH PermissionSources AS (
+					SELECT
+						PermissionSourceFolderTreeID = fot.ID
+						/*,PermissionID = aftp.PermissionID*/
+					FROM dbo.AccountFolderTree AS aft
+					INNER JOIN dbo.Account AS acc ON acc.ID = aft.AccountID AND acc.[State] = 1
+					INNER JOIN dbo.AccountFolderTreePermission AS aftp ON aftp.AccountFolderTreeID = aft.ID
+					INNER JOIN @PermissionIDs AS pIDs ON pIDs.Id = aftp.PermissionID
+					INNER JOIN dbo.FolderTree AS fot ON fot.ID = aft.FolderTreeID AND fot.InheritFromParent = 0
+					INNER JOIN dbo.Folder AS fol ON fol.[State] != 2 AND fol.ID = fot.FolderID AND fol.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+					WHERE aft.AccountID = @AccountID
+
+					UNION ALL
+
+					SELECT
+						PermissionSourceFolderTreeID = fot.ID
+						/*,PermissionID = gftp.PermissionID*/
+					FROM dbo.GroupAccount AS gra
+					INNER JOIN dbo.[Group] AS gro ON gro.ID = gra.GroupID AND gro.[State] = 1
+					INNER JOIN dbo.GroupFolderTree AS gft ON gft.GroupId = gra.GroupId
+					INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
+					INNER JOIN @PermissionIDs AS pIDs ON pIDs.Id = gftp.PermissionID
+					INNER JOIN dbo.FolderTree AS fot ON fot.ID = gft.FolderTreeID AND fot.InheritFromParent = 0
+					INNER JOIN dbo.Folder AS fol ON fol.[State] != 2 AND fol.ID = fot.FolderID AND fol.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+					WHERE gra.AccountID = @AccountID
+
+				)
+				SELECT DISTINCT fot.ID AS FolderTreeID, fot.Ident AS FolderTreeIdent, fot.[Level] AS FolderLevel, fot.ParentFolderTreeID, fotPar.Ident AS ParentFolderTreeIdent, fol.[Name] AS FolderName/*, pes.PermissionID*/
+				FROM PermissionSources AS pes
+				INNER JOIN dbo.FolderTree AS fot ON COALESCE(fot.InheritFromFolderTreeID, fot.ID) = pes.PermissionSourceFolderTreeID
+				INNER JOIN dbo.Folder AS fol ON fol.[State] != 2 AND fol.ID = fot.FolderID
+				LEFT JOIN dbo.FolderTree as fotPar on fotPar.ID = fot.ParentFolderTreeID
+
+		);
+
+	</Command>
+</Library>

@@ -19,6 +19,19 @@ export function parseXmlTolerant(source: string): XmlDocumentAst {
 
   for (const token of tokens) {
     const current = stack[stack.length - 1];
+
+    if (isSpecialInnerElement(current) && !isMatchingClosingToken(token, current)) {
+      const node: TextNode = {
+        kind: "text",
+        raw: token.raw,
+        start: token.start,
+        end: token.end,
+        rules: new Set<string>()
+      };
+      current.children.push(node);
+      continue;
+    }
+
     if (token.kind === "text") {
       const node: TextNode = {
         kind: "text",
@@ -178,3 +191,16 @@ function detectLineEnding(text: string): "\n" | "\r\n" {
   return text.includes("\r\n") ? "\r\n" : "\n";
 }
 
+function isSpecialInnerElement(node: ElementNode): boolean {
+  const local = getLocalName(node.name).toLowerCase();
+  return local === "sql" || local === "sqlcommand" || local === "htmltemplate" || local === "xmldescription" || local === "command";
+}
+
+function isMatchingClosingToken(token: XmlToken, element: ElementNode): boolean {
+  return token.kind === "closingTag" && getLocalName(token.name ?? "").toLowerCase() === getLocalName(element.name).toLowerCase();
+}
+
+function getLocalName(value: string): string {
+  const idx = value.indexOf(":");
+  return idx >= 0 ? value.slice(idx + 1) : value;
+}

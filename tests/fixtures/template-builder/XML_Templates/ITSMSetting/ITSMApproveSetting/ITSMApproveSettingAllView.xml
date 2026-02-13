@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMApproveSettingAllView" SegmentType="ITSMSettingSegment" TitleResourceKey="ITSMApproveSettingAllView_ITSM" GroupTitleResourceKey="ITSMSettingGroup_ITSM" Priority="120" CountColorCssClass="primary" PackageIdent="ITSMPackage"> 
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Volitelná pole
+  	]]>
+	</XMLDescription>
+  <AccessPermissions>
+    <string>ITSMSettingAdmin</string>
+  </AccessPermissions>
+
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMApproveSettingButton" FormIdent="ITSMApproveSetting" TitleResourceKey="NewITSMApproveSettingButton_ITSM" />
+  </Buttons>
+
+  <DataSource FormIdent="ITSMApproveSetting">
+    <DataPermissions>
+      <string>ITSMSettingAdmin</string>
+    </DataPermissions>
+    <Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" DataType="Number" />
+      <Column Ident="ITSMApproveSettingName" TitleResourceKey="ITSMApproveSettingName_ITSM" Width="30" />
+      <Column Ident="ITSMApproveSettingNameDescription" TitleResourceKey="ITSMApproveSettingNameDescription_ITSM" Width="70" />
+    </Columns>
+    <SQL>
+      SELECT
+        dialSetting.ID
+        , dialSetting.ITSMApproveSettingName
+        , dialSetting.ITSMApproveSettingNameDescription
+      FROM usr.ITSMApproveSetting AS dialSetting
+      WHERE
+       dialSetting.[State] != @DeletedState
+    </SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+    </Parameters>
+  </DataSource>
+
+  <CountDataSource>
+    <SQL>
+      SELECT COUNT(dialSetting.ID)
+      FROM usr.ITSMApproveSetting AS dialSetting
+      WHERE
+       dialSetting.[State] != @DeletedState
+    </SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="IsActive" DataType="Number" Value="1" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Statuses" DataType="NumberList" />
+    </Parameters>
+  </CountDataSource>
+</DataView>

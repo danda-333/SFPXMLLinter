@@ -1,0 +1,495 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="TextBoxControl" Ident="AdditionalFieldVisibility" DataType="String" TitleResourceKey="AdditionalFieldVisibility_ITSM" IsReadOnly="true" IsCreateColumn="false">
+			<DataBind>
+				<Dependencies>
+					<!--<string>ITSMCategoryLevel4Ident</string>-->
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="AdditionalFieldVisibility" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT(
+						SELECT mus.[Value]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID
+						INNER JOIN usr.ITSMOptionalFieldSetting AS itsOpfSetting ON itsOpfSetting.ID = itsCat.ITSMOptionalFieldDialID
+						INNER JOIN dbo.MultiSelect AS mus ON mus.TableID = itsOpfSetting.ID AND mus.FormIdent = 'ITSMOptionalFieldSetting' AND ControlIdent = 'OptionalFieldIdent'
+						WHERE fot.Ident = ISNULL(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident)
+						FOR JSON PATH
+					) AS AdditionalFieldVisibility
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="UserName" DataType="String" MaxLength="255" TitleResourceKey="UserName_AditionalField_ITSM" IsReadOnly="true" IsVisible="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="CertificateType" DataType="String" MaxLength="255" TitleResourceKey="CertificateType_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="RequestType" DataType="String" MaxLength="255" TitleResourceKey="RequestType_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ConsumerName" DataType="String" MaxLength="255" TitleResourceKey="ConsumerName_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ValidityPeriod" DataType="String" MaxLength="255" TitleResourceKey="ValidityPeriod_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="OriginalHWIMNumber" DataType="String" MaxLength="255" TitleResourceKey="OriginalHWIMNumber_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Justification" DataType="String" MaxLength="255" TitleResourceKey="Justification_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="RequestCategory" DataType="String" MaxLength="255" TitleResourceKey="RequestCategory_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Renewal" DataType="String" MaxLength="255" TitleResourceKey="Renewal_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Failure" DataType="String" MaxLength="255" TitleResourceKey="Failure_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Employee" DataType="String" MaxLength="255" TitleResourceKey="Employee_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Requirement" DataType="String" MaxLength="255" TitleResourceKey="Requirement_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="CompletionDate" DataType="String" MaxLength="255" TitleResourceKey="CompletionDate_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Attachment" DataType="String" MaxLength="255" TitleResourceKey="Attachment_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Login" DataType="String" MaxLength="255" TitleResourceKey="Login_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Permission" DataType="String" MaxLength="255" TitleResourceKey="Permission_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="SerialNumber" DataType="String" MaxLength="255" TitleResourceKey="SerialNumber_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ExpirationDate" DataType="String" MaxLength="255" TitleResourceKey="ExpirationDate_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Environment" DataType="String" MaxLength="255" TitleResourceKey="Environment_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="CommonName" DataType="String" MaxLength="255" TitleResourceKey="CommonName_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Email" DataType="String" MaxLength="255" TitleResourceKey="Email_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Organization" DataType="String" MaxLength="255" TitleResourceKey="Organization_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="SecondOrganization" DataType="String" MaxLength="255" TitleResourceKey="SecondOrganization_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Locality" DataType="String" MaxLength="255" TitleResourceKey="Locality_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="StateField" DataType="String" MaxLength="255" TitleResourceKey="State_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Country" DataType="String" MaxLength="255" TitleResourceKey="Country_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="SANAttribute" DataType="String" MaxLength="255" TitleResourceKey="SANAttribute_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ServerName" DataType="String" MaxLength="255" TitleResourceKey="ServerName_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="IPAddress" DataType="String" MaxLength="255" TitleResourceKey="IPAddress_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Zone" DataType="String" MaxLength="255" TitleResourceKey="Zone_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="vdom" DataType="String" MaxLength="255" TitleResourceKey="Vdom_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Transport" DataType="String" MaxLength="255" TitleResourceKey="Transport_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="Port" DataType="String" MaxLength="255" TitleResourceKey="Port_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="RevocationRequestDescription" DataType="String" MaxLength="255" TitleResourceKey="RevocationRequestDescription_AditionalField_ITSM" IsReadOnly="true" IsVisible="false">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<div class="row d-none">
+			<div class="col-md-12">
+				<div class="form-group">
+					<ControlLabel ControlID="AdditionalFieldVisibility" />
+					<Control ID="AdditionalFieldVisibility" />
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<ControlPlaceHolder ControlID="UserName">
+				<div class="row" data-additional-field-ident="UserName" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="UserName" />
+							<Control ID="UserName" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="CertificateType">
+				<div class="row" data-additional-field-ident="CertificateType" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="CertificateType" />
+							<Control ID="CertificateType" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="RequestType">
+				<div class="row" data-additional-field-ident="RequestType" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="RequestType" />
+							<Control ID="RequestType" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="ConsumerName">
+				<div class="row" data-additional-field-ident="ConsumerName" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ConsumerName" />
+							<Control ID="ConsumerName" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="ValidityPeriod">
+				<div class="row" data-additional-field-ident="ValidityPeriod" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ValidityPeriod" />
+							<Control ID="ValidityPeriod" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="OriginalHWIMNumber">
+				<div class="row" data-additional-field-ident="OriginalHWIMNumber" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="OriginalHWIMNumber" />
+							<Control ID="OriginalHWIMNumber" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Justification">
+				<div class="row" data-additional-field-ident="Justification" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Justification" />
+							<Control ID="Justification" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="RequestCategory">
+				<div class="row" data-additional-field-ident="RequestCategory" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="RequestCategory" />
+							<Control ID="RequestCategory" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Renewal">
+				<div class="row" data-additional-field-ident="Renewal" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Renewal" />
+							<Control ID="Renewal" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Failure">
+				<div class="row" data-additional-field-ident="Failure" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Failure" />
+							<Control ID="Failure" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Employee">
+				<div class="row" data-additional-field-ident="Employee" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Employee" />
+							<Control ID="Employee" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Requirement">
+				<div class="row" data-additional-field-ident="Requirement" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Requirement" />
+							<Control ID="Requirement" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="CompletionDate">
+				<div class="row" data-additional-field-ident="CompletionDate" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="CompletionDate" />
+							<Control ID="CompletionDate" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Attachment">
+				<div class="row" data-additional-field-ident="Attachment" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Attachment" />
+							<Control ID="Attachment" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Login">
+				<div class="row" data-additional-field-ident="Login" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Login" />
+							<Control ID="Login" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Permission">
+				<div class="row" data-additional-field-ident="Permission" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Permission" />
+							<Control ID="Permission" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="SerialNumber">
+				<div class="row" data-additional-field-ident="SerialNumber" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="SerialNumber" />
+							<Control ID="SerialNumber" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="ExpirationDate">
+				<div class="row" data-additional-field-ident="ExpirationDate" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ExpirationDate" />
+							<Control ID="ExpirationDate" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Environment">
+				<div class="row" data-additional-field-ident="Environment" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Environment" />
+							<Control ID="Environment" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="CommonName">
+				<div class="row" data-additional-field-ident="CommonName" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="CommonName" />
+							<Control ID="CommonName" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Email">
+				<div class="row" data-additional-field-ident="Email" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Email" />
+							<Control ID="Email" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Organization">
+				<div class="row" data-additional-field-ident="Organization" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Organization" />
+							<Control ID="Organization" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="SecondOrganization">
+				<div class="row" data-additional-field-ident="SecondOrganization" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="SecondOrganization" />
+							<Control ID="SecondOrganization" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Locality">
+				<div class="row" data-additional-field-ident="Locality" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Locality" />
+							<Control ID="Locality" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="StateField">
+				<div class="row" data-additional-field-ident="StateField" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="StateField" />
+							<Control ID="StateField" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Country">
+				<div class="row" data-additional-field-ident="Country" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Country" />
+							<Control ID="Country" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="SANAttribute">
+				<div class="row" data-additional-field-ident="SANAttribute" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="SANAttribute" />
+							<Control ID="SANAttribute" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="ServerName">
+				<div class="row" data-additional-field-ident="ServerName" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ServerName" />
+							<Control ID="ServerName" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="IPAddress">
+				<div class="row" data-additional-field-ident="IPAddress" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="IPAddress" />
+							<Control ID="IPAddress" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Zone">
+				<div class="row" data-additional-field-ident="Zone" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Zone" />
+							<Control ID="Zone" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="vdom">
+				<div class="row" data-additional-field-ident="vdom" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="vdom" />
+							<Control ID="vdom" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Transport">
+				<div class="row" data-additional-field-ident="Transport" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Transport" />
+							<Control ID="Transport" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="Port">
+				<div class="row" data-additional-field-ident="Port" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Port" />
+							<Control ID="Port" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+			<ControlPlaceHolder ControlID="RevocationRequestDescription">
+				<div class="row" data-additional-field-ident="RevocationRequestDescription" style="display: none;">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="RevocationRequestDescription" />
+							<Control ID="RevocationRequestDescription" />
+						</div>
+					</div>
+				</div>
+			</ControlPlaceHolder>
+		</div>
+
+
+	</Section>
+
+	<Section Root="Form" Name="ExternalJavaScriptRelativePaths" TargetXPath="//Form/ExternalJavaScriptRelativePaths" Insert="append">
+		<string>~/AppAsset/Packages/ITSM/Scripts/ITSMAdditionalFields.js</string>
+	</Section>
+	
+</Component>

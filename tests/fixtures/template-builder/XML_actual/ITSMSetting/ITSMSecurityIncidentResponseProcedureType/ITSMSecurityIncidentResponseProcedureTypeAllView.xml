@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMSecurityIncidentResponseProcedureTypeAllView" SegmentType="ITSMSettingSegment" TitleResourceKey="ITSMSecurityIncidentResponseProcedureTypeAllView_ITSM" GroupTitleResourceKey="ITSMSecuritySettingGroup_ITSM" Priority="24" DefaultFilterIdent="ITSMSecurityIncidentResponseProcedureTypeFilter" CountColorCssClass="primary" PackageIdent="ITSMPackage">
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Postup řešení bezpečnostního incidentu
+  	]]>
+	</XMLDescription>
+  <AccessPermissions>
+    <string>ITSMSettingAdmin</string>
+  </AccessPermissions>
+
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMSecurityIncidentResponseProcedureTypeButton" FormIdent="ITSMSecurityIncidentResponseProcedureTypeSetting" TitleResourceKey="NewITSMSecurityIncidentResponseProcedureTypeButton_ITSM" />
+  </Buttons>
+
+  <DataSource FormIdent="ITSMSecurityIncidentResponseProcedureTypeSetting">
+    <DataPermissions>
+      <string>ITSMSettingAdmin</string>
+    </DataPermissions>
+
+    <Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" IsVisible="true" DataType="Number" />
+      <Column Ident="TextValue" TitleResourceKey="TextValue_ITSM" Width="20" />
+      <Column Ident="Guid" TitleResourceKey="Guid_ITSM" Width="15" />
+      <Column Ident="LanguageID" TitleResourceKey="LanguageID_ITSM" Width="10" />
+      <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" Width="10" DataType="DateTime" />
+      <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" Width="10" />
+      <Column Ident="FunctionalKey" TitleResourceKey="FunctionalKey_ITSM" Width="10" />
+      <Column xsi:type="BadgeColumn" ColorCssClassColumnIdent="IsActiveColor" IsTranslate="true" Ident="IsActive" TitleResourceKey="IsActive_ITSM" Width="10" />
+      <Column Ident="OrderValue" TitleResourceKey="OrderValue_ITSM" Width="5" IsDefaultSort="true" SortType="ASC" />
+    </Columns>
+
+    <SQL>
+      SELECT dialSetting.ID,
+        dial.TextValue,
+        dial.Guid,
+        lan.[Name] AS LanguageID,
+        dial.CreateDate,
+        dial.OrderValue,
+        accCreator.FullName AS AccountID,
+        dialSetting.FunctionalKey,
+        IIF(dial.IsActive = 1, 'Active_ITSM', 'Inactive_ITSM') AS IsActive,
+        IIF(dial.IsActive = 1, 'success', 'danger') AS IsActiveColor
+      FROM usr.ITSMSecurityIncidentResponseProcedureTypeSetting AS dialSetting
+      INNER JOIN usr.ITSMSecurityIncidentResponseProcedureType AS dial
+        ON dial.Guid = dialSetting.Guid
+        AND dial.LanguageID = @UserLanguageID
+      INNER JOIN dbo.Account AS accCreator
+        ON accCreator.ID = dialSetting.AccountID
+      INNER JOIN dbo.Language AS lan
+        ON lan.ID = dial.LanguageID
+      WHERE dialSetting.[State] != @DeletedState
+        AND (dial.IsActive = @IsActive AND NOT EXISTS(SELECT NULL FROM @Statuses WHERE ID != -999))
+          OR (CAST(dial.IsActive AS INT) IN (SELECT ID FROM @Statuses WHERE ID != -999))
+      #FILTER#
+      ORDER BY dial.OrderValue ASC
+    </SQL>
+
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="IsActive" DataType="Number" Value="1" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Statuses" DataType="NumberList" />
+    </Parameters>
+  </DataSource>
+
+  <CountDataSource>
+    <SQL>
+      SELECT COUNT(dial.ID)
+      FROM usr.ITSMSecurityIncidentResponseProcedureTypeSetting AS dialSetting
+      INNER JOIN usr.ITSMSecurityIncidentResponseProcedureType AS dial
+        ON dial.Guid = dialSetting.Guid
+        AND dial.LanguageID = @UserLanguageID
+      WHERE dialSetting.[State] != @DeletedState
+        AND (dial.IsActive = @IsActive AND NOT EXISTS(SELECT NULL FROM @Statuses WHERE ID != -999))
+          OR (CAST(dial.IsActive AS INT) IN (SELECT ID FROM @Statuses WHERE ID != -999))
+      #FILTER#
+    </SQL>
+
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="IsActive" DataType="Number" Value="1" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Statuses" DataType="NumberList" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+
+    <Section xsi:type="ExportSection" Ident="BasicExport" TitleResourceKey="BasicExport_ITSM" IsExportSetting="true">
+      <DataSource FormIdent="ITSMSecurityIncidentResponseProcedureTypeSetting">
+        <DataPermissions>
+          <string>ITSMSettingAdmin</string>
+        </DataPermissions>
+
+        <Columns>
+          <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" IsVisible="true" DataType="Number" />
+          <Column Ident="TextValue" TitleResourceKey="TextValue_ITSM" Width="25" />
+          <Column Ident="Guid" TitleResourceKey="Guid_ITSM" Width="20" />
+          <Column Ident="LanguageID" TitleResourceKey="LanguageID_ITSM" Width="10" />
+          <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" Width="10" DataType="DateTime" />
+          <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" Width="15" />
+          <Column Ident="FunctionalKey" TitleResourceKey="FunctionalKey_ITSM" Width="10" />
+          <Column Ident="IsActive" TitleResourceKey="IsActive_ITSM" Width="10" />
+        </Columns>
+
+        <SQL>
+          SELECT
+            dialSetting.ID,
+            dial.TextValue,
+            dial.Guid,
+            lan.[Name] AS LanguageID,
+            dial.CreateDate,
+            accCreator.FullName AS AccountID,
+            dialSetting.FunctionalKey,
+            IIF(dial.IsActive = 1, 'Aktivní', 'Neaktivní') AS IsActive
+          FROM usr.ITSMSecurityIncidentResponseProcedureTypeSetting AS dialSetting
+          INNER JOIN usr.ITSMSecurityIncidentResponseProcedureType AS dial
+            ON dial.Guid = dialSetting.Guid
+            AND dial.LanguageID = @UserLanguageID
+          INNER JOIN dbo.Account AS accCreator
+            ON accCreator.ID = dialSetting.AccountID
+          INNER JOIN dbo.Language AS lan
+            ON lan.ID = dial.LanguageID
+          WHERE dialSetting.[State] != @DeletedState
+            AND (dial.IsActive = @IsActive AND NOT EXISTS(SELECT NULL FROM @Statuses WHERE ID != -999))
+              OR (CAST(dial.IsActive AS INT) IN (SELECT ID FROM @Statuses WHERE ID != -999))
+          #FILTER#
+        </SQL>
+
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="IsActive" DataType="Number" Value="1" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Statuses" DataType="NumberList" />
+        </Parameters>
+      </DataSource>
+    </Section>
+
+  </Sections>
+
+</DataView>

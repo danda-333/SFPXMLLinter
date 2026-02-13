@@ -44,7 +44,7 @@ export function tokenizeXml(source: string): XmlToken[] {
       continue;
     }
 
-    if (source[cursor] === "<") {
+    if (source[cursor] === "<" && isLikelyXmlTagStart(source, cursor)) {
       const tagEnd = findTagEnd(source, cursor + 1);
       if (tagEnd > cursor) {
         const raw = source.slice(cursor, tagEnd + 1);
@@ -52,6 +52,18 @@ export function tokenizeXml(source: string): XmlToken[] {
         cursor = tagEnd + 1;
         continue;
       }
+    }
+
+    // Handle non-XML '<' safely (e.g. SQL operators <=, <>, inline comparisons).
+    if (source[cursor] === "<" && !isLikelyXmlTagStart(source, cursor)) {
+      tokens.push({
+        kind: "text",
+        raw: source.slice(cursor, cursor + 1),
+        start: cursor,
+        end: cursor + 1
+      });
+      cursor += 1;
+      continue;
     }
 
     const nextTag = source.indexOf("<", cursor);
@@ -66,6 +78,30 @@ export function tokenizeXml(source: string): XmlToken[] {
   }
 
   return tokens;
+}
+
+function isLikelyXmlTagStart(source: string, pos: number): boolean {
+  if (source[pos] !== "<") {
+    return false;
+  }
+
+  const next = source[pos + 1];
+  if (!next) {
+    return false;
+  }
+
+  // Valid XML starts handled by tokenizer:
+  //   <?xml ... ?>
+  //   <!-- ... -->
+  //   <![CDATA[ ... ]]>
+  //   </tag>
+  //   <tag ...>
+  //   <ns:tag ...>
+  if (next === "?" || next === "!" || next === "/") {
+    return true;
+  }
+
+  return /[A-Za-z_]/.test(next);
 }
 
 function findTagEnd(source: string, start: number): number {
@@ -132,4 +168,3 @@ function parseTagToken(raw: string, start: number, end: number): XmlToken {
     end
   };
 }
-

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" Ident="ITSMCatalogSheet" FormType="Folder" SegmentType="Admin" FolderGroupSegmentIdent="ITSMServiceFolderGroup" PackageIdent="ITSMPackage">
+	<DataPermissions>
+		<string>SuperAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>SuperAdmin</string>
+	</CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false"/><!-- Uložit -->
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2"><!-- Smazat -->
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+	</Buttons>
+	<Controls>
+		<Control xsi:type="TextBoxControl" Ident="Name" DataType="String" MaxLength="255" TitleResourceKey="Name_ITSM" IsRequired="true" IsReadOnly="true" />
+		<Control xsi:type="SwitchControl" Ident="Active" DataType="Bool" Default="1" TitleResourceKey="IsActive_ITSM" IsRequired="true" IsReadOnly="true" />
+		<Control xsi:type="ShareMainFolderControl" Ident="ShareMainFolder" DataType="NumberList" ErrorMessageResourceKey="ShareMainFolderError_ITSM" TitleResourceKey="ShareMainFolder_ITSM" IsRequired="true" IsReadOnly="true" />
+		<Control xsi:type="FolderPermissionControl" Ident="FolderPermission" DataType="NumberList" TitleResourceKey="Access_ITSM" IsReadOnly="true" />
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-6">
+						<div class="form-group">
+							<ControlLabel ControlID="Name"/>
+							<Control ID="Name"/>
+						</div>
+					</div>
+          <div class="col-md-6">
+						<div class="form-group">
+							<Control ID="Active"/>
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="PermissionSection" TitleResourceKey="PermissionSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+				 <div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="FolderPermission"/>
+						</div>
+					</div>
+				</div>   
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="ShareMainFolderSection" TitleResourceKey="ShareMainFolderSection_ITSM" IconCssClass="icon-share3">
+			<HTMLTemplate>
+				 <div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="ShareMainFolder"/>
+						</div>
+					</div>
+				</div>       
+      </HTMLTemplate>
+		</Section>
+	</Sections>
+	<!-- <Indexes>
+		<Index Ident="IX_ITSMCatalogSheet_Name">	
+			<Columns>
+				<fi:Column Ident="Name" />
+			</Columns>
+		</Index>
+	</Indexes> -->
+</Form> 

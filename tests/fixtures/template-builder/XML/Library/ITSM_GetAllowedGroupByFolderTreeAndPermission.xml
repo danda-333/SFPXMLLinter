@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_GetAllowedGroupByFolderTreeAndPermission" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: Funkce pro vrácení skupin dle oprávnění a FolderTreeIdentu
+	]]></XMLDescription>
+	<Description>
+
+	</Description>
+	<Command>
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+
+		-- =============================================
+		-- Author:			Aleš Procházka
+		-- Create date: 2026-01-19
+		-- Description:	Funkce pro vrácení skupin dle oprávnění a FolderTreeIdentu
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(
+			@FolderTreeIdent VARCHAR(900),
+  		@PermissionIDs dbo.ListNVarchar100Type READONLY
+		)
+		RETURNS TABLE
+		AS
+		RETURN (
+
+			WITH SearchFolderTree AS (
+				SELECT fot.*
+				FROM dbo.FolderTree AS fot
+				WHERE fot.Ident = @FolderTreeIdent
+			)
+			SELECT DISTINCT
+				gro.ID AS GroupID
+				,gro.[Name] AS GroupName
+			FROM SearchFolderTree AS sft
+			INNER JOIN dbo.FolderTree AS fot ON fot.ID = ISNULL(sft.InheritFromFolderTreeID, fot.ID)
+			INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
+			INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
+			INNER JOIN @PermissionIDs AS pIDs ON pIDs.Id = gftp.PermissionID
+			INNER JOIN dbo.[Group] AS gro ON gro.ID = gft.GroupID AND gro.[State] = 1
+
+		);
+
+	</Command>
+</Library>

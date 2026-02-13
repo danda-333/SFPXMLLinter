@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMSupplierContractAllView" SegmentType="ITSMSettingSegment" TitleResourceKey="ITSMSupplierContractAllView_ITSM" GroupTitleResourceKey="ITSMSettingGroup_ITSM" Priority="130" CountColorCssClass="primary" PackageIdent="ITSMPackage">
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Smlouvy s dodavateli
+  	]]>
+	</XMLDescription>
+  <AccessPermissions>
+    <string>ITSMSettingAdmin</string>
+  </AccessPermissions>
+
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMSupplierContractButton" FormIdent="ITSMSupplierContract" TitleResourceKey="NewITSMSupplierContractButton_ITSM" />
+  </Buttons>
+
+  <DataSource FormIdent="ITSMSupplierContract">
+    <DataPermissions>
+      <string>ITSMSettingAdmin</string>
+    </DataPermissions>
+    <Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" DataType="Number" />
+      <Column Ident="ContractName" TitleResourceKey="ContractName_ITSM" Width="35" />
+      <Column Ident="ITSMSupplierOrganizationEntityGuid" TitleResourceKey="ITSMSupplierOrganizationEntityGuid_ITSM" Width="35" />
+      <Column Ident="ContractDateFrom" TitleResourceKey="ContractDateFrom_ITSM" Width="15" />
+      <Column Ident="ContractDateTo" TitleResourceKey="ContractDateTo_ITSM" Width="15" />
+    </Columns>
+    <SQL>
+      SELECT
+        dial.ID
+        , dial.ContractName
+        , supOrgEnt.TextValue as ITSMSupplierOrganizationEntityGuid
+        , dial.ContractDateFrom
+        , dial.ContractDateTo
+      FROM usr.ITSMSupplierContract AS dial
+      INNER JOIN usr.ITSMSupplierOrganizationEntity as supOrgEnt on supOrgEnt.Guid = dial.ITSMSupplierOrganizationEntityGuid
+      WHERE
+       dial.[State] != @DeletedState
+    </SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+    </Parameters>
+  </DataSource>
+
+  <CountDataSource>
+    <SQL>
+      SELECT COUNT(dial.ID)
+      FROM usr.ITSMSupplierContract AS dial
+      INNER JOIN usr.ITSMSupplierOrganizationEntity as supOrgEnt on supOrgEnt.Guid = dial.ITSMSupplierOrganizationEntityGuid
+      WHERE
+       dial.[State] != @DeletedState
+    </SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+    </Parameters>
+  </CountDataSource>
+</DataView>

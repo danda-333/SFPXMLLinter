@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMApproval" PackageIdent="ITSMPackage">
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number"/>
+		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150"/>
+
+		<Control xsi:type="TextBoxControl" Ident="ApproveOrder" DataType="Number" TitleResourceKey="ApproveOrder_ITSM" IsFakeReadOnly="true"/>
+
+		<Control xsi:type="DropDownListControl" Ident="ApproverType" DataType="String" TitleResourceKey="ApproverType_ITSM">
+			<ListItems>
+				<ListItem TitleResourceKey="Group_ITSM" Value="Group" />
+				<ListItem TitleResourceKey="Account_ITSM" Value="Account" />
+			</ListItems>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="ApproverGroupID" DataType="Number" TitleResourceKey="ApproverGroupID_ITSM" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT TOP(20)
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE gro.[State] = @GroupActiveState
+					ORDER BY gro.[Name] ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						gro.ID
+						,gro.[Name] 
+					FROM dbo.[Group] AS gro
+					WHERE 
+						gro.[State] = @GroupActiveState
+						AND gro.[Name] LIKE @ApproverGroupID
+					ORDER BY gro.[Name] ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverGroupID" DataType="String" MaxLength="200" LikeType="Both"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						gro.ID
+						,gro.[Name] 
+					FROM dbo.[Group] AS gro
+					WHERE gro.ID = @ApproverGroupID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverGroupID" DataType="Number"/>
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="ApproverAccountID" DataType="Number" TitleResourceKey="ApproverAccountID_ITSM" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT TOP(20)
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.[State] = @AccountActiveState
+					ORDER BY acc.FullName ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.[State] = @AccountActiveState
+						AND acc.FullName LIKE @ApproverAccountID
+					ORDER BY acc.FullName ASC
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverAccountID" DataType="String" MaxLength="200" LikeType="Both"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.ID = @ApproverAccountID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ApproverAccountID" DataType="Number"/>
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+	</Controls>
+</Form>

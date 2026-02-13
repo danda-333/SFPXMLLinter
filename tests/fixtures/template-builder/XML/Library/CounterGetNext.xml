@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="CounterGetNext" LibraryType="StoredProcedure" PackageIdent="CounterPackage">
+	<Description>
+		Vrací další číslo v sérii
+	</Description>
+	<Command>
+
+    SET ANSI_NULLS ON
+    GO
+    SET QUOTED_IDENTIFIER ON
+    GO
+
+    -- =============================================
+    -- Author:		  Daniel Šašek
+    -- Create date: 18.04.2023
+    -- Description:	Vrací další číslo v sérii
+    -- =============================================
+    #MODIFIER# PROCEDURE #NAME#
+    (
+      @Ident NVARCHAR(MAX)
+      ,@UserID INT
+    )
+    AS
+    BEGIN
+
+      DECLARE @NextNumber INT;
+
+      SELECT TOP(1) @NextNumber = NextNumber
+      FROM usr.Counter
+      WHERE Ident = @Ident
+
+      IF @NextNumber IS NULL
+      BEGIN
+        INSERT INTO usr.Counter (AccountID, Ident, NextNumber)
+        VALUES (@UserID, @Ident, 2)
+
+        SET @NextNumber = 1
+      END
+      ELSE
+      BEGIN
+        UPDATE usr.Counter
+        SET
+          NextNumber = NextNumber + 1
+          ,LastUpdateAccountID = @UserID
+          ,LastUpdate = GETDATE()
+        WHERE Ident = @Ident
+      END
+
+      RETURN @NextNumber
+
+    END
+
+	</Command>
+</Library>

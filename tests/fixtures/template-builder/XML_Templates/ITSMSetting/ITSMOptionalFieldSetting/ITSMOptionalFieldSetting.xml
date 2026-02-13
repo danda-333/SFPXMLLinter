@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" Ident="ITSMOptionalFieldSetting" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage">
+	<DataPermissions>
+		<string>ITSMSettingAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SaveAndCloseButton" TitleResourceKey="SaveAndCloseButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false"/>
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-undo2" PlacementType="Top Bottom" />
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="OptionalFieldSettingName" DataType="String" MaxLength="255" TitleResourceKey="OptionalFieldSettingName_ITSM" IsRequired="true" IsReadOnly="true"/>
+		<Control xsi:type="TextAreaControl" Ident="OptionalFieldSettingDescription" DataType="String" Rows="3" TitleResourceKey="OptionalFieldSettingDescription_ITSM" IsRequired="true" IsReadOnly="true"/>
+
+		<Control xsi:type="CheckBoxListControl" Ident="OptionalFieldIdent" DataType="StringList" TitleResourceKey="OptionalFieldIdent_ITSM" IsReadOnly="true">
+			<ListItems>
+				<ListItem TitleResourceKey="FieldSettingUserName_ITSM" Value="UserName" />
+				<ListItem TitleResourceKey="FieldSettingCertificateType_ITSM" Value="CertificateType" />
+				<ListItem TitleResourceKey="FieldSettingRequestType_ITSM" Value="RequestType" />
+				<ListItem TitleResourceKey="FieldSettingConsumerName_ITSM" Value="ConsumerName" />
+				<ListItem TitleResourceKey="FieldSettingValidityPeriod_ITSM" Value="ValidityPeriod" />
+				<ListItem TitleResourceKey="FieldSettingOriginalHWIMNumber_ITSM" Value="OriginalHWIMNumber" />
+				<ListItem TitleResourceKey="FieldSettingJustification_ITSM" Value="Justification" />
+				<ListItem TitleResourceKey="FieldSettingRequestCategory_ITSM" Value="RequestCategory" />
+				<ListItem TitleResourceKey="FieldSettingRenewal_ITSM" Value="Renewal" />
+				<ListItem TitleResourceKey="FieldSettingFailure_ITSM" Value="Failure" />
+				<ListItem TitleResourceKey="FieldSettingEmployee_ITSM" Value="Employee" />
+				<ListItem TitleResourceKey="FieldSettingRequirement_ITSM" Value="Requirement" />
+				<ListItem TitleResourceKey="FieldSettingCompletionDate_ITSM" Value="CompletionDate" />
+				<ListItem TitleResourceKey="FieldSettingAttachment_ITSM" Value="Attachment" />
+				<ListItem TitleResourceKey="FieldSettingLogin_ITSM" Value="Login" />
+				<ListItem TitleResourceKey="FieldSettingPermission_ITSM" Value="Permission" />
+				<ListItem TitleResourceKey="FieldSettingSerialNumber_ITSM" Value="SerialNumber" />
+				<ListItem TitleResourceKey="FieldSettingExpirationDate_ITSM" Value="ExpirationDate" />
+				<ListItem TitleResourceKey="FieldSettingEnvironment_ITSM" Value="Environment" />
+				<ListItem TitleResourceKey="FieldSettingCommonName_ITSM" Value="CommonName" />
+				<ListItem TitleResourceKey="FieldSettingEmail_ITSM" Value="Email" />
+				<ListItem TitleResourceKey="FieldSettingOrganization_ITSM" Value="Organization" />
+				<ListItem TitleResourceKey="FieldSettingSecondOrganization_ITSM" Value="SecondOrganization" />
+				<ListItem TitleResourceKey="FieldSettingLocality_ITSM" Value="Locality" />
+				<ListItem TitleResourceKey="FieldSettingState_ITSM" Value="State" />
+				<ListItem TitleResourceKey="FieldSettingCountry_ITSM" Value="Country" />
+				<ListItem TitleResourceKey="FieldSettingSANAttribute_ITSM" Value="SANAttribute" />
+				<ListItem TitleResourceKey="FieldSettingServerName_ITSM" Value="ServerName" />
+				<ListItem TitleResourceKey="FieldSettingIPAddress_ITSM" Value="IPAddress" />
+				<ListItem TitleResourceKey="FieldSettingZone_ITSM" Value="Zone" />
+				<ListItem TitleResourceKey="FieldSettingVdom_ITSM" Value="vdom" />
+				<ListItem TitleResourceKey="FieldSettingTransport_ITSM" Value="Transport" />
+				<ListItem TitleResourceKey="FieldSettingPort_ITSM" Value="Port" />
+				<ListItem TitleResourceKey="FieldSettingRevocationRequestDescription_ITSM" Value="RevocationRequestDescription" />
+			</ListItems>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformation" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate>
+
+				<style>
+					.no-label > label {
+						display: none !important;
+					}
+
+					.custom-table td,
+					.custom-table th {
+						padding: .15rem .5rem !important;
+					}
+
+					.custom-color-picker .sp-replacer{
+						display: flex;
+						width: 100%;
+					}
+
+					.custom-color-picker .sp-replacer .sp-preview {
+						flex-grow: 1;
+					}
+
+					.custom-table div:nth-child(2) {
+						display: none;
+					}
+
+					.select-bold select {
+						font-weight: bold;
+					}
+				</style>
+
+				<div class="row">
+					<div class="col-md-7">
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#BasicInformationSection_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-4">
+				
+										<div class="form-group">
+											<ControlLabel ControlID="OptionalFieldSettingName"/>
+											<Control ID="OptionalFieldSettingName"/>
+										</div>
+									
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-12">
+				
+										<div class="form-group">
+											<ControlLabel ControlID="OptionalFieldSettingDescription"/>
+											<Control ID="OptionalFieldSettingDescription"/>
+										</div>
+									
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-5">
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#OptonalFieldSettingLabel_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+				
+										<div class="form-group">
+											<Control ID="OptionalFieldIdent"/>
+										</div>
+									
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

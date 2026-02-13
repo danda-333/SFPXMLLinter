@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMApproveOrderHistory" SegmentType="ITSMRequestSegment" PackageIdent="ITSMPackage">
+	<DataPermissions>
+    <string>ITSMRequest</string>
+  </DataPermissions>
+  <CreatePermissions>
+    <string>ITSMRequest</string>
+  </CreatePermissions>
+	<Buttons>
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number"/>
+		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150"/>
+		<Control xsi:type="HiddenControl" Ident="ApproveOrder" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="GroupID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="DateSaved" DataType="DateTime"/>
+		<Control xsi:type="HiddenControl" Ident="Guid" DataType="String"/>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate><![CDATA[
+
+			]]></HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

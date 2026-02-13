@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMInovationAllView" SegmentType="ITSMInovationSegment" TitleResourceKey="ITSMInovationAllView_ITSM" XGroupTitleResourceKey="ITSMInovationGroup_ITSM" Priority="100" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMInovationFilter" ShareFilterIdent="ITSMInovationFilter" CountColorCssClass="primary" PackageIdent="ITSMPackage">
+  <AccessPermissions>
+    <string>ITSMInovation</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true" />
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMInovationButton" FormIdent="ITSMInovation" TitleResourceKey="NewITSMInovationButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMInovation">
+    <DataPermissions>
+      <string>ITSMInovationReporter</string>
+      <string>ITSMSpecialist</string>
+      <string>ITSMOperator</string>
+    </DataPermissions>
+		<Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number" />
+      <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.ITSMKey
+        </SQL>
+      </Column>
+      <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="20" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.[Subject]
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCompanyIdent" TitleResourceKey="ITSMCompanyIdent_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCom.[FolderName] AS ITSMCompanyIdent
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel2Ident" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCat2.[FolderName] AS ITSMCategoryLevel2Ident
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel3Ident" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCat3.[FolderName] AS ITSMCategoryLevel3Ident
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel4Ident" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL>
+          ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
+        </SQL>
+      </Column>
+      <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMInovation" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+        <SQL>
+          itsReq.State
+        </SQL>
+      </Column>
+      <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
+        <SQL>
+          itsReq.CreateDate
+        </SQL>
+      </Column>
+      <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accCreator.FullName AS AccountID
+        </SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          ftvCat5.[FolderName] AS ITSMCategoryLevel5Ident
+        </SQL>
+      </Column>
+      <Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accRep.[FullName] AS ReporterAccountID
+        </SQL>
+      </Column>
+      <Column Ident="ReporterEmail" TitleResourceKey="ReporterEmail_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[ReporterEmail]
+        </SQL>
+      </Column>
+      <Column Ident="ReporterPhone" TitleResourceKey="ReporterPhone_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[ReporterPhone]
+        </SQL>
+      </Column>
+      <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.[Description]
+        </SQL>
+      </Column>
+      <Column Ident="RequestedChangeJustification" TitleResourceKey="RequestedChangeJustification_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.RequestedChangeJustification
+        </SQL>
+      </Column>
+      <Column Ident="RequestedChangeRisk" TitleResourceKey="RequestedChangeRisk_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.RequestedChangeRisk
+        </SQL>
+      </Column>
+      <Column Ident="RequestedChangeDescription" TitleResourceKey="RequestedChangeDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.RequestedChangeDescription
+        </SQL>
+      </Column>
+      <Column Ident="DecisionInformation" TitleResourceKey="DecisionInformation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.DecisionInformation
+        </SQL>
+      </Column>
+      <Column Ident="VOICTDecisionDateTime" TitleResourceKey="VOICTDecisionDateTime_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          itsReq.VOICTDecisionDateTime
+        </SQL>
+      </Column>
+      <Column Ident="ITSMImplementationChangeProposalDecisionGuid" TitleResourceKey="ITSMImplementationChangeProposalDecisionGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          impChaProDec.TextValue AS ITSMImplementationChangeProposalDecisionGuid
+        </SQL>
+      </Column>
+      <Column Ident="ITSMChangeID" TitleResourceKey="ITSMChangeID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          CONCAT(itsmCha.ITSMKey,' - ',itsmCha.[Subject]) AS ITSMChangeID
+        </SQL>
+      </Column>
+      <Column Ident="CoordinatorAccountIDs" TitleResourceKey="CoordinatorAccountIDs_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          STUFF(
+            (
+              SELECT ', ' + acc.FullName
+              FROM dbo.MultiSelect AS mus
+              INNER JOIN dbo.Account as acc on acc.ID = mus.[Value]
+              WHERE
+                mus.TableID = itsReq.ID
+                AND mus.FormIdent = @FormIdent
+                AND mus.ControlIdent = @ControlIdent
+
+              FOR XML PATH('')
+            )
+          , 1, 2, '') AS CoordinatorAccountIDs
+        </SQL>
+      </Column>
+      <Column Ident="AssignedGroupID" TitleResourceKey="AssignedGroupID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          gro.[Name] AS [AssignedGroupID]
+        </SQL>
+      </Column>
+      <Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL>
+          accAsg.FullName AS [AssignedAccountID]
+        </SQL>
+      </Column>
+		</Columns>
+    <Froms>
+      <dsf:From Ident="ftvCat2">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel2Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat2 ON ftvCat2.FolderTreeIdent = itsReq.ITSMCategoryLevel2Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat3">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel3Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat3 ON ftvCat3.FolderTreeIdent = itsReq.ITSMCategoryLevel3Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat4">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel4Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat4 ON ftvCat4.FolderTreeIdent = itsReq.ITSMCategoryLevel4Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat5">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel5Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat5 ON ftvCat5.FolderTreeIdent = itsReq.ITSMCategoryLevel5Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accRep">
+        <dsf:Columns>
+          <dsf:string>ReporterAccountID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.Account as accRep on accRep.ID = itsReq.ReporterAccountID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accAsg">
+        <dsf:Columns>
+          <dsf:string>AssignedAccountID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.Account as accAsg on accAsg.ID = itsReq.AssignedAccountID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="gro">
+        <dsf:Columns>
+          <dsf:string>AssignedGroupID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.[Group] as gro on gro.ID = itsReq.AssignedGroupID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="impChaProDec">
+        <dsf:Columns>
+          <dsf:string>ITSMImplementationChangeProposalDecisionGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMImplementationChangeProposalDecision as impChaProDec on impChaProDec.Ident = itsReq.ITSMImplementationChangeProposalDecisionGuid AND impChaProDec.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="itsmCha">
+        <dsf:Columns>
+          <dsf:string>ITSMChangeID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMChange as itsmCha on itsmCha.ID = itsReq.ITSMChangeID
+        </dsf:SQL>
+      </dsf:From>
+    </Froms>
+		<SQL>
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT
+            itsReq.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMInovation AS itsReq
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+          #ADDFROM#
+          WHERE
+            itsReq.[State] != @DeletedState
+            AND (
+              (
+                ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMInovation(itsReq)|ITSMInovationReporter|]#
+              )
+              OR
+              (
+                ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMInovation(itsReq)|ITSMInovationReporter,ITSMAuthor|]#
+              )
+              OR
+              (
+                #PERMISSION[ITSMInovation(itsReq)]#
+              )
+            ) #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    </SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMInovation" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="50" Value="CoordinatorAccountIDs" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" />
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL>
+      SELECT COUNT(itsReq.ID)
+      FROM usr.ITSMInovation AS itsReq
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+      WHERE
+        itsReq.[State] != @DeletedState
+        AND (
+          (
+            ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMInovation(itsReq)|ITSMInovationReporter|]#
+          )
+          OR
+          (
+            ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMInovation(itsReq)|ITSMInovationReporter,ITSMAuthor|]#
+          )
+          OR
+          (
+            #PERMISSION[ITSMInovation(itsReq)]#
+          )
+        ) #FILTER#
+    </SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMInovation" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="50" Value="CoordinatorAccountID" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <Columns>
+          <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" DataType="Number" />
+          <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="25" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Subject]
+            </SQL>
+          </Column>
+          <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.ITSMKey
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCompanyIdent" TitleResourceKey="ITSMCompanyIdent_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCom.[FolderName] AS ITSMCompanyIdent
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel2Ident" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat2.[FolderName] AS ITSMCategoryLevel2Ident
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel3Ident" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat3.[FolderName] AS ITSMCategoryLevel3Ident
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel4Ident" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
+            </SQL>
+          </Column>
+          <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMInovation" TitleResourceKey="State_ITSM" IsColor="true" Width="15" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.State
+            </SQL>
+          </Column>
+          <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" DataType="DateTime">
+            <SQL>
+              itsReq.CreateDate
+            </SQL>
+          </Column>
+          <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accCreator.FullName AS AccountID
+            </SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              ftvCat5.[FolderName] AS ITSMCategoryLevel5Ident
+            </SQL>
+          </Column>
+          <Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accRep.[FullName] AS ReporterAccountID
+            </SQL>
+          </Column>
+          <Column Ident="ReporterEmail" TitleResourceKey="ReporterEmail_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[ReporterEmail]
+            </SQL>
+          </Column>
+          <Column Ident="ReporterPhone" TitleResourceKey="ReporterPhone_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[ReporterPhone]
+            </SQL>
+          </Column>
+          <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.[Description]
+            </SQL>
+          </Column>
+          <Column Ident="RequestedChangeJustification" TitleResourceKey="RequestedChangeJustification_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.RequestedChangeJustification
+            </SQL>
+          </Column>
+          <Column Ident="RequestedChangeRisk" TitleResourceKey="RequestedChangeRisk_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.RequestedChangeRisk
+            </SQL>
+          </Column>
+          <Column Ident="RequestedChangeDescription" TitleResourceKey="RequestedChangeDescription_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.RequestedChangeDescription
+            </SQL>
+          </Column>
+          <Column Ident="DecisionInformation" TitleResourceKey="DecisionInformation_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.DecisionInformation
+            </SQL>
+          </Column>
+          <Column Ident="VOICTDecisionDateTime" TitleResourceKey="VOICTDecisionDateTime_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              itsReq.VOICTDecisionDateTime
+            </SQL>
+          </Column>
+          <Column Ident="ITSMImplementationChangeProposalDecisionGuid" TitleResourceKey="ITSMImplementationChangeProposalDecisionGuid_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              impChaProDec.TextValue AS ITSMImplementationChangeProposalDecisionGuid
+            </SQL>
+          </Column>
+          <Column Ident="ITSMChangeID" TitleResourceKey="ITSMChangeID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              CONCAT(itsmCha.ITSMKey,' - ',itsmCha.[Subject]) AS ITSMChangeID
+            </SQL>
+          </Column>
+          <Column Ident="CoordinatorAccountIDs" TitleResourceKey="CoordinatorAccountIDs_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              STUFF(
+                (
+                  SELECT ', ' + acc.FullName
+                  FROM dbo.MultiSelect AS mus
+                  INNER JOIN dbo.Account as acc on acc.ID = mus.[Value]
+                  WHERE
+                    mus.TableID = itsReq.ID
+                    AND mus.FormIdent = @FormIdent
+                    AND mus.ControlIdent = @ControlIdent
+
+                  FOR XML PATH('')
+                )
+              , 1, 2, '') AS CoordinatorAccountIDs
+            </SQL>
+          </Column>
+          <Column Ident="AssignedGroupID" TitleResourceKey="AssignedGroupID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              gro.[Name] AS [AssignedGroupID]
+            </SQL>
+          </Column>
+          <Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl">
+            <SQL>
+              accAsg.FullName AS [AssignedAccountID]
+            </SQL>
+          </Column>
+        </Columns>
+        <Froms>
+          <dsf:From Ident="ftvCat2">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel2Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat2 ON ftvCat2.FolderTreeIdent = itsReq.ITSMCategoryLevel2Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat3">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel3Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat3 ON ftvCat3.FolderTreeIdent = itsReq.ITSMCategoryLevel3Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat4">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel4Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat4 ON ftvCat4.FolderTreeIdent = itsReq.ITSMCategoryLevel4Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat5">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel5Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat5 ON ftvCat5.FolderTreeIdent = itsReq.ITSMCategoryLevel5Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accRep">
+            <dsf:Columns>
+              <dsf:string>ReporterAccountID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.Account as accRep on accRep.ID = itsReq.ReporterAccountID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accAsg">
+            <dsf:Columns>
+              <dsf:string>AssignedAccountID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.Account as accAsg on accAsg.ID = itsReq.AssignedAccountID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="gro">
+            <dsf:Columns>
+              <dsf:string>AssignedGroupID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.[Group] as gro on gro.ID = itsReq.AssignedGroupID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="impChaProDec">
+            <dsf:Columns>
+              <dsf:string>ITSMImplementationChangeProposalDecisionGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMImplementationChangeProposalDecision as impChaProDec on impChaProDec.Ident = itsReq.ITSMImplementationChangeProposalDecisionGuid AND impChaProDec.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="itsmCha">
+            <dsf:Columns>
+              <dsf:string>ITSMChangeID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMChange as itsmCha on itsmCha.ID = itsReq.ITSMChangeID
+            </dsf:SQL>
+          </dsf:From>
+        </Froms>
+        <SQL>
+
+          SELECT
+            itsReq.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMInovation AS itsReq
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+          #ADDFROM#
+          WHERE
+            itsReq.[State] != @DeletedState
+            AND (
+              (
+                ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMInovation(itsReq)|ITSMInovationReporter|]#
+              )
+              OR
+              (
+                ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMInovation(itsReq)|ITSMInovationReporter,ITSMAuthor|]#
+              )
+              OR
+              (
+                #PERMISSION[ITSMInovation(itsReq)]#
+              )
+            ) #FILTER#
+
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMInovation" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="50" Value="CoordinatorAccountIDs" />
+        </Parameters>
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

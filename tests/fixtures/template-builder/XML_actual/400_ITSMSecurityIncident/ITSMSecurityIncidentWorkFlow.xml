@@ -1,0 +1,958 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMSecurityIncidentWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMSecurityIncident" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" /> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning" /> <!--New-->
+			<State Value="10" TitleResourceKey="Categorization_ITSM" ColorCssClass="warning" /><!-- Kategorizace -->
+      <State Value="15" TitleResourceKey="Analysis_ITSM" ColorCssClass="primary" /> <!--Analýza-->
+      <State Value="20" TitleResourceKey="RiskValidation_ITSM" ColorCssClass="primary" /> <!--Validace-->
+      <State Value="30" TitleResourceKey="ProposedMeasureAndSolution_ITSM" ColorCssClass="primary" /> <!--Návrh opatření a řešení-->
+      <State Value="40" TitleResourceKey="ProposedMeasureAndSolutionSignificantIncident_ITSM" ColorCssClass="primary" /> <!--Návrh opatření a řešení významného bezpečnostního incident-->
+
+      <State Value="50" TitleResourceKey="IncidentEvaluation_ITSM" ColorCssClass="primary" /> <!--Vyhodnocení incidentu-->
+      <State Value="60" TitleResourceKey="SentToHDMZE_ITSM" ColorCssClass="primary" /> <!--HD MZe-->
+
+      <State Value="70" TitleResourceKey="SentToOKBManager_ITSM" ColorCssClass="primary" /> <!--Schválení Vedoucím OKB-->
+
+			<State Value="80" TitleResourceKey="SolutionAssignedToTeam_ITSM" ColorCssClass="success" /><!-- SolutionAssignedToTeam : Přiděleno řešitelskému týmu -->
+			<State Value="90" TitleResourceKey="SolutionAssigned_ITSM" ColorCssClass="primary" /><!-- SolutionAssigned : Přiděleno řešiteli -->
+			<State Value="100" TitleResourceKey="SolutionValidation_ITSM" ColorCssClass="primary" /><!-- SolutionAssigned : Přiděleno řešiteli -->
+			<State Value="200" TitleResourceKey="Closed_ITSM" ColorCssClass="dark" /><!-- Closed : Uzavřeno -->
+
+    </States>
+  </Definition>
+
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5">
+      <Selectors>
+        <string>.js-howHideCategoryLevel5</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
+
+  <ControlShareCodes>
+		<ControlShareCode Ident="ShowCommunicationControlShare">
+			<Controls>
+
+				<FormControl Ident="CommunicationList" IsVisible="true" />
+				<FormControl Ident="PHCommunicationCard" IsVisible="true" />
+
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableCommunicationControlShare">
+			<Controls>
+
+				<FormControl Ident="Communication" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="CommunicationList" IsVisible="true" />
+				<FormControl Ident="PHCommunicationCard" IsVisible="true" />
+
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
+
+		<ControlShareCode Ident="ShowResolutionControlShare">
+			<Controls>
+				<FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" />
+				<FormControl Ident="SolutionDescription" IsVisible="true" />
+				<FormControl Ident="SolutionAditionalInformation" IsVisible="true" />
+        <FormControl Ident="PHSolutionCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" /> -->
+
+		<ControlShareCode Ident="EnableResolutionControlShare">
+			<Controls>
+				<FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SolutionDescription" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SolutionAditionalInformation" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="PHSolutionCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" /> -->
+
+		<ControlShareCode Ident="ShowAssigneeControlShare">
+			<Controls>
+				<FormControl Ident="AssignedGroupID" IsVisible="true" />
+				<FormControl Ident="AssignedAccountID" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowAssigneeControlShare" /> -->
+
+		<ControlShareCode Ident="ShowContactInformationControlShare">
+			<Controls>
+				<FormControl Ident="ReporterAccountID" IsVisible="true" />
+				<FormControl Ident="ReporterEmail" IsVisible="true" />
+				<FormControl Ident="ReporterPhone" IsVisible="true" />
+				<FormControl Ident="PHContactInformationCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableContactInformationControlShare">
+			<Controls>
+				<FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="PHContactInformationCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableContactInformationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableCategoryControlShare">
+			<Controls>
+				<FormControl Ident="ITSMCompanyIdent" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel2Ident" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel3Ident" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel4Ident" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel5Ident" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" /> -->
+
+		<ControlShareCode Ident="EnableBasicControlShare">
+			<Controls>
+				<FormControl Ident="Subject" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="Description" IsVisible="true" IsReadOnly="false" />
+
+        <FormControl Ident="PHRequestControlCard" IsVisible="true" />
+        <FormControl Ident="DialogAssignedGroupID" IsReadOnly="false" />
+        <FormControl Ident="DialogCommunication" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedAccountID" IsReadOnly="false" />
+        <FormControl Ident="DialogAssignedMyselfGroupID" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" /> -->
+
+		<ControlShareCode Ident="ShowLinkControlShare">
+			<Controls>
+        <FormControl Ident="ParentITSMID" IsVisible="true" />
+				<FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubform" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> -->
+
+		<ControlShareCode Ident="EnableLinkControlShare">
+			<Controls>
+				<FormControl Ident="ParentITSMID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SubTicketDataGrid" IsVisible="true" />
+				<FormControl Ident="ITSMLinkSubform" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> -->
+
+		<ControlShareCode Ident="EnableQuickAnalysisControlShare">
+			<Controls>
+				<FormControl Ident="PHQuickAnalysisCard" IsVisible="true" />
+				<FormControl Ident="ITSMSecurityIncidentTypeCodeGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="AnalysisJustification" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableQuickAnalysisControlShare" /> -->
+
+		<ControlShareCode Ident="ShowQuickAnalysisControlShare">
+			<Controls>
+				<FormControl Ident="PHQuickAnalysisCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowQuickAnalysisControlShare" /> -->
+
+		<ControlShareCode Ident="EnableSecurityIncidentClassificationControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentClassificationCard" IsVisible="true" />
+				<FormControl Ident="ITSMSecurityIncidentUrgencyCategoryGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentImpactCategoryGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentPriorityLevelGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentResponseProcedureTypeGuid" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentClassificationControlShare" /> -->
+
+		<ControlShareCode Ident="ShowSecurityIncidentClassificationControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentClassificationCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableSecurityIncidentAnalysisControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentAnalysisCard" IsVisible="true" />
+				<FormControl Ident="AnalysisSecurityIncident" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IncidentWorkCode" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentClassificationTypeGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentAffectedUserCountGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="AffectedSystems" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="Confidentiality" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="Integrity" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="Availability" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsAffectedOperatingSystem" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsAffectedSoftware" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsAffectedInternalNetwork" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsAffectedServices" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsAffectedInformation" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsAffectedVIS" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentAnalysisControlShare" /> -->
+
+		<ControlShareCode Ident="ShowSecurityIncidentAnalysisControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentAnalysisCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" /> -->
+
+		<ControlShareCode Ident="EnableSecurityIncidentImpactControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentImpactCard" IsVisible="true" />
+				<FormControl Ident="IsOrganizationalDifficulties" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsDataCompromise" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsFinancialLoss" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsThreatToPersonalInformation" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsInabilityToFulfillObligation" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsInabilityToContinueOperations" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsInvasionOfPrivacy" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsThreatToReputation" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentImpactControlShare" /> -->
+
+		<ControlShareCode Ident="ShowSecurityIncidentImpactControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentImpactCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" /> -->
+
+		<ControlShareCode Ident="EnableSecurityIncidentSecondAnalysisControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentSecondAnalysisCard" IsVisible="true" />
+				<FormControl Ident="ITSMSecurityIncidentRootCauseTypeGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReactiveMeasure" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentAffectedInformationClassGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IncidentTechnicalDescription" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="Risks" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="StateOfCoping" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="AffectedSystemsCount" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="AffectedUsersCount" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="TargetOfAttack" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="HostOrIP" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="HostFunction" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentSecondAnalysisControlShare" /> -->
+
+		<ControlShareCode Ident="ShowSecurityIncidentSecondAnalysisControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentSecondAnalysisCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" /> -->
+
+		<ControlShareCode Ident="EnableSecurityIncidentMeasureControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentMeasureCard" IsVisible="true" />
+				<FormControl Ident="SequenceNumber" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="IsImmediateCorrectiveAction" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ImmediateCorrectiveActionDateTime" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ImmediateCorrectiveActionRequestorID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentControlTypeGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentControlStatusGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMSecurityIncidentControlPriorityGuid" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SecuriyIncidentDescription" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SecurityIncidentTask" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SecurityIncidentCreateDateTime" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SecurityIncidentSolveDateTime" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="RelatedSequenceNumber" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SecurityIncidentRequestorID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SecurityIncidentOutput" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SecurityIncidentFile" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="AssignedAccountID" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentMeasureControlShare" /> -->
+
+		<ControlShareCode Ident="ShowSecurityIncidentMeasureControlShare">
+			<Controls>
+				<FormControl Ident="PHSecurityIncidentMeasureCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentMeasureControlShare" /> -->
+
+		<ControlShareCode Ident="EnableCSIRTTeamControlShare">
+			<Controls>
+				<FormControl Ident="PHCSIRTTeamCard" IsVisible="true" />
+				<FormControl Ident="CSIRTTeamConveningDateTime" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="CSIRTNegotiationResult" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="CSIRTOtherInformationFile" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCSIRTTeamControlShare" /> -->
+
+		<ControlShareCode Ident="ShowCSIRTTeamControlShare">
+			<Controls>
+				<FormControl Ident="PHCSIRTTeamCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCSIRTTeamControlShare" /> -->
+
+		<ControlShareCode Ident="EnableSERTTeamControlShare">
+			<Controls>
+				<FormControl Ident="PHSERTTeamCard" IsVisible="true" />
+				<FormControl Ident="SERTTeamConveningDateTime" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SERTNegotiationResult" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SERTOtherInformationFile" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableSERTTeamControlShare" /> -->
+
+		<ControlShareCode Ident="ShowSERTTeamControlShare">
+			<Controls>
+				<FormControl Ident="PHSERTTeamCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowSERTTeamControlShare" /> -->
+
+		<ControlShareCode Ident="EnableIncidentResolutionControlShare">
+			<Controls>
+				<FormControl Ident="PHIncidentResolutionCard" IsVisible="true" />
+        <FormControl Ident="ITSMSecurityIncidentBreachVectorTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMSecurityIncidentThreatActorTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMSecurityIncidentLogicalIntrusionTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMSecurityIncidentKeyBusinessImpactTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMSecurityIncidentOutcomeTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMSecurityIncidentTheftCategoryGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMSecurityIncidentFailureCategoryGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="CauseOfTheIncidentInformation" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentResolutionControlShare" /> -->
+
+		<ControlShareCode Ident="ShowIncidentResolutionControlShare">
+			<Controls>
+				<FormControl Ident="PHIncidentResolutionCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowIncidentResolutionControlShare" /> -->
+
+		<ControlShareCode Ident="EnableIncidentClosureControlShare">
+			<Controls>
+				<FormControl Ident="PHIncidentClosureCard" IsVisible="true" />
+        <FormControl Ident="ITSMSecurityIncidentResolutionMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="SecurityIncidentResolutionOtherInformationFile" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentClosureControlShare" /> -->
+
+		<ControlShareCode Ident="ShowIncidentClosureControlShare">
+			<Controls>
+				<FormControl Ident="PHIncidentClosureCard" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowIncidentClosureControlShare" /> -->
+  </ControlShareCodes>
+
+  <ActionShareCodes>
+    <!-- <ActionShareCode Ident="BasicRequiredActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string></string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                @PaymentTermsIdent = 'Other'
+              , 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="PaymentTermsIdent" DataType="String" />
+            </Parameters>
+          </Condition>
+          <TrueActions><Action xsi:type="Required" ActionStart="BeforeValidation">
+            <Idents>
+              <string>PaymentTermsOther</string>
+            </Idents>
+          </Action>
+          </TrueActions>
+        </Action>
+      </Actions>
+
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="BasicRequiredActionShare" /> -->
+
+    <!-- Email Actions -->
+    <!-- <ActionShareCode Ident="*EmailActionShare">
+      <Actions>
+
+        <Action xsi:type="Email" SubjectResourceKey="*_Email_ITSM" BodyResourceKey="*_Email_ITSM" EmailIdent="*_Email_ITSM" ActionStart="AfterPermission" Ident="*_Email_ITSM">
+          <Recipients>
+            <Recipient RecipientType="To" SourceType="Permission" Value="*" />
+          </Recipients>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="SubmitEmailActionShare" /> -->
+
+  </ActionShareCodes>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SendToCategorizationButtonShare">
+      <Buttons>
+        <Button Ident="SendToCategorizationButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="10" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToCategorizationButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendToAnalysisButtonShare">
+      <Buttons>
+        <Button Ident="SendToAnalysisButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="15" ActionStart="AfterSave" />
+            <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+              <DataSource>
+                <SQL>
+                  DECLARE
+                    @CounterIdent VARCHAR(100) = 'SI-',
+                    @NextNumber INT
+
+                  EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+                  UPDATE usr.ITSMSecurityIncident
+                  SET ITSMKey = CONCAT(@CounterIdent, RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+                  WHERE ID = @ID
+                </SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                </Parameters>
+              </DataSource>
+            </Action>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToAnalysisButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+    <ButtonShareCode Ident="AnalysisGroupButtonShare">
+			<Buttons>
+				<Button Ident="AnalysisGroupButton" IsVisible="true" />
+        <Button Ident="AcceptableRiskButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="60" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="StandardRiskButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="SignificantRiskButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+			</Buttons>
+		</ButtonShareCode><!-- <Button xsi:type="ShareCodeButton" Ident="AnalysisGroupButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendToMeasureAndSolutionSignificantRiskButtonShare">
+      <Buttons>
+        <Button Ident="SendToMeasureAndSolutionSignificantRiskButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToMeasureAndSolutionSignificantRiskButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendBackToAnalysisButtonShare">
+      <Buttons>
+        <Button Ident="SendBackToAnalysisButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="10" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendBackToAnalysisButtonShare" />  -->
+
+    <ButtonShareCode Ident="SolvedButtonShare">
+      <Buttons>
+        <Button Ident="SolvedButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolvedButtonShare" />  -->
+
+    <ButtonShareCode Ident="AssignToGroupButtonShare">
+      <Buttons>
+        <Button Ident="AssignToGroupButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="80" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />  -->
+
+    <ButtonShareCode Ident="SentToOKBManagerApproveButtonShare">
+      <Buttons>
+        <Button Ident="SentToOKBManagerApproveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="70" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SentToOKBManagerApproveButtonShare" />  -->
+
+    <ButtonShareCode Ident="SendToHDMZeButtonShare">
+      <Buttons>
+        <Button Ident="SendToHDMZeButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="60" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToHDMZeButtonShare" />  -->
+
+    <ButtonShareCode Ident="CloseButtonShare">
+      <Buttons>
+        <Button Ident="CloseButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="200" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />  -->
+
+    <ButtonShareCode Ident="ApproveButtonShare">
+      <Buttons>
+        <Button Ident="ApproveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="80" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ApproveButtonShare" />  -->
+
+    <ButtonShareCode Ident="RejectButtonShare">
+      <Buttons>
+        <Button Ident="RejectButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="200" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="RejectButtonShare" />  -->
+
+    <ButtonShareCode Ident="AssignButtonShare">
+      <Buttons>
+        <Button Ident="AssignButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="90" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />  -->
+
+    <ButtonShareCode Ident="AssignToMeButtonShare">
+      <Buttons>
+        <Button Ident="AssignToMeButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="90" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />  -->
+
+    <ButtonShareCode Ident="AssignSolvedButtonShare">
+      <Buttons>
+        <Button Ident="SolvedButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="100" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssignSolvedButtonShare" />  -->
+
+    <ButtonShareCode Ident="SolutionRejectedButtonShare">
+      <Buttons>
+        <Button Ident="SolutionRejectedButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="90" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolutionRejectedButtonShare" />  -->
+
+  </ButtonShareCodes>
+
+  <GlobalActions>
+
+    <!-- <Action xsi:type="ActionTrigger" Ident="*" ActionStart="AfterSave">
+      <DataSource>
+        <SQL>
+
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+        </Parameters>
+      </DataSource>
+    </Action> -->
+
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SendToAnalysisButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SendToCategorizationButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="10">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SendToAnalysisButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Categorization_ITSM-->
+    <Step State="15">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AnalysisGroupButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Analysis_ITSM-->
+    <Step State="20">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SendToMeasureAndSolutionSignificantRiskButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SendBackToAnalysisButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--RiskValidation_ITSM-->
+    <Step State="30">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SolvedButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--ProposedMeasureAndSolution_ITSM-->
+    <Step State="40">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SolvedButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SentToOKBManagerApproveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--ProposedMeasureAndSolutionSignificantIncident_ITSM-->
+    <Step State="50">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SendToHDMZeButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentClosureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--IncidentEvaluation_ITSM-->
+    <Step State="60">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentClosureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--SentToHDMZE_ITSM-->
+    <Step State="70">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ApproveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="RejectButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentClosureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--SentToOKBManager_ITSM-->
+    <Step State="80">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--SolutionAssignedToTeam_ITSM-->
+    <Step State="90">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignSolvedButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentClosureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--SolutionAssigned_ITSM-->
+    <Step State="100">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SolutionRejectedButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableIncidentClosureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--SolutionValidation_ITSM-->
+    <Step State="200">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSecurityIncident</string>
+          </Permissions>
+          <Buttons>
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowQuickAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentClassificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentImpactControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentSecondAnalysisControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSecurityIncidentMeasureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCSIRTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowSERTTeamControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowIncidentResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowIncidentClosureControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowContactInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Closed_ITSM-->
+
+  </Steps>
+</WorkFlow>

@@ -1,0 +1,666 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters"
+xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl"
+xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" 
+xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings"
+Ident="ITSMKnowledgeBase"
+SegmentType="ITSMKnowledgeBaseSegment"
+IsFolderTreePermission="true"
+PackageIdent="ITSMPackage"
+>
+	<DataPermissions>
+		<string>ITSMKnowledgeBase</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMKnowledgeBaseAdmin</string>
+	</CreatePermissions>
+	<Settings>
+		<Setting xsi:type="FolderTreeSetting">
+			<Items>
+				<FolderTreeItemSetting ControlIdent="FolderIdent" Level="1" />
+			</Items>
+		</Setting>
+	</Settings>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton" IconCssClass="icon-floppy-disk" ColorType="Primary" IsSave="true" IsVisible="false" IsStopRedirect="true" PlacementType="Top Bottom"/>
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton" IconCssClass="icon-bin2" ColorType="Danger" IsSave="false"  IsVisible="false" >
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle" DescriptionResourceKey="DeleteDialogDescription" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton" IconCssClass="icon-undo2"/>
+	</Buttons>
+	<Controls>
+		<Control xsi:type="TextBoxControl" Ident="ShowSubcategory" DataType="Bool">
+			<DataBind>
+				<Dependencies>
+					<string>CategoryID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ShowSubcategory" DataBindType="Value" ></Column>
+				</Columns>
+				<SQL>
+					SELECT CAST(IIF(ParentCategory is not null, 1, 0) as bit) AS ShowSubcategory
+					FROM usr.Category
+					WHERE ParentCategory = @CategoryID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="FolderTreeControl" Ident="FolderIdent" FolderGroupSegmentIdent="ITSMCommonFolderGroup" IsFolderTreePermission="true" TitleResourceKey="ITSMKnowledgeBaseFolderAll_ITSM" IsReadOnly="true"/>
+
+		<Control xsi:type="TextBoxControl" Ident="TitleEN" DataType="String" TitleResourceKey="Title_ITSM" IsFullText="true" IsReadOnly="true"/>
+		<Control xsi:type="TextBoxControl" Ident="TitleCZ" DataType="String" IsRequired="true" TitleResourceKey="Title_ITSM" IsFullText="true" IsReadOnly="true"/>
+		<Control xsi:type="DropDownListControl" Ident="CategoryID" DataType="Number" IsShowRequired="true" TitleResourceKey="CategoryID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title"/>
+				</Columns>
+				<SQL>
+					SELECT DISTINCT
+							wc.[ID]
+							, wc.[Name]
+					FROM usr.[Category] AS wc
+					LEFT JOIN usr.Category as wcp on wcp.ParentCategory = wc.ID
+					JOIN dbo.AccountComputedPermissionComputed acp on (acp.TableID = wc.ID OR acp.TableID = wcp.ID) and FormIdent = 'Category' and PermissionID = 'TicketAuthor'
+					WHERE wc.[State] != 0
+						AND (wc.ParentCategory is null OR wc.ParentCategory = acp.TableID)
+						AND acp.AccountID = @UserID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="SubcategoryID" DataType="String" IsShowRequired="true" TitleResourceKey="SubcategoryID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue">
+				<Dependencies>
+					<string>CategoryID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" ></Column>
+					<Column Ident="Name" DataBindType="Title"></Column>
+				</Columns>
+				<SQL>
+					SELECT DISTINCT wc.ID, wc.Name
+					FROM usr.Category wc
+					LEFT JOIN usr.Category as wcp on wcp.ID = wc.ParentCategory
+					JOIN dbo.AccountComputedPermissionComputed acp on (acp.TableID = wc.ID OR acp.TableID = wcp.ID) 
+						and acp.FormIdent = 'Category' and acp.PermissionID = 'TicketAuthor'
+					WHERE wc.ParentCategory = @CategoryID
+						AND wc.State != 0
+						AND acp.AccountID = @UserID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataBind>
+		</Control>
+		<Control xsi:type="RichTextBoxControl" Ident="ContentEN" Height="400" DataType="String" EnterType="P" TitleResourceKey="Content_ITSM" IsFullText="true" IsReadOnly="true"/>
+		<Control xsi:type="RichTextBoxControl" Ident="ContentCZ" Height="400" DataType="String" IsRequired="true" EnterType="P" TitleResourceKey="Content_ITSM" IsFullText="true" IsReadOnly="true"/>
+
+		<Control xsi:type="TagControl" Ident="ITSMKnowledgeBaseTag" DataType="StringList" IsAnyValue="true" IsRequired="true" TitleResourceKey="ITSMKnowledgeBaseTag_ITSM" IsReadOnly="true"> 
+			<DataBind> 
+				<Columns> 
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Value" DataBindType="Title"/>
+				</Columns> 
+				<SQL>
+					SELECT DISTINCT [Value] as ID, [Value]
+					FROM dbo.MultiSelect
+					WHERE FormIdent = @FormIdent AND ControlIdent = @ControlIdent AND [Value] LIKE @ITSMKnowledgeBaseTag
+				</SQL>
+				<Parameters> 
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKnowledgeBaseTag" DataType="String" LikeType="Both" MaxLength="200"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="200" Value="ITSMKnowledgeBase"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="200" Value="ITSMKnowledgeBaseTag"/>
+				</Parameters> 
+			</DataBind> 
+			<SelectedDataBind> 
+				<Columns> 
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="Value" DataBindType="Title"/>
+				</Columns> 
+				<SQL> 
+					SELECT Value as ID, Value as Value 
+					FROM @ITSMKnowledgeBaseTag 
+				</SQL> 
+				<Parameters> 
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKnowledgeBaseTag" DataType="StringList"/>
+				</Parameters> 
+			</SelectedDataBind>
+		</Control>
+
+		<Control xsi:type="FileControl" Ident="ContentIntoTxtFileList" IsReadOnly="true"/>
+		<Control xsi:type="TextBoxControl" Ident="FileENID" DataType="Number" IsReadOnly="true"/>
+		<Control xsi:type="TextBoxControl" Ident="FileCZID" DataType="Number" IsReadOnly="true"/>
+		<Control xsi:type="FileControl" Ident="FileList" IsShowDeleteButton="true" DeleteType="Creator" IsReadOnly="true"></Control>
+		<Control xsi:type="FileGalleryControl" Ident="FileGallery" FileControlIdent="FileList" TitleResourceKey="FileGallery_ITSM" IsReadOnly="true">
+			<Settings>
+				<fcs:Setting xsi:type="fcs:ImageResizeSetting" Percent="10" ResizeType="PercentResize" ></fcs:Setting>
+				<fcs:Setting xsi:type="fcs:PreviewResizeSetting" Percent="10" ResizeType="PercentResize" ></fcs:Setting>
+			</Settings>
+			<!-- <DataSource>
+				<Columns>
+					<Column Ident="Name" DataBindType="Value"/>
+				</Columns>
+				<SQL>
+					SELECT Name
+					FROM dbo.[File]
+					WHERE FormIdent = 'ITSMKnowledgeBase'
+						AND TableID = @ID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+				</Parameters>
+			</DataSource> -->
+		</Control>
+
+		<Control xsi:type="SwitchControl" Ident="IsFavorite" Default="0" TitleResourceKey="IsFavorite_ITSM" IsReadOnly="true" />
+		<Control xsi:type="SwitchControl" Ident="IsShowOnDashboard" Default="0" TitleResourceKey="ShowOnDashboard_ITSM" IsReadOnly="true">
+			<DataBind>
+				<Dependencies>
+					<string>CategoryID</string>
+					<string>SubCategoryID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT
+						CASE
+							WHEN EXISTS(
+								SELECT
+									NULL
+								FROM
+									usr.Category wc
+								WHERE
+									wc.ID = @CategoryID
+									AND wc.IsShowOnDashboard = @Active
+									AND @SubCategoryID IS NULL
+							)
+							THEN 1
+							WHEN EXISTS(
+								SELECT
+									NULL
+								FROM
+									usr.Category wc
+								WHERE
+									wc.ID = @SubCategoryID
+									AND wc.IsShowOnDashboard = @Active
+							)
+							THEN 1
+							ELSE 0
+						END AS [Value]
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SubCategoryID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Active" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsShowInQuickLinks" Default="0" TitleResourceKey="ShowInQuickLinks_ITSM" IsReadOnly="true">
+			<DataBind>
+				<Dependencies>
+					<string>CategoryID</string>
+					<string>SubCategoryID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT
+						CASE
+							WHEN EXISTS(
+								SELECT
+									NULL
+								FROM
+									usr.Category wc
+								WHERE
+									wc.ID = @CategoryID
+									AND wc.IsShowInQuickLinks = @Active
+									AND @SubCategoryID IS NULL
+							)
+							THEN 1
+							WHEN EXISTS(
+								SELECT
+									NULL
+								FROM
+									usr.Category wc
+								WHERE
+									wc.ID = @SubCategoryID
+									AND wc.IsShowInQuickLinks = @Active
+							)
+							THEN 1
+							ELSE 0
+						END AS [Value]
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SubCategoryID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Active" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsShowToAll" TitleResourceKey="ShowToAll_ITSM" IsReadOnly="true">
+			<DataBind>
+				<Dependencies>
+					<string>CategoryID</string>
+					<string>SubCategoryID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT
+						CASE
+							WHEN EXISTS(
+								SELECT
+									NULL
+								FROM
+									usr.Category wc
+								WHERE
+									wc.ID = @CategoryID
+									AND wc.IsShowToAll = @Active
+									AND @SubCategoryID IS NULL
+							)
+							THEN 1
+							WHEN EXISTS(
+								SELECT
+									NULL
+								FROM
+									usr.Category wc
+								WHERE
+									wc.ID = @SubCategoryID
+									AND wc.IsShowToAll = @Active
+							)
+							THEN 1
+							ELSE 0
+						END AS [Value]
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SubCategoryID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Active" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="CommunicationControl" Ident="ITSMKnowledgeBaseCommunication" Height="50" DataType="String" TitleResourceKey="ITSMKnowledgeBaseCommunication_ITSM" IsReadOnly="false" IsVisible="true" IsPriority="false"/>
+
+        <Control xsi:type="DataGridControl" Ident="ITSMKnowledgeBaseComments">
+            <DataSource>
+                <Columns>
+                    <Column Ident="FullName" TitleResourceKey="FullName_ITSM" Width="10" />
+                    <Column Ident="Content" TitleResourceKey="Content_ITSM" Width="10" />
+                    <Column Ident="CommentDate" TitleResourceKey="CommentDate_ITSM" Width="10" />
+                </Columns>
+                <SQL>
+                    SELECT acc.FullName, c.Content, c.CreateDate as CommentDate
+                    FROM dbo.Communication c
+                    JOIN dbo.Account acc on acc.ID = c.AccountID
+                    WHERE c.FormIdent = 'ITSMKnowledgeBase'
+                        AND c.ControlIdent = 'ITSMKnowledgeBaseCommunication'
+                        AND c.TableID = @ID
+                    ORDER BY c.CreateDate DESC
+                </SQL>
+                <Parameters>
+                    <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                </Parameters>
+            </DataSource>
+        </Control>
+	</Controls>
+	
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="ContentSection" TitleResourceKey="ContentSection_ITSM" IconCssClass="icon-bookmark" IsRazorEngine="true">
+			<Sources>
+				<DataSource Ident="Language">
+					<Columns>
+						<Column Ident="LanguageID" />
+					</Columns>
+					<SQL>
+						SELECT @UserLanguageID as LanguageID
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="Summary">
+					<Columns>
+						<Column Ident="TitleEN" TitleResourceKey="Title_ITSM" />
+						<Column Ident="TitleCZ" TitleResourceKey="Title_ITSM" />
+						<Column Ident="ContentEN" TitleResourceKey="Content_ITSM" />
+						<Column Ident="ContentCZ" TitleResourceKey="Content_ITSM" />
+						<Column Ident="CreateDate" TitleResourceKey="Content_ITSM" />
+						<Column Ident="UpdateDate" TitleResourceKey="Content_ITSM" />
+						<Column Ident="Tags" TitleResourceKey="Content_ITSM" />
+					</Columns>
+					<SQL>
+						SELECT
+							COALESCE(w.[TitleEN], '') AS TitleEN,
+							COALESCE(w.[TitleCZ], '') AS TitleCZ,
+							COALESCE(w.[ContentEN], '') AS ContentEN,
+							COALESCE(w.[ContentCZ], '') AS ContentCZ,
+							FORMAT(w.[CreateDate], 'dd. MM. yyyy') AS CreateDate,
+							FORMAT(w.[LastUpdate], 'dd. MM. yyyy') AS UpdateDate,
+							(
+								SELECT 
+									STRING_AGG(CONCAT('<a style="color: #999 !important;" href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView?filter=ITSMKnowledgeBaseTag:',ms.[Value],'">',ms.[Value],'</a>'), ', ') AS Tags
+								FROM dbo.MultiSelect as ms
+								WHERE ms.FormIdent = @FormIdent AND ms.ControlIdent = @ControlIdent AND ms.TableID = w.ID
+							) as Tags
+							,acc.[FullName] AS CreateAccount
+						FROM usr.[ITSMKnowledgeBase] AS w
+						LEFT JOIN dbo.[Account] AS acc ON acc.[ID] = w.[AccountID]
+						WHERE 
+							w.[ID] = @ID
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMKnowledgeBase"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="50" Value="ITSMKnowledgeBaseTag"/>
+					</Parameters>
+				</DataSource>
+			</Sources>
+			<HTMLTemplate>
+				<fieldset>
+					@{
+						var languageObject = Model.SingleObject(Model.Data.Language);
+						var summary = Model.SingleObject(Model.Data.Summary);
+					}
+
+					<div class="row">
+
+						@{
+							var TitleCZ = Model.SingleObject(Model.Data.Summary).TitleCZ ?? String.Empty;
+							var TitleEN = Model.SingleObject(Model.Data.Summary).TitleEN ?? String.Empty;
+							var ContentCZ = Model.SingleObject(Model.Data.Summary).ContentCZ ?? String.Empty;
+							var ContentEN = Model.SingleObject(Model.Data.Summary).ContentEN ?? String.Empty;
+
+							var LangTitle = languageObject.LanguageID == 1
+								? (!string.IsNullOrEmpty(TitleCZ) ? TitleCZ : TitleEN)
+								: (!string.IsNullOrEmpty(TitleEN) ? TitleEN : TitleCZ);
+
+							var LangContent = languageObject.LanguageID == 1
+								? (!string.IsNullOrEmpty(ContentCZ) ? ContentCZ : ContentEN)
+								: (!string.IsNullOrEmpty(ContentEN) ? ContentEN : ContentCZ);
+						}
+						<div class="col">
+							<div class="row">
+								<div class="col">
+									<div class="card">
+										<div class="card-body">
+											<h4 class="font-weight-semibold mb-1"><text>@LangTitle</text></h4>
+											<ul class="list-inline list-inline-dotted text-muted mb-3">
+												<li class="list-inline-item">[#PublishedOn_ITSM#]
+													<b>@summary.CreateDate</b>
+												</li>
+												<li class="list-inline-item">[#UpdatedOn_ITSM#]
+													<b>@summary.UpdateDate</b>
+												</li>
+												<li class="list-inline-item">[#PublishedBy#]
+													<b>@summary.CreateAccount</b>
+												</li>
+												<li class="list-inline-item">[#Tags_ITSM#]
+													<b>@Html.Raw(@summary.Tags)</b>
+												</li>
+											</ul>
+											<div id="ITSMKnowledgeBase-content">
+												<text>@Html.Raw(LangContent)</text>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							<div class="card">
+								<div class="card-body">
+									<div class="row">
+										<div class="col">
+											<div class="form-group">
+												<!-- <ControlLabel ControlID="FileGallery" /> -->
+												<Control ID="FileGallery" />
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col">
+											<div class="form-group">
+												<ControlLabel ControlID="ITSMKnowledgeBaseCommunication" />
+												<Control ID="ITSMKnowledgeBaseCommunication" />
+											</div>
+										</div>
+										<div class="col">
+											<div class="form-group">
+												<Control ID="ITSMKnowledgeBaseComments" />
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</fieldset>
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ContentSection" Ident="EditorSection" TitleResourceKey="EditorSection_ITSM" IconCssClass="icon-pencil5">
+			<Sources>
+				<DataSource Ident="Tags">
+					<Columns>
+						<Column Ident="Tags" TitleResourceKey="Content_ITSM" />
+					</Columns>
+					<SQL>
+						SELECT 
+							STRING_AGG(Tag, ', ') AS Tags
+						FROM (
+							SELECT DISTINCT ms.Value as Tag
+							FROM dbo.MultiSelect as ms
+							WHERE ms.FormIdent = @FormIdent AND ms.ControlIdent = @ControlIdent
+						) as a
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMKnowledgeBase"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="50" Value="ITSMKnowledgeBaseTag"/>
+					</Parameters>
+				</DataSource>
+			</Sources>
+			<HTMLTemplate>
+				<fieldset>
+					<div hidden>
+						<Control ID="ShowSubcategory" />
+					</div>
+					<div class="row">
+						<div class="col">
+							<div class="card">
+								<div class="card-header custom-header bg-light text-secondary header-elements-sm-inline">
+									<div class="header-elements">
+										<div class="list-icons">
+											<a class="list-icons-item" data-action="collapse"></a>
+										</div>
+										<h6 class="card-title text-uppercase font-size-sm font-weight-bold text-secondary">
+											[#Basic#]
+										</h6>
+									</div>
+								</div>
+								<div class="card-body collapse show" id="accordion-item-default1" data-parent="#accordion-item">
+									<div class="row">
+										<div class="col-md-6">
+											<!-- <div class="row">
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="CategoryID" />
+														<Control ID="CategoryID" />
+													</div>
+												</div>
+												<div class="col-md-6 js-showHideSubcategory">
+													<div class="form-group">
+														<ControlLabel ControlID="SubcategoryID" />
+														<Control ID="SubcategoryID" />
+													</div>
+												</div>
+											</div> -->
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="FolderIdent" />
+														<Control ID="FolderIdent" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMKnowledgeBaseTag" />
+														<Control ID="ITSMKnowledgeBaseTag" />
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="row">
+												<div class="col">
+													<div class="form-group">
+														<ControlLabel ControlID="FileList" />
+														<Control ID="FileList" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							<div class="card">
+								<div class="card-header custom-header bg-light text-secondary header-elements-sm-inline">
+									<div class="header-elements">
+										<div class="list-icons">
+											<a class="list-icons-item" data-action="collapse"></a>
+										</div>
+										<h6 class="card-title text-uppercase font-size-sm font-weight-bold text-secondary">
+											[#CZ#]
+										</h6>
+									</div>
+								</div>
+								<div class="card-body collapse show" id="accordion-item-default1" data-parent="#accordion-item">
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group">
+												<ControlLabel ControlID="TitleCZ" />
+												<Control ID="TitleCZ" />
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="ContentCZ" />
+												<Control ID="ContentCZ" />
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col">
+							<div class="card">
+								<div class="card-header custom-header bg-light text-secondary header-elements-sm-inline">
+									<div class="header-elements">
+										<div class="list-icons">
+											<a class="list-icons-item" data-action="collapse"></a>
+										</div>
+										<h6 class="card-title text-uppercase font-size-sm font-weight-bold text-secondary">
+											[#EN#]
+										</h6>
+									</div>
+								</div>
+								<div class="card-body collapse show" id="accordion-item-default1" data-parent="#accordion-item">
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="TitleEN" />
+												<Control ID="TitleEN" />
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="ContentEN" />
+												<Control ID="ContentEN" />
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							<div class="card">
+								<div class="card-header custom-header bg-light text-secondary header-elements-sm-inline">
+									<div class="header-elements">
+										<div class="list-icons">
+											<a class="list-icons-item" data-action="collapse"></a>
+										</div>
+										<h6 class="card-title text-uppercase font-size-sm font-weight-bold text-secondary">
+											[#OtherSettings_ITSM#]
+										</h6>
+									</div>
+								</div>
+								<div class="card-body collapse show" id="accordion-item-default1" data-parent="#accordion-item">
+									<div class="d-flex justify-content-evenly">
+										<div class="col">
+											<div class="form-group">
+												<Control ID="IsFavorite" />
+											</div>
+										</div>
+										<div class="col">
+											<div class="form-group">
+												<Control ID="IsShowOnDashboard" />
+											</div>
+										</div>
+										<div class="col">
+											<div class="form-group">
+												<Control ID="IsShowInQuickLinks" />
+											</div>
+										</div>
+										<div class="col">
+											<div class="form-group">
+												<Control ID="IsShowToAll" />
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row d-none">
+						<div class="col-md-12">
+							<div class="form-group">
+								<Control ID="ContentIntoTxtFileList" />
+								<Control ID="FileENID" />
+								<Control ID="FileCZID" />
+							</div>
+						</div>
+					</div>
+				</fieldset>
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

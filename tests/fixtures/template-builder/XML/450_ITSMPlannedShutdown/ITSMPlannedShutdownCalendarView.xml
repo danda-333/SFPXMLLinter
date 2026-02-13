@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xGroupTitleResourceKey="MyProfileCalendarGroup_MyProfile" Ident="ITSMPlannedShutdownCalendarView" Priority="1000" SegmentType="ITSMPlannedShutdownSegment" TitleResourceKey="ITSMPlannedShutdownCalendarView_ITSMPlannedShutdown" DefaultFilterIdent="ITSMPlannedShutdownCalendarFilter" ShareFilterIdent="ITSMPlannedShutdownCalendarFilter" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" ViewType="CalendarView">
+  <AccessPermissions>
+    <string>ITSMPlannedShutdown</string>
+  </AccessPermissions>
+  <Settings>
+  </Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMPlannedShutdownButton" FormIdent="ITSMPlannedShutdown" TitleResourceKey="NewITSMPlannedShutdownButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMPlannedShutdown">
+    <DataPermissions>
+      <string>ITSMPlannedShutdown</string>
+    </DataPermissions>
+    <Columns>
+      <Column Ident="ID" IsPrimaryKey="true" IsVisible="false" />
+      <Column Ident="Title" IsTranslate="true" />
+      <Column Ident="Description" />
+      <Column Ident="Start" Format="yyyy-MM-dd'T'HH:mm:ss" />
+      <Column Ident="End" Format="yyyy-MM-dd'T'HH:mm:ss" />
+      <Column Ident="BackgroundColor" />
+      <Column Ident="BorderColor" />
+    </Columns>
+    <SQL>
+      DECLARE @Year INT = YEAR(GETDATE());
+      DECLARE @Month INT = MONTH(GETDATE());
+
+      ;WITH Dates AS (
+          SELECT CAST(DATEFROMPARTS(@Year, @Month, 1) AS DATE) AS DayDate
+          UNION ALL
+          SELECT DATEADD(DAY, 1, DayDate)
+          FROM Dates
+          WHERE MONTH(DATEADD(DAY, 1, DayDate)) >= @Month
+      )
+
+      SELECT
+          itsmPlan.ID,
+          itsmPlan.Subject AS Title,
+          itsmPlan.Description AS Description,
+          itsmPlan.DateTimeFrom AS [Start],
+          itsmPlan.DateTimeTo AS [End],
+          '#1E90FF' AS BackgroundColor,
+          '#1E90FF' AS BorderColor
+      FROM usr.ITSMPlannedShutdown AS itsmPlan
+      WHERE
+          itsmPlan.State != @DeletedState
+          AND #PERMISSION[ITSMPlannedShutdown](itsmPlan)#
+      OPTION (MAXRECURSION 1000);
+		</SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" ConstantType="UserID" Ident="UserID" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DateFrom" ConstantType="DateFrom" DataType="DateTime" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DateTo" ConstantType="DateTo" DataType="DateTime" />
+    </Parameters>
+  </DataSource>
+</DataView>

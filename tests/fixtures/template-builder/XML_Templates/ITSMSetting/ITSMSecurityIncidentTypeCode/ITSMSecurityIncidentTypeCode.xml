@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMSecurityIncidentTypeCode" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage" IsSubForm="true"> 
+	<XMLDescription>
+		<![CDATA[
+    Číselník: Typ bezpečnostního incidentu
+  	]]>
+	</XMLDescription>
+	<DataPermissions>
+		<string>ITSMSettingAdmin</string> <!-- Static -->
+	</DataPermissions>
+
+	<CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</CreatePermissions>
+
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+		<Button xsi:type="FormButton" Ident="SaveWithoutValidationButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsSystem="true" />
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2" />
+	</Buttons>
+
+	<Controls>
+		<Control xsi:type="TextBoxControl" Ident="TextValue" DataType="String" TitleResourceKey="TextValue_ITSM" IsRequired="true" IsReadOnly="true" />
+		<Control xsi:type="DropDownListControl" Ident="LanguageID" DataType="SmallNumber" TitleResourceKey="LanguageID_ITSM" IsRequired="true" IsReadOnly="true" IsFakeReadOnly="true">
+			<DataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						lan.ID,
+						lan.[Name]
+					FROM dbo.Language AS lan
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="HiddenControl" Ident="SyncID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="Guid" DataType="Guid" />
+		<Control xsi:type="HiddenControl" Ident="IsActive" DataType="Bool" />
+		<Control xsi:type="HiddenControl" Ident="OrderValue" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" />
+	</Controls>
+
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM">
+			<HTMLTemplate>
+
+				<td class="select-bold">
+					<Control ID="LanguageID" />
+				</td>
+				<td>
+					<Control ID="TextValue" />
+					<Control ID="ID" />
+				</td>
+			</HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

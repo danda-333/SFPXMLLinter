@@ -153,6 +153,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function enqueueValidation(uri: vscode.Uri, priority: "high" | "low"): void {
+    if (uri.scheme !== "file") {
+      return;
+    }
+
     const key = uri.toString();
     if (priority === "high") {
       if (highPriorityValidationSet.has(key)) {
@@ -280,6 +284,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function validateUri(uri: vscode.Uri): Promise<void> {
+    if (uri.scheme !== "file") {
+      diagnostics.delete(uri);
+      return;
+    }
+
     const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     try {
       let document = existing;
@@ -304,7 +313,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function validateOpenDocuments(): void {
-    const targetUris = getUserOpenUris();
+    const targetUris = getUserOpenUris().filter((uri) => uri.scheme === "file");
 
     for (const uri of targetUris) {
       const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
@@ -1220,13 +1229,19 @@ function getUserOpenUris(): vscode.Uri[] {
     for (const tab of group.tabs) {
       const input = tab.input;
       if (input instanceof vscode.TabInputText) {
-        map.set(input.uri.toString(), input.uri);
+        if (input.uri.scheme === "file") {
+          map.set(input.uri.toString(), input.uri);
+        }
         continue;
       }
 
       if (input instanceof vscode.TabInputTextDiff) {
-        map.set(input.original.toString(), input.original);
-        map.set(input.modified.toString(), input.modified);
+        if (input.original.scheme === "file") {
+          map.set(input.original.toString(), input.original);
+        }
+        if (input.modified.scheme === "file") {
+          map.set(input.modified.toString(), input.modified);
+        }
         continue;
       }
     }

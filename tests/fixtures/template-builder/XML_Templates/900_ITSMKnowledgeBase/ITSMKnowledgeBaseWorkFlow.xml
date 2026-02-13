@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters"
+Ident="ITSMKnowledgeBaseWorkFlow"
+FormIdent="ITSMKnowledgeBase"
+SegmentType="ITSMKnowledgeBaseSegment"
+PackageIdent="ITSMPackage">
+	<Definition>
+		<States>
+			<State TitleResourceKey="Deleted_ITSM" Value="0" />
+			<State TitleResourceKey="New_ITSM" Value="1" />
+			<State TitleResourceKey="Created_ITSM" Value="2" />
+		</States>
+	</Definition>
+
+	<GlobalJavaScripts>
+        <JavaScript xsi:type="ShowHide" Ident="ShowHideSubcategory" ControlIdent="ShowSubcategory" >
+            <Selectors>
+                <string>.js-showHideSubcategory</string>
+            </Selectors>
+            <ShowValues>
+                <string>True</string>
+            </ShowValues>
+        </JavaScript>
+    </GlobalJavaScripts> 
+
+	<ControlShareCodes>
+		<ControlShareCode Ident="SubcategoryRequired">
+			<Controls>
+					<FormControl xsi:type="IFControl">
+							<Condition>
+									<SQL>
+											SELECT @ShowSubcategory
+									</SQL>
+									<Parameters>
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ShowSubcategory" DataType="Bool" />
+									</Parameters>
+							</Condition>
+							<TrueControls>
+									<FormControl Ident="SubcategoryID" IsReadOnly="false" IsRequired="true"/>
+							</TrueControls>
+					</FormControl>
+			</Controls>
+		</ControlShareCode>
+		<ControlShareCode Ident="EnableAllControlShareCode">
+			<Controls>
+				<FormControl Ident="TitleEN" IsReadOnly="false"/>
+				<FormControl Ident="TitleCZ" IsReadOnly="false"/>
+				<FormControl Ident="CategoryID" IsReadOnly="false"/>
+				<FormControl Ident="SubcategoryID" IsReadOnly="false"/>
+				<FormControl Ident="ContentEN" IsReadOnly="false"/>
+				<FormControl Ident="ContentCZ" IsReadOnly="false"/>
+				<FormControl Ident="ITSMKnowledgeBaseTag" IsReadOnly="false"/>
+				<FormControl Ident="IsFavorite" IsReadOnly="false"/>
+				<FormControl Ident="IsShowOnDashboard" IsReadOnly="false"/>
+				<FormControl Ident="IsShowInQuickLinks" IsReadOnly="false"/>
+				<FormControl Ident="IsShowToAll" IsReadOnly="false"/>
+				<FormControl Ident="ContentIntoTxtFileList" IsReadOnly="false"/>
+				<FormControl Ident="FileENID" IsReadOnly="false"/>
+				<FormControl Ident="FileCZID" IsReadOnly="false"/>
+				<FormControl Ident="FileList" IsReadOnly="false"/>
+				<FormControl Ident="FileGallery" IsReadOnly="false"/>
+				<FormControl Ident="FolderIdent" IsReadOnly="false"/>
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShareCode" /> -->
+	</ControlShareCodes>
+
+	<Steps>
+		<Step State="1">
+			<Groups>
+				<Group>
+					<Permissions>
+						<string>ITSMKnowledgeBaseEditorCategory</string>
+						<string>ITSMKnowledgeBaseEditorFolder</string>
+						<string>ITSMKnowledgeBaseAdmin</string>
+					</Permissions>
+					<Buttons>
+						<Button Ident="SaveButton" IsVisible="true" >
+							<Actions>
+								<Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+								<Action xsi:type="ActionTrigger" Ident="CreateContentTxtCZ" ActionStart="AfterSave">
+									<DataSource>
+										<SQL>
+											INSERT INTO dbo.[File] (FormIdent,ControlIdent,TableID,AccountID,ContentType,Name,CreateDate,State,Size,Extension,DataGuid,Data,Placement,GroupIdent,IsLock)
+											SELECT 
+												'ITSMKnowledgeBase',
+												'ContentIntoTxtFileList',
+												@ID,
+												@UserID,
+												'text/html',
+												CONCAT(@TitleCZ,'.html'),
+												GETDATE(),
+												1,
+												ROUND(DATALENGTH(@ContentCZ) / 1024.0 / 1024.0, 2),
+												'HTML',
+												NEWID(),
+												CAST(@ContentCZ AS VARBINARY(MAX)),
+												'Right',
+												NEWID(),
+												0
+
+												DECLARE @NewID INT = SCOPE_IDENTITY()
+
+												UPDATE usr.ITSMKnowledgeBase 
+												SET FileCZID = @NewID
+												WHERE ID = @ID
+										</SQL>
+										<Parameters>
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+        							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TitleCZ" DataType="String" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ContentCZ" DataType="String" />
+										</Parameters>
+									</DataSource>
+								</Action>
+								<Action xsi:type="ActionTrigger" Ident="CreateContentTxtEN" ActionStart="AfterSave">
+									<DataSource>
+										<SQL>
+											IF (@ContentEN IS NOT NULL AND @TitleEN IS NOT NULL)
+											BEGIN
+												INSERT INTO dbo.[File] (FormIdent,ControlIdent,TableID,AccountID,ContentType,Name,CreateDate,State,Size,Extension,DataGuid,Data,Placement,GroupIdent,IsLock)
+												SELECT 
+													'ITSMKnowledgeBase',
+													'ContentIntoTxtFileList',
+													@ID,
+													@UserID,
+													'text/html',
+													CONCAT(@TitleEN,'.html'),
+													GETDATE(),
+													1,
+													ROUND(DATALENGTH(@ContentEN) / 1024.0 / 1024.0, 2),
+													'HTML',
+													NEWID(),
+													CAST(@ContentEN AS VARBINARY(MAX)),
+													'Right',
+													NEWID(),
+													0
+
+													DECLARE @NewID INT = SCOPE_IDENTITY()
+
+													UPDATE usr.ITSMKnowledgeBase 
+													SET FileENID = @NewID
+													WHERE ID = @ID
+												END
+										</SQL>
+										<Parameters>
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+        							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TitleEN" DataType="String" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ContentEN" DataType="String" />
+										</Parameters>
+									</DataSource>
+								</Action>
+							</Actions>
+						</Button>
+					</Buttons>
+					<Controls>
+						<FormControl xsi:type="ShareCodeControl" Ident="SubcategoryRequired"/>
+						<FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShareCode" />
+					</Controls>
+					<Sections>
+						<Section Ident="ContentSection" IsVisible="false" />
+					</Sections>
+				</Group>
+			</Groups>
+		</Step>
+		<Step State="2">
+			<Groups>
+				<Group>
+					<Permissions>
+						<string>ITSMKnowledgeBaseEditor</string>
+						<string>ITSMKnowledgeBaseEditorFolder</string>
+						<string>ITSMKnowledgeBaseAdmin</string>
+					</Permissions>
+					<Buttons>
+						<Button Ident="DeleteButton" IsVisible="true" >
+							<Actions>
+								<Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+							</Actions>
+						</Button>
+						<Button Ident="SaveButton" IsVisible="true" >
+							<Actions>
+								<Action xsi:type="ActionTrigger" Ident="CreateOrUpdateContentTxtCZ" ActionStart="AfterSave">
+									<DataSource>
+										<SQL>
+										IF(@FileCZID IS NULL)
+										BEGIN
+											INSERT INTO dbo.[File] (FormIdent,ControlIdent,TableID,AccountID,ContentType,Name,CreateDate,State,Size,Extension,DataGuid,Data,Placement,GroupIdent,IsLock)
+											SELECT 
+												'ITSMKnowledgeBase',
+												'ContentIntoTxtFileList',
+												@ID,
+												@UserID,
+												'text/html',
+												CONCAT(@TitleCZ,'.html'),
+												GETDATE(),
+												1,
+												ROUND(DATALENGTH(@ContentCZ) / 1024.0 / 1024.0, 2),
+												'HTML',
+												NEWID(),
+												CAST(@ContentCZ AS VARBINARY(MAX)),
+												'Right',
+												NEWID(),
+												0
+
+												DECLARE @NewID INT = SCOPE_IDENTITY()
+
+												UPDATE usr.ITSMKnowledgeBase 
+												SET FileCZID = @NewID
+												WHERE ID = @ID
+											END 
+											ELSE 
+											BEGIN 
+												UPDATE dbo.[File]
+												SET Size = ROUND(DATALENGTH(@ContentCZ) / 1024.0 / 1024.0, 2),Data = CAST(@ContentCZ AS VARBINARY(MAX))
+												WHERE ID = @FileCZID
+											END
+										</SQL>
+										<Parameters>
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FileCZID" DataType="Number" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+        							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TitleCZ" DataType="String" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ContentCZ" DataType="String" />
+										</Parameters>
+									</DataSource>
+								</Action>
+								<Action xsi:type="ActionTrigger" Ident="CreateOrUpdateContentTxtEN" ActionStart="AfterSave">
+									<DataSource>
+										<SQL>
+										IF(@FileENID IS NULL AND @ContentEN IS NOT NULL AND @TitleEN IS NOT NULL)
+										BEGIN
+											INSERT INTO dbo.[File] (FormIdent,ControlIdent,TableID,AccountID,ContentType,Name,CreateDate,State,Size,Extension,DataGuid,Data,Placement,GroupIdent,IsLock)
+											SELECT 
+												'ITSMKnowledgeBase',
+												'ContentIntoTxtFileList',
+												@ID,
+												@UserID,
+												'text/html',
+												CONCAT(@TitleEN,'.html'),
+												GETDATE(),
+												1,
+												ROUND(DATALENGTH(@ContentEN) / 1024.0 / 1024.0, 2),
+												'HTML',
+												NEWID(),
+												CAST(@ContentEN AS VARBINARY(MAX)),
+												'Right',
+												NEWID(),
+												0
+
+												DECLARE @NewID INT = SCOPE_IDENTITY()
+
+												UPDATE usr.ITSMKnowledgeBase 
+												SET FileENID = @NewID
+												WHERE ID = @ID
+											END 
+											ELSE 
+											BEGIN 
+												IF(@ContentEN IS NOT NULL AND @TitleEN IS NOT NULL)
+												BEGIN
+													UPDATE dbo.[File]
+													SET Size = ROUND(DATALENGTH(@ContentEN) / 1024.0 / 1024.0, 2),Data = CAST(@ContentEN AS VARBINARY(MAX))
+													WHERE ID = @FileENID
+												END
+											END
+										</SQL>
+										<Parameters>
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FileENID" DataType="Number" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+        							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TitleEN" DataType="String" />
+											<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ContentEN" DataType="String" />
+										</Parameters>
+									</DataSource>
+								</Action>
+							</Actions>
+						</Button>
+					</Buttons>
+					<Controls>
+						<FormControl xsi:type="ShareCodeControl" Ident="SubcategoryRequired"/>
+						<FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShareCode" />
+					</Controls>
+					<Sections>
+						<Section Ident="EditorSection" IsVisible="true" />
+					</Sections>
+				</Group>
+				<Group>
+					<Permissions>
+						<string>ITSMKnowledgeBaseReader</string>
+						<string>ITSMKnowledgeBaseReaderFolder</string>
+						<string>ITSMKnowledgeBase</string>
+					</Permissions>
+					<Buttons>
+						<Button Ident="SaveButton" IsVisible="true">
+							<Actions>
+								<Action xsi:type="Communication" Type="Comment" ActionStart="AfterSave" ControlIdent="ITSMKnowledgeBaseCommunication"/>
+							</Actions>
+						</Button>
+					</Buttons>
+					<Controls>     
+					</Controls>
+					<Sections>
+						<Section Ident="EditorSection" IsVisible="false" />
+					</Sections>
+				</Group>
+			</Groups>
+		</Step>
+	</Steps>
+</WorkFlow>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" FormIdent="ValidForm" Ident="ErrDuplicateSectionWorkFlow">
+  <States>
+    <State Value="1">
+      <Group>
+        <Sections>
+          <Section Ident="BasicInformationSection" />
+          <Section Ident="BasicInformationSection" />
+        </Sections>
+      </Group>
+    </State>
+  </States>
+</WorkFlow>

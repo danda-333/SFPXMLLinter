@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" FormIdent="ValidForm" Ident="ErrDuplicateButtonWorkFlow">
+  <States>
+    <State Value="1">
+      <Group>
+        <Buttons>
+          <Button Ident="LocalButton" IsVisible="true" />
+          <Button Ident="LocalButton" IsVisible="true" />
+        </Buttons>
+      </Group>
+    </State>
+  </States>
+</WorkFlow>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" FormIdent="ValidForm" Ident="ErrUnknownButtonShareCodeWorkFlow">
+  <States>
+    <State Value="1">
+      <Group>
+        <Buttons>
+          <Button xsi:type="ShareCodeButton" Ident="MissingButtonShareCode" />
+        </Buttons>
+      </Group>
+    </State>
+  </States>
+</WorkFlow>

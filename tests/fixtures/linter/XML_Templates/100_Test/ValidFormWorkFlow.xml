@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication" FormIdent="ValidForm" Ident="ValidFormWorkFlow">
+
+  <Usings>
+    <Using Component="Shared/Sample" />
+  </Usings>
+
+	<ControlShareCodes>
+    <ControlShareCode Ident="LocalControlShareCode">
+    </ControlShareCode>
+
+    <ControlShareCode Ident="TestControlShareCode">
+      <Controls>
+        <!-- DefaultControls -->
+        <FormControl Ident="ID" />
+        <FormControl Ident="State" />
+        <FormControl Ident="AccountID" />
+        <FormControl Ident="CreateDate" />
+        <FormControl Ident="LastUpdate" />
+        <FormControl Ident="LastUpdateAccountID" />
+        <FormControl Ident="ComponentControl" />
+
+        <!-- Local -->
+        <FormControl Ident="LocalControl" />
+
+        <!-- Component from Sample.component.xml -->
+        <FormControl Ident="ComponentControl" />
+      </Controls>
+    </ControlShareCode>
+  </ControlShareCodes>
+
+	<ActionShareCodes>
+
+    <ActionShareCode Ident="LocalActionShareCode"/>
+
+    <ActionShareCode Ident="TestActionShareCode">
+      <Actions>
+
+        <Action Ident="LocalAction">
+          <Actions>
+            <!-- DefaultControls -->
+            <Action xsi:type="ActionValue" ControlIdent="ID" />
+            <Action xsi:type="ActionValue" ControlIdent="State" />
+            <Action xsi:type="ActionValue" ControlIdent="AccountID" />
+            <Action xsi:type="ActionValue" ControlIdent="CreateDate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdateAccountID" />
+
+            <!-- Local -->
+            <Action xsi:type="ActionValue" ControlIdent="LocalControl" />
+
+            <!-- Component from Sample.component.xml -->
+            <Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
+          </Actions>
+        </Action>
+
+        <Action Ident="ComponentAction">
+          <Actions>
+            <!-- DefaultControls -->
+            <Action xsi:type="ActionValue" ControlIdent="ID" />
+            <Action xsi:type="ActionValue" ControlIdent="State" />
+            <Action xsi:type="ActionValue" ControlIdent="AccountID" />
+            <Action xsi:type="ActionValue" ControlIdent="CreateDate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdateAccountID" />
+
+            <!-- Local -->
+            <Action xsi:type="ActionValue" ControlIdent="LocalControl" />
+
+            <!-- Component from Sample.component.xml -->
+            <Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
+          </Actions>
+        </Action>
+
+      </Actions>
+    </ActionShareCode>
+
+  </ActionShareCodes>
+
+	<ButtonShareCodes>
+
+    <ButtonShareCode Ident="LocalButtonShareCode"/>
+
+    <ButtonShareCode Ident="TestButtonShareCode">
+      <Buttons>
+
+        <Button Ident="LocalButton">
+          <Actions>
+            <!-- DefaultControls -->
+            <Action xsi:type="ActionValue" ControlIdent="ID" />
+            <Action xsi:type="ActionValue" ControlIdent="State" />
+            <Action xsi:type="ActionValue" ControlIdent="AccountID" />
+            <Action xsi:type="ActionValue" ControlIdent="CreateDate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdateAccountID" />
+
+            <!-- Local -->
+            <Action xsi:type="ActionValue" ControlIdent="LocalControl" />
+
+            <!-- Component from Sample.component.xml -->
+            <Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
+          </Actions>
+        </Button>
+
+        <Button Ident="ComponentButton">
+          <Actions>
+            <!-- DefaultControls -->
+            <Action xsi:type="ActionValue" ControlIdent="ID" />
+            <Action xsi:type="ActionValue" ControlIdent="State" />
+            <Action xsi:type="ActionValue" ControlIdent="AccountID" />
+            <Action xsi:type="ActionValue" ControlIdent="CreateDate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdate" />
+            <Action xsi:type="ActionValue" ControlIdent="LastUpdateAccountID" />
+
+            <!-- Local -->
+            <Action xsi:type="ActionValue" ControlIdent="LocalControl" />
+
+            <!-- Component from Sample.component.xml -->
+            <Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
+          </Actions>
+        </Button>
+
+      </Buttons>
+    </ButtonShareCode>
+
+    <ButtonShareCode Ident="Test2ButtonShareCode">
+      <Buttons>
+
+        <Button Ident="LocalButton">
+          <Actions>
+            <!-- Local -->
+            <Action xsi:type="ShareCode" Ident="LocalActionShareCode" />
+
+            <!-- Component from Sample.component.xml -->
+            <Action xsi:type="ShareCode" Ident="ComponentActionShareCode" />
+          </Actions>
+        </Button>
+
+        <Button Ident="ComponentButton">
+          <Actions>
+            <!-- Local -->
+            <Action xsi:type="ShareCode" Ident="LocalActionShareCode" />
+
+            <!-- Component from Sample.component.xml -->
+            <Action xsi:type="ShareCode" Ident="ComponentActionShareCode" />
+          </Actions>
+        </Button>
+
+      </Buttons>
+    </ButtonShareCode>
+
+  </ButtonShareCodes>
+
+  <GlobalJavaScripts>
+    <!-- DefaultControls -->
+    <JavaScript xsi:type="ShowHide" ControlIdent="ID" />
+    <JavaScript xsi:type="ShowHide" ControlIdent="State" />
+    <JavaScript xsi:type="ShowHide" ControlIdent="AccountID" />
+    <JavaScript xsi:type="ShowHide" ControlIdent="CreateDate" />
+    <JavaScript xsi:type="ShowHide" ControlIdent="LastUpdate" />
+    <JavaScript xsi:type="ShowHide" ControlIdent="LastUpdateAccountID" />
+
+    <!-- Local -->
+    <JavaScript xsi:type="ShowHide" ControlIdent="LocalControl" />
+
+    <!-- Component from Sample.component.xml -->
+    <JavaScript xsi:type="ShowHide" ControlIdent="ComponentControl" />
+  </GlobalJavaScripts>
+
+  <GlobalActions>
+
+    <Action xsi:type="Required">
+      <!-- DefaultControls -->
+      <string>ID</string>
+      <string>State</string>
+      <string>AccountID</string>
+      <string>CreateDate</string>
+      <string>LastUpdate</string>
+      <string>LastUpdateAccountID</string>
+      <string>ComponentControl</string>
+
+      <!-- Local -->
+      <string>LocalControl</string>
+
+      <!-- Component from Sample.component.xml -->
+      <string>ComponentControl</string>
+    </Action>
+
+  </GlobalActions>
+
+  <States>
+    <State Value="1">
+      <Group>
+        <Controls>
+          <!-- DefaultControls -->
+          <FormControl Ident="ID" />
+          <FormControl Ident="State" />
+          <FormControl Ident="AccountID" />
+          <FormControl Ident="CreateDate" />
+          <FormControl Ident="LastUpdate" />
+          <FormControl Ident="LastUpdateAccountID" />
+          <FormControl Ident="ComponentControl" />
+
+          <!-- Local -->
+          <FormControl Ident="LocalControl" />
+          <FormControl xsi:type="ShareCodeControl" Ident="LocalControlShareCode" />
+
+          <!-- Component from Sample.component.xml -->
+          <FormControl Ident="ComponentControl" />
+          <FormControl xsi:type="ShareCodeControl" Ident="ComponentControlShareCode" />
+
+        </Controls>
+        <Buttons>
+          <!-- Local -->
+          <Button Ident="LocalButton" IsVisible="true">
+            <Actions>
+              <!-- DefaultControls -->
+              <Action xsi:type="ActionValue" ControlIdent="ID" />
+              <Action xsi:type="ActionValue" ControlIdent="State" />
+              <Action xsi:type="ActionValue" ControlIdent="AccountID" />
+              <Action xsi:type="ActionValue" ControlIdent="CreateDate" />
+              <Action xsi:type="ActionValue" ControlIdent="LastUpdate" />
+              <Action xsi:type="ActionValue" ControlIdent="LastUpdateAccountID" />
+
+              <!-- Local -->
+              <Action xsi:type="ActionValue" ControlIdent="LocalControl" />
+
+              <!-- Component from Sample.component.xml -->
+              <Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
+            </Actions>
+          </Button>
+          <Button xsi:type="ShareCodeButton" Ident="LocalButtonShareCode" />
+
+          <!-- Component from Sample.component.xml -->
+          <Button Ident="ComponentButton" IsVisible="true">
+            <Actions>
+              <!-- DefaultControls -->
+              <Action xsi:type="ActionValue" ControlIdent="ID" />
+              <Action xsi:type="ActionValue" ControlIdent="State" />
+              <Action xsi:type="ActionValue" ControlIdent="AccountID" />
+              <Action xsi:type="ActionValue" ControlIdent="CreateDate" />
+              <Action xsi:type="ActionValue" ControlIdent="LastUpdate" />
+              <Action xsi:type="ActionValue" ControlIdent="LastUpdateAccountID" />
+
+              <!-- Local -->
+              <Action xsi:type="ActionValue" ControlIdent="LocalControl" />
+
+              <!-- Component from Sample.component.xml -->
+              <Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
+            </Actions>
+          </Button>
+          <Button xsi:type="ShareCodeButton" Ident="ComponentButtonShareCode" />
+
+        </Buttons>
+      </Group>
+    </State>
+  </States>
+
+</WorkFlow>

@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -236,6 +236,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test:formatter": "npm run compile && node out/tests/formatter/runFormatterFixtures.js && node out/tests/formatter/runSelectionFormatterTests.js",
+    "test:linter": "npm run compile && node out/tests/linter/runLinterFixtures.js",
     "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js",
     "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runBuildTemplateFixtures.js",
     "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",

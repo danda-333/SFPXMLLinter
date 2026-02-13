@@ -9,7 +9,7 @@ import { getSystemMetadata, isKnownSystemTableForeignKey } from "../config/syste
 import { collectTemplateAvailableControlIdents } from "../utils/templateControls";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 import { maskXmlComments } from "../utils/xmlComments";
-import { getAllFormIdentCandidates, isKnownFormIdent } from "../utils/formIdents";
+import { getAllFormIdentCandidates, isKnownFormIdent, resolveSystemTableName } from "../utils/formIdents";
 
 export interface RuleDiagnostic {
   ruleId: string;
@@ -35,7 +35,7 @@ export class DiagnosticsEngine {
     }
 
     this.validateMappingFormIdentReferences(facts, index, issues);
-    this.validateMappingReferences(facts, index, issues);
+    this.validateMappingReferences(document, facts, index, issues);
     this.validateRequiredActionIdentReferences(document, facts, index, issues);
     this.validateWorkflowControlIdentReferences(document, facts, index, issues);
     this.validateUsingReferences(facts, index, issues);
@@ -162,9 +162,12 @@ export class DiagnosticsEngine {
 
     const availableControlShareCodes = collectWorkflowControlShareCodes(facts, index);
     const availableButtonShareCodes = collectWorkflowButtonShareCodes(facts, index);
+    const metadata = getSystemMetadata();
+    const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata);
+    const availableButtons = collectWorkflowAvailableButtons(facts, index, form);
     for (const ref of facts.workflowReferences) {
       if (ref.kind === "formControl") {
-        if (!form.controls.has(ref.ident)) {
+        if (!availableControls.has(ref.ident)) {
           issues.push({
             ruleId: "unknown-form-control-ident",
             range: ref.range,
@@ -194,7 +197,7 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      if (ref.kind === "button" && !form.buttons.has(ref.ident)) {
+      if (ref.kind === "button" && !availableButtons.has(ref.ident)) {
         issues.push({
           ruleId: "unknown-form-button-ident",
           range: ref.range,
@@ -238,11 +241,13 @@ export class DiagnosticsEngine {
   }
 
   private validateMappingReferences(
+    document: vscode.TextDocument,
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
     const settings = getSettings();
+    const metadata = getSystemMetadata();
     const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow" ? facts.workflowFormIdent : facts.formIdent;
     if (!owningFormIdent) {
       return;
@@ -253,24 +258,44 @@ export class DiagnosticsEngine {
       return;
     }
 
+    const localAvailableControlIdents = collectResolvableControlIdents(document, facts, index);
+
     for (const mapping of facts.mappingIdentReferences) {
       const identKey = mapping.ident;
-      if (mapping.kind === "fromIdent" && form.controls.has(identKey)) {
+      if (mapping.kind === "fromIdent" && localAvailableControlIdents.has(identKey)) {
         continue;
       }
 
       if (mapping.kind === "toIdent") {
         const targetFormIdent = mapping.mappingFormIdent;
         const targetForm = targetFormIdent ? index.formsByIdent.get(targetFormIdent) : undefined;
-        if (targetForm && targetForm.controls.has(identKey)) {
-          continue;
+        if (targetForm) {
+          const targetSameAsOwning = targetFormIdent === owningFormIdent;
+          if (targetSameAsOwning) {
+            if (localAvailableControlIdents.has(identKey)) {
+              continue;
+            }
+          } else if (targetForm.controls.has(identKey) || metadata.defaultFormColumns.has(identKey)) {
+            continue;
+          }
+        }
+
+        // If MappingFormIdent points to known system/external table, validate against
+        // table columns (including default form columns).
+        if (targetFormIdent) {
+          const systemTable = resolveSystemTableName(targetFormIdent, metadata);
+          if (systemTable) {
+            if (isKnownSystemTableForeignKey(metadata, systemTable, identKey) || metadata.defaultFormColumns.has(identKey)) {
+              continue;
+            }
+          }
         }
 
         if (settings.incompleteMode && targetFormIdent && !targetForm) {
           continue;
         }
 
-        if (!targetForm && form.controls.has(identKey)) {
+        if (!targetForm && localAvailableControlIdents.has(identKey)) {
           continue;
         }
       }
@@ -288,7 +313,7 @@ export class DiagnosticsEngine {
             : withDidYouMean(
                 `Mapping ${mapping.kind} '${mapping.ident}' was not found in controls of Form '${form.ident}'.`,
                 mapping.ident,
-                form.controls
+                localAvailableControlIdents
               )
       });
     }
@@ -731,6 +756,49 @@ function collectWorkflowButtonShareCodeButtonIdents(
         target.add(buttonId);
       }
       out.set(shareCode, target);
+    }
+  }
+
+  return out;
+}
+
+function collectWorkflowAvailableControls(
+  facts: ReturnType<typeof parseDocumentFacts>,
+  index: WorkspaceIndex,
+  form: import("../indexer/types").IndexedForm,
+  metadata: ReturnType<typeof getSystemMetadata>
+): Set<string> {
+  const out = new Set<string>(form.controls);
+  for (const column of metadata.defaultFormColumns) {
+    out.add(column);
+  }
+
+  for (const usingRef of facts.usingReferences) {
+    const component = resolveComponentByKey(index, usingRef.componentKey);
+    if (!component) {
+      continue;
+    }
+    for (const ident of component.formControlDefinitions.keys()) {
+      out.add(ident);
+    }
+  }
+
+  return out;
+}
+
+function collectWorkflowAvailableButtons(
+  facts: ReturnType<typeof parseDocumentFacts>,
+  index: WorkspaceIndex,
+  form: import("../indexer/types").IndexedForm
+): Set<string> {
+  const out = new Set<string>(form.buttons);
+  for (const usingRef of facts.usingReferences) {
+    const component = resolveComponentByKey(index, usingRef.componentKey);
+    if (!component) {
+      continue;
+    }
+    for (const ident of component.formButtonDefinitions.keys()) {
+      out.add(ident);
     }
   }
 

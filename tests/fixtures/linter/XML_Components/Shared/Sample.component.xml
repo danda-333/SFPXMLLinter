@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+  <Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+    <Control xsi:type="TextBoxControl" Ident="ComponentControl" />
+  </Section>
+
+  <Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
+    <Button xsi:type="FormButton" Ident="ComponentButton" TitleResourceKey="ComponentButton_Package" IsSave="true" IsVisible="false" />
+  </Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="ComponentControlShareCode"/>
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="ButtonShareCodes" TargetXPath="//WorkFlow/ButtonShareCodes" Insert="append">
+
+		<ButtonShareCode Ident="ComponentButtonShareCode"/>
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+
+		<ActionShareCode Ident="ComponentActionShareCode"/>
+		
+	</Section>
+
+</Component>

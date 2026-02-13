@@ -1,0 +1,8 @@
+{
+  "externalTables": {
+    "ExternalForm": ["ID", "ExternalControl"],
+    "dbo.LegacyExternalForm": {
+      "columns": ["LegacyExternalControl"]
+    }
+  }
+}

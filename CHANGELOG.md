@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.10
+
+- Linter stability and consistency:
+  - improved mapping/workflow ident resolution for defaults, system/external tables, and `Using`-injected symbols.
+  - fixed self-closing `ButtonShareCode` parsing edge case causing false duplicate/sharecode expansion.
+  - improved `.sfpxmlsetting`/`.sfpxmlsettings` discovery (workspace + nested locations), so external table metadata is loaded more reliably.
+- Added fixture-based linter regression suite (`npm run test:linter`):
+  - validates all `tests/fixtures/linter/XML_Templates/**/*.xml`.
+  - valid fixtures must have zero diagnostics.
+  - invalid fixtures (`900_chyby`) must produce exactly one expected diagnostic.
+  - includes per-file progress output and final summary.
+
 ## 0.0.9
 
 - Added configurable `sfpXmlLinter.incompleteMode`:

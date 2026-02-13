@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication" Ident="ValidForm">
+
+	<Buttons>
+    <Button xsi:type="FormButton" Ident="LocalButton" TitleResourceKey="LocalButton_Package" IsSave="true" IsVisible="false" />
+
+    <Button xsi:type="FormButton" Ident="LocalValidMappingButton" TitleResourceKey="LocalMappingButton_Package" MappingFormIdent="ValidForm">
+      <Mappings>
+        <Mapping FromIdent="ID" ToIdent="ComponentControl" />
+        <Mapping FromIdent="State" ToIdent="LocalControl" />
+        <Mapping FromIdent="AccountID" ToIdent="LastUpdateAccountID" />
+        <Mapping FromIdent="CreateDate" ToIdent="LastUpdate" />
+        <Mapping FromIdent="LastUpdate" ToIdent="CreateDate" />
+        <Mapping FromIdent="LastUpdateAccountID" ToIdent="AccountID" />
+        <Mapping FromIdent="LocalControl" ToIdent="State" />
+        <Mapping FromIdent="ComponentControl" ToIdent="ID" />
+      </Mappings>
+    </Button>
+
+    <Button xsi:type="FormButton" Ident="LocalExternalMappingButton" TitleResourceKey="LocalMappingButton_Package" MappingFormIdent="ExternalForm">
+      <Mappings>
+        <Mapping FromIdent="LocalControl" ToIdent="ID" />
+        <Mapping FromIdent="LocalControl" ToIdent="ExternalControl" />
+      </Mappings>
+    </Button>
+
+    <Button xsi:type="FormButton" Ident="LocalLegacyExternalMappingButton" TitleResourceKey="LocalMappingButton_Package" MappingFormIdent="LegacyExternalForm">
+      <Mappings>
+        <Mapping FromIdent="LocalControl" ToIdent="ID" />
+        <Mapping FromIdent="LocalControl" ToIdent="LegacyExternalControl" />
+      </Mappings>
+    </Button>
+
+    <Button xsi:type="FormButton" Ident="LocalSystemMappingButton" TitleResourceKey="LocalMappingButton_Package" MappingFormIdent="Account">
+      <Mappings>
+        <Mapping FromIdent="LocalControl" ToIdent="ID" />
+      </Mappings>
+    </Button>
+
+    <Button xsi:type="FormButton" Ident="ComponentButton" TitleResourceKey="ComponentButton_Package" IsSave="true" IsVisible="false" />
+  </Buttons>
+  <Controls>
+    <Control xsi:type="TextBoxControl" Ident="LocalControl" />
+
+    <Control xsi:type="DropDownListControl" Ident="ValidFormID" />
+    <Control xsi:type="DropDownListControl" Ident="ValidFormIdent" />
+    <Control xsi:type="DropDownListControl" Ident="ValidFormState" />
+
+    <Control xsi:type="ListBoxControl" Ident="ValidFormIDs" />
+    <Control xsi:type="ListBoxControl" Ident="ValidFormIdents" />
+    <Control xsi:type="ListBoxControl" Ident="ValidFormStates" />
+
+    <Control xsi:type="DropDownListControl" Ident="ExternalFormID" />
+    <Control xsi:type="DropDownListControl" Ident="ExternalFormIdent" />
+    <Control xsi:type="DropDownListControl" Ident="ExternalFormState" />
+
+    <Control xsi:type="ListBoxControl" Ident="ExternalFormIDs" />
+    <Control xsi:type="ListBoxControl" Ident="ExternalFormIdents" />
+    <Control xsi:type="ListBoxControl" Ident="ExternalFormStates" />
+
+    <Control xsi:type="DropDownListControl" Ident="LegacyExternalFormID" />
+    <Control xsi:type="DropDownListControl" Ident="LegacyExternalFormIdent" />
+    <Control xsi:type="DropDownListControl" Ident="LegacyExternalFormState" />
+
+    <Control xsi:type="ListBoxControl" Ident="LegacyExternalFormIDs" />
+    <Control xsi:type="ListBoxControl" Ident="LegacyExternalFormIdents" />
+    <Control xsi:type="ListBoxControl" Ident="LegacyExternalFormStates" />
+
+    <Control xsi:type="DropDownListControl" Ident="AccountID" />
+    <Control xsi:type="DropDownListControl" Ident="AccountIdent" />
+
+    <Control xsi:type="ListBoxControl" Ident="AccountIDs" />
+    <Control xsi:type="ListBoxControl" Ident="AccountIdents" />
+
+    <Control xsi:type="TextBoxControl" Ident="ComponentControl" />
+  </Controls>
+
+  <Sections>
+    <Section xsi:type="ContentSection" Ident="BasicInformationSection">
+      <HTMLTemplate><![CDATA[
+        <!-- DefaultControls -->
+        <Control ID="ID" />
+        <ControlLabel ControlID="ID" />
+        <ControlPlaceHolder ControlID="ID" />
+
+        <Control ID="State" />
+        <ControlLabel ID="State" />
+        <ControlPlaceHolder ControlID="State" />
+
+        <Control ID="AccountID" />
+        <ControlLabel ControlID="AccountID" />
+        <ControlPlaceHolder ControlID="AccountID" />
+
+        <Control ID="CreateDate" />
+        <ControlLabel ControlID="CreateDate" />
+        <ControlPlaceHolder ControlID="CreateDate" />
+
+        <Control ID="LastUpdate" />
+        <ControlLabel ControlID="LastUpdate" />
+        <ControlPlaceHolder ControlID="LastUpdate" />
+
+        <Control ID="LastUpdateAccountID" />
+        <ControlLabel ControlID="LastUpdateAccountID" />
+        <ControlPlaceHolder ControlID="LastUpdateAccountID" />
+
+        <!-- Local -->
+        <Control ID="LocalControl" />
+        <ControlLabel ControlID="LocalControl" />
+        <ControlPlaceHolder ControlID="LocalControl" />
+
+        <!-- Component from Sample.component.xml -->
+        <Control ID="ComponentControl" />
+        <ControlLabel ControlID="ComponentControl" />
+        <ControlPlaceHolder ControlID="ComponentControl" />
+      ]]></HTMLTemplate>
+    </Section>
+  </Sections>
+
+</Form>

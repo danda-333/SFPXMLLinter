@@ -172,6 +172,10 @@ export function getSystemMetadata(): SystemMetadata {
 }
 
 export function isKnownSystemTableForeignKey(metadata: SystemMetadata, tableName: string, foreignKey: string): boolean {
+  if (metadata.defaultFormColumns.has(foreignKey)) {
+    return true;
+  }
+
   if (metadata.systemTableAllowedForeignKeys.has(foreignKey)) {
     return true;
   }
@@ -186,9 +190,11 @@ export function isKnownSystemTableForeignKey(metadata: SystemMetadata, tableName
 
 function collectSettingsSources(workspacePaths: readonly string[]): Array<{ filePath: string; stat: fs.Stats }> {
   const out: Array<{ filePath: string; stat: fs.Stats }> = [];
+  const visited = new Set<string>();
   for (const root of workspacePaths) {
+    const normalizedRoot = path.resolve(root);
     for (const fileName of [".sfpxmlsetting", ".sfpxmlsettings"]) {
-      const fullPath = path.join(root, fileName);
+      const fullPath = path.join(normalizedRoot, fileName);
       if (!fs.existsSync(fullPath)) {
         continue;
       }
@@ -197,9 +203,70 @@ function collectSettingsSources(workspacePaths: readonly string[]): Array<{ file
         if (!stat.isFile()) {
           continue;
         }
+        const key = fullPath.toLowerCase();
+        if (visited.has(key)) {
+          continue;
+        }
+        visited.add(key);
         out.push({ filePath: fullPath, stat });
       } catch {
         // Ignore inaccessible setting file.
+      }
+    }
+
+    const stack = [normalizedRoot];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (!current) {
+        continue;
+      }
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(current, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+
+      for (const entry of entries) {
+        const fullPath = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          const nameLower = entry.name.toLowerCase();
+          if (
+            nameLower === ".git" ||
+            nameLower === ".vscode" ||
+            nameLower === "node_modules" ||
+            nameLower === "out" ||
+            nameLower === "dist"
+          ) {
+            continue;
+          }
+          stack.push(fullPath);
+          continue;
+        }
+
+        if (!entry.isFile()) {
+          continue;
+        }
+
+        const nameLower = entry.name.toLowerCase();
+        if (nameLower !== ".sfpxmlsetting" && nameLower !== ".sfpxmlsettings") {
+          continue;
+        }
+
+        try {
+          const stat = fs.statSync(fullPath);
+          if (!stat.isFile()) {
+            continue;
+          }
+          const key = fullPath.toLowerCase();
+          if (visited.has(key)) {
+            continue;
+          }
+          visited.add(key);
+          out.push({ filePath: fullPath, stat });
+        } catch {
+          // Ignore inaccessible setting file.
+        }
       }
     }
   }

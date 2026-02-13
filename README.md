@@ -137,6 +137,7 @@ Notes:
 ```bash
 npm install
 npm run compile
+npm run test:linter
 npm run test:formatter
 npm run test:templates
 ```

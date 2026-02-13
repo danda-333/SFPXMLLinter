@@ -654,6 +654,10 @@ function collectButtonShareCodeContents(text: string): ButtonShareCodeContent[] 
   const out: ButtonShareCodeContent[] = [];
   for (const match of text.matchAll(/<ButtonShareCode\b([^>]*)>([\s\S]*?)<\/ButtonShareCode>/gi)) {
     const attrs = match[1] ?? "";
+    if (/\/\s*$/.test(attrs)) {
+      // Ignore self-closing tags: <ButtonShareCode ... />
+      continue;
+    }
     const parsed = parseAttributes(attrs, text, attributeStartIndex(match));
     const ident = parsed.get("Ident")?.value?.trim();
     if (!ident) {

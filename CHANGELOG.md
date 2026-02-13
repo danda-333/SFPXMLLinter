@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.8
+
+- Template builder updates:
+  - Added support for custom inline params in placeholder section syntax, e.g.:
+    - `{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}`
+  - Section placeholders now correctly resolve inherited and explicit params in nested template composition.
+  - Removed script/content XML entity encoding in builder output to keep generated runtime content raw.
+- Testing:
+  - Added dedicated template-core test suite (`npm run test:templates:core`) for isolated templating behavior checks.
+  - `npm run test:templates` now runs both core templating tests and full production fixture parity tests.
+
 ## 0.0.7
 
 - New tolerant XML formatter implementation (without legacy formatter parser dependency):

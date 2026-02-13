@@ -63,6 +63,9 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - Build command:
   - `SFP XML Linter: Build XML Templates`
   - Native TypeScript `BuildXmlTemplates` builder (no PowerShell fallback)
+  - Placeholder sections support custom inline params:
+    - `{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}`
+    - enables replacements inside inserted section content (e.g. `{{CustomParam}}`)
 - Report command:
   - `SFP XML Linter: Workspace Diagnostics Report`
   - Prints diagnostics summary and per-rule counts to output channel
@@ -107,6 +110,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 npm install
 npm run compile
 npm run test:formatter
+npm run test:templates
 ```
 
 Run extension in VS Code with `F5` (Extension Development Host).

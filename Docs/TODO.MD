@@ -14,3 +14,4 @@ Sem budeme prubezne zapisovat vylepseni pro pozdejsi implementaci.
     - Variable dosadi se dummy data
     - TableParamater ??
 5. 'text' a #text# zustavaji podbarvene pri zakomentovani v SQL -- i /**/
+6. Přidat pro SQL syntax higlhligt pto UPDATE (rouzova jako SSMS)

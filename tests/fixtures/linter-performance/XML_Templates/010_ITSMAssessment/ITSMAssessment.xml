@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMAssessment" PackageIdent="ITSMPackage">
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number"/>
+		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150"/>
+		<Control xsi:type="HiddenControl" Ident="IsApproved" DataType="Number"/>
+		<Control xsi:type="HiddenControl" Ident="IsUserAction" DataType="Number" Default="0"/>
+
+		<Control xsi:type="TextBoxControl" Ident="AssessmentOrder" DataType="Number" TitleResourceKey="AssessmentOrder_ITSM" IsFakeReadOnly="true"/>
+
+		<Control xsi:type="AutoCompleteControl" Ident="AssessmentAccountID" DataType="Number" TitleResourceKey="AssessmentAccountID_ITSM" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT TOP(20)
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.[State] = @AccountActiveState
+					ORDER BY acc.FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.[State] = @AccountActiveState
+						AND acc.FullName LIKE @AssessmentAccountID
+					ORDER BY acc.FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentAccountID" DataType="String" MaxLength="200" LikeType="Both"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.ID = @ApproverAccountID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentAccountID" DataType="Number"/>
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+	</Controls>
+</Form>

@@ -1,0 +1,816 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMRelease" SegmentType="ITSMReleaseSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+	<Usings>
+		<Using Component="Common/FolderTreeSetting" />
+		<Using Component="Common/PageSetting" FormIdent="ITSMRelease" />
+		<Using Component="Common/SLACriteriaControls" />
+
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMRelease" />
+		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMSupplierRequest" KeyPrefix="REL" />
+
+		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMSupplierRequest" />
+		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMRelease" />
+		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMRelease" />
+		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMRelease" />
+		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMSupplierRequest" />
+		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMSupplierRequest" />
+
+		<Using Component="Common/Buttons/SaveGroupButton" />
+		<Using Component="Common/Buttons/DeleteButton" />
+		<Using Component="Common/Buttons/BackButton" />
+	</Usings>
+	<DataPermissions>
+		<string>ITSMRelease</string>
+		<string>ITSMReleaseReporter</string>
+		<string>ITSMReleaseManager</string>
+		<string>ITSMReleaseSharedReporter</string>
+		<string>ITSMOperator</string>
+		<string>ITSMSupplier</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMRelease</string>
+	</CreatePermissions>
+	<DynamicPermission>
+		<Columns>
+			<Column Ident="PermissionIdent" DataBindType="Value" />
+		</Columns>
+		<SQL><![CDATA[
+			DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+			INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+			SELECT 'ITSMReleaseSharedReporter' AS PermissionIdent
+			FROM usr.ITSM_FolderTreeView as itsmFolTre
+			WHERE
+				itsmFolTre.FolderTreeIdent = @ITSMCompanyIdent
+				AND itsmFolTre.IsShareAmongAuthors = @StateOne
+				AND EXISTS(
+					SELECT NULL
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID, @FolderGroupSegmentIdent, @PermissionIDs)
+					WHERE
+						FolderTreeIdent = itsmFolTre.FolderTreeIdent
+				)
+		]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+		</Parameters>
+	</DynamicPermission>
+	<Settings>
+	</Settings>
+	<Buttons>
+
+		<Button xsi:type="FormButton" Ident="SubmitButton" TitleResourceKey="SubmitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="ConfirmCoordinatorButton" TitleResourceKey="ConfirmCoordinatorButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-user-check" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="SendToApprovalButton" TitleResourceKey="SendToReleaseApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-collaboration" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="TakoOverApprovalButton" TitleResourceKey="TakoOverApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-users" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="AssignApprovalButton" TitleResourceKey="AssignApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-user-plus" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="BackToRevisionButton" TitleResourceKey="BackToRevisionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-loop3" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="SendToSupplierButton" TitleResourceKey="SendToSupplierButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-user-tie" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="DeployedButton" TitleResourceKey="DeployedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-download" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="TestingSuccesfullButton" TitleResourceKey="TestingSuccesfullButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-folder-check" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="TestingFailureButton" TitleResourceKey="TestingFailureButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-folder-remove" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="RollbackDecisionButton" TitleResourceKey="RollbackDecisionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-database-refresh" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="RollbackExecutedButton" TitleResourceKey="RollbackExecutedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-database-check" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="CloseButton" TitleResourceKey="CloseButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-lock" IsVisible="false" IsStopRedirect="true" />
+
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="PlaceHolderControl" Ident="PHShutdown" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHDeployment" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHTesting" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHRollback" IsVisible="false" />
+
+		<!--SpecificControls-->
+		<Control xsi:type="TextBoxControl" Ident="ReleaseName" TitleResourceKey="ReleaseName_ITSM" DataType="String" MaxLength="150" IsShowRequired="true" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="AutoCompleteControl" Ident="ReleaseManagerAccountID" DataType="Number" TitleResourceKey="ReleaseManagerAccountID_ITSM" IsShowRequired="true" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID,
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						FullName LIKE @ReleaseManagerAccountID
+						AND [State] = @ActiveState
+					ORDER BY FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReleaseManagerAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID, 
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						ID = @ReleaseManagerAccountID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReleaseManagerAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+		<Control xsi:type="AutoCompleteControl" Ident="ITSMChangeID" DataType="Number" TitleResourceKey="ReleaseITSMChangeID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Subject" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID,
+						CONCAT(ITSMKey,' - ',[Subject]) AS [Subject]
+					FROM 
+						usr.ITSMChange
+					WHERE 
+						(
+							ITSMKey LIKE @ITSMChangeID
+							OR
+							[Subject] LIKE @ITSMChangeID
+						)
+						AND [State] != @DeletedState
+					ORDER BY CONCAT(ITSMKey,' - ',[Subject]) ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMChangeID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Subject" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID,
+						CONCAT(ITSMKey,' - ',[Subject]) AS [Subject]
+					FROM 
+						usr.ITSMChange
+					WHERE 
+						ID = @ITSMChangeID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMChangeID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMReleaseClassificationCategoryGuid" DataType="Guid" TitleResourceKey="ITSMReleaseClassificationCategoryGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMReleaseClassificationCategory AS dial
+					INNER JOIN usr.ITSMReleaseClassificationCategorySetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMReleaseClassificationCategory AS dial
+							INNER JOIN usr.ITSMReleaseClassificationCategorySetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMReleaseDeploymentTypeGuid" DataType="Guid" TitleResourceKey="ITSMReleaseDeploymentTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMReleaseDeploymentType AS dial
+					INNER JOIN usr.ITSMReleaseDeploymentTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMReleaseDeploymentType AS dial
+							INNER JOIN usr.ITSMReleaseDeploymentTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMOperationalEnvironmentTypeGuid" DataType="Guid" TitleResourceKey="ITSMOperationalEnvironmentTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMOperationalEnvironmentType AS dial
+					INNER JOIN usr.ITSMOperationalEnvironmentTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMOperationalEnvironmentType AS dial
+							INNER JOIN usr.ITSMOperationalEnvironmentTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="FileControl" Ident="ReleaseScheduleFile" TitleResourceKey="ReleaseScheduleFile_ITSM" IsReadOnly="true" />
+		<Control xsi:type="FileControl" Ident="DeploymentPlanFile" TitleResourceKey="DeploymentPlanFile_ITSM" IsReadOnly="true" />
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMReleaseApprovalDecisionResultGuid" DataType="Guid" TitleResourceKey="ITSMReleaseApprovalDecisionResultGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMReleaseApprovalDecisionResult AS dial
+					INNER JOIN usr.ITSMReleaseApprovalDecisionResultSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMReleaseApprovalDecisionResult AS dial
+							INNER JOIN usr.ITSMReleaseApprovalDecisionResultSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="ApprovalJustification" DataType="String" Rows="3" TitleResourceKey="ApprovalJustification_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ApprovalDateTime" TitleResourceKey="ApprovalDateTime_ITSM" DataType="DateTime" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="RequestForShutdown" DataType="String" Rows="3" TitleResourceKey="RequestForShutdown_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ShutdownStartDateTime" TitleResourceKey="ShutdownStartDateTime_ITSM" DataType="DateTime" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ShutdownEndDateTime" TitleResourceKey="ShutdownEndDateTime_ITSM" DataType="DateTime" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="DeploymentDescription" DataType="String" Rows="3" TitleResourceKey="DeploymentDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="DeploymentDateTime" TitleResourceKey="DeploymentDateTime_ITSM" DataType="DateTime" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMReleaseTestSummaryConclusionGuid" DataType="Guid" TitleResourceKey="ITSMReleaseTestSummaryConclusionGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMReleaseTestSummaryConclusion AS dial
+					INNER JOIN usr.ITSMReleaseTestSummaryConclusionSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMReleaseTestSummaryConclusion AS dial
+							INNER JOIN usr.ITSMReleaseTestSummaryConclusionSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMReleaseTestExecutionResultGuid" DataType="Guid" TitleResourceKey="ITSMReleaseTestExecutionResultGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMReleaseTestExecutionResult AS dial
+					INNER JOIN usr.ITSMReleaseTestExecutionResultSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMReleaseTestExecutionResult AS dial
+							INNER JOIN usr.ITSMReleaseTestExecutionResultSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="TestingResultDescription" DataType="String" Rows="3" TitleResourceKey="TestingResultDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="TestingEndDateTime" TitleResourceKey="TestingEndDateTime_ITSM" DataType="DateTime" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsTrainingRequired" TitleResourceKey="IsTrainingRequired_ITSM" LabelPlacementType="Center" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="TrainingDateTime" TitleResourceKey="TrainingDateTime_ITSM" DataType="DateTime" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="DropDownListControl" Ident="IsRollback" TitleResourceKey="IsRollback_ITSM" DataType="Number" IsReadOnly="true">
+			<ListItems>
+				<ListItem TitleResourceKey="SelectValue_ITSM" Value="" />
+				<ListItem TitleResourceKey="Yes_ITSM" Value="1" />
+				<ListItem TitleResourceKey="No_ITSM" Value="0" />
+			</ListItems>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="INT" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT usr.GetResourceText(
+							CASE @Value
+							WHEN 1
+								THEN 'Yes_ITSM'
+							WHEN 0
+								THEN 'No_ITSM'
+							END
+						,@UserLanguageID)
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="RollbackJustification" DataType="String" Rows="3" TitleResourceKey="RollbackJustification_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="RollbackDateTime" TitleResourceKey="RollbackDateTime_ITSM" DataType="DateTime" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<!--/SpecificControls-->
+
+	</Controls>
+	<Components>
+		<Component ComponentIdent="TimeLineComponent" Ident="TimeLine" />
+	</Components>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate><![CDATA[
+				<div class="row">
+
+					<div class="col-md-9"><!-- Levý sloupec -->
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#BasicInformation_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse"></a>
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#ScheduledRelease_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse"></a>
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="ReleaseName" />
+													<Control ID="ReleaseName" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-3">
+												<div class="form-group">
+													<ControlLabel ControlID="ReleaseManagerAccountID" />
+													<Control ID="ReleaseManagerAccountID" />
+												</div>
+											</div>
+											<div class="col-md-3">
+												<div class="form-group">
+													<ControlLabel ControlID="ITSMChangeID" />
+													<Control ID="ITSMChangeID" />
+												</div>
+											</div>
+											<div class="col-md-3">
+												<div class="form-group">
+													<ControlLabel ControlID="ITSMReleaseClassificationCategoryGuid" />
+													<Control ID="ITSMReleaseClassificationCategoryGuid" />
+												</div>
+											</div>
+											<div class="col-md-3">
+												<div class="form-group">
+													<ControlLabel ControlID="ITSMReleaseDeploymentTypeGuid" />
+													<Control ID="ITSMReleaseDeploymentTypeGuid" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-3">
+												<div class="form-group">
+													<ControlLabel ControlID="ITSMOperationalEnvironmentTypeGuid" />
+													<Control ID="ITSMOperationalEnvironmentTypeGuid" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group">
+													<ControlLabel ControlID="ReleaseScheduleFile" />
+													<Control ID="ReleaseScheduleFile" />
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group">
+													<ControlLabel ControlID="DeploymentPlanFile" />
+													<Control ID="DeploymentPlanFile" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="row d-none">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#ReleaseApproval_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse"></a>
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										<div class="row">
+											<div class="col-md-3">
+												<div class="form-group">
+													<ControlLabel ControlID="ITSMReleaseApprovalDecisionResultGuid" />
+													<Control ID="ITSMReleaseApprovalDecisionResultGuid" />
+												</div>
+											</div>
+											<div class="col-md-3">
+												<div class="form-group">
+													<ControlLabel ControlID="ApprovalDateTime" />
+													<Control ID="ApprovalDateTime" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="ApprovalJustification" />
+													<Control ID="ApprovalJustification" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<Control ID="PHShutdown">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#ReleaseShutdown_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ShutdownStartDateTime" />
+														<Control ID="ShutdownStartDateTime" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ShutdownEndDateTime" />
+														<Control ID="ShutdownEndDateTime" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="RequestForShutdown" />
+														<Control ID="RequestForShutdown" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHDeployment">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#ReleaseDeployment_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="DeploymentDateTime" />
+														<Control ID="DeploymentDateTime" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="DeploymentDescription" />
+														<Control ID="DeploymentDescription" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHTesting">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#ReleaseTesting_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMReleaseTestSummaryConclusionGuid" />
+														<Control ID="ITSMReleaseTestSummaryConclusionGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMReleaseTestExecutionResultGuid" />
+														<Control ID="ITSMReleaseTestExecutionResultGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="TestingEndDateTime" />
+														<Control ID="TestingEndDateTime" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="TestingResultDescription" />
+														<Control ID="TestingResultDescription" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="IsTrainingRequired" />
+														<Control ID="IsTrainingRequired" />
+													</div>
+												</div>
+												<div class="col-md-3 js-showHideTrainingDateTime" style="display:none;">
+													<div class="form-group">
+														<ControlLabel ControlID="TrainingDateTime" />
+														<Control ID="TrainingDateTime" />
+													</div>
+												</div>
+											</div>
+											<Control ID="PHRollback">
+												<div class="row">
+													<div class="col-md-12">
+														<legend class="font-weight-bold">[#RollbackInformation_ITSM#]</legend>
+													</div>
+												</div>
+												<div class="row">
+													<div class="col-md-3">
+														<div class="form-group">
+															<ControlLabel ControlID="IsRollback" />
+															<Control ID="IsRollback" />
+														</div>
+													</div>
+													<div class="col-md-3 js-showHideRollbackDateTime" style="display:none;">
+														<div class="form-group">
+															<ControlLabel ControlID="RollbackDateTime" />
+															<Control ID="RollbackDateTime" />
+														</div>
+													</div>
+												</div>
+												<div class="row js-showHideRollbackDateTime" style="display:none;">
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="RollbackJustification" />
+															<Control ID="RollbackJustification" />
+														</div>
+													</div>
+												</div>
+											</Control>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
+
+					</div><!-- //Levý sloupec -->
+
+					<div class="col-md-3"><!-- Pravý sloupec -->
+
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+
+					</div><!-- //Pravý sloupec -->
+
+				</div>
+
+				{{Component:Common/Shared/ITSMKey,Section:Html}}
+				{{Component:Common/Controls/ThisFormIdent,Section:Html}}
+			]]></HTMLTemplate>
+		</Section>
+
+	</Sections>
+</Form>

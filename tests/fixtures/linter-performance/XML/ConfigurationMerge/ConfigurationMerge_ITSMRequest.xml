@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ConfigurationMerge_ITSMRequest" PackageIdent="ITSMPackage">
+	<Sections>
+		<Section xsi:type="SegmentSection">
+			<Segments>
+
+				<Segment MergeType="Replace" SegmentType="ITSMRequestSegment" IconCssClass="icon-stack-text" TitleResourceKey="ITSMRequestSegment_ITSM" Url="~/Segment/Index/ITSMRequestSegment" Priority="10" />
+
+			</Segments>
+		</Section>
+	</Sections>
+</Configuration>

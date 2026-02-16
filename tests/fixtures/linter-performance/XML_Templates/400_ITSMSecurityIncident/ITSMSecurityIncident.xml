@@ -1,0 +1,1889 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- @IgnoreFile unknown-form-ident -->
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMSecurityIncident" SegmentType="ITSMSecurityIncidentSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+	<Usings>
+		<Using Component="Common/FolderTreeSetting" />
+		<Using Component="Common/PageSetting" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/SLACriteriaControls" />
+
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMSecurityIncident" KeyPrefix="SI"/>
+		<Using Component="Common/Shared/Resolve" FormIdent="ITSMSecurityIncident" />
+
+		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/AdditionalFields" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMSecurityIncident" />
+
+		<Using Component="Common/Buttons/SendToCategorizationButton" />
+		<Using Component="Common/Buttons/SendToProcessButton" />
+		<Using Component="Common/Buttons/CloseButton" />
+		<Using Component="Common/Buttons/CancelButton" />
+		<Using Component="Common/Buttons/SaveGroupButton" />
+		<Using Component="Common/Buttons/DeleteButton" />
+		<Using Component="Common/Buttons/BackButton" />
+	</Usings>
+	<ExternalJavaScriptRelativePaths>
+	</ExternalJavaScriptRelativePaths>
+	<DataPermissions>
+		<string>ITSMSecurityIncident</string>
+		<string>ITSMSecurityIncidentReporter</string>
+		<string>ITSMSecurityIncidentSharedReporter</string>
+		<string>ITSMAuthor</string>
+		<string>ITSMSpecialist</string>
+		<string>ITSMOperator</string>
+		<string>ITSMSupplier</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMSecurityIncident</string>
+	</CreatePermissions>
+	<DynamicPermission>
+		<Columns>
+			<Column Ident="PermissionIdent" DataBindType="Value"/>
+		</Columns>
+		<SQL><![CDATA[
+			DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+			INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+      SELECT 'ITSMSecurityIncidentSharedReporter' AS PermissionIdent
+			FROM usr.ITSM_FolderTreeView as itsmFolTre
+			WHERE
+				itsmFolTre.FolderTreeIdent = @ITSMCompanyIdent
+				AND itsmFolTre.IsShareAmongAuthors = @StateOne
+				AND EXISTS(
+					SELECT NULL
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID, @FolderGroupSegmentIdent, @PermissionIDs)
+					WHERE
+						FolderTreeIdent = itsmFolTre.FolderTreeIdent
+				)
+		]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1"/>
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900"/>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+		</Parameters>
+	</DynamicPermission>
+	<Settings>
+	</Settings>
+	<Buttons>
+
+		<Button xsi:type="FormButton" Ident="SolutionRejectedButton" TitleResourceKey="SolutionRejectedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false"  IsStopRedirect="true"/>
+
+		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true"/>
+
+		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true"/>
+
+		<Button xsi:type="FormButton" Ident="SendToHDMZeButton" TitleResourceKey="SendToHDMZeButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true"/>
+		
+		<Button xsi:type="FormButton" Ident="SentToOKBManagerApproveButton" TitleResourceKey="SentToOKBManagerApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-hammer-wrench" IsVisible="false" IsStopRedirect="true"/>
+		
+		<Button xsi:type="FormButton" Ident="SolvedButton" TitleResourceKey="SolvedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true"/>
+		
+		<Button xsi:type="FormButton" Ident="SendBackToAnalysisButton" TitleResourceKey="SendBackToAnalysisButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-thumbs-down2" IsVisible="false" IsStopRedirect="true"/>
+		
+		<Button xsi:type="FormButton" Ident="SendToMeasureAndSolutionSignificantRiskButton" TitleResourceKey="SendToMeasureAndSolutionSignificantRiskButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-thumbs-up2" IsVisible="false" IsStopRedirect="true"/>
+
+		<Button xsi:type="GroupButton" Ident="AnalysisGroupButton" TitleResourceKey="AnalysisGroupButton_ITSM" IsVisible="false" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-eye4">
+			<Buttons>
+				<Button xsi:type="FormButton" Ident="AcceptableRiskButton" TitleResourceKey="AcceptableRiskButton_ITSM" IsSave="true" PlacementType="Top Bottom" IsVisible="false" IsStopRedirect="true"/>
+
+				<Button xsi:type="FormButton" Ident="StandardRiskButton" TitleResourceKey="StandardRiskButton_ITSM" IsSave="true" PlacementType="Top Bottom" IsVisible="false" IsStopRedirect="true"/>
+
+				<Button xsi:type="FormButton" Ident="SignificantRiskButton" TitleResourceKey="SignificantRiskButton_ITSM" IsSave="true" PlacementType="Top Bottom" IsVisible="false" IsStopRedirect="true"/>
+			</Buttons>
+		</Button>
+
+		<Button xsi:type="FormButton" Ident="SendToAnalysisButton" TitleResourceKey="SendToAnalysisButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-file-eye" IsVisible="false" IsStopRedirect="true"/>
+
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true" IsFullText="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		
+
+		<!-- PHs -->
+    <Control xsi:type="PlaceHolderControl" Ident="PHQuickAnalysisCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHSecurityIncidentClassificationCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHSecurityIncidentAnalysisCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHSecurityIncidentImpactCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHSecurityIncidentSecondAnalysisCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHSecurityIncidentMeasureCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHCSIRTTeamCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHSERTTeamCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHIncidentResolutionCard" IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHIncidentClosureCard" IsVisible="false"/>
+		<!-- PHs -->
+
+		<!--SpecificControls-->
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentTypeCodeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentTypeCodeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentTypeCode AS dial
+					INNER JOIN usr.ITSMSecurityIncidentTypeCodeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentTypeCode AS dial
+							INNER JOIN usr.ITSMSecurityIncidentTypeCodeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="AnalysisJustification" DataType="String" Rows="3" TitleResourceKey="AnalysisJustification_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentUrgencyCategoryGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentUrgencyCategoryGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentUrgencyCategory AS dial
+					INNER JOIN usr.ITSMSecurityIncidentUrgencyCategorySetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentUrgencyCategory AS dial
+							INNER JOIN usr.ITSMSecurityIncidentUrgencyCategorySetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentImpactCategoryGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentImpactCategoryGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentImpactCategory AS dial
+					INNER JOIN usr.ITSMSecurityIncidentImpactCategorySetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentImpactCategory AS dial
+							INNER JOIN usr.ITSMSecurityIncidentImpactCategorySetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentPriorityLevelGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentPriorityLevelGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentPriorityLevel AS dial
+					INNER JOIN usr.ITSMSecurityIncidentPriorityLevelSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentPriorityLevel AS dial
+							INNER JOIN usr.ITSMSecurityIncidentPriorityLevelSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentResponseProcedureTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentResponseProcedureTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentResponseProcedureType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentResponseProcedureTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentResponseProcedureType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentResponseProcedureTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+
+
+		<Control xsi:type="TextAreaControl" Ident="AnalysisSecurityIncident" DataType="String" Rows="3" TitleResourceKey="AnalysisSecurityIncident_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="IncidentWorkCode" DataType="String" MaxLength="150" TitleResourceKey="IncidentWorkCode_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentClassificationTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentClassificationTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentClassificationType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentClassificationTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentClassificationType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentClassificationTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentAffectedUserCountGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentAffectedUserCountGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentAffectedUserCount AS dial
+					INNER JOIN usr.ITSMSecurityIncidentAffectedUserCountSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentAffectedUserCount AS dial
+							INNER JOIN usr.ITSMSecurityIncidentAffectedUserCountSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="AffectedSystems" DataType="String" Rows="3" TitleResourceKey="AffectedSystems_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		
+		<Control xsi:type="TextAreaControl" Ident="Confidentiality" DataType="String" Rows="3" TitleResourceKey="Confidentiality_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="Integrity" DataType="String" Rows="3" TitleResourceKey="Integrity_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="Availability" DataType="String" Rows="3" TitleResourceKey="Availability_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="SwitchControl" Ident="IsAffectedOperatingSystem" TitleResourceKey="IsAffectedOperatingSystem_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsAffectedSoftware" TitleResourceKey="IsAffectedSoftware_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsAffectedInternalNetwork" TitleResourceKey="IsAffectedInternalNetwork_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsAffectedServices" TitleResourceKey="IsAffectedServices_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsAffectedInformation" TitleResourceKey="IsAffectedInformation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsAffectedVIS" TitleResourceKey="IsAffectedVIS_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		
+		<Control xsi:type="SwitchControl" Ident="IsOrganizationalDifficulties" TitleResourceKey="IsOrganizationalDifficulties_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsDataCompromise" TitleResourceKey="IsDataCompromise_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsFinancialLoss" TitleResourceKey="IsFinancialLoss_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsThreatToPersonalInformation" TitleResourceKey="IsThreatToPersonalInformation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsInabilityToFulfillObligation" TitleResourceKey="IsInabilityToFulfillObligation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsInabilityToContinueOperations" TitleResourceKey="IsInabilityToContinueOperations_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsInvasionOfPrivacy" TitleResourceKey="IsInvasionOfPrivacy_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsThreatToReputation" TitleResourceKey="IsThreatToReputation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentRootCauseTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentRootCauseTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentRootCauseType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentRootCauseTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentRootCauseType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentRootCauseTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ReactiveMeasure" DataType="String" MaxLength="150" TitleResourceKey="ReactiveMeasure_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentAffectedInformationClassGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentAffectedInformationClassGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentAffectedInformationClass AS dial
+					INNER JOIN usr.ITSMSecurityIncidentAffectedInformationClassSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentAffectedInformationClass AS dial
+							INNER JOIN usr.ITSMSecurityIncidentAffectedInformationClassSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="IncidentTechnicalDescription" DataType="String" Rows="3" TitleResourceKey="IncidentTechnicalDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="Risks" DataType="String" Rows="3" TitleResourceKey="Risks_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="StateOfCoping" DataType="String" MaxLength="150" TitleResourceKey="StateOfCoping_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="AffectedSystemsCount" DataType="String" MaxLength="150" TitleResourceKey="AffectedSystemsCount_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="AffectedUsersCount" DataType="String" MaxLength="150" TitleResourceKey="AffectedUsersCount_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="TargetOfAttack" DataType="String" MaxLength="150" TitleResourceKey="TargetOfAttack_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="HostOrIP" DataType="String" MaxLength="150" TitleResourceKey="HostOrIP_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="HostFunction" DataType="String" MaxLength="150" TitleResourceKey="HostFunction_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		
+		<Control xsi:type="TextBoxControl" Ident="SequenceNumber" DataType="Number" TitleResourceKey="SequenceNumber_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="SwitchControl" Ident="IsImmediateCorrectiveAction" TitleResourceKey="IsImmediateCorrectiveAction_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="ImmediateCorrectiveActionDateTime" DataType="DateTime" TitleResourceKey="ImmediateCorrectiveActionDateTime_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="AutoCompleteControl" Ident="ImmediateCorrectiveActionRequestorAccountID" DataType="Number" TitleResourceKey="ImmediateCorrectiveActionRequestorAccountID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID,
+						acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.FullName LIKE @ImmediateCorrectiveActionRequestorAccountID
+						AND acc.[State] = @ActiveState
+					ORDER BY acc.FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ImmediateCorrectiveActionRequestorAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID, 
+						acc.[FullName]
+					FROM dbo.Account AS acc
+					WHERE
+						acc.ID = @ImmediateCorrectiveActionRequestorAccountID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ImmediateCorrectiveActionRequestorAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentControlTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentControlTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentControlType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentControlTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentControlType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentControlTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentControlStatusGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentControlStatusGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentControlStatus AS dial
+					INNER JOIN usr.ITSMSecurityIncidentControlStatusSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentControlStatus AS dial
+							INNER JOIN usr.ITSMSecurityIncidentControlStatusSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentControlPriorityGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentControlPriorityGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentControlPriority AS dial
+					INNER JOIN usr.ITSMSecurityIncidentControlPrioritySetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentControlPriority AS dial
+							INNER JOIN usr.ITSMSecurityIncidentControlPrioritySetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="SecuriyIncidentDescription" DataType="String" Rows="3" TitleResourceKey="SecuriyIncidentDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="SecurityIncidentTask" DataType="String" Rows="3" TitleResourceKey="SecurityIncidentTask_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="SecurityIncidentCreateDateTime" DataType="DateTime" TitleResourceKey="SecurityIncidentCreateDateTime_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="SecurityIncidentSolveDateTime" DataType="DateTime" TitleResourceKey="SecurityIncidentSolveDateTime_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="RelatedSequenceNumber" DataType="String" MaxLength="150" TitleResourceKey="RelatedSequenceNumber_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="AutoCompleteControl" Ident="SecurityIncidentRequestorAccountID" DataType="Number" TitleResourceKey="SecurityIncidentRequestorAccountID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID,
+						acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas 
+						ON gas.AccountID = acc.ID
+					WHERE 
+						acc.FullName LIKE @SecurityIncidentRequestorAccountID
+						AND acc.[State] = @ActiveState
+					ORDER BY acc.FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SecurityIncidentRequestorAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID, 
+						acc.[FullName]
+					FROM dbo.Account AS acc
+					WHERE
+						acc.ID = @SecurityIncidentRequestorAccountID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SecurityIncidentRequestorAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="SecurityIncidentOutput" DataType="String" Rows="3" TitleResourceKey="SecurityIncidentOutput_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="FileControl" Ident="SecurityIncidentFile" TitleResourceKey="SecurityIncidentFile_ITSM" IsReadOnly="true"/>
+
+		
+		<Control xsi:type="TextBoxControl" Ident="CSIRTTeamConveningDateTime" DataType="DateTime" TitleResourceKey="CSIRTTeamConveningDateTime_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="CSIRTNegotiationResult" DataType="String" Rows="3" TitleResourceKey="CSIRTNegotiationResult_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="FileControl" Ident="CSIRTOtherInformationFile" TitleResourceKey="CSIRTOtherInformationFile_ITSM" IsReadOnly="true"/>
+
+		
+		<Control xsi:type="TextBoxControl" Ident="SERTTeamConveningDateTime" DataType="DateTime" TitleResourceKey="SERTTeamConveningDateTime_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="SERTNegotiationResult" DataType="String" Rows="3" TitleResourceKey="SERTNegotiationResult_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="FileControl" Ident="SERTOtherInformationFile" TitleResourceKey="SERTOtherInformationFile_ITSM" IsReadOnly="true"/>
+
+		
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentBreachVectorTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentBreachVectorTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentBreachVectorType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentBreachVectorTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentBreachVectorType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentBreachVectorTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentThreatActorTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentThreatActorTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentThreatActorType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentThreatActorTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentThreatActorType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentThreatActorTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentLogicalIntrusionTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentLogicalIntrusionTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentLogicalIntrusionType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentLogicalIntrusionTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentLogicalIntrusionType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentLogicalIntrusionTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentKeyBusinessImpactTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentKeyBusinessImpactTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentKeyBusinessImpactType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentKeyBusinessImpactTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentKeyBusinessImpactType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentKeyBusinessImpactTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentOutcomeTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentOutcomeTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentOutcomeType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentOutcomeTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentOutcomeType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentOutcomeTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentTheftCategoryGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentTheftCategoryGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentTheftCategory AS dial
+					INNER JOIN usr.ITSMSecurityIncidentTheftCategorySetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentTheftCategory AS dial
+							INNER JOIN usr.ITSMSecurityIncidentTheftCategorySetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentFailureCategoryGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentFailureCategoryGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentFailureCategory AS dial
+					INNER JOIN usr.ITSMSecurityIncidentFailureCategorySetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentFailureCategory AS dial
+							INNER JOIN usr.ITSMSecurityIncidentFailureCategorySetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="CauseOfTheIncidentInformation" DataType="String" Rows="3" TitleResourceKey="CauseOfTheIncidentInformation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		
+		<Control xsi:type="DropDownListControl" Ident="ITSMSecurityIncidentResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMSecurityIncidentResolutionMethodTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSecurityIncidentResolutionMethodType AS dial
+					INNER JOIN usr.ITSMSecurityIncidentResolutionMethodTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSecurityIncidentResolutionMethodType AS dial
+							INNER JOIN usr.ITSMSecurityIncidentResolutionMethodTypeSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+		<Control xsi:type="FileControl" Ident="SecurityIncidentResolutionOtherInformationFile" TitleResourceKey="SecurityIncidentResolutionOtherInformationFile_ITSM" IsReadOnly="true"/>
+		<!--/SpecificControls-->
+
+	</Controls>
+	<Components>
+	</Components>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate><![CDATA[
+				<div class="row">
+
+					<div class="col-md-9"><!-- Levý sloupec -->
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#BasicInformation_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse"></a>
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
+
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="Subject" />
+													<Control ID="Subject" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="Description" />
+													<Control ID="Description" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<Control ID="PHQuickAnalysisCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#QuickAnalysis_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentTypeCodeGuid" />
+														<Control ID="ITSMSecurityIncidentTypeCodeGuid" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="AnalysisJustification" />
+														<Control ID="AnalysisJustification" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHSecurityIncidentClassificationCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SecurityIncidentClassification_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentUrgencyCategoryGuid" />
+														<Control ID="ITSMSecurityIncidentUrgencyCategoryGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentImpactCategoryGuid" />
+														<Control ID="ITSMSecurityIncidentImpactCategoryGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentPriorityLevelGuid" />
+														<Control ID="ITSMSecurityIncidentPriorityLevelGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentResponseProcedureTypeGuid" />
+														<Control ID="ITSMSecurityIncidentResponseProcedureTypeGuid" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHSecurityIncidentAnalysisCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SecurityIncidentAnalysis_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="IncidentWorkCode" />
+														<Control ID="IncidentWorkCode" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentClassificationTypeGuid" />
+														<Control ID="ITSMSecurityIncidentClassificationTypeGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentAffectedUserCountGuid" />
+														<Control ID="ITSMSecurityIncidentAffectedUserCountGuid" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="AnalysisSecurityIncident" />
+														<Control ID="AnalysisSecurityIncident" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="AffectedSystems" />
+														<Control ID="AffectedSystems" />
+													</div>
+												</div>
+											</div>
+
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<legend class="font-weight-bold">[#SecurityIncidentImpact_ITSM#]</legend>
+													</div>
+												</div>
+											</div>
+
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="Confidentiality" />
+														<Control ID="Confidentiality" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="Integrity" />
+														<Control ID="Integrity" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="Availability" />
+														<Control ID="Availability" />
+													</div>
+												</div>
+											</div>
+
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<legend class="font-weight-bold">[#SecurityIncidentAffectedGroups_ITSM#]</legend>
+													</div>
+												</div>
+											</div>
+
+											<div class="row">
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsAffectedOperatingSystem" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsAffectedSoftware" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsAffectedInternalNetwork" />
+													</div>
+												</div>
+											</div>
+
+											<div class="row">
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsAffectedServices" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsAffectedInformation" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsAffectedVIS" />
+													</div>
+												</div>
+											</div>
+
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHSecurityIncidentImpactCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SecurityIncidentImpact_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsOrganizationalDifficulties" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsDataCompromise" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsFinancialLoss" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsThreatToPersonalInformation" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsInabilityToFulfillObligation" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsInabilityToContinueOperations" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsInvasionOfPrivacy" />
+													</div>
+												</div>
+												<div class="col-md-4">
+													<div class="form-group">
+														<Control ID="IsThreatToReputation" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHSecurityIncidentSecondAnalysisCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SecurityIncidentSecondAnalysis_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentRootCauseTypeGuid" />
+														<Control ID="ITSMSecurityIncidentRootCauseTypeGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentAffectedInformationClassGuid" />
+														<Control ID="ITSMSecurityIncidentAffectedInformationClassGuid" />
+													</div>
+												</div>
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="ReactiveMeasure" />
+														<Control ID="ReactiveMeasure" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="IncidentTechnicalDescription" />
+														<Control ID="IncidentTechnicalDescription" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="Risks" />
+														<Control ID="Risks" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="StateOfCoping" />
+														<Control ID="StateOfCoping" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="AffectedSystemsCount" />
+														<Control ID="AffectedSystemsCount" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="AffectedUsersCount" />
+														<Control ID="AffectedUsersCount" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="TargetOfAttack" />
+														<Control ID="TargetOfAttack" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="HostOrIP" />
+														<Control ID="HostOrIP" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="HostFunction" />
+														<Control ID="HostFunction" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHSecurityIncidentMeasureCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SecurityIncidentMeasure_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="SequenceNumber" />
+														<Control ID="SequenceNumber" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<Control ID="IsImmediateCorrectiveAction" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ImmediateCorrectiveActionDateTime" />
+														<Control ID="ImmediateCorrectiveActionDateTime" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ImmediateCorrectiveActionRequestorAccountID" />
+														<Control ID="ImmediateCorrectiveActionRequestorAccountID" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentControlTypeGuid" />
+														<Control ID="ITSMSecurityIncidentControlTypeGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentControlStatusGuid" />
+														<Control ID="ITSMSecurityIncidentControlStatusGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentControlPriorityGuid" />
+														<Control ID="ITSMSecurityIncidentControlPriorityGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="AssignedAccountID" />
+														<Control ID="AssignedAccountID" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="SecuriyIncidentDescription" />
+														<Control ID="SecuriyIncidentDescription" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="SecurityIncidentTask" />
+														<Control ID="SecurityIncidentTask" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="SecurityIncidentCreateDateTime" />
+														<Control ID="SecurityIncidentCreateDateTime" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="SecurityIncidentSolveDateTime" />
+														<Control ID="SecurityIncidentSolveDateTime" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="RelatedSequenceNumber" />
+														<Control ID="RelatedSequenceNumber" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="SecurityIncidentRequestorAccountID" />
+														<Control ID="SecurityIncidentRequestorAccountID" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="SecurityIncidentOutput" />
+														<Control ID="SecurityIncidentOutput" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="SecurityIncidentFile" />
+														<Control ID="SecurityIncidentFile" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHCSIRTTeamCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#CSIRTTeam_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="CSIRTTeamConveningDateTime" />
+														<Control ID="CSIRTTeamConveningDateTime" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="CSIRTNegotiationResult" />
+														<Control ID="CSIRTNegotiationResult" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="CSIRTOtherInformationFile" />
+														<Control ID="CSIRTOtherInformationFile" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHSERTTeamCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SERTTeam_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="SERTTeamConveningDateTime" />
+														<Control ID="SERTTeamConveningDateTime" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="SERTNegotiationResult" />
+														<Control ID="SERTNegotiationResult" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="SERTOtherInformationFile" />
+														<Control ID="SERTOtherInformationFile" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHIncidentResolutionCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#IncidentResolution_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentBreachVectorTypeGuid" />
+														<Control ID="ITSMSecurityIncidentBreachVectorTypeGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentThreatActorTypeGuid" />
+														<Control ID="ITSMSecurityIncidentThreatActorTypeGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentLogicalIntrusionTypeGuid" />
+														<Control ID="ITSMSecurityIncidentLogicalIntrusionTypeGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentKeyBusinessImpactTypeGuid" />
+														<Control ID="ITSMSecurityIncidentKeyBusinessImpactTypeGuid" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentOutcomeTypeGuid" />
+														<Control ID="ITSMSecurityIncidentOutcomeTypeGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentTheftCategoryGuid" />
+														<Control ID="ITSMSecurityIncidentTheftCategoryGuid" />
+													</div>
+												</div>
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentFailureCategoryGuid" />
+														<Control ID="ITSMSecurityIncidentFailureCategoryGuid" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="CauseOfTheIncidentInformation" />
+														<Control ID="CauseOfTheIncidentInformation" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						<Control ID="PHIncidentClosureCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#IncidentClosure_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSecurityIncidentResolutionMethodTypeGuid" />
+														<Control ID="ITSMSecurityIncidentResolutionMethodTypeGuid" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="SecurityIncidentResolutionOtherInformationFile" />
+														<Control ID="SecurityIncidentResolutionOtherInformationFile" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
+
+					</div><!-- //Levý sloupec -->
+
+					<div class="col-md-3"><!-- Pravý sloupec -->
+
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Assign,Section:Html}}
+						{{Component:Common/Shared/Resolve,Section:Html}}
+
+					</div><!-- //Pravý sloupec -->
+
+				</div>
+				
+			]]></HTMLTemplate>
+		</Section>
+		{{Component:Common/Shared/ITSMKey,Section:Html}}
+
+	</Sections>
+</Form>

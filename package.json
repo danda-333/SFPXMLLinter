@@ -237,6 +237,7 @@
     "watch": "tsc -watch -p ./",
     "test:formatter": "npm run compile && node out/tests/formatter/runFormatterFixtures.js && node out/tests/formatter/runSelectionFormatterTests.js",
     "test:linter": "npm run compile && node out/tests/linter/runLinterFixtures.js",
+    "test:linter:perf": "npm run compile && node out/tests/linter/runLinterPerformance.js",
     "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js",
     "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runBuildTemplateFixtures.js",
     "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",

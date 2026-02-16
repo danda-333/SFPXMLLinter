@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
+		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true" />
+	</Section>
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<!-- @Ignore unknown-form-ident -->
+		<Control xsi:type="SubFormControl" Ident="ITSMAssessment{{ITSMType}}FakeSubForm" TextResourceKey="ITSMAssessment{{ITSMType}}FakeSubForm_ITSM" FormIdent="ITSMAssessment{{ITSMType}}FakeSubForm" IsSortable="true" SortableControlIdent="AssessmentOrder" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column xsi:type="SortableColumn" Ident="AssessmentOrder" Width="10" IsDefaultSort="true" SortType="ASC"/>
+					<Column Ident="AssessmentAccountID" TitleResourceKey="AssessmentAccountID_ITSM" Width="80"/>
+					<Column xsi:type="DeleteColumn" Ident="ID" Width="10"/>
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						itsAss.ID
+						,itsAss.AssessmentOrder
+						,approverAcc.FullName AS AssessmentAccountID
+					FROM usr.ITSMAssessment AS itsAss
+					LEFT JOIN dbo.[Account] AS approverAcc on approverAcc.ID = itsAss.AssessmentAccountID
+					WHERE
+						itsAss.TableID = @ID
+						AND itsAss.FormIdent = @ThisFormIdent
+						AND itsAss.[State] != @DeletedState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+				</Parameters>
+			</DataSource>
+		</Control>
+
+		<Control xsi:type="PlaceHolderControl" Ident="ITSMAssessmentSubFormCardPlaceHolder" IsVisible="false"/>
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<Control ID="ITSMAssessmentSubFormCardPlaceHolder">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="card">
+						<div class="card-header bg-white header-elements-inline">
+							<h6 class="card-title">[#AssessmentSubForm_ITSM#]</h6>
+							<div class="header-elements">
+								<div class="list-icons">
+									<a class="list-icons-item" data-action="collapse" />
+								</div>
+							</div>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<ControlLabel ControlID="ITSMAssessment{{ITSMType}}FakeSubForm" />
+										<Control ID="ITSMAssessment{{ITSMType}}FakeSubForm" />
+									</div>
+								</div> 
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</Control>
+	</Section>
+
+	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="EnableAssessmentControlShare">
+			<Controls>
+				<FormControl Ident="ITSMAssessmentSubFormCardPlaceHolder" IsVisible="true" />
+				<FormControl Ident="ITSMAssessment{{ITSMType}}FakeSubForm" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAssessmentControlShare" /> -->
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+
+		<ActionShareCode Ident="ApproveAssessmentActionShare">
+      <Actions>
+
+        <Action xsi:type="ActionTrigger" Ident="UpdateApproveAssessment" ActionStart="AfterSave">
+					<DataSource>
+						<SQL><![CDATA[
+							UPDATE usr.ITSMAssessment
+							SET IsApproved = 1
+							, IsUserAction = 1
+							, LastUpdate = GETDATE()
+							, LastUpdateAccountID = @UserID
+							WHERE
+								FormIdent = @ThisFormIdent
+								AND TableID = @ID
+								AND [State] != @DeletedState
+								AND AssessmentAccountID = @UserID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+				<Action xsi:type="IF" ActionStart="AfterSave">
+          <Condition>
+            <SQL><![CDATA[
+              SELECT IIF(
+                NOT EXISTS(
+									SELECT NULL
+									FROM usr.ITSMAssessment
+									WHERE
+										FormIdent = @ThisFormIdent
+										AND TableID = @ID
+										AND [State] != @DeletedState
+										AND	ISNULL(IsUserAction,0) = 0
+								)
+                ,1
+                ,0
+              )
+            ]]></SQL>
+            <Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="ChangeState" State="{{ApprovedState}}" ActionStart="AfterSave" />
+          </TrueActions>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ApproveAssessmentActionShare" /> -->
+
+		<ActionShareCode Ident="RejectAssessmentActionShare">
+      <Actions>
+
+        <Action xsi:type="ActionTrigger" Ident="UpdateRejectAssessment" ActionStart="AfterSave">
+					<DataSource>
+						<SQL><![CDATA[
+							UPDATE usr.ITSMAssessment
+							SET IsApproved = 0
+							, IsUserAction = 1
+							, LastUpdate = GETDATE()
+							, LastUpdateAccountID = @UserID
+							WHERE
+								FormIdent = @ThisFormIdent
+								AND TableID = @ID
+								AND [State] != @DeletedState
+								AND AssessmentAccountID = @UserID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+				<Action xsi:type="ChangeState" State="{{RejectedState}}" ActionStart="AfterSave" />
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="RejectAssessmentActionShare" /> -->
+
+		<ActionShareCode Ident="ClearAssessmentActionShare">
+      <Actions>
+
+        <Action xsi:type="ActionTrigger" Ident="UpdateClearAssessment" ActionStart="AfterSave">
+					<DataSource>
+						<SQL><![CDATA[
+							UPDATE usr.ITSMAssessment
+							SET [State] = @DeletedState
+							WHERE
+								FormIdent = @ThisFormIdent
+								AND TableID = @ID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+				<Action xsi:type="ChangeState" State="{{RejectedState}}" ActionStart="AfterSave" />
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ClearAssessmentActionShare" /> -->
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="ButtonShareCodes" TargetXPath="//WorkFlow/ButtonShareCodes" Insert="append">
+
+		<ButtonShareCode Ident="AssessmentApprovalButtonShare">
+      <Buttons>
+
+        <Button Ident="ApproveButton" IsVisible="true">
+					<VisibleCondition>
+						<SQL><![CDATA[
+							DECLARE @NextOrder INT = ISNULL((
+								SELECT TOP 1 AssessmentOrder
+								FROM usr.ITSMAssessment
+								WHERE
+									FormIdent = @ThisFormIdent
+									AND TableID = @ID
+									AND [State] != @DeletedState
+									AND IsUserAction = 1
+								ORDER BY AssessmentOrder DESC
+							),0) + 1;
+
+							SELECT IIF(
+								EXISTS(
+									SELECT NULL
+									FROM usr.ITSMAssessment
+									WHERE
+										FormIdent = @ThisFormIdent
+										AND TableID = @ID
+										AND [State] != @DeletedState
+										AND AssessmentOrder = @NextOrder
+										AND AssessmentAccountID = @UserID
+										AND ISNULL(IsUserAction,0) = 0
+								)
+								,1
+								,0
+							)
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						</Parameters>
+					</VisibleCondition>
+          <Actions>
+						<Action xsi:type="ShareCode" Ident="ApproveAssessmentActionShare" />
+          </Actions>
+        </Button>
+
+        <Button Ident="RejectButton" IsVisible="true">
+					<VisibleCondition>
+						<SQL><![CDATA[
+							DECLARE @NextOrder INT = ISNULL((
+								SELECT TOP 1 AssessmentOrder
+								FROM usr.ITSMAssessment
+								WHERE
+									FormIdent = @ThisFormIdent
+									AND TableID = @ID
+									AND [State] != @DeletedState
+									AND IsUserAction = 1
+								ORDER BY AssessmentOrder DESC
+							),0) + 1;
+
+							SELECT IIF(
+								EXISTS(
+									SELECT NULL
+									FROM usr.ITSMAssessment
+									WHERE
+										FormIdent = @ThisFormIdent
+										AND TableID = @ID
+										AND [State] != @DeletedState
+										AND AssessmentOrder = @NextOrder
+										AND AssessmentAccountID = @UserID
+										AND ISNULL(IsUserAction,0) = 0
+								)
+								,1
+								,0
+							)
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						</Parameters>
+					</VisibleCondition>
+          <Actions>
+						<Action xsi:type="ShareCode" Ident="RejectAssessmentActionShare" />
+          </Actions>
+        </Button>
+
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssessmentApprovalButtonShare" />  -->
+		
+	</Section>
+	
+</Component>

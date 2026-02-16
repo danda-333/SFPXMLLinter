@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMEventRecordWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMEventRecord" PackageIdent="ITSMPackage">
+
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" /> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning" /> <!--New-->
+      <State Value="2" TitleResourceKey="Saved_ITSM" ColorCssClass="primary" /> <!--Saved-->
+    </States>
+  </Definition>
+
+  <GlobalJavaScripts>
+
+		<JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5">
+			<Selectors>
+				<string>.js-howHideCategoryLevel5</string>
+			</Selectors>
+			<ShowValues>
+				<string>1</string>
+			</ShowValues>
+		</JavaScript>
+
+		<JavaScript xsi:type="ShowHide" Ident="ShowIfReporterEmailDifferent" ControlIdent="IsReporterEmailDifferent">
+			<Selectors>
+				<string>.js-showIfReporterEmailDifferent</string>
+			</Selectors>
+			<ShowValues>
+				<string>1</string>
+			</ShowValues>
+		</JavaScript>
+
+		<JavaScript xsi:type="ShowHide" Ident="ShowIfReporterPhoneDifferent" ControlIdent="IsReporterPhoneDifferent">
+			<Selectors>
+				<string>.js-showIfReporterPhoneDifferent</string>
+			</Selectors>
+			<ShowValues>
+				<string>1</string>
+			</ShowValues>
+		</JavaScript>
+	</GlobalJavaScripts>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableBasicControlShare">
+      <Controls>
+        <FormControl Ident="Subject" IsReadOnly="false" />
+        <FormControl Ident="Description" IsReadOnly="false" />
+        <FormControl Ident="EventDateTime" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" /> -->
+
+		<ControlShareCode Ident="EnableCategoryControlShare">
+			<Controls>
+				<FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" /> -->
+
+		<ControlShareCode Ident="ShowReporterContanctInfoDiffControlShare">
+			<Controls>
+				<FormControl Ident="IsReporterEmailDifferent" IsVisible="true" />
+				<FormControl Ident="IsReporterPhoneDifferent" IsVisible="true" />
+				<FormControl Ident="ReporterEmailDifferentPlaceHolder" IsVisible="true" />
+				<FormControl Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" /> -->
+
+		<ControlShareCode Ident="ShowReporterInformationControlShare">
+			<Controls>
+				<FormControl Ident="ReporterAccountID" IsVisible="true" />
+				<FormControl Ident="ReporterEmail" IsVisible="true" />
+				<FormControl Ident="ReporterPhone" IsVisible="true" />
+				<FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" />
+				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableReporterInformationControlShare">
+			<Controls>
+				<FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" />
+				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" /> -->
+
+		<ControlShareCode Ident="ShowCommunicationControlShare">
+			<Controls>
+
+				<FormControl Ident="CommunicationList" IsVisible="true" />
+				<FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
+
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableCommunicationControlShare">
+			<Controls>
+
+				<FormControl Ident="Communication" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="CommunicationList" IsVisible="true" />
+				<FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
+
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
+
+		<ControlShareCode Ident="ShowLinkControlShare">
+			<Controls>
+				<FormControl Ident="ParentTableID" IsVisible="true" />
+				<FormControl Ident="SubITSMDataGrid" IsVisible="true" />
+				<FormControl Ident="ITSMLinkSubForm" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> -->
+
+		<ControlShareCode Ident="EnableLinkControlShare">
+			<Controls>
+				<FormControl Ident="ParentTableID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="SubITSMDataGrid" IsVisible="true" />
+				<FormControl Ident="ITSMLinkSubForm" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> -->
+
+	</ControlShareCodes>
+
+  <ActionShareCodes>
+  </ActionShareCodes>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="SaveAndExitButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+        <Button Ident="SaveAndExitButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+		<ButtonShareCode Ident="SaveButtonShare">
+			<Buttons>
+				<Button Ident="SaveButton" IsVisible="true">
+					<Actions>
+					</Actions>
+				</Button>
+				<Button Ident="SaveAndExitButton" IsVisible="true">
+					<Actions>
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" /> -->
+	</ButtonShareCodes>
+
+  <GlobalActions>
+
+	<Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+			<DataSource>
+				<SQL><![CDATA[
+					IF @ITSMKey IS NULL
+					BEGIN
+						DECLARE
+							@CounterIdent VARCHAR(100) = 'ITSM_ER',
+							@NextNumber INT
+
+						EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+						UPDATE usr.[ITSMEventRecord]
+						SET ITSMKey = CONCAT('ER-', RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+						WHERE ID = @ID
+					END
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
+				</Parameters>
+			</DataSource>
+		</Action>
+
+		<Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+
+	</GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMEventRecord</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMEventRecordOperator</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMEventRecord</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMEventRecordOperator</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Saved-->
+
+  </Steps>
+</WorkFlow>

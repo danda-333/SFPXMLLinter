@@ -1,0 +1,5 @@
+{
+  "externalTables": {
+    "ITSM_FolderTreeView": ["ID"]
+  }
+}

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMPlannedShutdown" SegmentType="ITSMPlannedShutdownSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+	<Usings>
+		<Using Component="Common/FolderTreeSetting" />
+		<Using Component="Common/PageSetting" FormIdent="ITSMPlannedShutdown" />
+
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMPlannedShutdown" />
+		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMPlannedShutdown" KeyPrefix="PS"/>
+
+		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMPlannedShutdown" />
+		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMPlannedShutdown" />
+		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMPlannedShutdown" />
+		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMPlannedShutdown" />
+		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMPlannedShutdown" />
+		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMPlannedShutdown" />
+		
+		<Using Component="Common/Buttons/DeleteButton" />
+		<Using Component="Common/Buttons/BackButton" />
+		<Using Component="Common/Buttons/SaveGroupButton" />
+
+	</Usings>
+	<DataPermissions>
+		<string>ITSMPlannedShutdown</string>
+		<string>ITSMPlannedShutdownReporter</string>
+		<string>ITSMPlannedShutdownSharedReporter</string>
+		<string>ITSMAuthor</string>
+		<string>ITSMSpecialist</string>
+		<string>ITSMOperator</string>
+		<string>ITSMSupplier</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMPlannedShutdown</string>
+	</CreatePermissions>
+	<DynamicPermission>
+		<Columns>
+			<Column Ident="PermissionIdent" DataBindType="Value"/>
+		</Columns>
+		<SQL><![CDATA[
+			DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+			INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+      SELECT 'ITSMPlannedShutdownSharedReporter' AS PermissionIdent
+			FROM usr.ITSM_FolderTreeView as itsmFolTre
+			WHERE
+				itsmFolTre.FolderTreeIdent = @ITSMCompanyIdent
+				AND itsmFolTre.IsShareAmongAuthors = @StateOne
+				AND EXISTS(
+					SELECT NULL
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID, @FolderGroupSegmentIdent, @PermissionIDs)
+					WHERE
+						FolderTreeIdent = itsmFolTre.FolderTreeIdent
+				)
+		]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1"/>
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900"/>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+		</Parameters>
+	</DynamicPermission>
+	<Settings>
+	</Settings>
+	<Buttons>
+
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsReadOnly="true"/>
+
+		<Control xsi:type="TextBoxControl" Ident="DateTimeFrom" DataType="DateTime" TitleResourceKey="DateTimeFrom_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="DateTimeTo" DataType="DateTime" TitleResourceKey="DateTimeTo_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+	</Controls>
+	<Components>
+		<Component ComponentIdent="TimeLineComponent" Ident="TimeLine"/>
+	</Components>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate><![CDATA[
+				<div class="row">
+
+					<div class="col-md-9"><!-- Levý sloupec -->
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#BasicInformation_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse"></a>
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="Subject" />
+													<Control ID="Subject" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="Description" />
+													<Control ID="Description" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
+
+					</div><!-- //Levý sloupec -->
+
+					<div class="col-md-3"><!-- Pravý sloupec -->
+
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#DateTimeControl_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse" />
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="DateTimeFrom" />
+													<Control ID="DateTimeFrom" />
+												</div>
+											</div> 
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="DateTimeTo" />
+													<Control ID="DateTimeTo" />
+												</div>
+											</div> 
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+					</div><!-- //Pravý sloupec -->
+
+				</div>
+
+				{{Component:Common/Shared/ITSMKey,Section:Html}}
+				{{Component:Common/Controls/ThisFormIdent,Section:Html}}
+			]]></HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

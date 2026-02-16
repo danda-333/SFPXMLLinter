@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMLinkSubFormWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMLinkSubForm" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" /> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning" /> <!--New-->
+      <State Value="2" TitleResourceKey="Saved_ITSM" ColorCssClass="primary" /> <!--Saved-->
+    </States>
+  </Definition>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="ITSMLinkTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="SourceUniqueIdent" IsReadOnly="false" />
+        <FormControl Ident="TargetUniqueIdent" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes>
+
+  <GlobalActions>
+    <Action xsi:type="GlobalValidation" ActionStart="BeforeValidation" ErrorMessageResourceKey="OneITSMIDHasToBeParentID_Error_ITSM">
+      <Condition>
+        <SQL><![CDATA[
+          SELECT IIF(
+            (IIF(@SourceUniqueIdent = CONCAT(-1, '#', @ThisFormIdent), CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent), @SourceUniqueIdent) != CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AND IIF(@TargetUniqueIdent = CONCAT(-1, '#', @ThisFormIdent), CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent), @TargetUniqueIdent) = CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent))
+            OR
+            (IIF(@SourceUniqueIdent = CONCAT(-1, '#', @ThisFormIdent), CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent), @SourceUniqueIdent) = CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AND IIF(@TargetUniqueIdent = CONCAT(-1, '#', @ThisFormIdent), CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) , @TargetUniqueIdent) != CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent))
+            OR
+            (IIF(@SourceUniqueIdent = CONCAT(-1, '#', @ThisFormIdent), CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent), @SourceUniqueIdent) = CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AND IIF(@TargetUniqueIdent = CONCAT(-1, '#', @ThisFormIdent), CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) , @TargetUniqueIdent) = CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent))
+          , 1, 0)
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetUniqueIdent" DataType="String" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceUniqueIdent" DataType="String" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ThisFormIdent" DataType="String" SetDataType="ParentData" />
+        </Parameters>
+      </Condition>
+      <ControlIdents>
+        <string>ID</string>
+      </ControlIdents>
+    </Action>
+
+    <Action xsi:type="GlobalValidation" ActionStart="BeforeValidation" ErrorMessageResourceKey="ITSMIDsCantBeSame_Error_ITSM">
+      <Condition>
+        <SQL><![CDATA[
+          SELECT IIF(
+            @SourceUniqueIdent = @TargetUniqueIdent
+          , 0, 1)
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetUniqueIdent" DataType="String" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceUniqueIdent" DataType="String" />
+        </Parameters>
+      </Condition>
+      <ControlIdents>
+        <string>ID</string>
+      </ControlIdents>
+    </Action>
+
+    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+      <DataSource>
+        <SQL><![CDATA[
+
+          UPDATE usr.ITSMLinkSubForm
+          SET
+            /* TableID = SOurce/TargetUnique ident everithyng before # */
+            /* FormIdent = SOurce/TargetUnique ident everithyng after # */
+            SourceTableID = CASE
+              WHEN CHARINDEX('#', SourceUniqueIdent) > 0 THEN
+                CASE
+                  WHEN TRY_CONVERT(INT, LEFT(SourceUniqueIdent, CHARINDEX('#', SourceUniqueIdent) - 1)) = -1 THEN @ID
+                  ELSE TRY_CONVERT(INT, LEFT(SourceUniqueIdent, CHARINDEX('#', SourceUniqueIdent) - 1))
+                END
+              ELSE NULL
+            END,
+            SourceFormIdent = CASE
+              WHEN CHARINDEX('#', SourceUniqueIdent) > 0 THEN SUBSTRING(SourceUniqueIdent, CHARINDEX('#', SourceUniqueIdent) + 1, LEN(SourceUniqueIdent))
+              ELSE NULL
+            END,
+            TargetTableID = CASE
+              WHEN CHARINDEX('#', TargetUniqueIdent) > 0 THEN
+                CASE
+                  WHEN TRY_CONVERT(INT, LEFT(TargetUniqueIdent, CHARINDEX('#', TargetUniqueIdent) - 1)) = -1 THEN @ID
+                  ELSE TRY_CONVERT(INT, LEFT(TargetUniqueIdent, CHARINDEX('#', TargetUniqueIdent) - 1))
+                END
+              ELSE NULL
+            END,
+            TargetFormIdent = CASE
+              WHEN CHARINDEX('#', TargetUniqueIdent) > 0 THEN SUBSTRING(TargetUniqueIdent, CHARINDEX('#', TargetUniqueIdent) + 1, LEN(TargetUniqueIdent))
+              ELSE NULL
+            END
+          WHERE ID = @ID
+
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+        </Parameters>
+      </DataSource>
+    </Action>
+
+  </GlobalActions>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+
+            <Action xsi:type="ActionTrigger" Ident="UpdateTargetID" ActionStart="AfterSave">
+              <DataSource>
+                <SQL><![CDATA[
+                  IF(@SourceUniqueIdent = CONCAT(-1, '#', @FormIdent))
+                  BEGIN
+                    UPDATE usr.ITSMLinkSubForm SET SourceUniqueIdent = CONCAT(@TableID, '#', @FormIdent) WHERE ID = @ID
+                  END
+
+                  IF(@TargetUniqueIdent = CONCAT(-1, '#', @FormIdent))
+                  BEGIN
+                    UPDATE usr.ITSMLinkSubForm SET TargetUniqueIdent = CONCAT(@TableID, '#', @FormIdent) WHERE ID = @ID
+                  END
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <!-- <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentID" AlterIdent="ID" DataType="Number" SetDataType="ParentData"/> -->
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TableID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FormIdent" DataType="String" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceUniqueIdent" DataType="String" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetUniqueIdent" DataType="String" />
+                </Parameters>
+              </DataSource>
+            </Action>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+  </ButtonShareCodes>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMRequest</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMRequest</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Saved-->
+
+  </Steps>
+</WorkFlow>

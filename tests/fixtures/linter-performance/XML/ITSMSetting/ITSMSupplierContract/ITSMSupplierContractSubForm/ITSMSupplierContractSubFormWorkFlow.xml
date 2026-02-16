@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMSupplierContractSubFormWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMSupplierContractSubForm" PackageIdent="ITSMPackage">
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" />
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="primary" />
+      <State Value="2" TitleResourceKey="Saved_ITSM" ColorCssClass="primary" />
+    </States>
+  </Definition>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShareCode">
+      <Controls>
+        <FormControl Ident="ServicePrice" IsReadOnly="false" />
+        <FormControl Ident="ServiceFolderTreeIdent" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShareCode" /> -->
+  </ControlShareCodes>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true" />
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+  </ButtonShareCodes>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSettingAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShareCode" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSettingAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShareCode" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step>
+
+  </Steps>
+</WorkFlow>

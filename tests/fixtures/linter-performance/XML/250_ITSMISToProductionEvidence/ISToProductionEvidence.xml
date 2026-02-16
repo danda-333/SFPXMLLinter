@@ -1,0 +1,674 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMISToProductionEvidence" SegmentType="ITSMISToProductionEvidenceSegment" PackageIdent="ITSMPackage" xIsDebug="true">
+
+	<DataPermissions>
+		<string>ITSMISToProductionEvidence</string>
+		<string>ITSMISToProductionEvidenceAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMISToProductionEvidence</string>
+		<string>ITSMISToProductionEvidenceAdmin</string>
+	</CreatePermissions>
+	<Settings>
+
+		<Setting xsi:type="PageSetting">
+			<DataSource>
+				<SQL><![CDATA[
+					DECLARE @NewITSMRequest_Title_ITSM NVARCHAR(255) = usr.GetResourceText('NewITSMRequest_Title_ITSM', @UserLanguageID)
+
+					SELECT ISNULL(CAST((
+						SELECT CONCAT([ITSMKey] , ' ' , LEFT(itsReq.Subject, 20))
+						FROM usr.ITSMRequest AS itsReq
+						WHERE itsReq.ID = @ID
+					) AS NVARCHAR(MAX)), @NewITSMRequest_Title_ITSM) AS Title
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+				</Parameters>
+			</DataSource>
+		</Setting>
+	</Settings>
+	<Buttons>
+
+		<Button xsi:type="FormButton" Ident="SubmitButton" TitleResourceKey="SubmitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="BackToOperationButton" TitleResourceKey="BackToOperationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-previous2" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="OperationStartedButton" TitleResourceKey="OperationStartedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="FormButton" Ident="OperationClosedButton" TitleResourceKey="OperationClosedButton_ITSM" IsSave="true" PlacementType="Top Bottom" Color="#777" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+
+		<Button xsi:type="GroupButton" Ident="SaveGroupButton" TitleResourceKey="SaveGroupButton_ITSM" IsStopRedirect="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk">
+			<Buttons>
+
+				<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+
+				<Button xsi:type="FormButton" Ident="SaveAndExitButton" TitleResourceKey="SaveAndExitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+
+			</Buttons>
+		</Button>
+
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-undo2" />
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemName" DataType="String" TitleResourceKey="SystemName_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control><!-- Název systému, zkratka -->
+
+		<Control xsi:type="TextAreaControl" Ident="SystemDescription" DataType="String" Rows="5" TitleResourceKey="SystemDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control><!-- Popis systému -->
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMSupplierOrganizationEntityGuid" DataType="String" TitleResourceKey="SupplierOrganizationEntityGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						dial.Guid,
+						dial.TextValue
+					FROM usr.ITSMSupplierOrganizationEntity AS dial
+					WHERE
+						dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMSupplierOrganizationEntity AS dial
+							WHERE
+								dial.[State] != 0
+								AND CAST(dial.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control><!-- Dodavatel -->
+
+		<Control xsi:type="TextBoxControl" Ident="SupplierOrganizationEntityAddress" DataType="String" TitleResourceKey="SupplierOrganizationEntityAddress_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control><!-- Adresa dodavatele -->
+
+		<Control xsi:type="TextBoxControl" Ident="ContractNumber" DataType="String" TitleResourceKey="ContractNumber_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMSupplierContractID" DataType="String" TitleResourceKey="ITSMSupplierContractID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>ITSMSupplierOrganizationEntityGuid</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="ContractName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						dial.ID,
+						dial.ContractName
+					FROM usr.ITSMSupplierContract AS dial
+					WHERE
+						dial.[State] != @DeletedState
+						AND dial.ITSMSupplierOrganizationEntityGuid = @ITSMSupplierOrganizationEntityGuid
+					ORDER BY dial.ID ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMSupplierOrganizationEntityGuid" DataType="String" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.ContractName
+						FROM usr.ITSMSupplierContract AS dial
+							WHERE
+								dial.[State] != 0
+								AND CAST(dial.ID AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control><!-- Smlouva -->
+
+		<Control xsi:type="TextBoxControl" Ident="TechnicalGarant" DataType="String" TitleResourceKey="TechnicalGarant_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="MaterialGarant" DataType="String" TitleResourceKey="MaterialGarant_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="Surveillance" DataType="String" TitleResourceKey="Surveillance_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IncreasedMonitoring" DataType="String" TitleResourceKey="IncreasedMonitoring_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="TicketSendingForm" DataType="String" TitleResourceKey="TicketSendingForm_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SolverTeam" DataType="String" TitleResourceKey="SolverTeam_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemDocumentation" DataType="String" TitleResourceKey="SystemDocumentation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="DocumentationLocation" DataType="String" TitleResourceKey="DocumentationLocation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="SystemHandoverDate" DataType="DateTime" TitleResourceKey="SystemHandoverDate_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="TraindeEmployees" DataType="String" Rows="5" TitleResourceKey="TraindeEmployees_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="FileControl" Ident="FileList" TitleResourceKey="FileList_ITSM" RenderType="FormExtension" IsShowDeleteButton="true" FormExtensionIdent="ITSMISToProductionEvidenceFileExtension" IsReadOnly="true" /><!-- Přílohy -->
+
+		<!-- PHs -->
+		<Control xsi:type="PlaceHolderControl" Ident="PHSupplierInformationCard" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHEmployeesCard" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHCommunicationCard" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHAttachmentsCard" IsVisible="false" />
+		<!-- PHs -->
+
+		<Control xsi:type="HiddenControl" Ident="ITSMKey" DataType="String" MaxLength="255" />
+
+		<Control xsi:type="CommunicationControl" Ident="Communication" Height="400" DataType="String" IsVisible="false" IsReadOnly="true" TitleResourceKey="Communication_ITSM">
+			<SettingPermissions>
+				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="Zadavatel" IconCssClass="icon-user" ColorCssClass="blue-600">
+					<VisiblePermissions>
+						<string>Creator</string>
+					</VisiblePermissions>
+				</SettingPermission>
+			</SettingPermissions>
+			<Settings>
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+			</Settings>
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="CommunicationControl" Ident="DialogCommunication" Height="400" DataType="String" TitleResourceKey="Communication_ITSM">
+			<SettingPermissions>
+				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="ITSMAuthor_ITSM" IconCssClass="icon-user" ColorCssClass="blue-600">
+					<VisiblePermissions>
+						<string>Creator</string>
+					</VisiblePermissions>
+				</SettingPermission>
+			</SettingPermissions>
+			<Settings>
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+			</Settings>
+		</Control>
+
+		<Control xsi:type="CommunicationListControl" Ident="CommunicationList" TitleResourceKey="CommunicationList_ITSM" CommunicationControlIdent="Communication" IsVisible="false">
+			<OtherSource>
+				<SQL>
+					SELECT c.ID
+					FROM dbo.Communication as c
+					WHERE c.TableID = @ID AND c.FormIdent = @FormIdent AND c.ControlIdent = @ControlIdent
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="150" Value="ITSMSupplierRequest" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="150" Value="DialogCommunication" />
+				</Parameters>
+			</OtherSource>
+		</Control>
+
+		<Control xsi:type="PlaceHolderControl" Ident="CommunicationCardPlaceHolder" IsVisible="false" />
+
+		<Control xsi:type="HTMLContentViewControl" Ident="MainInfoHTMLContentView" IsRazorEngine="true">
+			<Sources>
+				<DataSource Ident="Main">
+					<Columns>
+						<!-- @Ignore unknown-form-ident -->
+						<Column xsi:type="WorkFlowStateColumn" Ident="State" IsColor="true" FormIdent="ITSMISToProductionEvidence" />
+						<Column Ident="ITSMGeneralResolutionMethodTypeGuid" />
+						<Column Ident="Header" />
+						<Column Ident="AccountID" />
+						<Column Ident="CreateDate" DataType="DateTime" />
+						<Column Ident="LastUpdateAccountID" />
+						<Column Ident="LastUpdate" DataType="DateTime" />
+						<Column Ident="AssignedGroupID" />
+						<Column Ident="AssignedAccountID" />
+					</Columns>
+					<SQL><![CDATA[
+						SELECT
+							ISNULL(itsReq.[State], 1) AS [State]
+							,itsGrmt.[TextValue] AS ITSMGeneralResolutionMethodTypeGuid
+
+							,itsReq.ID
+							,itsReq.ITSMKey
+							,itsReq.Subject
+
+							,itsReqParent.ID AS ParentTableID
+							,itsReqParent.ITSMKey AS ParentITSMKey
+							,itsReqParent.Subject AS ParentSubject
+
+							,accCreator.FullName AS AccountID
+							,itsReq.CreateDate
+
+							,accLastUpdate.FullName AS LastUpdateAccountID
+							,itsReq.LastUpdate
+
+							,groAssigned.[Name] AS AssignedGroupID
+							,accAssigned.[FullName] AS AssignedAccountID
+
+						FROM (VALUES (0)) AS dual(zero)
+						LEFT JOIN usr.ITSMISToProductionEvidence AS itsReq ON itsReq.ID = @ID
+						LEFT JOIN usr.ITSMISToProductionEvidence AS itsReqParent ON itsReqParent.ID = itsReq.ParentTableID
+						LEFT JOIN dbo.[Group] AS groAssigned ON groAssigned.ID = itsReq.AssignedGroupID
+						LEFT JOIN dbo.Account AS accAssigned ON accAssigned.ID = itsReq.AssignedAccountID
+						LEFT JOIN dbo.Account AS accCreator ON accCreator.ID = ISNULL(itsReq.AccountID, @UserID)
+						LEFT JOIN dbo.Account AS accLastUpdate ON accLastUpdate.ID = itsReq.LastUpdateAccountID
+						LEFT JOIN usr.ITSMGeneralResolutionMethodType AS itsGrmt ON itsGrmt.Guid = itsReq.ITSMGeneralResolutionMethodTypeGuid AND itsGrmt.LanguageID = @UserLanguageID
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="SLAs">
+					<Columns>
+						<Column Ident="SLAType" />
+						<Column Ident="SLAStatus" />
+						<Column Ident="SLADate" />
+						<Column Ident="SLASpentTime" />
+						<Column Ident="SLASpentPercent" />
+						<Column Ident="SLARemainingTime" />
+						<Column Ident="SLARemainingPercent" />
+						<Column Ident="CalendarName" />
+						<Column Ident="SLAStatusColorCssClass" />
+					</Columns>
+					<SQL><![CDATA[
+						SELECT
+							CONCAT(itsGsc.SLAType, '_SLAType_ITSM') AS SLAType
+							,CONCAT(itsGsc.SLAStatus, '_SLAType_ITSM') AS SLAStatus
+							,itsGsc.FinishTime AS SLADate
+							,itsGsc.TimeSpent AS SLASpentTime
+							,itsGsc.PercentSpent AS SLASpentPercent
+							,itsGsc.TimeRemain AS SLARemainingTime
+							,itsGsc.PercentRemain AS SLARemainingPercent
+							,itsGsc.SLAName AS CalendarName
+							,CONCAT('bg-', itsGsc.SLAStatusColorCssClass) AS SLAStatusColorCssClass
+						FROM usr.ITSMISToProductionEvidence AS itsReq
+						CROSS APPLY usr.ITSM_GetSLAComputes (itsReq.ID, 'ITSMISToProductionEvidence', NULL) AS itsGsc
+						WHERE
+							itsReq.ID = @ID
+						ORDER BY itsGsc.SLATypePriority
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					</Parameters>
+				</DataSource>
+			</Sources>
+			<HTMLTemplate><![CDATA[
+				@{
+					var mainData = Model.Data.Main[0];
+				}
+
+				<div class="d-flex flex-wrap">
+					<div class="d-flex flex-wrap justify-content-between" style="flex: 999 1 min(100%, 650px);">
+						<div style="flex: 999 1 min(100%, 450px); font-size: 16px;">
+							@if(!(mainData.ParentTableID is System.DBNull)){
+								<div class="font-size-sm">[#ParentTableID_Information_ITSM#]: <a href="~/Form/Detail/ITSMISToProductionEvidence/@mainData.ParentTableID">@mainData.ParentITSMKey</a> | @mainData.ParentSubject</div>
+							}
+							<div>
+								@if(!(mainData.ID is System.DBNull)){
+									<text><a href="~/Form/Detail/ITSMISToProductionEvidence/@mainData.ID">@mainData.ITSMKey</a> | @mainData.Subject</text>
+								} else {
+									<text>[#CreatingNewITSMRequest_Information_ITSM#]</text>
+								}
+							</div>
+							<small class="d-block text-muted ml-0 font-size-sm">
+								[#Created_ITSM#]: @mainData.AccountID @if(!(mainData.CreateDate is System.DBNull)){@mainData.CreateDate}
+								@if(!(mainData.LastUpdate is System.DBNull)){<text>, [#Updated_ITSM#]: @mainData.LastUpdateAccountID @mainData.LastUpdate</text>}
+							</small>
+						</div>
+						<div style="flex: 1 1 auto;">
+							<ul class="list-group list-group-flush m-0">
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#State_ITSM#]:</span>
+									<div class="ml-auto">@mainData.State</div>
+								</li>
+								@if(!(mainData.ITSMGeneralResolutionMethodTypeGuid is System.DBNull)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#ITSMGeneralResolutionMethodTypeGuid_ITSM#]:</span>
+									<div class="ml-auto">@mainData.ITSMGeneralResolutionMethodTypeGuid</div>
+								</li>
+								}
+								@if(!(mainData.AssignedGroupID is System.DBNull)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#AssignedGroupID_ITSM#]:</span>
+									<div class="ml-auto">@mainData.AssignedGroupID</div>
+								</li>
+								}
+								@if(!(mainData.AssignedAccountID is System.DBNull)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#AssignedAccountID_ITSM#]:</span>
+									<div class="ml-auto">@mainData.AssignedAccountID</div>
+								</li>
+								}
+							</ul>
+						</div>
+					</div>
+					<div class="d-flex flex-wrap align-items-start gap-1-lmtl4" style="flex: 1 1 auto;">
+						@foreach(var item in Model.Data.SLAs){
+						<div class="d-flex flex-column" style="flex: 1 1 auto;">
+							<div class="card-body @item.SLAStatusColorCssClass m-0">
+								<div class="d-flex">
+									<h3 class="font-weight-semibold mb-0 font-size-lg">@item.SLAType</h3>
+									<div class="list-icons ml-auto">
+										@item.SLADate
+										<!--<a class="list-icons-item ml-1" data-action="reload"></a>-->
+									</div>
+								</div>
+								<div>
+									<div class="d-flex line-height-sm">
+										<span class="mr-2">[#SLASpent_ITSM#]:</span><span class="ml-auto">@item.SLASpentTime &bull; @(item.SLASpentPercent)%</span>
+									</div>
+									<div class="d-flex line-height-sm">
+										<span class="mr-2">[#SLARemaining_ITSM#]:</span><span class="ml-auto">@item.SLARemainingTime &bull; @(item.SLARemainingPercent)%</span>
+									</div>
+									<div class="d-flex line-height-sm">
+										<span class="mr-2">[#Calendar_ITSM#]:</span><span class="ml-auto">@item.CalendarName</span>
+									</div>
+									<div class="d-flex line-height-sm">
+										<span class="mr-2">[#SLAStatus_ITSM#]:</span><span class="ml-auto">@item.SLAStatus</span>
+									</div>
+								</div>
+							</div>
+							<div class="progress bg-white" style="height: 0.375rem; border-radius: 0;">
+								<div class="progress-bar bg-success" style="width: @(item.SLASpentPercent)%">
+									<span class="sr-only">@(item.SLASpentPercent)% To end</span>
+								</div>
+							</div>
+						</div>
+						}
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Control>
+	</Controls>
+	<Components>
+		<Component ComponentIdent="TimeLineComponent" Ident="TimeLine" />
+	</Components>
+	<Sections>
+	<Section Root="Form" xsi:type="HeaderSection" Ident="HeaderSection">
+			<HTMLTemplate><![CDATA[
+				<style>
+					#MainInfoHTMLContentView {
+						width: 100%;
+					}
+
+					#sfpFormMainHeader {
+						padding-left: 0 !important;
+						padding-right: 0 !important;
+					}
+				</style>
+				<Control ID="MainInfoHTMLContentView" />
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate><![CDATA[
+				<div class="row">
+
+					<div class="col-md-9"><!-- Levý sloupec -->
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="form-group">
+									<ControlLabel ControlID="SystemName" />
+									<Control ID="SystemName" />
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-md-12">
+								<div class="form-group">
+									<ControlLabel ControlID="SystemDescription" />
+									<Control ID="SystemDescription" />
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-md-12">
+								<div class="form-group">
+									<ControlLabel ControlID="TraindeEmployees" />
+									<Control ID="TraindeEmployees" />
+								</div>
+							</div>
+						</div>
+						<Control ID="PHCommunicationCard">
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#Communication_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse" />
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<Control ID="Communication" />
+												</div>
+											</div>
+											<div class="col-md-12">
+												<div class="form-group">
+													<Control ID="CommunicationList" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						</Control>
+
+					</div><!-- //Levý sloupec -->
+
+					<div class="col-md-3"><!-- Pravý sloupec -->
+
+						<Control ID="PHSupplierInformationCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#SupplierInformation_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSupplierOrganizationEntityGuid" />
+														<Control ID="ITSMSupplierOrganizationEntityGuid" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="SupplierOrganizationEntityAddress" />
+														<Control ID="SupplierOrganizationEntityAddress" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ContractNumber" />
+														<Control ID="ContractNumber" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMSupplierContractID" />
+														<Control ID="ITSMSupplierContractID" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control><!-- Karta dodavatele -->
+
+						<Control ID="PHEmployeesCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#EmployeesCard_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="TechnicalGarant" />
+														<Control ID="TechnicalGarant" />
+													</div>
+												</div>
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="MaterialGarant" />
+														<Control ID="MaterialGarant" />
+													</div>
+												</div>
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="Surveillance" />
+														<Control ID="Surveillance" />
+													</div>
+												</div>
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="IncreasedMonitoring" />
+														<Control ID="IncreasedMonitoring" />
+													</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="TicketSendingForm" />
+															<Control ID="TicketSendingForm" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="SolverTeam" />
+															<Control ID="SolverTeam" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="SystemDocumentation" />
+															<Control ID="SystemDocumentation" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="DocumentationLocation" />
+															<Control ID="DocumentationLocation" />
+														</div>
+													</div>
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="SystemHandoverDate" />
+															<Control ID="SystemHandoverDate" />
+														</div>
+							</div>
+						</Control><!--Osoby za příjemce -->
+
+						<Control ID="PHAttachmentsCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#Atachments_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="FileList" />
+														<Control ID="FileList" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control><!-- Karta Vyřešení -->
+
+					</div><!-- //Pravý sloupec -->
+
+				</div>
+
+		<div class="row d-none">
+			<Control ID="ITSMKey" />
+		</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM" IconCssClass="icon-history">
+			<HTMLTemplate><![CDATA[
+				<fieldset>
+					<div class="row">
+						<div class="col-md-12">
+							<Component ID="TimeLine"/>
+						</div>
+					</div>
+				</fieldset>
+			]]></HTMLTemplate>
+		</Section>
+
+	</Sections>
+</Form>

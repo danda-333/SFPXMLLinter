@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMInovation" SegmentType="ITSMInovationSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" IXsDebug="true">
+	<Usings>
+		<Using Component="Common/FolderTreeSetting" />
+		<Using Component="Common/PageSetting" FormIdent="ITSMInovation" />
+		<Using Component="Common/SLACriteriaControls" />
+
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMInovation" />
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMInovation" />
+		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMInovation" KeyPrefix="INO"/>
+		<Using Component="Common/Shared/Resolve" FormIdent="ITSMInovation" />
+
+		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMInovation" />
+		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMInovation" />
+		<Using Component="Common/Controls/AdditionalFields" FormIdent="ITSMInovation" />
+		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMInovation" />
+		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMInovation" />
+		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMInovation" />
+		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMInovation" />
+
+		<Using Component="Common/Buttons/SendToProcessButton" />
+		<Using Component="Common/Buttons/CloseButton" />
+		<Using Component="Common/Buttons/CancelButton" />
+		<Using Component="Common/Buttons/SaveGroupButton" />
+		<Using Component="Common/Buttons/DeleteButton" />
+		<Using Component="Common/Buttons/BackButton" />
+	</Usings>
+	<ExternalJavaScriptRelativePaths>
+	</ExternalJavaScriptRelativePaths>
+	<DataPermissions>
+		<string>ITSMInovation</string>
+		<string>ITSMInovationReporter</string>
+		<string>ITSMInovationSharedReporter</string>
+		<string>ITSMAuthor</string>
+		<string>ITSMSpecialist</string>
+		<string>ITSMOperator</string>
+		<string>ITSMSupplier</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMInovation</string>
+	</CreatePermissions>
+	<DynamicPermission>
+		<Columns>
+			<Column Ident="PermissionIdent" DataBindType="Value"/>
+		</Columns>
+		<SQL><![CDATA[
+			DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+			INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+
+      SELECT 'ITSMInovationSharedReporter' AS PermissionIdent
+			FROM usr.ITSM_FolderTreeView as itsmFolTre
+			WHERE
+				itsmFolTre.FolderTreeIdent = @ITSMCompanyIdent
+				AND itsmFolTre.IsShareAmongAuthors = @StateOne
+				AND EXISTS(
+					SELECT NULL
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID, @FolderGroupSegmentIdent, @PermissionIDs)
+					WHERE
+						FolderTreeIdent = itsmFolTre.FolderTreeIdent
+				)
+		]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1"/>
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+			<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900"/>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+		</Parameters>
+	</DynamicPermission>
+	<Settings>
+	</Settings>
+	<Buttons>
+		<!-- Tlačítka pro přechod mezi stavy workflow -->
+		<Button xsi:type="FormButton" Ident="SendToOperatorAssessmentButton" TitleResourceKey="SendToOperatorAssessmentButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-eye" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToCompletenessCheckButton" TitleResourceKey="SendToCompletenessCheckButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-file-check" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToForApprovalButton" TitleResourceKey="SendToForApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-stamp" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToCoordinatorButton" TitleResourceKey="SendToCoordinatorButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-user-tie" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToForRealizationButton" TitleResourceKey="SendToForRealizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-cog" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToInRealizationButton" TitleResourceKey="SendToInRealizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-play3" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToForClosureButton" TitleResourceKey="SendToForClosureButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-flag3" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToClosedButton" TitleResourceKey="SendToClosedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToPostponedButton" TitleResourceKey="SendToPostponedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-pause" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="ReturnToCompletenessCheckButton" TitleResourceKey="ReturnToCompletenessCheckButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-undo" IsVisible="false" IsStopRedirect="true"/>
+
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true" IsFullText="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="RequestedChangeJustification" DataType="String" Rows="3" TitleResourceKey="RequestedChangeJustification_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="RequestedChangeRisk" DataType="String" Rows="3" TitleResourceKey="RequestedChangeRisk_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		<Control xsi:type="TextAreaControl" Ident="RequestedChangeDescription" DataType="String" Rows="3" TitleResourceKey="RequestedChangeDescription_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		
+		<Control xsi:type="DropDownListControl" Ident="ITSMImplementationChangeProposalDecisionGuid" DataType="Guid" TitleResourceKey="ITSMImplementationChangeProposalDecisionGuid_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMImplementationChangeProposalDecision AS dial
+					INNER JOIN usr.ITSMImplementationChangeProposalDecisionSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMImplementationChangeProposalDecision AS dial
+							INNER JOIN usr.ITSMImplementationChangeProposalDecisionSetting AS dialsetting 
+								ON dialsetting.Guid = dial.Guid
+							WHERE 
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="DecisionInformation" DataType="String" Rows="3" TitleResourceKey="DecisionInformation_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="VOICTDecisionDateTime" DataType="DateTime" TitleResourceKey="VOICTDecisionDateTime_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="ListBoxControl" Ident="CoordinatorAccountIDs" DataType="NumberList" TitleResourceKey="CoordinatorAccountIDs_ITSM" IsReadOnly="true">
+			<DataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						ID
+						, FullName
+					FROM dbo.Account
+					WHERE
+						[State] = @ActiveState
+					ORDER BY FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="INT" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = STUFF((
+              SELECT CONCAT(', ', acc.FullName)
+              FROM dbo.Account AS acc
+              WHERE 
+                (
+                  @Value LIKE CAST(acc.ID AS VARCHAR(255)) -- Jediná hodnota v listu
+                  OR @Value LIKE CAST(acc.ID AS VARCHAR(255))+',%' -- List začínající hodnotou
+                  OR @Value LIKE '%,'+CAST(acc.ID AS VARCHAR(255))+',%' -- Hodnota uprostřed listu
+                  OR @Value LIKE '%,'+CAST(acc.ID AS VARCHAR(255)) -- List končící hodnotou
+                )
+          FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '')
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="ITSMChangeID" DataType="Number" TitleResourceKey="ITSMChangeID_ITSM" IsReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="ITSMTitle" DataBindType="Title" IsTranslate="true"/>
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT 
+            itsm.SourceID AS ID
+            ,CONCAT(itsm.[ITSMKey],' - ',itsm.[Subject]) AS [ITSMTitle]
+					FROM usr.ITSM_FormFullView AS itsm
+					WHERE 
+            (
+							itsm.[ITSMKey] LIKE @ITSMChangeID
+							OR
+							itsm.[Subject] LIKE @ITSMChangeID
+						)
+            AND itsm.SourceID != ISNULL(@ID, -1)
+						AND itsm.SourceFormIdent = @ChangeFormIdent
+						AND itsm.LastFolderTreeIdent IN (
+							SELECT
+								FolderTreeIdent
+							FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs)
+						)
+					
+				]]></SQL>
+				<Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMChangeID" DataType="String" LikeType="Both" MaxLength="200"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ChangeFormIdent" DataType="String" MaxLength="100" Value="ITSMChange"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="ITSMTitle" DataBindType="Title" IsTranslate="true"/>
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+            itsm.SourceID AS ID
+            ,CONCAT(itsm.[ITSMKey],' - ',itsm.[Subject]) AS [ITSMTitle]
+					FROM usr.ITSM_FormFullView AS itsm
+					WHERE
+						itsm.SourceID = @ITSMChangeID
+						AND itsm.SourceFormIdent = @ChangeFormIdent
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMChangeID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ChangeFormIdent" DataType="String" MaxLength="100" Value="ITSMChange"/>
+				</Parameters>
+			</SelectedDataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSMChange" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="ITSMKey" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<!-- PHs -->
+    <Control xsi:type="PlaceHolderControl" Ident="PHContactInformationCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHCommunicationCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHSolutionCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHRequestControlCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHImplementationCard"  IsVisible="false"/>
+		<!-- PHs -->
+
+
+		<Control xsi:type="TextBoxControl" Ident="ThisFormIdent" TitleResourceKey="ThisFormIdent_ITSM" DataType="String" MaxLength="100" Default="ITSMInovation"/>
+
+	</Controls>
+	<Components>
+	</Components>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate><![CDATA[
+				<div class="row">
+
+					<div class="col-md-9"><!-- Levý sloupec -->
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#BasicInformation_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse"></a>
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="Subject" />
+													<Control ID="Subject" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="Description" />
+													<Control ID="Description" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card">
+									<div class="card-header bg-white header-elements-inline">
+										<h6 class="card-title">[#IdeaForInnovation_ITSM#]</h6>
+										<div class="header-elements">
+											<div class="list-icons">
+												<a class="list-icons-item" data-action="collapse"></a>
+											</div>
+										</div>
+									</div>
+									<div class="card-body">
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group">
+													<ControlLabel ControlID="RequestedChangeJustification" />
+													<Control ID="RequestedChangeJustification" />
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group">
+													<ControlLabel ControlID="RequestedChangeRisk" />
+													<Control ID="RequestedChangeRisk" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="RequestedChangeDescription" />
+													<Control ID="RequestedChangeDescription" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group">
+													<ControlLabel ControlID="ITSMImplementationChangeProposalDecisionGuid" />
+													<Control ID="ITSMImplementationChangeProposalDecisionGuid" />
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group">
+													<ControlLabel ControlID="VOICTDecisionDateTime" />
+													<Control ID="VOICTDecisionDateTime" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="DecisionInformation" />
+													<Control ID="DecisionInformation" />
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
+
+					</div><!-- //Levý sloupec -->
+
+					<div class="col-md-3"><!-- Pravý sloupec -->
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Assign,Section:Html}}
+						{{Component:Common/Shared/Resolve,Section:Html}}
+
+						<Control ID="PHImplementationCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#ImplementationOfChange_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="CoordinatorAccountIDs" />
+														<Control ID="CoordinatorAccountIDs" />
+													</div>
+												</div> 
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ITSMChangeID" />
+														<Control ID="ITSMChangeID" />
+													</div>
+												</div> 
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
+
+					</div><!-- //Pravý sloupec -->
+
+				</div>
+			]]></HTMLTemplate>
+		</Section>
+		{{Component:Common/Shared/ITSMKey,Section:Html}}
+
+	</Sections>
+</Form>

@@ -262,7 +262,10 @@ export class DiagnosticsEngine {
 
     for (const mapping of facts.mappingIdentReferences) {
       const identKey = mapping.ident;
-      if (mapping.kind === "fromIdent" && localAvailableControlIdents.has(identKey)) {
+      // FromIdent validation is intentionally disabled for now.
+      // It depends on source/query semantics (often SQL-driven), which are not
+      // fully resolvable by the current static parser.
+      if (mapping.kind === "fromIdent") {
         continue;
       }
 

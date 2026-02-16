@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ErrUnknownMappingIdentForm">
   <Controls>
     <Control xsi:type="TextBoxControl" Ident="LocalControl" />
@@ -6,8 +6,9 @@
   <Buttons>
     <Button xsi:type="FormButton" Ident="LocalButton" TitleResourceKey="LocalButton_ITSM" MappingFormIdent="ValidForm">
       <Mappings>
-        <Mapping FromIdent="MissingControl" ToIdent="ID" />
+        <Mapping FromIdent="ID" ToIdent="MissingToIdent" />
       </Mappings>
     </Button>
   </Buttons>
 </Form>
+

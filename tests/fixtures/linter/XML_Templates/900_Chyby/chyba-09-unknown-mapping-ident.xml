@@ -6,8 +6,9 @@
   <Buttons>
     <Button xsi:type="FormButton" Ident="LocalButton" TitleResourceKey="LocalButton_ITSM" MappingFormIdent="ValidForm">
       <Mappings>
-        <Mapping FromIdent="MissingControl" ToIdent="ID" />
+        <Mapping FromIdent="ID" ToIdent="MissingToIdent" />
       </Mappings>
     </Button>
   </Buttons>
 </Form>
+

@@ -270,44 +270,22 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
   const formsByIdent = new Map<string, IndexedForm>();
   const componentsByKey = new Map<string, IndexedComponent>();
   const componentKeysByBaseName = new Map<string, Set<string>>();
+  const parsedEntries: Array<{
+    rel: string;
+    doc: MockTextDocument;
+    facts: ParsedDocumentFacts;
+    root: string;
+  }> = [];
 
   for (const [rel, doc] of docs.entries()) {
     const facts = parseDocumentFactsFromText(doc.getText()) as ParsedDocumentFacts;
     const root = (facts.rootTag ?? "").toLowerCase();
-    if (root === "form") {
-      const formIdent = facts.formIdent ?? facts.rootIdent;
-      if (!formIdent) {
-        continue;
-      }
-      const controlDefinitions = new Map<string, Location>();
-      for (const item of facts.declaredControlInfos) {
-        controlDefinitions.set(item.ident, new Location(doc.uri, item.range as unknown as Range));
-      }
-      const buttonDefinitions = new Map<string, Location>();
-      for (const item of facts.declaredButtonInfos) {
-        buttonDefinitions.set(item.ident, new Location(doc.uri, item.range as unknown as Range));
-      }
-      const sectionDefinitions = new Map<string, Location>();
-      for (const item of facts.identOccurrences) {
-        if (item.kind !== "section") {
-          continue;
-        }
-        sectionDefinitions.set(item.ident, new Location(doc.uri, item.range as unknown as Range));
-      }
-      formsByIdent.set(formIdent, {
-        ident: formIdent,
-        uri: doc.uri as unknown as import("vscode").Uri,
-        controls: new Set(facts.declaredControls),
-        buttons: new Set(facts.declaredButtons),
-        sections: new Set(facts.declaredSections),
-        formIdentLocation: new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))) as unknown as import("vscode").Location,
-        controlDefinitions: controlDefinitions as unknown as Map<string, import("vscode").Location>,
-        buttonDefinitions: buttonDefinitions as unknown as Map<string, import("vscode").Location>,
-        sectionDefinitions: sectionDefinitions as unknown as Map<string, import("vscode").Location>
-      });
-      continue;
-    }
+    parsedEntries.push({ rel, doc, facts, root });
+  }
 
+  // Pass 1: components
+  for (const entry of parsedEntries) {
+    const { rel, doc, facts, root } = entry;
     if (root === "component") {
       const componentKey = normalizeComponentKeyFromRel(rel);
       const sectionNames = collectSectionNames(doc.getText());
@@ -359,6 +337,69 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     }
   }
 
+  // Pass 2: forms (with Using expansion from components)
+  for (const entry of parsedEntries) {
+    const { doc, facts, root } = entry;
+    if (root !== "form") {
+      continue;
+    }
+
+    const formIdent = facts.formIdent ?? facts.rootIdent;
+    if (!formIdent) {
+      continue;
+    }
+
+    const controls = new Set(facts.declaredControls);
+    const buttons = new Set(facts.declaredButtons);
+    const sections = new Set(facts.declaredSections);
+
+    const controlDefinitions = new Map<string, Location>();
+    for (const item of facts.declaredControlInfos) {
+      controlDefinitions.set(item.ident, new Location(doc.uri, item.range as unknown as Range));
+    }
+
+    const buttonDefinitions = new Map<string, Location>();
+    for (const item of facts.declaredButtonInfos) {
+      buttonDefinitions.set(item.ident, new Location(doc.uri, item.range as unknown as Range));
+    }
+
+    const sectionDefinitions = new Map<string, Location>();
+    for (const item of facts.identOccurrences) {
+      if (item.kind !== "section") {
+        continue;
+      }
+      sectionDefinitions.set(item.ident, new Location(doc.uri, item.range as unknown as Range));
+    }
+
+    for (const usingRef of facts.usingReferences) {
+      const component = resolveComponentFromFixtureIndex(componentsByKey, componentKeysByBaseName, usingRef.componentKey);
+      if (!component) {
+        continue;
+      }
+      for (const ident of component.formControlDefinitions.keys()) {
+        controls.add(ident);
+      }
+      for (const ident of component.formButtonDefinitions.keys()) {
+        buttons.add(ident);
+      }
+      for (const ident of component.formSectionDefinitions.keys()) {
+        sections.add(ident);
+      }
+    }
+
+    formsByIdent.set(formIdent, {
+      ident: formIdent,
+      uri: doc.uri as unknown as import("vscode").Uri,
+      controls,
+      buttons,
+      sections,
+      formIdentLocation: new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))) as unknown as import("vscode").Location,
+      controlDefinitions: controlDefinitions as unknown as Map<string, import("vscode").Location>,
+      buttonDefinitions: buttonDefinitions as unknown as Map<string, import("vscode").Location>,
+      sectionDefinitions: sectionDefinitions as unknown as Map<string, import("vscode").Location>
+    });
+  }
+
   const emptyMapLocations = new Map<string, Location[]>();
   const emptyNestedRef = new Map<string, Map<string, Location[]>>();
   const emptyUsageMap = new Map<string, Set<string>>();
@@ -381,6 +422,26 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     componentsReady: true,
     fullReady: true
   };
+}
+
+function resolveComponentFromFixtureIndex(
+  componentsByKey: Map<string, IndexedComponent>,
+  componentKeysByBaseName: Map<string, Set<string>>,
+  requestedKey: string
+): IndexedComponent | undefined {
+  const exact = componentsByKey.get(requestedKey);
+  if (exact) {
+    return exact;
+  }
+
+  const baseName = requestedKey.split("/").pop() ?? requestedKey;
+  const aliases = componentKeysByBaseName.get(baseName);
+  if (!aliases || aliases.size === 0) {
+    return undefined;
+  }
+
+  const ordered = [...aliases].sort((a, b) => a.length - b.length || a.localeCompare(b));
+  return componentsByKey.get(ordered[0]);
 }
 
 function collectFiles(root: string, extension: string): string[] {

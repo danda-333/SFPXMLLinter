@@ -110,7 +110,14 @@ export function parseDocumentFacts(document: vscode.TextDocument): ParsedDocumen
 }
 
 export function parseDocumentFactsFromText(rawText: string): ParsedDocumentFacts {
-  const text = maskXmlComments(rawText);
+  return parseDocumentFactsCore(maskXmlComments(rawText));
+}
+
+export function parseDocumentFactsFromMaskedText(maskedText: string): ParsedDocumentFacts {
+  return parseDocumentFactsCore(maskedText);
+}
+
+function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
 
   const facts: ParsedDocumentFacts = {
     declaredControls: new Set<string>(),
@@ -135,6 +142,7 @@ export function parseDocumentFactsFromText(rawText: string): ParsedDocumentFacts
   };
 
   const rootMatch = /<\s*([A-Za-z_][\w:.-]*)\b/.exec(text);
+  const rootTagLower = (rootMatch ? stripPrefix(rootMatch[1]) : "").toLowerCase();
   if (rootMatch) {
     facts.rootTag = stripPrefix(rootMatch[1]);
   }
@@ -181,276 +189,305 @@ export function parseDocumentFactsFromText(rawText: string): ParsedDocumentFacts
     }
   }
 
-  for (const m of text.matchAll(/<Control\b([^>]*)>/gi)) {
-    const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-    const attr = attrs.get("Ident");
-    const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
-    if (attr?.value) {
-      facts.declaredControls.add(attr.value);
+  const canDeclareFormNodes = rootTagLower === "form" || rootTagLower === "component";
+  const canHaveWorkflowNodes = rootTagLower === "workflow" || rootTagLower === "component";
+
+  if (canDeclareFormNodes && text.includes("<Control")) {
+    for (const m of text.matchAll(/<Control\b([^>]*)>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const attr = attrs.get("Ident");
+      const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
+      if (attr?.value) {
+        facts.declaredControls.add(attr.value);
+        if (attr.valueRange) {
+          facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "control" });
+          facts.declaredControlInfos.push({ ident: attr.value, range: attr.valueRange, type });
+        }
+      }
+    }
+  }
+
+  const buttonTags = text.includes("<Button") ? collectButtonTags(text) : [];
+  if ((canDeclareFormNodes || canHaveWorkflowNodes) && buttonTags.length > 0) {
+    for (const buttonTag of buttonTags) {
+      const attrs = parseAttributes(buttonTag.rawAttrs, text, buttonTag.attrsStartIndex);
+      const ident = attrs.get("Ident");
+      const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
+      if (ident?.value) {
+        facts.declaredButtons.add(ident.value);
+        if (ident.valueRange) {
+          facts.identOccurrences.push({
+            ident: ident.value,
+            range: ident.valueRange,
+            kind: "button",
+            scopeKey: buttonTag.scopeKey
+          });
+          facts.declaredButtonInfos.push({ ident: ident.value, range: ident.valueRange, type });
+        }
+      }
+    }
+  }
+
+  if ((canDeclareFormNodes || canHaveWorkflowNodes) && text.includes("<Section")) {
+    const sectionTags = collectSectionTags(text);
+    for (const sectionTag of sectionTags) {
+      const attrs = parseAttributes(sectionTag.rawAttrs, text, sectionTag.attrsStartIndex);
+      const attr = attrs.get("Ident");
+      if (!attr?.value) {
+        continue;
+      }
+
+      facts.declaredSections.add(attr.value);
       if (attr.valueRange) {
-        facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "control" });
-        facts.declaredControlInfos.push({ ident: attr.value, range: attr.valueRange, type });
+        facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "section", scopeKey: sectionTag.scopeKey });
+      }
+      if (attr.valueRange && canHaveWorkflowNodes) {
+        facts.workflowReferences.push({ kind: "section", ident: attr.value, range: attr.valueRange, scopeKey: sectionTag.scopeKey });
       }
     }
   }
 
-  const buttonTags = collectButtonTags(text);
-  for (const buttonTag of buttonTags) {
-    const attrs = parseAttributes(buttonTag.rawAttrs, text, buttonTag.attrsStartIndex);
-    const ident = attrs.get("Ident");
-    const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
-    if (ident?.value) {
-      facts.declaredButtons.add(ident.value);
-      if (ident.valueRange) {
-        facts.identOccurrences.push({
-          ident: ident.value,
-          range: ident.valueRange,
-          kind: "button",
-          scopeKey: buttonTag.scopeKey
+  if (canHaveWorkflowNodes && text.includes("<FormControl")) {
+    for (const m of text.matchAll(/<FormControl\b([^>]*)>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const attr = attrs.get("Ident");
+      const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
+      if (attr?.value && attr.valueRange) {
+        if ((type ?? "").toLowerCase() === "sharecodecontrol") {
+          facts.workflowReferences.push({ kind: "controlShareCode", ident: attr.value, range: attr.valueRange });
+        } else {
+          facts.workflowReferences.push({ kind: "formControl", ident: attr.value, range: attr.valueRange });
+        }
+      }
+    }
+  }
+
+  if (canHaveWorkflowNodes && text.includes("<ControlShareCode")) {
+    for (const m of text.matchAll(/<ControlShareCode\b([^>]*)>/gi)) {
+      const attr = findAttribute(m[1], "Ident", text, attributeStartIndex(m));
+      if (!attr?.value || !attr.valueRange) {
+        continue;
+      }
+
+      const key = attr.value;
+      facts.declaredControlShareCodes.add(key);
+      if (!facts.controlShareCodeDefinitions.has(key)) {
+        facts.controlShareCodeDefinitions.set(key, attr.valueRange);
+      }
+    }
+  }
+
+  if (canHaveWorkflowNodes && text.includes("<ButtonShareCode")) {
+    for (const m of text.matchAll(/<ButtonShareCode\b([^>]*)>/gi)) {
+      const attr = findAttribute(m[1], "Ident", text, attributeStartIndex(m));
+      if (!attr?.value || !attr.valueRange) {
+        continue;
+      }
+
+      const key = attr.value;
+      facts.declaredButtonShareCodes.add(key);
+      if (!facts.buttonShareCodeDefinitions.has(key)) {
+        facts.buttonShareCodeDefinitions.set(key, attr.valueRange);
+      }
+    }
+  }
+
+  if (canHaveWorkflowNodes && text.includes("<ButtonShareCode")) {
+    for (const share of collectButtonShareCodeContents(text)) {
+      const key = share.ident;
+      const buttonIds = collectButtonIdentsFromText(share.content);
+      if (!facts.buttonShareCodeButtonIdents.has(key)) {
+        facts.buttonShareCodeButtonIdents.set(key, new Set<string>());
+      }
+
+      const target = facts.buttonShareCodeButtonIdents.get(key);
+      if (!target) {
+        continue;
+      }
+
+      for (const buttonId of buttonIds) {
+        target.add(buttonId);
+      }
+    }
+  }
+
+  if (canHaveWorkflowNodes && buttonTags.length > 0) {
+    for (const buttonTag of buttonTags) {
+      const attrs = parseAttributes(buttonTag.rawAttrs, text, buttonTag.attrsStartIndex);
+      const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
+
+      const ident = attrs.get("Ident");
+      if (ident?.value && ident.valueRange) {
+        if (type?.toLowerCase() === "sharecodebutton") {
+          facts.workflowReferences.push({ kind: "buttonShareCode", ident: ident.value, range: ident.valueRange, scopeKey: buttonTag.scopeKey });
+        } else {
+          facts.workflowReferences.push({ kind: "button", ident: ident.value, range: ident.valueRange, scopeKey: buttonTag.scopeKey });
+        }
+      }
+    }
+  }
+
+  if (text.includes("<Using")) {
+    for (const m of text.matchAll(/<Using\b([^>]*)>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const componentAttr = attrs.get("Component") ?? attrs.get("Name");
+      if (!componentAttr?.value || !componentAttr.valueRange) {
+        continue;
+      }
+
+      const sectionAttr = attrs.get("Section");
+      facts.usingReferences.push({
+        componentKey: normalizeComponentKey(componentAttr.value),
+        rawComponentValue: componentAttr.value,
+        componentValueRange: componentAttr.valueRange,
+        sectionValue: sectionAttr?.value,
+        sectionValueRange: sectionAttr?.valueRange
+      });
+    }
+  }
+
+  if (text.includes("<Mapping")) {
+    const mappingContexts = collectMappingContexts(text);
+    for (const m of text.matchAll(/<Mapping\b([^>]*)>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const fromIdent = attrs.get("FromIdent");
+      const toIdent = attrs.get("ToIdent");
+      const context = findMappingContext(mappingContexts, m.index ?? 0);
+      const mappingFormIdent = context?.mappingFormIdent;
+
+      if (fromIdent?.value && fromIdent.valueRange) {
+        facts.mappingIdentReferences.push({
+          kind: "fromIdent",
+          ident: fromIdent.value,
+          range: fromIdent.valueRange,
+          mappingFormIdent
         });
-        facts.declaredButtonInfos.push({ ident: ident.value, range: ident.valueRange, type });
+      }
+
+      if (toIdent?.value && toIdent.valueRange) {
+        facts.mappingIdentReferences.push({
+          kind: "toIdent",
+          ident: toIdent.value,
+          range: toIdent.valueRange,
+          mappingFormIdent
+        });
+      }
+    }
+
+    for (const context of mappingContexts) {
+      if (context.mappingFormIdent && context.mappingFormIdentRange) {
+        facts.mappingFormIdentReferences.push({
+          formIdent: context.mappingFormIdent,
+          range: context.mappingFormIdentRange
+        });
       }
     }
   }
 
-  const sectionTags = collectSectionTags(text);
-  for (const sectionTag of sectionTags) {
-    const attrs = parseAttributes(sectionTag.rawAttrs, text, sectionTag.attrsStartIndex);
-    const attr = attrs.get("Ident");
-    if (!attr?.value) {
-      continue;
-    }
-
-    facts.declaredSections.add(attr.value);
-    if (attr.valueRange) {
-      facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "section", scopeKey: sectionTag.scopeKey });
-    }
-    if (attr.valueRange) {
-      facts.workflowReferences.push({ kind: "section", ident: attr.value, range: attr.valueRange, scopeKey: sectionTag.scopeKey });
-    }
-  }
-
-  for (const m of text.matchAll(/<FormControl\b([^>]*)>/gi)) {
-    const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-    const attr = attrs.get("Ident");
-    const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
-    if (attr?.value && attr.valueRange) {
-      if ((type ?? "").toLowerCase() === "sharecodecontrol") {
-        facts.workflowReferences.push({ kind: "controlShareCode", ident: attr.value, range: attr.valueRange });
-      } else {
-        facts.workflowReferences.push({ kind: "formControl", ident: attr.value, range: attr.valueRange });
-      }
-    }
-  }
-
-  for (const m of text.matchAll(/<ControlShareCode\b([^>]*)>/gi)) {
-    const attr = findAttribute(m[1], "Ident", text, attributeStartIndex(m));
-    if (!attr?.value || !attr.valueRange) {
-      continue;
-    }
-
-    const key = attr.value;
-    facts.declaredControlShareCodes.add(key);
-    if (!facts.controlShareCodeDefinitions.has(key)) {
-      facts.controlShareCodeDefinitions.set(key, attr.valueRange);
-    }
-  }
-
-  for (const m of text.matchAll(/<ButtonShareCode\b([^>]*)>/gi)) {
-    const attr = findAttribute(m[1], "Ident", text, attributeStartIndex(m));
-    if (!attr?.value || !attr.valueRange) {
-      continue;
-    }
-
-    const key = attr.value;
-    facts.declaredButtonShareCodes.add(key);
-    if (!facts.buttonShareCodeDefinitions.has(key)) {
-      facts.buttonShareCodeDefinitions.set(key, attr.valueRange);
-    }
-  }
-
-  for (const share of collectButtonShareCodeContents(text)) {
-    const key = share.ident;
-    const buttonIds = collectButtonIdentsFromText(share.content);
-    if (!facts.buttonShareCodeButtonIdents.has(key)) {
-      facts.buttonShareCodeButtonIdents.set(key, new Set<string>());
-    }
-
-    const target = facts.buttonShareCodeButtonIdents.get(key);
-    if (!target) {
-      continue;
-    }
-
-    for (const buttonId of buttonIds) {
-      target.add(buttonId);
-    }
-  }
-
-  for (const buttonTag of buttonTags) {
-    const attrs = parseAttributes(buttonTag.rawAttrs, text, buttonTag.attrsStartIndex);
-    const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
-
-    const ident = attrs.get("Ident");
-    if (ident?.value && ident.valueRange) {
-      if (type?.toLowerCase() === "sharecodebutton") {
-        facts.workflowReferences.push({ kind: "buttonShareCode", ident: ident.value, range: ident.valueRange, scopeKey: buttonTag.scopeKey });
-      } else {
-        facts.workflowReferences.push({ kind: "button", ident: ident.value, range: ident.valueRange, scopeKey: buttonTag.scopeKey });
-      }
-    }
-  }
-
-  for (const m of text.matchAll(/<Using\b([^>]*)>/gi)) {
-    const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-    const componentAttr = attrs.get("Component") ?? attrs.get("Name");
-    if (!componentAttr?.value || !componentAttr.valueRange) {
-      continue;
-    }
-
-    const sectionAttr = attrs.get("Section");
-    facts.usingReferences.push({
-      componentKey: normalizeComponentKey(componentAttr.value),
-      rawComponentValue: componentAttr.value,
-      componentValueRange: componentAttr.valueRange,
-      sectionValue: sectionAttr?.value,
-      sectionValueRange: sectionAttr?.valueRange
-    });
-  }
-
-  const buttonContexts = collectButtonMappingContexts(text);
-  for (const m of text.matchAll(/<Mapping\b([^>]*)>/gi)) {
-    const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-    const fromIdent = attrs.get("FromIdent");
-    const toIdent = attrs.get("ToIdent");
-    const context = findButtonContext(buttonContexts, m.index ?? 0);
-    const mappingFormIdent = context?.mappingFormIdent;
-
-    if (fromIdent?.value && fromIdent.valueRange) {
-      facts.mappingIdentReferences.push({
-        kind: "fromIdent",
-        ident: fromIdent.value,
-        range: fromIdent.valueRange,
-        mappingFormIdent
-      });
-    }
-
-    if (toIdent?.value && toIdent.valueRange) {
-      facts.mappingIdentReferences.push({
-        kind: "toIdent",
-        ident: toIdent.value,
-        range: toIdent.valueRange,
-        mappingFormIdent
-      });
-    }
-  }
-
-  for (const context of buttonContexts) {
-    if (context.mappingFormIdent && context.mappingFormIdentRange) {
-      facts.mappingFormIdentReferences.push({
-        formIdent: context.mappingFormIdent,
-        range: context.mappingFormIdentRange
-      });
-    }
-  }
-
-  for (const actionMatch of text.matchAll(/<Action\b([^>]*)>([\s\S]*?)<\/Action>/gi)) {
-    const attrs = parseAttributes(actionMatch[1] ?? "", text, attributeStartIndex(actionMatch));
-    const actionType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
-    if (actionType !== "required") {
-      continue;
-    }
-
-    const body = actionMatch[2] ?? "";
-    const whole = actionMatch[0] ?? "";
-    const bodyOffsetInWhole = whole.indexOf(body);
-    if (bodyOffsetInWhole < 0) {
-      continue;
-    }
-
-    const bodyStart = (actionMatch.index ?? 0) + bodyOffsetInWhole;
-    for (const identMatch of body.matchAll(/<string\b[^>]*>([\s\S]*?)<\/string>/gi)) {
-      const rawValue = identMatch[1] ?? "";
-      const ident = rawValue.trim();
-      if (!ident) {
+  if (canHaveWorkflowNodes && text.includes("<Action")) {
+    for (const actionMatch of text.matchAll(/<Action\b([^>]*)>([\s\S]*?)<\/Action>/gi)) {
+      const attrs = parseAttributes(actionMatch[1] ?? "", text, attributeStartIndex(actionMatch));
+      const actionType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
+      if (actionType !== "required") {
         continue;
       }
 
-      const fullStringTag = identMatch[0] ?? "";
-      const rawValueOffset = fullStringTag.indexOf(rawValue);
-      if (rawValueOffset < 0) {
+      const body = actionMatch[2] ?? "";
+      const whole = actionMatch[0] ?? "";
+      const bodyOffsetInWhole = whole.indexOf(body);
+      if (bodyOffsetInWhole < 0) {
         continue;
       }
 
-      const leadingWhitespace = (/^\s*/.exec(rawValue)?.[0].length ?? 0);
-      const start = bodyStart + (identMatch.index ?? 0) + rawValueOffset + leadingWhitespace;
-      const range = new vscode.Range(indexToPosition(text, start), indexToPosition(text, start + ident.length));
-      facts.requiredActionIdentReferences.push({ ident, range });
+      const bodyStart = (actionMatch.index ?? 0) + bodyOffsetInWhole;
+      for (const identMatch of body.matchAll(/<string\b[^>]*>([\s\S]*?)<\/string>/gi)) {
+        const rawValue = identMatch[1] ?? "";
+        const ident = rawValue.trim();
+        if (!ident) {
+          continue;
+        }
+
+        const fullStringTag = identMatch[0] ?? "";
+        const rawValueOffset = fullStringTag.indexOf(rawValue);
+        if (rawValueOffset < 0) {
+          continue;
+        }
+
+        const leadingWhitespace = (/^\s*/.exec(rawValue)?.[0].length ?? 0);
+        const start = bodyStart + (identMatch.index ?? 0) + rawValueOffset + leadingWhitespace;
+        const range = new vscode.Range(indexToPosition(text, start), indexToPosition(text, start + ident.length));
+        facts.requiredActionIdentReferences.push({ ident, range });
+      }
+    }
+
+    for (const actionTag of text.matchAll(/<Action\b([^>]*)>/gi)) {
+      const attrs = parseAttributes(actionTag[1] ?? "", text, attributeStartIndex(actionTag));
+      const actionType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
+      if (actionType !== "actionvalue") {
+        continue;
+      }
+
+      const controlIdentAttr = getAttributeCaseInsensitive(attrs, "ControlIdent");
+      if (!controlIdentAttr?.value || !controlIdentAttr.valueRange) {
+        continue;
+      }
+
+      facts.workflowControlIdentReferences.push({
+        kind: "actionValue",
+        ident: controlIdentAttr.value,
+        range: controlIdentAttr.valueRange
+      });
     }
   }
 
-  for (const actionTag of text.matchAll(/<Action\b([^>]*)>/gi)) {
-    const attrs = parseAttributes(actionTag[1] ?? "", text, attributeStartIndex(actionTag));
-    const actionType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
-    if (actionType !== "actionvalue") {
-      continue;
-    }
+  if (canHaveWorkflowNodes && text.includes("<JavaScript")) {
+    for (const jsTag of text.matchAll(/<JavaScript\b([^>]*)>/gi)) {
+      const attrs = parseAttributes(jsTag[1] ?? "", text, attributeStartIndex(jsTag));
+      const jsType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
+      if (jsType !== "showhide") {
+        continue;
+      }
 
-    const controlIdentAttr = getAttributeCaseInsensitive(attrs, "ControlIdent");
-    if (!controlIdentAttr?.value || !controlIdentAttr.valueRange) {
-      continue;
-    }
+      const controlIdentAttr = getAttributeCaseInsensitive(attrs, "ControlIdent");
+      if (!controlIdentAttr?.value || !controlIdentAttr.valueRange) {
+        continue;
+      }
 
-    facts.workflowControlIdentReferences.push({
-      kind: "actionValue",
-      ident: controlIdentAttr.value,
-      range: controlIdentAttr.valueRange
-    });
+      facts.workflowControlIdentReferences.push({
+        kind: "showHideJavaScript",
+        ident: controlIdentAttr.value,
+        range: controlIdentAttr.valueRange
+      });
+    }
   }
 
-  for (const jsTag of text.matchAll(/<JavaScript\b([^>]*)>/gi)) {
-    const attrs = parseAttributes(jsTag[1] ?? "", text, attributeStartIndex(jsTag));
-    const jsType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
-    if (jsType !== "showhide") {
-      continue;
+  if (rootTagLower === "form" && text.includes("<Control")) {
+    for (const m of text.matchAll(/<(Control|ControlLabel|ControlPlaceHolder)\b([^>]*)>/gi)) {
+      const rawTagName = (m[1] ?? "").trim();
+      const tagName = normalizeHtmlControlTagName(rawTagName);
+      if (!tagName) {
+        continue;
+      }
+
+      const full = m[0] ?? "";
+      const rawAttrs = m[2] ?? "";
+      const fullStart = m.index ?? 0;
+      const attrsOffset = full.indexOf(rawAttrs);
+      const attrsStart = fullStart + (attrsOffset >= 0 ? attrsOffset : 0);
+      const attrs = parseAttributes(rawAttrs, text, attrsStart);
+      const attributeName = tagName === "Control" ? "ID" : "ControlID";
+      const attr = getAttributeCaseInsensitive(attrs, attributeName) ?? (tagName === "Control" ? getAttributeCaseInsensitive(attrs, "ControlID") : undefined);
+      if (!attr?.value || !attr.valueRange) {
+        continue;
+      }
+
+      facts.htmlControlReferences.push({
+        tagName,
+        attributeName: attributeName === "ID" ? "ID" : "ControlID",
+        ident: attr.value,
+        range: attr.valueRange
+      });
     }
-
-    const controlIdentAttr = getAttributeCaseInsensitive(attrs, "ControlIdent");
-    if (!controlIdentAttr?.value || !controlIdentAttr.valueRange) {
-      continue;
-    }
-
-    facts.workflowControlIdentReferences.push({
-      kind: "showHideJavaScript",
-      ident: controlIdentAttr.value,
-      range: controlIdentAttr.valueRange
-    });
-  }
-
-  for (const m of text.matchAll(/<(Control|ControlLabel|ControlPlaceHolder)\b([^>]*)>/gi)) {
-    const rawTagName = (m[1] ?? "").trim();
-    const tagName = normalizeHtmlControlTagName(rawTagName);
-    if (!tagName) {
-      continue;
-    }
-
-    const full = m[0] ?? "";
-    const rawAttrs = m[2] ?? "";
-    const fullStart = m.index ?? 0;
-    const attrsOffset = full.indexOf(rawAttrs);
-    const attrsStart = fullStart + (attrsOffset >= 0 ? attrsOffset : 0);
-    const attrs = parseAttributes(rawAttrs, text, attrsStart);
-    const attributeName = tagName === "Control" ? "ID" : "ControlID";
-    const attr = getAttributeCaseInsensitive(attrs, attributeName) ?? (tagName === "Control" ? getAttributeCaseInsensitive(attrs, "ControlID") : undefined);
-    if (!attr?.value || !attr.valueRange) {
-      continue;
-    }
-
-    facts.htmlControlReferences.push({
-      tagName,
-      attributeName: attributeName === "ID" ? "ID" : "ControlID",
-      ident: attr.value,
-      range: attr.valueRange
-    });
   }
 
   return facts;
@@ -693,15 +730,15 @@ function collectButtonIdentsFromText(text: string): Set<string> {
   return out;
 }
 
-interface ButtonMappingContext {
+interface MappingContext {
   start: number;
   end: number;
   mappingFormIdent?: string;
   mappingFormIdentRange?: vscode.Range;
 }
 
-function collectButtonMappingContexts(text: string): ButtonMappingContext[] {
-  const contexts: ButtonMappingContext[] = [];
+function collectMappingContexts(text: string): MappingContext[] {
+  const contexts: MappingContext[] = [];
 
   for (const m of text.matchAll(/<Button\b([^>]*)>([\s\S]*?)<\/Button>/gi)) {
     const full = m[0] ?? "";
@@ -723,17 +760,59 @@ function collectButtonMappingContexts(text: string): ButtonMappingContext[] {
     });
   }
 
+  for (const m of text.matchAll(/<Action\b([^>]*)>([\s\S]*?)<\/Action>/gi)) {
+    const full = m[0] ?? "";
+    const attrs = m[1] ?? "";
+    const start = m.index ?? 0;
+    const end = start + full.length;
+
+    const attrsOffset = full.indexOf(attrs);
+    const attrsStart = start + (attrsOffset >= 0 ? attrsOffset : 0);
+    const parsedAttrs = parseAttributes(attrs, text, attrsStart);
+    const actionType = (
+      getAttributeCaseInsensitive(parsedAttrs, "xsi:type")?.value ??
+      getAttributeCaseInsensitive(parsedAttrs, "type")?.value ??
+      ""
+    ).trim().toLowerCase();
+    if (actionType !== "generateform") {
+      continue;
+    }
+
+    const mappingFormIdentAttr = getAttributeCaseInsensitive(parsedAttrs, "FormIdent");
+    const mappingFormIdent = mappingFormIdentAttr?.value?.trim();
+    if (!mappingFormIdent) {
+      continue;
+    }
+
+    contexts.push({
+      start,
+      end,
+      mappingFormIdent,
+      mappingFormIdentRange: mappingFormIdentAttr?.valueRange
+    });
+  }
+
+  contexts.sort((a, b) => {
+    if (a.start !== b.start) {
+      return a.start - b.start;
+    }
+    return a.end - b.end;
+  });
+
   return contexts;
 }
 
-function findButtonContext(contexts: ButtonMappingContext[], offset: number): ButtonMappingContext | undefined {
+function findMappingContext(contexts: MappingContext[], offset: number): MappingContext | undefined {
+  let best: MappingContext | undefined;
   for (const context of contexts) {
     if (offset >= context.start && offset <= context.end) {
-      return context;
+      if (!best || (context.end - context.start) <= (best.end - best.start)) {
+        best = context;
+      }
     }
   }
 
-  return undefined;
+  return best;
 }
 
 function getAttributeCaseInsensitive(attrs: Map<string, XmlAttributeMatch>, attributeName: string): XmlAttributeMatch | undefined {

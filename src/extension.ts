@@ -50,6 +50,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const lowPriorityValidationSet = new Set<string>();
   let sqlSuggestTriggerTimer: NodeJS.Timeout | undefined;
   let suppressSqlSuggestUntil = 0;
+  let reindexProgressState:
+    | {
+        progress: vscode.Progress<{ message?: string; increment?: number }>;
+        reportedPercent: number;
+      }
+    | undefined;
 
   context.subscriptions.push(diagnostics);
   context.subscriptions.push(buildOutput);
@@ -74,26 +80,121 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       case "discover-start":
         return "PHASE discover: searching XML files...";
       case "discover-done":
-        return `PHASE discover: found ${event.total ?? 0} files`;
+        return event.message ?? `PHASE discover: found ${event.total ?? 0} files`;
+      case "parse-start":
+        return event.message ?? `PHASE parse: start (${event.total ?? 0})`;
       case "parse-progress":
         return `PHASE parse: ${event.current ?? 0}/${event.total ?? 0} ${rel ?? ""}`.trim();
+      case "parse-done":
+        return event.message ?? `PHASE parse: done (${event.current ?? 0}/${event.total ?? 0})`;
       case "components-start":
         return `PHASE components: start (${event.total ?? 0})`;
       case "components-progress":
         return `PHASE components: ${event.current ?? 0}/${event.total ?? 0} ${rel ?? ""}`.trim();
       case "components-done":
-        return `PHASE components: done (${event.total ?? 0})`;
+        return event.message ?? `PHASE components: done (${event.total ?? 0})`;
       case "forms-start":
         return `PHASE forms: start (${event.total ?? 0})`;
       case "forms-progress":
         return `PHASE forms: ${event.current ?? 0}/${event.total ?? 0} ${rel ?? ""}`.trim();
       case "forms-done":
-        return `PHASE forms: done (${event.total ?? 0})`;
+        return event.message ?? `PHASE forms: done (${event.total ?? 0})`;
+      case "references-start":
+        return event.message ?? `PHASE references: start (${event.total ?? 0})`;
+      case "references-progress":
+        return `PHASE references: ${event.current ?? 0}/${event.total ?? 0}`;
+      case "references-done":
+        return event.message ?? `PHASE references: done (${event.total ?? 0})`;
       case "done":
         return `PHASE done: ${event.message ?? "index ready"}`;
       default:
         return event.message ?? event.phase;
     }
+  }
+
+  function mapIndexPhasePercent(event: RebuildIndexProgressEvent): number {
+    switch (event.phase) {
+      case "discover-start":
+        return 0;
+      case "discover-done":
+        return 5;
+      case "parse-start":
+        return 5;
+      case "parse-progress":
+        return event.total && event.total > 0 ? 5 + Math.floor((event.current ?? 0) / event.total * 30) : 5;
+      case "parse-done":
+        return 35;
+      case "components-start":
+        return 35;
+      case "components-progress":
+        return event.total && event.total > 0 ? 35 + Math.floor((event.current ?? 0) / event.total * 25) : 35;
+      case "components-done":
+        return 60;
+      case "forms-start":
+        return 60;
+      case "forms-progress":
+        return event.total && event.total > 0 ? 60 + Math.floor((event.current ?? 0) / event.total * 35) : 60;
+      case "forms-done":
+        return 90;
+      case "references-start":
+        return 90;
+      case "references-progress":
+        return event.total && event.total > 0 ? 90 + Math.floor((event.current ?? 0) / event.total * 10) : 90;
+      case "references-done":
+        return 95;
+      case "done":
+        return 100;
+      default:
+        return 0;
+    }
+  }
+
+  function reportReindexProgress(domain: "template" | "runtime", event: RebuildIndexProgressEvent): void {
+    const state = reindexProgressState;
+    if (!state) {
+      return;
+    }
+
+    // Map each domain to 50% of total progress.
+    const phasePercent = mapIndexPhasePercent(event);
+    const absolutePercent = domain === "template" ? Math.floor(phasePercent * 0.5) : 50 + Math.floor(phasePercent * 0.5);
+    const increment = Math.max(0, absolutePercent - state.reportedPercent);
+    state.progress.report({
+      increment,
+      message: `[${domain}] ${formatIndexProgress(event)}`
+    });
+    state.reportedPercent = Math.max(state.reportedPercent, absolutePercent);
+  }
+
+  async function withReindexProgress<T>(title: string, fn: () => Promise<T>): Promise<T> {
+    return vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title,
+        cancellable: false
+      },
+      async (progress) => {
+        const previous = reindexProgressState;
+        reindexProgressState = {
+          progress,
+          reportedPercent: 0
+        };
+
+        try {
+          const result = await fn();
+          if (reindexProgressState.reportedPercent < 100) {
+            progress.report({
+              increment: 100 - reindexProgressState.reportedPercent,
+              message: "done"
+            });
+            reindexProgressState.reportedPercent = 100;
+          }
+          return result;
+        } finally {
+          reindexProgressState = previous;
+        }
+      }
+    );
   }
 
   function getIndexerByDomain(domain: XmlIndexDomain): WorkspaceIndexer {
@@ -338,16 +439,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       onProgress: verbose
         ? (event) => {
             logIndex(`[template] ${formatIndexProgress(event)}`);
+            reportReindexProgress("template", event);
           }
-        : undefined
+        : (event) => {
+            reportReindexProgress("template", event);
+          }
     });
 
     await runtimeIndexer.rebuildIndex({
       onProgress: verbose
         ? (event) => {
             logIndex(`[runtime] ${formatIndexProgress(event)}`);
+            reportReindexProgress("runtime", event);
           }
-        : undefined
+        : (event) => {
+            reportReindexProgress("runtime", event);
+          }
     });
 
     if (verbose) {
@@ -364,8 +471,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
-  async function rebuildBootstrapIndexAndValidateOpenDocs(options?: { verboseProgress?: boolean }): Promise<void> {
+  async function rebuildBootstrapIndexAndValidateOpenDocs(options?: { verboseProgress?: boolean; includeRuntime?: boolean }): Promise<void> {
     const verbose = options?.verboseProgress === true;
+    const includeRuntime = options?.includeRuntime !== false;
     if (verbose) {
       logIndex("Bootstrap indexing START (components + forms)");
     }
@@ -375,18 +483,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       onProgress: verbose
         ? (event) => {
             logIndex(`[template] ${formatIndexProgress(event)}`);
+            reportReindexProgress("template", event);
           }
-        : undefined
+        : (event) => {
+            reportReindexProgress("template", event);
+          }
     });
 
-    await runtimeIndexer.rebuildIndex({
-      scope: "bootstrap",
-      onProgress: verbose
-        ? (event) => {
-            logIndex(`[runtime] ${formatIndexProgress(event)}`);
-          }
-        : undefined
-    });
+    if (includeRuntime) {
+      await runtimeIndexer.rebuildIndex({
+        scope: "bootstrap",
+        onProgress: verbose
+          ? (event) => {
+              logIndex(`[runtime] ${formatIndexProgress(event)}`);
+              reportReindexProgress("runtime", event);
+            }
+          : (event) => {
+              reportReindexProgress("runtime", event);
+            }
+      });
+    } else if (verbose) {
+      logIndex("Bootstrap indexing SKIP runtime (no runtime XML opened).");
+    }
 
     if (verbose) {
       logIndex("Bootstrap indexing DONE (components + forms)");
@@ -443,7 +561,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   async function revalidateWorkspaceFull(): Promise<void> {
     const startedAt = Date.now();
     logIndex("REVALIDATE START: full reindex + full validation");
-    await queueReindex("all");
+    await withReindexProgress("SFP XML Linter: Revalidate - Indexing", async () => {
+      await queueReindex("all");
+    });
 
     const uris = (await globConfiguredXmlFiles()).filter((uri) => uri.scheme === "file");
     const total = uris.length;
@@ -479,13 +599,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.showInformationMessage(`SFP XML Linter: Revalidate done (${processed} files, ${durationMs} ms).`);
   }
 
-  function scheduleDeferredFullReindex(delayMs = 1400): void {
+  function scheduleDeferredFullReindex(delayMs = 6000): void {
     if (deferredFullReindexTimer) {
       clearTimeout(deferredFullReindexTimer);
     }
 
     deferredFullReindexTimer = setTimeout(() => {
       deferredFullReindexTimer = undefined;
+      if (!hasShownInitialIndexReadyNotification) {
+        void withReindexProgress("SFP XML Linter: Initial Full Indexing", async () => {
+          await queueReindex("all");
+        });
+        return;
+      }
+
       void queueReindex("all");
     }, delayMs);
   }
@@ -1110,7 +1237,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // then perform
   // full index and background validation.
   void (async () => {
-    await rebuildBootstrapIndexAndValidateOpenDocs({ verboseProgress: true });
+    const hasRuntimeOpenAtStartup = getUserOpenUris().some((uri) => getXmlIndexDomainByUri(uri) === "runtime");
+    await withReindexProgress("SFP XML Linter: Initial Bootstrap Indexing", async () => {
+      await rebuildBootstrapIndexAndValidateOpenDocs({
+        verboseProgress: true,
+        includeRuntime: hasRuntimeOpenAtStartup
+      });
+    });
     scheduleDeferredFullReindex();
   })();
 }

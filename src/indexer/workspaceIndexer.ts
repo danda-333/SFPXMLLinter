@@ -1,29 +1,39 @@
 import * as vscode from "vscode";
 import { WorkspaceIndex, IndexedComponent, IndexedForm } from "./types";
 import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
-import { parseDocumentFactsFromText } from "./xmlFacts";
+import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
 import { maskXmlComments } from "../utils/xmlComments";
 
 interface ParsedEntry {
   uri: vscode.Uri;
-  document: vscode.TextDocument;
   maskedText: string;
-  facts: ReturnType<typeof parseDocumentFactsFromText>;
+  facts: ReturnType<typeof parseDocumentFactsFromMaskedText>;
   root: string;
+}
+
+interface PositionResolver {
+  uri: vscode.Uri;
+  positionAt(offset: number): vscode.Position;
+  getText?: () => string;
 }
 
 export interface RebuildIndexProgressEvent {
   phase:
     | "discover-start"
     | "discover-done"
+    | "parse-start"
     | "parse-progress"
+    | "parse-done"
     | "components-start"
     | "components-progress"
     | "components-done"
     | "forms-start"
     | "forms-progress"
     | "forms-done"
+    | "references-start"
+    | "references-progress"
+    | "references-done"
     | "done";
   current?: number;
   total?: number;
@@ -67,7 +77,7 @@ export class WorkspaceIndexer {
     formIdent?: string;
   } {
     const maskedText = maskXmlComments(document.getText());
-    const facts = parseDocumentFactsFromText(maskedText);
+    const facts = parseDocumentFactsFromMaskedText(maskedText);
     const root = (facts.rootTag ?? "").toLowerCase();
     if (root !== "form") {
       return { updated: false, reason: "not-form" };
@@ -125,7 +135,7 @@ export class WorkspaceIndexer {
     componentKey?: string;
   } {
     const maskedText = maskXmlComments(document.getText());
-    const facts = parseDocumentFactsFromText(maskedText);
+    const facts = parseDocumentFactsFromMaskedText(maskedText);
     const root = (facts.rootTag ?? "").toLowerCase();
     if (root !== "component") {
       return { updated: false, reason: "not-component" };
@@ -145,7 +155,7 @@ export class WorkspaceIndexer {
     const component: IndexedComponent = {
       key,
       uri: document.uri,
-      sections: this.readComponentSections(document, maskedText),
+      sections: this.readComponentSections(maskedText),
       componentLocation: new vscode.Location(document.uri, new vscode.Position(0, 0)),
       sectionDefinitions,
       formControlDefinitions: formInjected.controls,
@@ -169,17 +179,26 @@ export class WorkspaceIndexer {
   public async rebuildIndex(options?: RebuildIndexOptions): Promise<WorkspaceIndex> {
     const onProgress = options?.onProgress;
     const scope = options?.scope ?? "all";
+    const allStart = Date.now();
     onProgress?.({ phase: "discover-start", message: "Scanning workspace for XML files." });
+    const discoverStart = Date.now();
     const files = await globConfiguredXmlFiles(this.roots);
+    const discoverMs = Date.now() - discoverStart;
     onProgress?.({
       phase: "discover-done",
       total: files.length,
-      message: `Found ${files.length} XML files.`
+      message: `Found ${files.length} XML files in ${discoverMs} ms.`
     });
 
     const parsedEntries: ParsedEntry[] = [];
-    const parseBatchSize = 12;
+    const parseBatchSize = 48;
     let processed = 0;
+    const parseStart = Date.now();
+    onProgress?.({
+      phase: "parse-start",
+      total: files.length,
+      message: `Parsing XML files (${files.length}).`
+    });
     for (let offset = 0; offset < files.length; offset += parseBatchSize) {
       const batch = files.slice(offset, offset + parseBatchSize);
       const batchEntries = await Promise.all(
@@ -188,9 +207,9 @@ export class WorkspaceIndexer {
             return undefined;
           }
 
-          const document = await vscode.workspace.openTextDocument(uri);
-          const maskedText = maskXmlComments(document.getText());
-          const facts = parseDocumentFactsFromText(maskedText);
+          const text = await readWorkspaceFileText(uri);
+          const maskedText = maskXmlComments(text);
+          const facts = parseDocumentFactsFromMaskedText(maskedText);
           if (scope === "bootstrap") {
             const root = (facts.rootTag ?? "").toLowerCase();
             if (root !== "component" && root !== "form") {
@@ -200,7 +219,6 @@ export class WorkspaceIndexer {
 
           return {
             uri,
-            document,
             maskedText,
             facts,
             root: (facts.rootTag ?? "").toLowerCase()
@@ -226,6 +244,13 @@ export class WorkspaceIndexer {
 
       await yieldToEventLoop();
     }
+    const parseMs = Date.now() - parseStart;
+    onProgress?.({
+      phase: "parse-done",
+      current: processed,
+      total: files.length,
+      message: `Parsed ${processed}/${files.length} files in ${parseMs} ms (accepted ${parsedEntries.length}).`
+    });
 
     const formsByIdent = new Map<string, IndexedForm>();
     const componentsByKey = new Map<string, IndexedComponent>();
@@ -241,6 +266,7 @@ export class WorkspaceIndexer {
     const componentSectionUsageFormIdentsByKey = new Map<string, Map<string, Set<string>>>();
 
     const componentEntries = parsedEntries.filter((entry) => entry.root === "component");
+    const componentsStart = Date.now();
     onProgress?.({
       phase: "components-start",
       total: componentEntries.length,
@@ -252,15 +278,16 @@ export class WorkspaceIndexer {
         continue;
       }
 
+      const resolver = createRawResolver(entry.uri, entry.maskedText);
       const key = this.getComponentKey(entry.uri);
-      const sectionDefinitions = this.collectAttributeDefinitions(entry.document, /<Section\b([^>]*)>/gi, "Name", entry.maskedText);
-      const formInjected = this.collectFormInjectedDefinitions(entry.document, entry.maskedText);
-      const workflowInjected = this.collectWorkflowInjectedDefinitions(entry.document, entry.maskedText);
+      const sectionDefinitions = this.collectAttributeDefinitions(resolver, /<Section\b([^>]*)>/gi, "Name", entry.maskedText);
+      const formInjected = this.collectFormInjectedDefinitions(resolver, entry.maskedText);
+      const workflowInjected = this.collectWorkflowInjectedDefinitions(resolver, entry.maskedText);
 
       const component: IndexedComponent = {
         key,
         uri: entry.uri,
-        sections: this.readComponentSections(entry.document, entry.maskedText),
+        sections: this.readComponentSections(entry.maskedText),
         componentLocation: new vscode.Location(entry.uri, new vscode.Position(0, 0)),
         sectionDefinitions,
         formControlDefinitions: formInjected.controls,
@@ -288,7 +315,12 @@ export class WorkspaceIndexer {
         await yieldToEventLoop();
       }
     }
-    onProgress?.({ phase: "components-done", total: componentEntries.length });
+    const componentsMs = Date.now() - componentsStart;
+    onProgress?.({
+      phase: "components-done",
+      total: componentEntries.length,
+      message: `Built ${componentEntries.length} components in ${componentsMs} ms.`
+    });
 
     const provisionalIndex: WorkspaceIndex = {
       formsByIdent: new Map<string, IndexedForm>(),
@@ -309,6 +341,7 @@ export class WorkspaceIndexer {
     };
 
     const formEntries = parsedEntries.filter((entry) => entry.root === "form" && !!entry.facts.formIdent);
+    const formsStart = Date.now();
     onProgress?.({
       phase: "forms-start",
       total: formEntries.length,
@@ -320,10 +353,11 @@ export class WorkspaceIndexer {
         continue;
       }
 
-      const formIdentLocation = this.findFormIdentLocation(entry.document, entry.maskedText) ?? new vscode.Location(entry.uri, new vscode.Position(0, 0));
-      const controlDefinitions = this.collectAttributeDefinitions(entry.document, /<Control\b([^>]*)>/gi, "Ident", entry.maskedText);
-      const buttonDefinitions = this.collectAttributeDefinitions(entry.document, /<Button\b([^>]*)>/gi, "Ident", entry.maskedText);
-      const sectionDefinitions = this.collectAttributeDefinitions(entry.document, /<Section\b([^>]*)>/gi, "Ident", entry.maskedText);
+      const resolver = createRawResolver(entry.uri, entry.maskedText);
+      const formIdentLocation = this.findFormIdentLocation(resolver, entry.maskedText) ?? new vscode.Location(entry.uri, new vscode.Position(0, 0));
+      const controlDefinitions = this.collectAttributeDefinitions(resolver, /<Control\b([^>]*)>/gi, "Ident", entry.maskedText);
+      const buttonDefinitions = this.collectAttributeDefinitions(resolver, /<Button\b([^>]*)>/gi, "Ident", entry.maskedText);
+      const sectionDefinitions = this.collectAttributeDefinitions(resolver, /<Section\b([^>]*)>/gi, "Ident", entry.maskedText);
 
       const controls = new Set([...entry.facts.declaredControls]);
       const buttons = new Set([...entry.facts.declaredButtons]);
@@ -365,9 +399,20 @@ export class WorkspaceIndexer {
         await yieldToEventLoop();
       }
     }
-    onProgress?.({ phase: "forms-done", total: formEntries.length });
+    const formsMs = Date.now() - formsStart;
+    onProgress?.({
+      phase: "forms-done",
+      total: formEntries.length,
+      message: `Built ${formEntries.length} forms in ${formsMs} ms.`
+    });
 
     let processedRefEntries = 0;
+    const referencesStart = Date.now();
+    onProgress?.({
+      phase: "references-start",
+      total: parsedEntries.length,
+      message: `Resolving references (${parsedEntries.length}).`
+    });
     for (const entry of parsedEntries) {
       const root = entry.root;
       const uri = entry.uri;
@@ -489,10 +534,23 @@ export class WorkspaceIndexer {
       }
 
       processedRefEntries++;
+      if (processedRefEntries % 100 === 0 || processedRefEntries === parsedEntries.length) {
+        onProgress?.({
+          phase: "references-progress",
+          current: processedRefEntries,
+          total: parsedEntries.length
+        });
+      }
       if (processedRefEntries % 50 === 0) {
         await yieldToEventLoop();
       }
     }
+    const referencesMs = Date.now() - referencesStart;
+    onProgress?.({
+      phase: "references-done",
+      total: parsedEntries.length,
+      message: `Resolved references for ${parsedEntries.length} files in ${referencesMs} ms.`
+    });
 
     this.index = {
       formsByIdent,
@@ -511,20 +569,23 @@ export class WorkspaceIndexer {
       componentsReady: true,
       fullReady: scope === "all"
     };
+    const totalMs = Date.now() - allStart;
     onProgress?.({
       phase: "done",
-      message: `Index ready: forms=${formsByIdent.size}, components=${componentsByKey.size}.`
+      message:
+        `Index ready in ${totalMs} ms: forms=${formsByIdent.size}, components=${componentsByKey.size}, ` +
+        `discover=${discoverMs} ms, parse=${parseMs} ms, components=${componentsMs} ms, forms=${formsMs} ms, refs=${referencesMs} ms.`
     });
 
     return this.index;
   }
 
-  private collectFormInjectedDefinitions(document: vscode.TextDocument, preMaskedText?: string): {
+  private collectFormInjectedDefinitions(document: PositionResolver, preMaskedText?: string): {
     controls: Map<string, vscode.Location>;
     buttons: Map<string, vscode.Location>;
     sections: Map<string, vscode.Location>;
   } {
-    const text = preMaskedText ?? maskXmlComments(document.getText());
+    const text = resolveMaskedText(document, preMaskedText);
     const controls = new Map<string, vscode.Location>();
     const buttons = new Map<string, vscode.Location>();
     const sections = new Map<string, vscode.Location>();
@@ -564,12 +625,12 @@ export class WorkspaceIndexer {
     return { controls, buttons, sections };
   }
 
-  private collectWorkflowInjectedDefinitions(document: vscode.TextDocument, preMaskedText?: string): {
+  private collectWorkflowInjectedDefinitions(document: PositionResolver, preMaskedText?: string): {
     controlShareCodes: Map<string, vscode.Location>;
     buttonShareCodes: Map<string, vscode.Location>;
     buttonShareCodeButtonIdents: Map<string, Set<string>>;
   } {
-    const text = preMaskedText ?? maskXmlComments(document.getText());
+    const text = resolveMaskedText(document, preMaskedText);
     const controlShareCodes = new Map<string, vscode.Location>();
     const buttonShareCodes = new Map<string, vscode.Location>();
     const buttonShareCodeButtonIdents = new Map<string, Set<string>>();
@@ -642,7 +703,7 @@ export class WorkspaceIndexer {
   }
 
   private collectAttributeDefinitionsFromText(
-    document: vscode.TextDocument,
+    document: PositionResolver,
     text: string,
     globalTextOffset: number,
     tagRegex: RegExp,
@@ -680,8 +741,8 @@ export class WorkspaceIndexer {
     return result;
   }
 
-  private findFormIdentLocation(document: vscode.TextDocument, preMaskedText?: string): vscode.Location | undefined {
-    const text = preMaskedText ?? maskXmlComments(document.getText());
+  private findFormIdentLocation(document: PositionResolver, preMaskedText?: string): vscode.Location | undefined {
+    const text = resolveMaskedText(document, preMaskedText);
     const match = /<Form\b[^>]*\bIdent\s*=\s*("([^"]*)"|'([^']*)')/i.exec(text);
     if (!match) {
       return undefined;
@@ -705,17 +766,17 @@ export class WorkspaceIndexer {
   }
 
   private collectAttributeDefinitions(
-    document: vscode.TextDocument,
+    document: PositionResolver,
     tagRegex: RegExp,
     attributeName: string,
     preMaskedText?: string
   ): Map<string, vscode.Location> {
-    const text = preMaskedText ?? maskXmlComments(document.getText());
+    const text = resolveMaskedText(document, preMaskedText);
     return this.collectAttributeDefinitionsFromText(document, text, 0, tagRegex, attributeName, true);
   }
 
-  private readComponentSections(document: vscode.TextDocument, preMaskedText?: string): Set<string> {
-    const text = preMaskedText ?? maskXmlComments(document.getText());
+  private readComponentSections(preMaskedText?: string): Set<string> {
+    const text = preMaskedText ?? "";
     const sections = new Set<string>();
     for (const m of text.matchAll(/<Section\b[^>]*\bName\s*=\s*("([^"]*)"|'([^']*)')/gi)) {
       const name = (m[2] ?? m[3] ?? "").trim();
@@ -889,6 +950,67 @@ function isLikelyBootstrapPath(uri: vscode.Uri): boolean {
 
 function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+async function readWorkspaceFileText(uri: vscode.Uri): Promise<string> {
+  const bytes = await vscode.workspace.fs.readFile(uri);
+  const text = new TextDecoder("utf-8").decode(bytes);
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+function createRawResolver(uri: vscode.Uri, text: string): PositionResolver {
+  const lineStarts = computeLineStarts(text);
+  return {
+    uri,
+    positionAt(offset: number): vscode.Position {
+      return offsetToPosition(lineStarts, offset, text.length);
+    }
+  };
+}
+
+function resolveMaskedText(document: PositionResolver, preMaskedText?: string): string {
+  if (preMaskedText !== undefined) {
+    return preMaskedText;
+  }
+
+  if (typeof document.getText === "function") {
+    return maskXmlComments(document.getText());
+  }
+
+  return "";
+}
+
+function computeLineStarts(text: string): number[] {
+  const starts: number[] = [0];
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) {
+      starts.push(i + 1);
+    }
+  }
+
+  return starts;
+}
+
+function offsetToPosition(lineStarts: readonly number[], offset: number, textLength: number): vscode.Position {
+  const safe = Math.max(0, Math.min(offset, textLength));
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const start = lineStarts[mid];
+    const nextStart = mid + 1 < lineStarts.length ? lineStarts[mid + 1] : Number.MAX_SAFE_INTEGER;
+    if (safe < start) {
+      high = mid - 1;
+    } else if (safe >= nextStart) {
+      low = mid + 1;
+    } else {
+      return new vscode.Position(mid, safe - start);
+    }
+  }
+
+  const line = Math.max(0, Math.min(lineStarts.length - 1, low));
+  const start = lineStarts[line] ?? 0;
+  return new vscode.Position(line, safe - start);
 }
 
 function findFormIdentByUri(formsByIdent: Map<string, IndexedForm>, uri: vscode.Uri): string | undefined {

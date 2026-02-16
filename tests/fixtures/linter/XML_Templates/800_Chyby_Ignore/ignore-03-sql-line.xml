@@ -1,0 +1,10 @@
+﻿<Form Ident="IgnoreSqlLineForm" PackageIdent="ITSMPackage" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Controls>
+    <Control xsi:type="TextBoxControl" Ident="A" DataType="String" TitleResourceKey="A_ITSM" />
+  </Controls>
+  <DataSource>
+    <SQL>
+      SELECT * FROM dbo.[Account] WHERE ID=@A -- @Ignore sql-convention-equals-spacing
+    </SQL>
+  </DataSource>
+</Form>

@@ -1,0 +1,6 @@
+﻿<Form Ident="IgnoreTypoForm" PackageIdent="ITSMPackage" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Controls>
+    <!-- @Ignore typo-maxlenght-attribute -->
+    <Control xsi:type="TextBoxControl" Ident="X" DataType="String" TitleResourceKey="X_ITSM" MaxLenght="10" />
+  </Controls>
+</Form>

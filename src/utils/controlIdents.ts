@@ -1,24 +1,26 @@
 import * as vscode from "vscode";
 import { WorkspaceIndex } from "../indexer/types";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
+import { ParsedDocumentFacts } from "../indexer/xmlFacts";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { collectTemplateAvailableControlIdents } from "./templateControls";
-import { getSystemMetadata } from "../config/systemMetadata";
+import { getSystemMetadata, SystemMetadata } from "../config/systemMetadata";
 
 export function collectResolvableControlIdents(
   document: vscode.TextDocument,
-  facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  facts: ParsedDocumentFacts,
+  index: WorkspaceIndex,
+  options?: { metadata?: SystemMetadata; maskedText?: string }
 ): Set<string> {
+  const metadata = options?.metadata ?? getSystemMetadata();
   const root = facts.rootTag?.toLowerCase();
 
   if (root === "form") {
-    return collectTemplateAvailableControlIdents(document, facts, index);
+    return collectTemplateAvailableControlIdents(document, facts, index, { metadata, maskedText: options?.maskedText });
   }
 
   if (root === "workflow") {
     const out = new Set<string>();
-    appendDefaultColumns(out);
+    appendDefaultColumns(out, metadata);
     const formIdent = facts.workflowFormIdent;
     const form = formIdent ? index.formsByIdent.get(formIdent) : undefined;
     if (form) {
@@ -43,7 +45,7 @@ export function collectResolvableControlIdents(
 
   if (root === "component") {
     const out = new Set<string>(facts.declaredControls);
-    appendDefaultColumns(out);
+    appendDefaultColumns(out, metadata);
     for (const usingRef of facts.usingReferences) {
       const component = resolveComponentByKey(index, usingRef.componentKey);
       if (!component) {
@@ -60,12 +62,11 @@ export function collectResolvableControlIdents(
 
   const fallbackForm = facts.formIdent ? index.formsByIdent.get(facts.formIdent) : undefined;
   const out = fallbackForm ? new Set<string>(fallbackForm.controls) : new Set<string>();
-  appendDefaultColumns(out);
+  appendDefaultColumns(out, metadata);
   return out;
 }
 
-function appendDefaultColumns(target: Set<string>): void {
-  const metadata = getSystemMetadata();
+function appendDefaultColumns(target: Set<string>, metadata: SystemMetadata): void {
   for (const column of metadata.defaultFormColumns) {
     target.add(column);
   }

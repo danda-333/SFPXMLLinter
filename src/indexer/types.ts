@@ -1,4 +1,5 @@
 ﻿import * as vscode from "vscode";
+import type { ParsedDocumentFacts } from "./xmlFacts";
 
 export interface IndexedForm {
   ident: string;
@@ -39,6 +40,8 @@ export interface WorkspaceIndex {
   componentSectionReferenceLocationsByKey: Map<string, Map<string, vscode.Location[]>>;
   componentUsageFormIdentsByKey: Map<string, Set<string>>;
   componentSectionUsageFormIdentsByKey: Map<string, Map<string, Set<string>>>;
+  parsedFactsByUri: Map<string, ParsedDocumentFacts>;
+  hasIgnoreDirectiveByUri: Map<string, boolean>;
   formsReady: boolean;
   componentsReady: boolean;
   fullReady: boolean;

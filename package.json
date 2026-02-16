@@ -24,11 +24,15 @@
   },
   "activationEvents": [
     "onLanguage:xml",
+    "onStartupFinished",
     "onCommand:sfpXmlLinter.buildXmlTemplates",
     "onCommand:sfpXmlLinter.buildXmlTemplatesAll",
     "onCommand:sfpXmlLinter.showBuildQueueLog",
+    "onCommand:sfpXmlLinter.showIndexLog",
     "onCommand:sfpXmlLinter.rebuildIndex",
     "onCommand:sfpXmlLinter.revalidateWorkspace",
+    "onCommand:sfpXmlLinter.revalidateProject",
+    "onCommand:sfpXmlLinter.switchProjectScopeToActiveFile",
     "onCommand:sfpXmlLinter.workspaceDiagnosticsReport",
     "onCommand:sfpXmlLinter.formatDocumentTolerant",
     "onCommand:sfpXmlLinter.formatSelectionTolerant"
@@ -87,6 +91,10 @@
         "title": "SFP XML Linter: Show Build Queue Log"
       },
       {
+        "command": "sfpXmlLinter.showIndexLog",
+        "title": "SFP XML Linter: Show Index Log"
+      },
+      {
         "command": "sfpXmlLinter.workspaceDiagnosticsReport",
         "title": "SFP XML Linter: Workspace Diagnostics Report"
       },
@@ -97,6 +105,14 @@
       {
         "command": "sfpXmlLinter.revalidateWorkspace",
         "title": "SFP XML Linter: Revalidate Workspace (Full)"
+      },
+      {
+        "command": "sfpXmlLinter.revalidateProject",
+        "title": "SFP XML Linter: Revalidate Current Project"
+      },
+      {
+        "command": "sfpXmlLinter.switchProjectScopeToActiveFile",
+        "title": "SFP XML Linter: Switch Project Scope To Active File"
       },
       {
         "command": "sfpXmlLinter.formatDocumentTolerant",

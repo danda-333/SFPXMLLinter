@@ -1,0 +1,7 @@
+<Form Ident="IgnoreLineForm" PackageIdent="ITSMPackage" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Controls>
+    <Control xsi:type="TextBoxControl" Ident="DupControl" DataType="String" TitleResourceKey="DupControl_ITSM" />
+    <!-- @Ignore duplicate-control-ident -->
+    <Control xsi:type="TextBoxControl" Ident="DupControl" DataType="String" TitleResourceKey="DupControl2_ITSM" />
+  </Controls>
+</Form>

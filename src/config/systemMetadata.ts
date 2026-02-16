@@ -125,10 +125,19 @@ const STATIC_METADATA: SystemMetadata = {
 let cachedWorkspaceStamp = "";
 let cachedWorkspaceMetadata: SystemMetadata | undefined;
 
+export function invalidateSystemMetadataCache(): void {
+  cachedWorkspaceStamp = "";
+  cachedWorkspaceMetadata = undefined;
+}
+
 export function getSystemMetadata(): SystemMetadata {
   const folders = vscode.workspace.workspaceFolders ?? [];
   if (folders.length === 0) {
     return STATIC_METADATA;
+  }
+
+  if (cachedWorkspaceMetadata) {
+    return cachedWorkspaceMetadata;
   }
 
   const sources = collectSettingsSources(folders.map((f) => f.uri.fsPath));
@@ -211,62 +220,6 @@ function collectSettingsSources(workspacePaths: readonly string[]): Array<{ file
         out.push({ filePath: fullPath, stat });
       } catch {
         // Ignore inaccessible setting file.
-      }
-    }
-
-    const stack = [normalizedRoot];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (!current) {
-        continue;
-      }
-      let entries: fs.Dirent[];
-      try {
-        entries = fs.readdirSync(current, { withFileTypes: true });
-      } catch {
-        continue;
-      }
-
-      for (const entry of entries) {
-        const fullPath = path.join(current, entry.name);
-        if (entry.isDirectory()) {
-          const nameLower = entry.name.toLowerCase();
-          if (
-            nameLower === ".git" ||
-            nameLower === ".vscode" ||
-            nameLower === "node_modules" ||
-            nameLower === "out" ||
-            nameLower === "dist"
-          ) {
-            continue;
-          }
-          stack.push(fullPath);
-          continue;
-        }
-
-        if (!entry.isFile()) {
-          continue;
-        }
-
-        const nameLower = entry.name.toLowerCase();
-        if (nameLower !== ".sfpxmlsetting" && nameLower !== ".sfpxmlsettings") {
-          continue;
-        }
-
-        try {
-          const stat = fs.statSync(fullPath);
-          if (!stat.isFile()) {
-            continue;
-          }
-          const key = fullPath.toLowerCase();
-          if (visited.has(key)) {
-            continue;
-          }
-          visited.add(key);
-          out.push({ filePath: fullPath, stat });
-        } catch {
-          // Ignore inaccessible setting file.
-        }
       }
     }
   }

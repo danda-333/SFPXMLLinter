@@ -1,12 +1,11 @@
 ﻿import * as vscode from "vscode";
-import { getSettings, mapSeverityToDiagnostic } from "../config/settings";
+import { getSettings, mapSeverityToDiagnostic, SfpXmlLinterSettings } from "../config/settings";
 import { parseIgnoreState, isRuleIgnored } from "./ignore";
 import { WorkspaceIndex } from "../indexer/types";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
+import { parseDocumentFacts, parseDocumentFactsFromMaskedText } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
-import { getSystemMetadata, isKnownSystemTableForeignKey } from "../config/systemMetadata";
-import { collectTemplateAvailableControlIdents } from "../utils/templateControls";
+import { getSystemMetadata, isKnownSystemTableForeignKey, SystemMetadata } from "../config/systemMetadata";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 import { maskXmlComments } from "../utils/xmlComments";
 import { getAllFormIdentCandidates, isKnownFormIdent, resolveSystemTableName } from "../utils/formIdents";
@@ -17,34 +16,59 @@ export interface RuleDiagnostic {
   range: vscode.Range;
 }
 
+export interface BuildDiagnosticsOptions {
+  standaloneMode?: boolean;
+  parsedFacts?: ReturnType<typeof parseDocumentFacts>;
+  maskedText?: string;
+  fastBackgroundMode?: boolean;
+  settingsOverride?: SfpXmlLinterSettings;
+  metadataOverride?: SystemMetadata;
+  skipConfiguredRootsCheck?: boolean;
+}
+
 export class DiagnosticsEngine {
-  public buildDiagnostics(document: vscode.TextDocument, index: WorkspaceIndex): vscode.Diagnostic[] {
-    if (!documentInConfiguredRoots(document)) {
+  public buildDiagnostics(document: vscode.TextDocument, index: WorkspaceIndex, options?: BuildDiagnosticsOptions): vscode.Diagnostic[] {
+    const standaloneMode = options?.standaloneMode === true;
+    const fastBackgroundMode = options?.fastBackgroundMode === true;
+    const skipConfiguredRootsCheck = options?.skipConfiguredRootsCheck === true;
+    if (!standaloneMode && !skipConfiguredRootsCheck && !documentInConfiguredRoots(document)) {
       return [];
     }
 
-    const facts = parseDocumentFacts(document);
+    const maskedText = options?.maskedText ?? maskXmlComments(document.getText());
+    const facts = options?.parsedFacts ?? parseDocumentFactsFromMaskedText(maskedText);
+    const metadata = options?.metadataOverride ?? getSystemMetadata();
+    const settings = options?.settingsOverride ?? getSettings();
+    const formIdentCandidates = getAllFormIdentCandidates(index, metadata);
     const issues: RuleDiagnostic[] = [];
+    let cachedResolvableControlIdents: Set<string> | undefined;
+    const getResolvableControlIdents = (): Set<string> => {
+      if (!cachedResolvableControlIdents) {
+        cachedResolvableControlIdents = collectResolvableControlIdents(document, facts, index, { metadata, maskedText });
+      }
+      return cachedResolvableControlIdents;
+    };
 
-    this.validateGeneralFormIdentReferences(facts, index, issues);
+    this.validateGeneralFormIdentReferences(facts, index, issues, metadata, formIdentCandidates, settings);
     this.validateDuplicateIdents(facts, index, issues);
-    this.validateIdentConventions(facts, index, issues);
+    this.validateIdentConventions(facts, index, issues, metadata);
 
     if (facts.rootTag?.toLowerCase() === "workflow") {
-      this.validateWorkflowReferences(facts, index, issues);
+      this.validateWorkflowReferences(facts, index, issues, metadata);
     }
 
-    this.validateMappingFormIdentReferences(facts, index, issues);
-    this.validateMappingReferences(document, facts, index, issues);
-    this.validateRequiredActionIdentReferences(document, facts, index, issues);
-    this.validateWorkflowControlIdentReferences(document, facts, index, issues);
+    this.validateMappingFormIdentReferences(facts, index, issues, metadata, formIdentCandidates, settings);
+    this.validateMappingReferences(facts, index, issues, metadata, getResolvableControlIdents, settings);
+    this.validateRequiredActionIdentReferences(facts, issues, getResolvableControlIdents);
+    this.validateWorkflowControlIdentReferences(facts, issues, getResolvableControlIdents);
     this.validateUsingReferences(facts, index, issues);
-    this.validateHtmlTemplateControlReferences(document, facts, index, issues);
-    this.validateCommonAttributeTypos(document, issues);
-    this.validateSqlEqualsSpacing(document, issues);
+    this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
+    if (!fastBackgroundMode) {
+      this.validateCommonAttributeTypos(document, issues, maskedText);
+      this.validateSqlEqualsSpacing(document, issues, maskedText);
+    }
 
-    const settings = getSettings();
-    const ignoreState = parseIgnoreState(document);
+    const ignoreState = fastBackgroundMode ? undefined : parseIgnoreState(document);
 
     const diagnostics: vscode.Diagnostic[] = [];
     for (const issue of issues) {
@@ -54,7 +78,7 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      if (isRuleIgnored(ignoreState, issue.ruleId, issue.range.start.line)) {
+      if (ignoreState && isRuleIgnored(ignoreState, issue.ruleId, issue.range.start.line)) {
         continue;
       }
 
@@ -123,11 +147,11 @@ export class DiagnosticsEngine {
   private validateGeneralFormIdentReferences(
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    metadata: SystemMetadata,
+    candidates: readonly string[],
+    settings: SfpXmlLinterSettings
   ): void {
-    const settings = getSettings();
-    const metadata = getSystemMetadata();
-    const candidates = getAllFormIdentCandidates(index, metadata);
     for (const ref of facts.formIdentReferences) {
       if (isKnownFormIdent(ref.formIdent, index, metadata)) {
         continue;
@@ -149,7 +173,12 @@ export class DiagnosticsEngine {
     }
   }
 
-  private validateWorkflowReferences(facts: ReturnType<typeof parseDocumentFacts>, index: WorkspaceIndex, issues: RuleDiagnostic[]): void {
+  private validateWorkflowReferences(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
+    issues: RuleDiagnostic[],
+    metadata: SystemMetadata
+  ): void {
     const formIdent = facts.workflowFormIdent;
     if (!formIdent) {
       return;
@@ -162,7 +191,6 @@ export class DiagnosticsEngine {
 
     const availableControlShareCodes = collectWorkflowControlShareCodes(facts, index);
     const availableButtonShareCodes = collectWorkflowButtonShareCodes(facts, index);
-    const metadata = getSystemMetadata();
     const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata);
     const availableButtons = collectWorkflowAvailableButtons(facts, index, form);
     for (const ref of facts.workflowReferences) {
@@ -241,13 +269,13 @@ export class DiagnosticsEngine {
   }
 
   private validateMappingReferences(
-    document: vscode.TextDocument,
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    metadata: SystemMetadata,
+    getResolvableControlIdents: () => Set<string>,
+    settings: SfpXmlLinterSettings
   ): void {
-    const settings = getSettings();
-    const metadata = getSystemMetadata();
     const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow" ? facts.workflowFormIdent : facts.formIdent;
     if (!owningFormIdent) {
       return;
@@ -258,7 +286,7 @@ export class DiagnosticsEngine {
       return;
     }
 
-    const localAvailableControlIdents = collectResolvableControlIdents(document, facts, index);
+    const localAvailableControlIdents = getResolvableControlIdents();
 
     for (const mapping of facts.mappingIdentReferences) {
       const identKey = mapping.ident;
@@ -325,11 +353,11 @@ export class DiagnosticsEngine {
   private validateMappingFormIdentReferences(
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    metadata: SystemMetadata,
+    candidates: readonly string[],
+    settings: SfpXmlLinterSettings
   ): void {
-    const settings = getSettings();
-    const metadata = getSystemMetadata();
-    const candidates = getAllFormIdentCandidates(index, metadata);
     for (const ref of facts.mappingFormIdentReferences) {
       if (isKnownFormIdent(ref.formIdent, index, metadata)) {
         continue;
@@ -386,16 +414,15 @@ export class DiagnosticsEngine {
   }
 
   private validateRequiredActionIdentReferences(
-    document: vscode.TextDocument,
     facts: ReturnType<typeof parseDocumentFacts>,
-    index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    getResolvableControlIdents: () => Set<string>
   ): void {
     if (facts.requiredActionIdentReferences.length === 0) {
       return;
     }
 
-    const available = collectResolvableControlIdents(document, facts, index);
+    const available = getResolvableControlIdents();
     for (const ref of facts.requiredActionIdentReferences) {
       if (available.has(ref.ident)) {
         continue;
@@ -414,10 +441,9 @@ export class DiagnosticsEngine {
   }
 
   private validateWorkflowControlIdentReferences(
-    document: vscode.TextDocument,
     facts: ReturnType<typeof parseDocumentFacts>,
-    index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    getResolvableControlIdents: () => Set<string>
   ): void {
     if (facts.workflowControlIdentReferences.length === 0) {
       return;
@@ -427,7 +453,7 @@ export class DiagnosticsEngine {
       return;
     }
 
-    const available = collectResolvableControlIdents(document, facts, index);
+    const available = getResolvableControlIdents();
     for (const ref of facts.workflowControlIdentReferences) {
       if (available.has(ref.ident)) {
         continue;
@@ -461,7 +487,8 @@ export class DiagnosticsEngine {
   private validateIdentConventions(
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    metadata: SystemMetadata
   ): void {
     if (facts.rootTag?.toLowerCase() === "workflow" && facts.rootIdent && facts.rootIdentRange) {
       if (!endsWithExact(facts.rootIdent, "WorkFlow")) {
@@ -510,7 +537,6 @@ export class DiagnosticsEngine {
       }
     }
 
-    const metadata = getSystemMetadata();
     const formCandidates = [...index.formsByIdent.values()].map((f) => f.ident);
     const targetCandidates = [
       ...formCandidates.map((name) => ({ name, kind: "form" as const })),
@@ -578,10 +604,9 @@ export class DiagnosticsEngine {
   }
 
   private validateHtmlTemplateControlReferences(
-    document: vscode.TextDocument,
     facts: ReturnType<typeof parseDocumentFacts>,
-    index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    getResolvableControlIdents: () => Set<string>
   ): void {
     if (facts.htmlControlReferences.length === 0) {
       return;
@@ -592,7 +617,7 @@ export class DiagnosticsEngine {
       return;
     }
 
-    const available = collectTemplateAvailableControlIdents(document, facts, index);
+    const available = getResolvableControlIdents();
     for (const ref of facts.htmlControlReferences) {
       if (available.has(ref.ident)) {
         continue;
@@ -610,8 +635,8 @@ export class DiagnosticsEngine {
     }
   }
 
-  private validateSqlEqualsSpacing(document: vscode.TextDocument, issues: RuleDiagnostic[]): void {
-    const text = maskXmlComments(document.getText());
+  private validateSqlEqualsSpacing(document: vscode.TextDocument, issues: RuleDiagnostic[], maskedText: string): void {
+    const text = maskedText;
     const blockRegex = /<(SQL|Command)\b[^>]*>([\s\S]*?)<\/\1>/gi;
     for (const blockMatch of text.matchAll(blockRegex)) {
       const whole = blockMatch[0] ?? "";
@@ -634,8 +659,8 @@ export class DiagnosticsEngine {
     }
   }
 
-  private validateCommonAttributeTypos(document: vscode.TextDocument, issues: RuleDiagnostic[]): void {
-    const text = maskXmlComments(document.getText());
+  private validateCommonAttributeTypos(document: vscode.TextDocument, issues: RuleDiagnostic[], maskedText: string): void {
+    const text = maskedText;
     const tagRegex = /<((?:[A-Za-z_][\w.-]*:)?(?:Control|Parameter))\b([^>]*)>/gi;
 
     let tagMatch: RegExpExecArray | null;

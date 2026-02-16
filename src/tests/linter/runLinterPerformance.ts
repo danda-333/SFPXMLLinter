@@ -3,7 +3,10 @@ import * as path from "node:path";
 import Module = require("node:module");
 
 const workspaceRoot = path.resolve(__dirname, "../../../tests/fixtures/linter-performance");
+// Defaults tuned for larger real-world workspaces (hundreds of XML files).
+// Keep env overrides for stricter local/CI experiments.
 const maxPhaseMs = Number(process.env.SFP_LINTER_PERF_LIMIT_MS ?? "2000");
+const maxBackgroundValidationMs = Number(process.env.SFP_LINTER_PERF_BG_LIMIT_MS ?? "4500");
 
 type VscodeMockState = {
   workspaceRoot: string;
@@ -63,6 +66,26 @@ class Location {
   constructor(uri: Uri, range: Range) {
     this.uri = uri;
     this.range = range;
+  }
+}
+
+enum DiagnosticSeverity {
+  Error = 0,
+  Warning = 1,
+  Information = 2,
+  Hint = 3
+}
+
+class Diagnostic {
+  public readonly range: Range;
+  public readonly message: string;
+  public readonly severity: DiagnosticSeverity;
+  public source?: string;
+  public code?: string | number;
+  constructor(range: Range, message: string, severity: DiagnosticSeverity) {
+    this.range = range;
+    this.message = message;
+    this.severity = severity;
   }
 }
 
@@ -153,6 +176,8 @@ const vscodeMock = {
   Position,
   Range,
   Location,
+  DiagnosticSeverity,
+  Diagnostic,
   workspace: {
     workspaceFolders: [{ uri: Uri.file(workspaceRoot), name: "linter-perf-fixture", index: 0 }],
     fs: {
@@ -202,6 +227,7 @@ const vscodeMock = {
 
 type RebuildIndexProgressEvent = import("../../indexer/workspaceIndexer").RebuildIndexProgressEvent;
 type WorkspaceIndexer = import("../../indexer/workspaceIndexer").WorkspaceIndexer;
+type DiagnosticsEngine = import("../../diagnostics/engine").DiagnosticsEngine;
 
 const moduleAny = Module as unknown as { _load: (request: string, parent: unknown, isMain: boolean) => unknown };
 const originalLoad = moduleAny._load;
@@ -215,6 +241,9 @@ moduleAny._load = function patchedLoad(request: string, parent: unknown, isMain:
 
 const { WorkspaceIndexer } = require("../../indexer/workspaceIndexer") as {
   WorkspaceIndexer: new (roots?: readonly string[]) => WorkspaceIndexer;
+};
+const { DiagnosticsEngine } = require("../../diagnostics/engine") as {
+  DiagnosticsEngine: new () => DiagnosticsEngine;
 };
 
 function computeLineStarts(text: string): number[] {
@@ -250,6 +279,78 @@ async function measureIndex(
   return durationMs;
 }
 
+function getIndexDomainForUri(uri: Uri): "template" | "runtime" | "other" {
+  const rel = path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, "/").toLowerCase();
+  if (/(^|\/)xml_templates\//.test(rel) || /(^|\/)xml_components\//.test(rel)) {
+    return "template";
+  }
+  if (/(^|\/)xml\//.test(rel)) {
+    return "runtime";
+  }
+  return "other";
+}
+
+function collectAllLinterUris(): Uri[] {
+  return [
+    ...collectXmlFiles(path.join(workspaceRoot, "XML_Templates")),
+    ...collectXmlFiles(path.join(workspaceRoot, "XML_Components")),
+    ...collectXmlFiles(path.join(workspaceRoot, "XML"))
+  ];
+}
+
+async function measureBackgroundValidation(
+  templateIndexer: WorkspaceIndexer,
+  runtimeIndexer: WorkspaceIndexer
+): Promise<number> {
+  const engine = new DiagnosticsEngine();
+  const uris = collectAllLinterUris().filter((uri) => getIndexDomainForUri(uri) !== "other");
+  const CONCURRENCY = 8;
+  let diagnosticsCount = 0;
+  let filesWithDiagnostics = 0;
+
+  const started = Date.now();
+  for (let i = 0; i < uris.length; i += CONCURRENCY) {
+    const batch = uris.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      batch.map(async (uri) => {
+        const text = readWorkspaceFileText(uri.fsPath);
+        const doc = createVirtualXmlDocument(uri, text);
+        const domain = getIndexDomainForUri(uri);
+        const index = domain === "runtime" ? runtimeIndexer.getIndex() : templateIndexer.getIndex();
+        const diagnostics = engine.buildDiagnostics(doc as unknown as import("vscode").TextDocument, index);
+        diagnosticsCount += diagnostics.length;
+        if (diagnostics.length > 0) {
+          filesWithDiagnostics += 1;
+        }
+      })
+    );
+    const processed = Math.min(i + CONCURRENCY, uris.length);
+    if (processed % 200 === 0 || processed === uris.length) {
+      console.log(`[linter:perf] background/validation progress ${processed}/${uris.length}`);
+      await sleep(1);
+    }
+  }
+  const durationMs = Date.now() - started;
+  console.log(
+    `[linter:perf] background/validation: ${durationMs} ms (files=${uris.length}, filesWithDiagnostics=${filesWithDiagnostics}, diagnostics=${diagnosticsCount})`
+  );
+  return durationMs;
+}
+
+function readWorkspaceFileText(filePath: string): string {
+  const bytes = fs.readFileSync(filePath);
+  const text = new TextDecoder("utf-8").decode(bytes);
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+function createVirtualXmlDocument(uri: Uri, text: string): TextDocument {
+  return new TextDocument(uri, text);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function run(): Promise<void> {
   if (!fs.existsSync(workspaceRoot)) {
     throw new Error(`Performance fixture not found: ${workspaceRoot}`);
@@ -257,6 +358,7 @@ async function run(): Promise<void> {
 
   console.log(`[linter:perf] Fixture: ${workspaceRoot}`);
   console.log(`[linter:perf] Threshold per startup phase: ${maxPhaseMs} ms`);
+  console.log(`[linter:perf] Threshold background validation: ${maxBackgroundValidationMs} ms`);
 
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
@@ -264,6 +366,7 @@ async function run(): Promise<void> {
   const templateBootstrapMs = await measureIndex("template/bootstrap", templateIndexer, "bootstrap");
   const templateFullMs = await measureIndex("template/full", templateIndexer, "all");
   const runtimeFullMs = await measureIndex("runtime/full", runtimeIndexer, "all");
+  const backgroundValidationMs = await measureBackgroundValidation(templateIndexer, runtimeIndexer);
 
   const violations: string[] = [];
   if (templateBootstrapMs > maxPhaseMs) {
@@ -274,6 +377,9 @@ async function run(): Promise<void> {
   }
   if (runtimeFullMs > maxPhaseMs) {
     violations.push(`runtime/full=${runtimeFullMs} ms`);
+  }
+  if (backgroundValidationMs > maxBackgroundValidationMs) {
+    violations.push(`background/validation=${backgroundValidationMs} ms`);
   }
 
   if (violations.length > 0) {

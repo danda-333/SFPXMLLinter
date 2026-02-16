@@ -140,6 +140,7 @@ const { parseDocumentFactsFromText } = require("../../indexer/xmlFacts") as type
 class MockTextDocument {
   public readonly uri: Uri;
   public readonly languageId = "xml";
+  public readonly lineCount: number;
   private readonly text: string;
   private readonly lineStarts: number[];
 
@@ -147,6 +148,7 @@ class MockTextDocument {
     this.uri = Uri.file(filePath);
     this.text = text;
     this.lineStarts = computeLineStarts(text);
+    this.lineCount = this.lineStarts.length;
   }
 
   public getText(): string {
@@ -171,6 +173,23 @@ class MockTextDocument {
     }
 
     return new Position(0, safe);
+  }
+
+  public lineAt(line: number): { text: string } {
+    const safeLine = Math.max(0, Math.min(line, this.lineCount - 1));
+    const start = this.lineStarts[safeLine] ?? 0;
+    const endWithBreak = safeLine + 1 < this.lineStarts.length ? this.lineStarts[safeLine + 1] : this.text.length;
+    let end = endWithBreak;
+    if (end > start && this.text.charCodeAt(end - 1) === 10) {
+      end--;
+    }
+    if (end > start && this.text.charCodeAt(end - 1) === 13) {
+      end--;
+    }
+
+    return {
+      text: this.text.slice(start, end)
+    };
   }
 }
 
@@ -418,6 +437,8 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     componentSectionReferenceLocationsByKey: emptyNestedRef as unknown as Map<string, Map<string, import("vscode").Location[]>>,
     componentUsageFormIdentsByKey: emptyUsageMap,
     componentSectionUsageFormIdentsByKey: emptyNestedUsage,
+    parsedFactsByUri: new Map(),
+    hasIgnoreDirectiveByUri: new Map(),
     formsReady: true,
     componentsReady: true,
     fullReady: true

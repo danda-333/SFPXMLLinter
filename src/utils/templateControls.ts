@@ -4,15 +4,16 @@ import { ParsedDocumentFacts } from "../indexer/xmlFacts";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { maskXmlComments } from "./xmlComments";
 import { normalizeComponentKey } from "./paths";
-import { getSystemMetadata } from "../config/systemMetadata";
+import { getSystemMetadata, SystemMetadata } from "../config/systemMetadata";
 
 export function collectTemplateAvailableControlIdents(
   document: vscode.TextDocument,
   facts: ParsedDocumentFacts,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  options?: { metadata?: SystemMetadata; maskedText?: string }
 ): Set<string> {
   const out = new Set<string>();
-  appendDefaultColumns(out);
+  appendDefaultColumns(out, options?.metadata);
 
   for (const item of facts.declaredControlInfos) {
     out.add(item.ident);
@@ -29,7 +30,7 @@ export function collectTemplateAvailableControlIdents(
     }
   }
 
-  const text = maskXmlComments(document.getText());
+  const text = options?.maskedText ?? maskXmlComments(document.getText());
   for (const componentKey of collectIncludeComponentKeys(text)) {
     const component = resolveComponentByKey(index, componentKey);
     if (!component) {
@@ -44,9 +45,9 @@ export function collectTemplateAvailableControlIdents(
   return out;
 }
 
-function appendDefaultColumns(target: Set<string>): void {
-  const metadata = getSystemMetadata();
-  for (const column of metadata.defaultFormColumns) {
+function appendDefaultColumns(target: Set<string>, metadata?: SystemMetadata): void {
+  const source = metadata ?? getSystemMetadata();
+  for (const column of source.defaultFormColumns) {
     target.add(column);
   }
 }

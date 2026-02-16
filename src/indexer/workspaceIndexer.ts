@@ -62,6 +62,8 @@ export class WorkspaceIndexer {
     componentSectionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
     componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
     componentSectionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
+    parsedFactsByUri: new Map(),
+    hasIgnoreDirectiveByUri: new Map(),
     formsReady: false,
     componentsReady: false,
     fullReady: false
@@ -125,6 +127,8 @@ export class WorkspaceIndexer {
     };
 
     this.index.formsByIdent.set(facts.formIdent, form);
+    this.index.parsedFactsByUri.set(document.uri.toString(), facts);
+    this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
     this.index.formsReady = true;
     return { updated: true, reason: "updated", formIdent: facts.formIdent };
   }
@@ -167,6 +171,8 @@ export class WorkspaceIndexer {
     };
 
     this.index.componentsByKey.set(key, component);
+    this.index.parsedFactsByUri.set(document.uri.toString(), facts);
+    this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
     const baseName = this.getBaseNameFromKey(key);
     const variants = this.index.componentKeysByBaseName.get(baseName) ?? new Set<string>();
     variants.add(key);
@@ -191,6 +197,8 @@ export class WorkspaceIndexer {
     });
 
     const parsedEntries: ParsedEntry[] = [];
+    const parsedFactsByUri = new Map<string, ReturnType<typeof parseDocumentFactsFromMaskedText>>();
+    const hasIgnoreDirectiveByUri = new Map<string, boolean>();
     const parseBatchSize = 48;
     let processed = 0;
     const parseStart = Date.now();
@@ -210,6 +218,7 @@ export class WorkspaceIndexer {
           const text = await readWorkspaceFileText(uri);
           const maskedText = maskXmlComments(text);
           const facts = parseDocumentFactsFromMaskedText(maskedText);
+          hasIgnoreDirectiveByUri.set(uri.toString(), containsIgnoreDirective(text));
           if (scope === "bootstrap") {
             const root = (facts.rootTag ?? "").toLowerCase();
             if (root !== "component" && root !== "form") {
@@ -239,6 +248,7 @@ export class WorkspaceIndexer {
       for (const entry of batchEntries) {
         if (entry) {
           parsedEntries.push(entry);
+          parsedFactsByUri.set(entry.uri.toString(), entry.facts);
         }
       }
 
@@ -335,6 +345,8 @@ export class WorkspaceIndexer {
       componentSectionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
       componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
       componentSectionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
+      parsedFactsByUri: new Map(parsedFactsByUri),
+      hasIgnoreDirectiveByUri: new Map(hasIgnoreDirectiveByUri),
       formsReady: true,
       componentsReady: true,
       fullReady: scope === "all"
@@ -565,6 +577,8 @@ export class WorkspaceIndexer {
       componentSectionReferenceLocationsByKey,
       componentUsageFormIdentsByKey,
       componentSectionUsageFormIdentsByKey,
+      parsedFactsByUri,
+      hasIgnoreDirectiveByUri,
       formsReady: true,
       componentsReady: true,
       fullReady: scope === "all"
@@ -946,6 +960,10 @@ function isLikelyBootstrapPath(uri: vscode.Uri): boolean {
   }
 
   return true;
+}
+
+function containsIgnoreDirective(text: string): boolean {
+  return /@Ignore/i.test(text);
 }
 
 function yieldToEventLoop(): Promise<void> {

@@ -1,0 +1,17 @@
+﻿<!-- @IgnoreFile unknown-form-ident unknown-form-control-ident -->
+<WorkFlow Ident="IgnoreFileWorkFlow" FormIdent="ValidForm" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <DataSource FormIdent="TotallyUnknownForm">
+    <SQL>SELECT 1</SQL>
+  </DataSource>
+  <States>
+    <State xsi:type="State" Ident="S1" Number="1">
+      <Groups>
+        <Group xsi:type="StateGroup" Ident="G1">
+          <FormControls>
+            <FormControl Ident="NotExistingControlInValidForm" />
+          </FormControls>
+        </Group>
+      </Groups>
+    </State>
+  </States>
+</WorkFlow>

@@ -1,7 +1,9 @@
 ﻿import * as vscode from "vscode";
+import * as fs from "node:fs/promises";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
 import { DiagnosticsEngine } from "./diagnostics/engine";
 import { documentInConfiguredRoots, getXmlIndexDomainByUri, XmlIndexDomain } from "./utils/paths";
+import { invalidateSystemMetadataCache } from "./config/systemMetadata";
 import { DiagnosticsHoverProvider } from "./providers/diagnosticsHoverProvider";
 import { HoverRegistry, DocumentationHoverResolver } from "./providers/hoverRegistry";
 import { BuildXmlTemplatesService } from "./template/buildXmlTemplatesService";
@@ -13,11 +15,30 @@ import { SfpXmlReferencesProvider } from "./providers/referencesProvider";
 import { SfpSqlPlaceholderSemanticProvider } from "./providers/sqlPlaceholderSemanticProvider";
 import { SfpXmlColorProvider } from "./providers/colorProvider";
 import { globConfiguredXmlFiles } from "./utils/paths";
-import { getSettings } from "./config/settings";
+import { getSettings, SfpXmlLinterSettings } from "./config/settings";
 import { parseDocumentFacts } from "./indexer/xmlFacts";
 import { formatXmlTolerant } from "./formatter";
 import { formatXmlSelectionWithContext } from "./formatter/selection";
 import { FormatterOptions } from "./formatter/types";
+import { WorkspaceIndex } from "./indexer/types";
+import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
+
+const REFERENCE_REQUIRED_RULES = new Set<string>([
+  "unknown-form-ident",
+  "unknown-form-control-ident",
+  "unknown-form-button-ident",
+  "unknown-workflow-button-share-code-ident",
+  "unknown-form-section-ident",
+  "unknown-mapping-ident",
+  "unknown-mapping-form-ident",
+  "unknown-required-action-ident",
+  "unknown-workflow-action-value-control-ident",
+  "unknown-workflow-show-hide-control-ident",
+  "unknown-html-template-control-ident",
+  "unknown-using-component",
+  "unknown-using-section",
+  "ident-convention-lookup-control"
+]);
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const DEBUG_PREFIX = "[SFP-DBG]";
@@ -29,6 +50,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
   const engine = new DiagnosticsEngine();
   const buildService = new BuildXmlTemplatesService();
+  const emptyIndex: WorkspaceIndex = {
+    formsByIdent: new Map(),
+    componentsByKey: new Map(),
+    componentKeysByBaseName: new Map(),
+    formIdentReferenceLocations: new Map(),
+    mappingFormIdentReferenceLocations: new Map(),
+    controlReferenceLocationsByFormIdent: new Map(),
+    buttonReferenceLocationsByFormIdent: new Map(),
+    sectionReferenceLocationsByFormIdent: new Map(),
+    componentReferenceLocationsByKey: new Map(),
+    componentSectionReferenceLocationsByKey: new Map(),
+    componentUsageFormIdentsByKey: new Map(),
+    componentSectionUsageFormIdentsByKey: new Map(),
+    parsedFactsByUri: new Map(),
+    hasIgnoreDirectiveByUri: new Map(),
+    formsReady: false,
+    componentsReady: false,
+    fullReady: false
+  };
   const documentationHoverResolver = new DocumentationHoverResolver();
   const hoverDocsWatchers: vscode.Disposable[] = [];
   let hasInitialIndex = false;
@@ -50,6 +90,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const lowPriorityValidationSet = new Set<string>();
   let sqlSuggestTriggerTimer: NodeJS.Timeout | undefined;
   let suppressSqlSuggestUntil = 0;
+  let activeProjectScopeKey: string | undefined;
+  const standaloneValidationVersionByUri = new Map<string, number>();
+  const indexedValidationLogSignatureByUri = new Map<string, string>();
   let reindexProgressState:
     | {
         progress: vscode.Progress<{ message?: string; increment?: number }>;
@@ -63,15 +106,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(formatterOutput);
 
   function logBuild(message: string): void {
-    buildOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
+    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
+    buildOutput.appendLine(line);
+    console.log(line);
   }
 
   function logIndex(message: string): void {
-    indexOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
+    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
+    indexOutput.appendLine(line);
+    console.log(line);
   }
 
   function logFormatter(message: string): void {
-    formatterOutput.appendLine(`[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`);
+    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
+    formatterOutput.appendLine(line);
+    console.log(line);
+  }
+
+  function logSingleFile(message: string): void {
+    logIndex(`[single-file] ${message}`);
   }
 
   function formatIndexProgress(event: RebuildIndexProgressEvent): string {
@@ -287,7 +340,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     lowPriorityValidationQueue.length = 0;
     lowPriorityValidationSet.clear();
 
-    for (const uri of uris) {
+    const filtered = uris.filter((uri) => shouldValidateUriForActiveProjects(uri));
+    for (const uri of filtered) {
       enqueueValidation(uri, "low");
     }
   }
@@ -297,27 +351,133 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
+    const LOW_PRIORITY_CONCURRENCY = 8;
+    const backgroundSettingsSnapshot: SfpXmlLinterSettings = getSettings();
+    const backgroundMetadataSnapshot: SystemMetadata = getSystemMetadata();
     isValidationWorkerRunning = true;
     try {
       let processed = 0;
+      let processedLow = 0;
+      let totalLowAtStart = lowPriorityValidationQueue.length;
+      let lowComputeMs = 0;
+      let lowPublishMs = 0;
+      let lowFastPathCount = 0;
+      let lowFsReadPathCount = 0;
+      let lowOpenDocPathCount = 0;
+      let lowCacheMissCount = 0;
+      const lowSlowest: Array<{
+        relOrPath: string;
+        totalMs: number;
+        readMs: number;
+        diagnosticsMs: number;
+      }> = [];
       while (highPriorityValidationQueue.length > 0 || lowPriorityValidationQueue.length > 0) {
-        const useHigh = highPriorityValidationQueue.length > 0;
-        const key = useHigh ? highPriorityValidationQueue.shift() : lowPriorityValidationQueue.shift();
-        if (!key) {
+        if (highPriorityValidationQueue.length > 0) {
+          const key = highPriorityValidationQueue.shift();
+          if (!key) {
+            continue;
+          }
+          highPriorityValidationSet.delete(key);
+          const uri = vscode.Uri.parse(key);
+          await validateUri(uri);
+          processed++;
           continue;
         }
 
-        if (useHigh) {
-          highPriorityValidationSet.delete(key);
-        } else {
+        if (processedLow === 0) {
+          totalLowAtStart = lowPriorityValidationQueue.length;
+          if (totalLowAtStart > 0) {
+            logIndex(`Background validation START files=${totalLowAtStart}`);
+          }
+        }
+
+        const batch = lowPriorityValidationQueue.splice(0, LOW_PRIORITY_CONCURRENCY);
+        if (batch.length === 0) {
+          continue;
+        }
+        for (const key of batch) {
           lowPriorityValidationSet.delete(key);
         }
 
-        const uri = vscode.Uri.parse(key);
-        await validateUri(uri);
-        processed++;
-        if (!useHigh && processed % 20 === 0) {
+        const computeStartedAt = Date.now();
+        const outcomes: Array<Awaited<ReturnType<typeof computeIndexedValidationOutcome>>> = [];
+        for (const key of batch) {
+          const uri = vscode.Uri.parse(key);
+          const outcome = await computeIndexedValidationOutcome(uri, {
+            preferFsRead: true,
+            settingsSnapshot: backgroundSettingsSnapshot,
+            metadataSnapshot: backgroundMetadataSnapshot
+          });
+          outcomes.push(outcome);
+        }
+        lowComputeMs += Date.now() - computeStartedAt;
+
+        const publishStartedAt = Date.now();
+        const updates: Array<[vscode.Uri, readonly vscode.Diagnostic[] | undefined]> = [];
+        for (const outcome of outcomes) {
+          if (!outcome) {
+            continue;
+          }
+
+          if (outcome.pathMode === "fast") {
+            lowFastPathCount++;
+          } else if (outcome.pathMode === "fs") {
+            lowFsReadPathCount++;
+          } else if (outcome.pathMode === "open") {
+            lowOpenDocPathCount++;
+          }
+          if (outcome.cacheMiss) {
+            lowCacheMissCount++;
+          }
+
+          if (outcome.totalMs >= 10) {
+            lowSlowest.push({
+              relOrPath: outcome.relOrPath,
+              totalMs: outcome.totalMs,
+              readMs: outcome.readMs,
+              diagnosticsMs: outcome.diagnosticsMs
+            });
+          }
+
+          updates.push([outcome.uri, outcome.diagnostics]);
+          if (outcome.shouldLog) {
+            const key = outcome.uri.toString();
+            if (indexedValidationLogSignatureByUri.get(key) !== outcome.signature) {
+              indexedValidationLogSignatureByUri.set(key, outcome.signature);
+              logIndex(`validate indexed DONE: ${outcome.relOrPath} diagnostics=${outcome.diagnostics.length}`);
+            }
+          }
+        }
+        if (updates.length > 0) {
+          diagnostics.set(updates);
+        }
+        lowPublishMs += Date.now() - publishStartedAt;
+
+        processed += batch.length;
+        processedLow += batch.length;
+        if (processedLow % 100 === 0 || processedLow === totalLowAtStart) {
+          logIndex(`Background validation progress ${processedLow}/${totalLowAtStart}`);
+        }
+        if (processed % 200 === 0) {
           await sleep(1);
+        }
+      }
+      if (processedLow > 0) {
+        logIndex(
+          `Background validation DONE files=${processedLow} (compute=${lowComputeMs} ms, publish=${lowPublishMs} ms)`
+        );
+        logIndex(
+          `Background validation path stats: fast=${lowFastPathCount}, fs=${lowFsReadPathCount}, open=${lowOpenDocPathCount}, cacheMiss=${lowCacheMissCount}`
+        );
+        if (lowSlowest.length > 0) {
+          lowSlowest.sort((a, b) => b.totalMs - a.totalMs);
+          const top = lowSlowest.slice(0, 10);
+          logIndex("Background validation slowest files (top 10):");
+          for (const item of top) {
+            logIndex(
+              `  ${item.totalMs} ms (read=${item.readMs} ms, diagnostics=${item.diagnosticsMs} ms) ${item.relOrPath}`
+            );
+          }
         }
       }
     } finally {
@@ -384,8 +544,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }, 35);
   }
 
-  async function validateUri(uri: vscode.Uri): Promise<void> {
+  async function validateUri(
+    uri: vscode.Uri,
+    options?: { respectProjectScope?: boolean; preferFsRead?: boolean }
+  ): Promise<void> {
     if (uri.scheme !== "file") {
+      diagnostics.delete(uri);
+      return;
+    }
+
+    const respectProjectScope = options?.respectProjectScope !== false;
+    if (respectProjectScope && !shouldValidateUriForActiveProjects(uri)) {
       diagnostics.delete(uri);
       return;
     }
@@ -393,6 +562,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     try {
       let document = existing;
+      if (!document && options?.preferFsRead && uri.scheme === "file") {
+        const text = await readWorkspaceFileText(uri);
+        const virtualDocument = createVirtualXmlDocument(uri, text);
+        validateDocument(virtualDocument);
+        return;
+      }
+
       if (!document) {
         const key = uri.toString();
         internalValidationOpens.add(key);
@@ -413,7 +589,105 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  async function computeIndexedValidationOutcome(
+    uri: vscode.Uri,
+    options?: {
+      respectProjectScope?: boolean;
+      preferFsRead?: boolean;
+      settingsSnapshot?: SfpXmlLinterSettings;
+      metadataSnapshot?: SystemMetadata;
+    }
+  ): Promise<
+    | {
+        uri: vscode.Uri;
+        diagnostics: vscode.Diagnostic[];
+        signature: string;
+        shouldLog: boolean;
+        relOrPath: string;
+        totalMs: number;
+        readMs: number;
+        diagnosticsMs: number;
+        pathMode: "fast" | "fs" | "open";
+        cacheMiss: boolean;
+      }
+    | undefined
+  > {
+    const totalStartedAt = Date.now();
+    if (uri.scheme !== "file") {
+      diagnostics.delete(uri);
+      return undefined;
+    }
+
+    const respectProjectScope = options?.respectProjectScope !== false;
+    if (respectProjectScope && !shouldValidateUriForActiveProjects(uri)) {
+      diagnostics.delete(uri);
+      return undefined;
+    }
+
+    const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
+    const readStartedAt = Date.now();
+    const index = getIndexerForUri(uri).getIndex();
+    const cachedFacts = index.parsedFactsByUri.get(uri.toString());
+    const canUseFastBackgroundFacts = false;
+    const cacheMiss = options?.preferFsRead === true && !cachedFacts;
+
+    let document = existing;
+    let pathMode: "fast" | "fs" | "open" = "open";
+    if (!document && options?.preferFsRead) {
+      const text = await readWorkspaceFileText(uri);
+      document = createVirtualXmlDocument(uri, text);
+      pathMode = "fs";
+    }
+    if (!document) {
+      const key = uri.toString();
+      internalValidationOpens.add(key);
+      try {
+        document = await vscode.workspace.openTextDocument(uri);
+        pathMode = "open";
+      } finally {
+        internalValidationOpens.delete(key);
+      }
+    }
+    if (!document) {
+      return undefined;
+    }
+    const readMs = Date.now() - readStartedAt;
+    const diagnosticsStartedAt = Date.now();
+    const diagnosticsDocument = document;
+    const computed = engine.buildDiagnostics(
+      diagnosticsDocument,
+      index,
+      cachedFacts
+        ? {
+            parsedFacts: cachedFacts,
+            settingsOverride: options?.settingsSnapshot,
+            metadataOverride: options?.metadataSnapshot,
+            skipConfiguredRootsCheck: true
+          }
+        : {
+            settingsOverride: options?.settingsSnapshot,
+            metadataOverride: options?.metadataSnapshot
+          }
+    );
+    const diagnosticsMs = Date.now() - diagnosticsStartedAt;
+    const signature = `${diagnosticsDocument.version}:${computed.length}`;
+    return {
+      uri,
+      diagnostics: computed,
+      signature,
+      shouldLog: computed.length > 0 || isUserOpenDocument(uri),
+      relOrPath: vscode.workspace.asRelativePath(uri, false),
+      totalMs: Date.now() - totalStartedAt,
+      readMs,
+      diagnosticsMs,
+      pathMode,
+      cacheMiss
+    };
+  }
+
   function validateOpenDocuments(): void {
+    ensureActiveProjectScopeInitialized();
+    clearDiagnosticsOutsideActiveProjects();
     const targetUris = getUserOpenUris().filter((uri) => uri.scheme === "file");
 
     for (const uri of targetUris) {
@@ -514,7 +788,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     validateOpenDocuments();
   }
 
-  async function queueReindex(scope: "bootstrap" | "all"): Promise<void> {
+  async function queueReindex(scope: "bootstrap" | "all", options?: { verboseProgress?: boolean }): Promise<void> {
     logIndex(`QUEUE reindex requested scope=${scope} running=${isReindexRunning}`);
     if (isReindexRunning) {
       queuedReindexScope = maxReindexScope(queuedReindexScope, scope);
@@ -525,7 +799,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     isReindexRunning = true;
     const startedAt = Date.now();
     try {
-      const verboseProgress = !hasShownInitialIndexReadyNotification;
+      const verboseProgress = options?.verboseProgress ?? !hasShownInitialIndexReadyNotification;
       let pendingScope: "bootstrap" | "all" = scope;
       do {
         queuedReindexScope = "none";
@@ -578,7 +852,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       },
       async (progress) => {
         for (const uri of uris) {
-          await validateUri(uri);
+          await validateUri(uri, { respectProjectScope: false });
           processed++;
 
           if (processed % 25 === 0 || processed === total) {
@@ -597,6 +871,209 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const durationMs = Date.now() - startedAt;
     logIndex(`REVALIDATE DONE: ${processed} files in ${durationMs} ms`);
     vscode.window.showInformationMessage(`SFP XML Linter: Revalidate done (${processed} files, ${durationMs} ms).`);
+  }
+
+  async function revalidateCurrentProject(): Promise<void> {
+    const activeUri = vscode.window.activeTextEditor?.document.uri;
+    if (!activeUri || activeUri.scheme !== "file") {
+      vscode.window.showInformationMessage("SFP XML Linter: Open a file from the target project first.");
+      return;
+    }
+
+    const projectKey = getProjectKeyForUri(activeUri);
+    if (!projectKey) {
+      vscode.window.showInformationMessage("SFP XML Linter: Active file is outside configured XML roots.");
+      return;
+    }
+
+    const startedAt = Date.now();
+    logIndex(`REVALIDATE PROJECT START: ${projectKey}`);
+    await withReindexProgress("SFP XML Linter: Revalidate - Current Project Indexing", async () => {
+      await queueReindex("all");
+    });
+
+    const uris = (await globConfiguredXmlFiles())
+      .filter((uri) => uri.scheme === "file")
+      .filter((uri) => getProjectKeyForUri(uri) === projectKey);
+    await validateUrisWithProgress(uris, "SFP XML Linter: Revalidating current project");
+
+    const durationMs = Date.now() - startedAt;
+    logIndex(`REVALIDATE PROJECT DONE: ${uris.length} files in ${durationMs} ms`);
+    vscode.window.showInformationMessage(`SFP XML Linter: Project revalidate done (${uris.length} files, ${durationMs} ms).`);
+  }
+
+  async function validateUrisWithProgress(uris: readonly vscode.Uri[], title: string): Promise<void> {
+    const total = uris.length;
+    let processed = 0;
+    let reportedPercent = 0;
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title,
+        cancellable: false
+      },
+      async (progress) => {
+        for (const uri of uris) {
+          await validateUri(uri, { preferFsRead: true });
+          processed++;
+          if (processed % 25 === 0 || processed === total) {
+            const nextPercent = total > 0 ? Math.floor((processed / total) * 100) : 100;
+            progress.report({
+              increment: Math.max(0, nextPercent - reportedPercent),
+              message: `${processed}/${total}`
+            });
+            reportedPercent = nextPercent;
+            await sleep(1);
+          }
+        }
+      }
+    );
+  }
+
+  function shouldValidateUriForActiveProjects(uri: vscode.Uri): boolean {
+    // Files outside configured XML roots are treated as standalone:
+    // always allow validation (non-reference rules handled in validateDocument).
+    if (!isReindexRelevantUri(uri)) {
+      return true;
+    }
+
+    if (!isWorkspaceMultiProject()) {
+      return true;
+    }
+
+    if (!activeProjectScopeKey) {
+      return true;
+    }
+
+    const projectKey = getProjectKeyForUri(uri);
+    if (!projectKey) {
+      return true;
+    }
+
+    if (projectKey === activeProjectScopeKey) {
+      return true;
+    }
+
+    // Outside active scope: validate only open files ad-hoc, do not flood diagnostics for whole scope.
+    return isUserOpenDocument(uri);
+  }
+
+  function clearDiagnosticsOutsideActiveProjects(): void {
+    if (!isWorkspaceMultiProject()) {
+      return;
+    }
+
+    if (!activeProjectScopeKey) {
+      return;
+    }
+
+    diagnostics.forEach((uri) => {
+      const projectKey = getProjectKeyForUri(uri);
+      if (!projectKey) {
+        return;
+      }
+
+      if (projectKey !== activeProjectScopeKey && !isUserOpenDocument(uri)) {
+        diagnostics.delete(uri);
+      }
+    });
+  }
+
+  function clearClosedStandaloneDiagnostics(): void {
+    diagnostics.forEach((uri) => {
+      if (uri.scheme !== "file") {
+        return;
+      }
+
+      const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/").toLowerCase();
+      if (!rel.endsWith(".xml")) {
+        return;
+      }
+
+      if (isReindexRelevantUri(uri)) {
+        return;
+      }
+
+      if (isUserOpenDocument(uri)) {
+        return;
+      }
+
+      diagnostics.delete(uri);
+      standaloneValidationVersionByUri.delete(uri.toString());
+      indexedValidationLogSignatureByUri.delete(uri.toString());
+      logSingleFile(`cleanup removed closed standalone diagnostics: ${vscode.workspace.asRelativePath(uri, false)}`);
+    });
+  }
+
+  function ensureActiveProjectScopeInitialized(): void {
+    if (activeProjectScopeKey) {
+      return;
+    }
+
+    const candidate = getUserOpenUris()
+      .filter((uri) => uri.scheme === "file")
+      .map((uri) => getProjectKeyForUri(uri))
+      .find((v): v is string => !!v);
+    if (!candidate) {
+      return;
+    }
+
+    activeProjectScopeKey = candidate;
+    logIndex(`PROJECT scope initialized: ${candidate}`);
+  }
+
+  async function switchActiveProjectScopeToUri(uri: vscode.Uri): Promise<void> {
+    if (!isWorkspaceMultiProject()) {
+      logIndex("PROJECT scope switch skipped: workspace is not multi-project.");
+      return;
+    }
+
+    const next = getProjectKeyForUri(uri);
+    if (!next) {
+      logIndex("PROJECT scope switch skipped: active file is outside configured XML roots.");
+      return;
+    }
+
+    if (next === activeProjectScopeKey) {
+      logIndex(`PROJECT scope unchanged: ${next}`);
+      return;
+    }
+
+    const prev = activeProjectScopeKey;
+    activeProjectScopeKey = next;
+    logIndex(`PROJECT scope switched: ${prev ?? "<none>"} -> ${next}`);
+    clearDiagnosticsOutsideActiveProjects();
+
+    const uris = (await globConfiguredXmlFiles())
+      .filter((u) => u.scheme === "file")
+      .filter((u) => getProjectKeyForUri(u) === next);
+    logIndex(`PROJECT scope validation queued for ${uris.length} file(s).`);
+    enqueueWorkspaceValidation(uris);
+  }
+
+  function isWorkspaceMultiProject(): boolean {
+    const projectKeys = new Set<string>();
+
+    for (const form of templateIndexer.getIndex().formsByIdent.values()) {
+      const key = getProjectKeyForUri(form.uri);
+      if (key) {
+        projectKeys.add(key);
+      }
+    }
+    for (const component of templateIndexer.getIndex().componentsByKey.values()) {
+      const key = getProjectKeyForUri(component.uri);
+      if (key) {
+        projectKeys.add(key);
+      }
+    }
+    for (const form of runtimeIndexer.getIndex().formsByIdent.values()) {
+      const key = getProjectKeyForUri(form.uri);
+      if (key) {
+        projectKeys.add(key);
+      }
+    }
+
+    return projectKeys.size > 1;
   }
 
   function scheduleDeferredFullReindex(delayMs = 6000): void {
@@ -806,19 +1283,64 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function validateDocument(document: vscode.TextDocument): void {
+    if (document.languageId !== "xml") {
+      diagnostics.delete(document.uri);
+      return;
+    }
+
+    // Ignore virtual XML documents (git:, vscode-userdata:, etc.).
+    // We only validate real files and optional untitled scratch XML.
+    if (document.uri.scheme !== "file" && document.uri.scheme !== "untitled") {
+      diagnostics.delete(document.uri);
+      return;
+    }
+
+    const relOrPath = document.uri.scheme === "file"
+      ? vscode.workspace.asRelativePath(document.uri, false)
+      : document.uri.toString();
+
     if (!documentInConfiguredRoots(document)) {
+      const docKey = document.uri.toString();
+      const alreadyValidatedVersion = standaloneValidationVersionByUri.get(docKey);
+      if (alreadyValidatedVersion === document.version) {
+        logSingleFile(`validate standalone SKIP unchanged version: ${relOrPath} v${document.version}`);
+        return;
+      }
+
+      logSingleFile(`validate standalone START: ${relOrPath}`);
+      const standaloneDiagnostics = engine.buildDiagnostics(document, emptyIndex, { standaloneMode: true }).filter((d) => {
+        const code = typeof d.code === "string" ? d.code : "";
+        return !REFERENCE_REQUIRED_RULES.has(code);
+      });
+      diagnostics.set(document.uri, standaloneDiagnostics);
+      standaloneValidationVersionByUri.set(docKey, document.version);
+      logSingleFile(`validate standalone DONE: ${relOrPath} diagnostics=${standaloneDiagnostics.length}`);
+      return;
+    }
+
+    if (!shouldValidateUriForActiveProjects(document.uri)) {
+      logIndex(`validate skipped by project scope: ${relOrPath}`);
       diagnostics.delete(document.uri);
       return;
     }
 
     // Avoid noisy false positives during startup before the first full index exists.
     if (!hasInitialIndex) {
+      logIndex(`validate skipped before initial index: ${relOrPath}`);
       diagnostics.delete(document.uri);
       return;
     }
 
     const result = engine.buildDiagnostics(document, getIndexerForUri(document.uri).getIndex());
     diagnostics.set(document.uri, result);
+    if (result.length > 0 || isUserOpenDocument(document.uri)) {
+      const key = document.uri.toString();
+      const signature = `${document.version}:${result.length}`;
+      if (indexedValidationLogSignatureByUri.get(key) !== signature) {
+        indexedValidationLogSignatureByUri.set(key, signature);
+        logIndex(`validate indexed DONE: ${relOrPath} diagnostics=${result.length}`);
+      }
+    }
   }
 
   function refreshHoverDocsWatchers(): void {
@@ -857,38 +1379,77 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
 
+      if (document.languageId === "xml" && (document.uri.scheme === "file" || document.uri.scheme === "untitled")) {
+        const relOrPath = document.uri.scheme === "file"
+          ? vscode.workspace.asRelativePath(document.uri, false)
+          : document.uri.toString();
+        logIndex(`onDidOpenTextDocument xml: ${relOrPath}`);
+      }
       validateDocument(document);
-      if (isUserOpenDocument(document.uri)) {
+      if (isUserOpenDocument(document.uri) && documentInConfiguredRoots(document)) {
         enqueueValidation(document.uri, "high");
+      }
+    }),
+    vscode.workspace.onDidCloseTextDocument((document) => {
+      if (document.languageId !== "xml") {
+        return;
+      }
+
+      if (!documentInConfiguredRoots(document)) {
+        const relOrPath = document.uri.scheme === "file"
+          ? vscode.workspace.asRelativePath(document.uri, false)
+          : document.uri.toString();
+        logSingleFile(`onDidCloseTextDocument: ${relOrPath}`);
+        diagnostics.delete(document.uri);
+        standaloneValidationVersionByUri.delete(document.uri.toString());
+        indexedValidationLogSignatureByUri.delete(document.uri.toString());
+        logSingleFile(`closed standalone file, diagnostics cleared: ${relOrPath}`);
       }
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       scheduleSqlSuggestOnTyping(event);
       pendingContentChangesSinceLastSave.add(event.document.uri.toString());
       validateDocument(event.document);
-      if (isUserOpenDocument(event.document.uri)) {
+      if (isUserOpenDocument(event.document.uri) && documentInConfiguredRoots(event.document)) {
         enqueueValidation(event.document.uri, "high");
       }
     }),
     vscode.window.onDidChangeVisibleTextEditors(() => {
       validateOpenDocuments();
+      clearClosedStandaloneDiagnostics();
       for (const uri of getUserOpenUris()) {
+        const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
+        if (!doc || !documentInConfiguredRoots(doc)) {
+          continue;
+        }
         enqueueValidation(uri, "high");
       }
     }),
     vscode.window.tabGroups.onDidChangeTabs(() => {
       validateOpenDocuments();
+      clearClosedStandaloneDiagnostics();
       for (const uri of getUserOpenUris()) {
+        const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
+        if (!doc || !documentInConfiguredRoots(doc)) {
+          continue;
+        }
         enqueueValidation(uri, "high");
       }
     }),
     vscode.workspace.onDidSaveTextDocument((document) => {
+      if (isSfpSettingsUri(document.uri)) {
+        invalidateSystemMetadataCache();
+        logIndex(`SETTINGS changed: ${vscode.workspace.asRelativePath(document.uri, false)} -> metadata cache invalidated`);
+        void queueReindex("all");
+        return;
+      }
+
       const saveKey = document.uri.toString();
       const hadContentChanges = pendingContentChangesSinceLastSave.has(saveKey);
       pendingContentChangesSinceLastSave.delete(saveKey);
 
       validateDocument(document);
-      if (isUserOpenDocument(document.uri)) {
+      if (isUserOpenDocument(document.uri) && documentInConfiguredRoots(document)) {
         enqueueValidation(document.uri, "high");
       }
 
@@ -924,11 +1485,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void maybeAutoBuildTemplates(document);
     }),
     vscode.workspace.onDidCreateFiles((event) => {
+      if (event.files.some((uri) => isSfpSettingsUri(uri))) {
+        invalidateSystemMetadataCache();
+        logIndex("SETTINGS created -> metadata cache invalidated");
+      }
       if (event.files.some((uri) => isReindexRelevantUri(uri))) {
         void queueReindex("all");
       }
     }),
     vscode.workspace.onDidDeleteFiles((event) => {
+      if (event.files.some((uri) => isSfpSettingsUri(uri))) {
+        invalidateSystemMetadataCache();
+        logIndex("SETTINGS deleted -> metadata cache invalidated");
+      }
       for (const uri of event.files) {
         diagnostics.delete(uri);
       }
@@ -938,6 +1507,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     vscode.workspace.onDidRenameFiles((event) => {
+      if (event.files.some((item) => isSfpSettingsUri(item.oldUri) || isSfpSettingsUri(item.newUri))) {
+        invalidateSystemMetadataCache();
+        logIndex("SETTINGS renamed -> metadata cache invalidated");
+      }
       for (const item of event.files) {
         diagnostics.delete(item.oldUri);
       }
@@ -948,6 +1521,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (event.affectsConfiguration("sfpXmlLinter")) {
+        invalidateSystemMetadataCache();
         documentationHoverResolver.markDirty();
         refreshHoverDocsWatchers();
         validateOpenDocuments();
@@ -1006,6 +1580,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       providedCodeActionKinds: SfpXmlIgnoreCodeActionProvider.providedCodeActionKinds
     })
   );
+
+  // Catch already-open XML editors (including files outside configured roots/workspace folders).
+  const openXmlCountAtActivate = vscode.workspace.textDocuments.filter((d) => d.languageId === "xml").length;
+  logIndex(`Activation warmup: open xml docs=${openXmlCountAtActivate}`);
+  for (const doc of vscode.workspace.textDocuments) {
+    if (doc.languageId === "xml") {
+      const relOrPath = doc.uri.scheme === "file"
+        ? vscode.workspace.asRelativePath(doc.uri, false)
+        : doc.uri.toString();
+      logIndex(`Activation warmup validating: ${relOrPath}`);
+      validateDocument(doc);
+    }
+  }
 
   context.subscriptions.push(
     vscode.commands.registerCommand("sfpXmlLinter.suppressNextSqlSuggest", () => {
@@ -1112,6 +1699,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.showIndexLog", () => {
+      indexOutput.show(true);
+      logIndex("Opened index log");
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("sfpXmlLinter.rebuildIndex", async () => {
       const start = Date.now();
       await queueReindex("all");
@@ -1123,6 +1717,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.commands.registerCommand("sfpXmlLinter.revalidateWorkspace", async () => {
       await revalidateWorkspaceFull();
+    }),
+    vscode.commands.registerCommand("sfpXmlLinter.revalidateProject", async () => {
+      await revalidateCurrentProject();
+    }),
+    vscode.commands.registerCommand("sfpXmlLinter.switchProjectScopeToActiveFile", async () => {
+      const active = vscode.window.activeTextEditor?.document.uri;
+      if (!active || active.scheme !== "file") {
+        vscode.window.showInformationMessage("SFP XML Linter: Open an XML file from target project first.");
+        return;
+      }
+
+      await switchActiveProjectScopeToUri(active);
+      vscode.window.showInformationMessage("SFP XML Linter: Active project scope switched.");
     })
   );
 
@@ -1237,6 +1844,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // then perform
   // full index and background validation.
   void (async () => {
+    ensureActiveProjectScopeInitialized();
     const hasRuntimeOpenAtStartup = getUserOpenUris().some((uri) => getXmlIndexDomainByUri(uri) === "runtime");
     await withReindexProgress("SFP XML Linter: Initial Bootstrap Indexing", async () => {
       await rebuildBootstrapIndexAndValidateOpenDocs({
@@ -1489,3 +2097,190 @@ function isReindexRelevantUri(uri: vscode.Uri): boolean {
     return rel === normalized || rel.startsWith(`${normalized}/`) || rel.includes(`/${normalized}/`);
   });
 }
+
+function isSfpSettingsUri(uri: vscode.Uri): boolean {
+  if (uri.scheme !== "file") {
+    return false;
+  }
+
+  const fileName = uri.fsPath.replace(/\\/g, "/").split("/").pop()?.toLowerCase();
+  return fileName === ".sfpxmlsetting" || fileName === ".sfpxmlsettings";
+}
+
+function getProjectKeyForUri(uri: vscode.Uri): string | undefined {
+  if (uri.scheme !== "file") {
+    return undefined;
+  }
+
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+  const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/");
+  const relLower = rel.toLowerCase();
+  const settings = getSettings();
+
+  let bestRootStart = Number.MAX_SAFE_INTEGER;
+  let matched = false;
+  for (const root of settings.workspaceRoots) {
+    const normalized = root.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (!normalized) {
+      continue;
+    }
+
+    if (relLower === normalized || relLower.startsWith(`${normalized}/`)) {
+      matched = true;
+      bestRootStart = 0;
+      break;
+    }
+
+    const token = `/${normalized}/`;
+    const idx = relLower.indexOf(token);
+    if (idx < 0) {
+      continue;
+    }
+
+    matched = true;
+    const start = idx + 1;
+    if (start < bestRootStart) {
+      bestRootStart = start;
+    }
+  }
+
+  if (!matched) {
+    return undefined;
+  }
+
+  const prefix = bestRootStart <= 0 ? "." : rel.slice(0, bestRootStart - 1);
+  const workspaceKey = workspaceFolder?.uri.fsPath ?? "__no_workspace__";
+  return `${workspaceKey}|${prefix || "."}`;
+}
+
+async function readWorkspaceFileText(uri: vscode.Uri): Promise<string> {
+  let text: string;
+  if (uri.scheme === "file") {
+    try {
+      text = await fs.readFile(uri.fsPath, "utf8");
+    } catch {
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      text = new TextDecoder("utf-8").decode(bytes);
+    }
+  } else {
+    const bytes = await vscode.workspace.fs.readFile(uri);
+    text = new TextDecoder("utf-8").decode(bytes);
+  }
+
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+function createVirtualXmlDocument(uri: vscode.Uri, text: string): vscode.TextDocument {
+  const lineStarts = computeLineStarts(text);
+  const lineCount = lineStarts.length;
+  const doc = {
+    uri,
+    languageId: "xml",
+    version: 0,
+    lineCount,
+    getText(range?: vscode.Range): string {
+      if (!range) {
+        return text;
+      }
+
+      const startOffset = this.offsetAt(range.start);
+      const endOffset = this.offsetAt(range.end);
+      return text.slice(startOffset, endOffset);
+    },
+    positionAt(offset: number): vscode.Position {
+      return offsetToPosition(lineStarts, offset, text.length);
+    },
+    offsetAt(position: vscode.Position): number {
+      const line = Math.max(0, Math.min(position.line, lineStarts.length - 1));
+      const lineStart = lineStarts[line] ?? 0;
+      return Math.max(0, Math.min(text.length, lineStart + Math.max(0, position.character)));
+    },
+    lineAt(lineOrPos: number | vscode.Position): vscode.TextLine {
+      const rawLine = typeof lineOrPos === "number" ? lineOrPos : lineOrPos.line;
+      const line = Math.max(0, Math.min(rawLine, lineCount - 1));
+      const lineStart = lineStarts[line] ?? 0;
+      const nextLineStart = line + 1 < lineCount ? lineStarts[line + 1] : text.length;
+      const lineEndWithBreak = nextLineStart;
+
+      // VS Code TextLine.text excludes trailing line break.
+      let lineEnd = lineEndWithBreak;
+      if (lineEnd > lineStart && text.charCodeAt(lineEnd - 1) === 10) {
+        lineEnd--;
+      }
+      if (lineEnd > lineStart && text.charCodeAt(lineEnd - 1) === 13) {
+        lineEnd--;
+      }
+
+      const lineText = text.slice(lineStart, lineEnd);
+      const firstNonWhitespaceCharacterIndex = /\S/.test(lineText) ? (lineText.search(/\S/) ?? 0) : lineText.length;
+      const range = new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, lineText.length));
+      const rangeIncludingLineBreak = new vscode.Range(
+        new vscode.Position(line, 0),
+        new vscode.Position(line, Math.max(0, lineEndWithBreak - lineStart))
+      );
+
+      return {
+        lineNumber: line,
+        text: lineText,
+        range,
+        rangeIncludingLineBreak,
+        firstNonWhitespaceCharacterIndex,
+        isEmptyOrWhitespace: firstNonWhitespaceCharacterIndex >= lineText.length
+      } as vscode.TextLine;
+    }
+  } as vscode.TextDocument;
+
+  return doc;
+}
+
+function createIndexOnlyXmlDocument(uri: vscode.Uri): vscode.TextDocument {
+  const doc = {
+    uri,
+    languageId: "xml",
+    version: 0,
+    getText(): string {
+      return "";
+    },
+    positionAt(_offset: number): vscode.Position {
+      return new vscode.Position(0, 0);
+    },
+    offsetAt(_position: vscode.Position): number {
+      return 0;
+    }
+  } as vscode.TextDocument;
+
+  return doc;
+}
+
+function computeLineStarts(text: string): number[] {
+  const starts: number[] = [0];
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) {
+      starts.push(i + 1);
+    }
+  }
+  return starts;
+}
+
+function offsetToPosition(lineStarts: readonly number[], offset: number, textLength: number): vscode.Position {
+  const safe = Math.max(0, Math.min(offset, textLength));
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const start = lineStarts[mid];
+    const nextStart = mid + 1 < lineStarts.length ? lineStarts[mid + 1] : Number.MAX_SAFE_INTEGER;
+    if (safe < start) {
+      high = mid - 1;
+    } else if (safe >= nextStart) {
+      low = mid + 1;
+    } else {
+      return new vscode.Position(mid, safe - start);
+    }
+  }
+
+  const line = Math.max(0, Math.min(lineStarts.length - 1, low));
+  const start = lineStarts[line] ?? 0;
+  return new vscode.Position(line, safe - start);
+}
+

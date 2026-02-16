@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { promises as fs } from "node:fs";
 import { getSettings } from "../config/settings";
 import { documentInConfiguredRoots } from "../utils/paths";
+import { BUILTIN_HOVER_DOCS } from "./builtinHoverDocs";
 
 export interface HoverContentResolver {
   resolve(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.MarkdownString | undefined>;
@@ -107,41 +108,50 @@ export class DocumentationHoverResolver implements HoverContentResolver {
 async function loadHoverDocs(): Promise<ResolvedHoverDocEntry[]> {
   const settings = getSettings();
   const folders = vscode.workspace.workspaceFolders ?? [];
-  if (folders.length === 0) {
-    return [];
-  }
 
   const entries: ResolvedHoverDocEntry[] = [];
   let sourcePriority = 0;
-  for (const folder of folders) {
-    for (const filePath of settings.hoverDocsFiles) {
-      sourcePriority++;
-      const resolved = path.isAbsolute(filePath) ? filePath : path.join(folder.uri.fsPath, filePath);
-      try {
-        const raw = await fs.readFile(resolved, "utf8");
-        const parsed = JSON.parse(raw) as HoverDocsFile;
-        if (!parsed.entries || !Array.isArray(parsed.entries)) {
-          continue;
-        }
 
-        let entryPriority = 0;
-        for (const entry of parsed.entries) {
-          entryPriority++;
-          if (entry && typeof entry.summary === "string" && entry.summary.trim().length > 0) {
-            entries.push({
-              ...entry,
-              sourcePriority,
-              entryPriority
-            });
+  if (folders.length > 0) {
+    for (const folder of folders) {
+      for (const filePath of settings.hoverDocsFiles) {
+        sourcePriority++;
+        const resolved = path.isAbsolute(filePath) ? filePath : path.join(folder.uri.fsPath, filePath);
+        try {
+          const raw = await fs.readFile(resolved, "utf8");
+          const parsed = JSON.parse(raw) as HoverDocsFile;
+          if (!parsed.entries || !Array.isArray(parsed.entries)) {
+            continue;
           }
+
+          let entryPriority = 0;
+          for (const entry of parsed.entries) {
+            entryPriority++;
+            if (entry && typeof entry.summary === "string" && entry.summary.trim().length > 0) {
+              entries.push({
+                ...entry,
+                sourcePriority,
+                entryPriority
+              });
+            }
+          }
+        } catch {
+          // Ignore missing/invalid docs file, resolver remains best-effort.
         }
-      } catch {
-        // Ignore missing/invalid docs file, resolver remains best-effort.
       }
     }
   }
 
-  return entries;
+  if (entries.length > 0) {
+    return entries;
+  }
+
+  // Built-in fallback docs from source code (based on SFPDocs), used when external files are unavailable.
+  return BUILTIN_HOVER_DOCS.map((entry, index) => ({
+    ...entry,
+    sourcePriority: 0,
+    entryPriority: index + 1
+  }));
 }
 
 function findBestEntry(entries: ResolvedHoverDocEntry[], ctx: XmlHoverContext): ResolvedHoverDocEntry | undefined {

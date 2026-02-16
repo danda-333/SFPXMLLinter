@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.11
+
+- SQL highlighting improvements:
+  - Added dedicated `UPDATE` token highlighting in embedded SQL/Command blocks.
+  - Fixed SQL semantic highlighting to ignore SQL comments (`-- ...`, `/* ... */`) so placeholders/strings are not highlighted inside comments.
+- Completion/snippet improvements for workflow actions:
+  - Expanded production-oriented `Action` snippets based on real fixture usage:
+    - `ChangeState`, `ChangeState (StateDataSource)`, `ShareCode`, `ActionTrigger`, `ActionValue`, `GlobalValidation`, `Required`, `SetValue`, `IF`, `Communication`, `Email`, `Alert`, `ClearCache`, `GenerateForm`, `GenerateSubForm`.
+  - Added richer `Action` attribute suggestions for common action types.
+  - Improved action snippet ordering/priorities to prefer most common workflow patterns.
+  - Updated `ActionValue` snippet to use `DataSource` (SQL + Parameters) instead of inline `Value`.
+  - Suppressed `Value` attribute suggestion when editing `Action xsi:type=\"ActionValue\"`.
+- Diagnostics message quality:
+  - `ident-convention-lookup-control` now includes ident split details (`purpose`, `formOrTable`, `foreignKey`) and explicit "primary table/form not found" hint when applicable.
+- Hover docs fallback:
+  - Added built-in hover docs in source (based on `SFPDocs`) that are used automatically when external `hoverDocsFiles` are not found.
+
 ## 0.0.10
 
 - Linter stability and consistency:

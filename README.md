@@ -34,6 +34,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - SQL inline ignore is supported in `SQL`/`Command` blocks:
     - `-- @Ignore rule-id`
     - `/* @Ignore rule-id */`
+  - SQL semantic highlighting ignores SQL comments (`-- ...`, `/* ... */`) to avoid placeholder/string highlighting in commented SQL.
 - Hover on diagnostics (message + rule id)
 - Color preview and picker for hex literals in XML (`#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`)
 - Completion (context-aware foundation):
@@ -41,6 +42,8 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - attribute names by tag
   - enum values (`xsi:type`, `DataType`, `Insert`, ...)
   - semantic values (`FormIdent`, `Using Component/Section`, WorkFlow `Ident` refs)
+  - production-oriented workflow `Action` snippets (e.g. `ChangeState`, `ChangeState (StateDataSource)`, `ActionTrigger`, `ActionValue`, `GlobalValidation`, `Required`, `Communication`, `Email`, `Alert`, `GenerateForm`, `GenerateSubForm`, `IF`)
+  - `ActionValue` snippet defaults to `DataSource` (`SQL` + `Parameters`) and does not suggest inline `Value` for `xsi:type="ActionValue"`
 - Go to Definition:
   - `WorkFlow@FormIdent` -> `<Form Ident="...">`
   - any `FormIdent="..."` reference -> `<Form Ident="...">`
@@ -154,6 +157,7 @@ Hover documentation is loaded from configurable JSON files:
   - `Docs/hover-docs.team.json`
 - Changes in these files are reloaded automatically (no extension host restart required).
 - If multiple entries match with the same relevance, later files in `hoverDocsFiles` win (override behavior).
+- If no external hover docs file is available, built-in fallback docs (derived from `SFPDocs`) are used automatically.
 
 Minimal file format:
 

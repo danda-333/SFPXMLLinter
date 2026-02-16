@@ -4,6 +4,10 @@
   "injectionSelector": "L:source.sql - comment - comment.block.xml - comment.block",
   "patterns": [
     {
+      "name": "keyword.other.sfp.sql-update",
+      "match": "\\b(?:UPDATE|Update|update)\\b"
+    },
+    {
       "name": "entity.name.tag",
       "match": "'(?:''|[^'\\r\\n])*'"
     },

@@ -112,6 +112,9 @@
           "include": "#sfpSqlPlaceholders"
         },
         {
+          "include": "#sfpSqlKeywords"
+        },
+        {
           "include": "source.sql"
         }
       ]
@@ -158,6 +161,9 @@
         },
         {
           "include": "#sfpSqlPlaceholders"
+        },
+        {
+          "include": "#sfpSqlKeywords"
         },
         {
           "include": "source.sql"
@@ -218,6 +224,9 @@
           "include": "#sfpSqlPlaceholders"
         },
         {
+          "include": "#sfpSqlKeywords"
+        },
+        {
           "include": "source.sql"
         }
       ]
@@ -260,6 +269,14 @@
         {
           "name": "constant.other.sfp.resource-key",
           "match": "\\[#[-A-Za-z0-9_.]+#\\]"
+        }
+      ]
+    },
+    "sfpSqlKeywords": {
+      "patterns": [
+        {
+          "name": "keyword.other.sfp.sql-update",
+          "match": "\\b(?:UPDATE|Update|update)\\b"
         }
       ]
     },

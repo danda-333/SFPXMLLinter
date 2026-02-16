@@ -28,7 +28,7 @@ export class SfpSqlPlaceholderSemanticProvider implements vscode.DocumentSemanti
       }
 
       const contentStartOffset = (blockMatch.index ?? 0) + openTagEnd + 1;
-      const maskedContent = maskXmlComments(content);
+      const maskedContent = maskSqlComments(maskXmlComments(content));
 
       for (const tokenMatch of maskedContent.matchAll(placeholderRegex)) {
         const token = tokenMatch[0];
@@ -65,4 +65,65 @@ export class SfpSqlPlaceholderSemanticProvider implements vscode.DocumentSemanti
 
     return builder.build();
   }
+}
+
+function maskSqlComments(sql: string): string {
+  const chars = sql.split("");
+  let inSingleQuote = false;
+  let inDoubleDash = false;
+  let inBlock = false;
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const next = i + 1 < chars.length ? chars[i + 1] : "";
+
+    if (inDoubleDash) {
+      if (ch !== "\r" && ch !== "\n") {
+        chars[i] = " ";
+      } else {
+        inDoubleDash = false;
+      }
+      continue;
+    }
+
+    if (inBlock) {
+      if (ch === "*" && next === "/") {
+        chars[i] = " ";
+        chars[i + 1] = " ";
+        i++;
+        inBlock = false;
+        continue;
+      }
+      if (ch !== "\r" && ch !== "\n") {
+        chars[i] = " ";
+      }
+      continue;
+    }
+
+    if (!inSingleQuote && ch === "-" && next === "-") {
+      chars[i] = " ";
+      chars[i + 1] = " ";
+      i++;
+      inDoubleDash = true;
+      continue;
+    }
+
+    if (!inSingleQuote && ch === "/" && next === "*") {
+      chars[i] = " ";
+      chars[i + 1] = " ";
+      i++;
+      inBlock = true;
+      continue;
+    }
+
+    if (ch === "'") {
+      if (inSingleQuote && next === "'") {
+        i++;
+        continue;
+      }
+      inSingleQuote = !inSingleQuote;
+    }
+  }
+
+  return chars.join("");
 }

@@ -15,6 +15,13 @@ const ROOT_ELEMENTS = ["Form", "WorkFlow", "DataView", "Filter", "Dashboard", "C
 const CHILD_ELEMENTS: Record<string, string[]> = {
   form: ["Buttons", "Controls", "Sections", "Components", "Usings", "Using", "DataPermissions", "CreatePermissions", "AccessPermissions", "DenyPermissions"],
   workflow: ["Definition", "Steps", "GlobalActions", "GlobalJavaScripts", "ActionShareCodes", "ButtonShareCodes", "ControlShareCodes", "Usings", "Using"],
+  globalactions: ["Action"],
+  beforeopenactions: ["Action"],
+  actionsharecodes: ["ActionShareCode"],
+  actionsharecode: ["Actions"],
+  actions: ["Action"],
+  trueactions: ["Action"],
+  falseactions: ["Action"],
   controls: ["Control", "FormControl"],
   buttons: ["Button"],
   sections: ["Section"],
@@ -70,8 +77,26 @@ const ATTRIBUTES_BY_TAG: Record<string, string[]> = {
   using: ["Component", "Name", "Section", "Insert"],
   sectionoverride: ["Name", "TargetXPath", "Insert", "Root"],
   state: ["Value", "Title", "TitleResourceKey", "ColorCssClass"],
-  action: ["xsi:type", "Ident", "State", "ActionStart"]
-  ,
+  action: [
+    "xsi:type",
+    "Ident",
+    "State",
+    "ActionStart",
+    "ControlIdent",
+    "FormIdent",
+    "ButtonIdent",
+    "Value",
+    "Type",
+    "SubjectResourceKey",
+    "BodyResourceKey",
+    "EmailIdent",
+    "MessageResourceKey",
+    "AlertIdent",
+    "IconCssClass",
+    "IconColor",
+    "ErrorMessageResourceKey",
+    "IsStopSendActionCreator"
+  ],
   javascript: ["xsi:type", "Ident", "ControlIdent", "ActionStart"],
   mapping: ["FromIdent", "ToIdent"],
   datasource: ["Ident", "FormIdent"]
@@ -133,6 +158,23 @@ const DATA_TYPE_CHOICE_LOOKUP_MULTI = "StringList,VarCharList,NumberList,SmallNu
 const INSERT_MODES = ["append", "prepend", "before", "after", "placeholder"];
 const COLOR_CSS = ["danger", "warning", "primary", "info", "success", "dark"];
 const ACTION_START_TYPES = ["BeforeValidation", "AfterValidation", "AfterSave", "AfterPermission"];
+const ACTION_TYPES = [
+  "ChangeState",
+  "ShareCode",
+  "ActionTrigger",
+  "ActionValue",
+  "GlobalValidation",
+  "Email",
+  "Required",
+  "Communication",
+  "Alert",
+  "SetValue",
+  "IF",
+  "GenerateSubForm",
+  "ClearCache",
+  "GenerateForm",
+  "History"
+];
 const PARAMETER_TYPES = ["dsp:VariableParameter", "dsp:ValueParameter", "dsp:TableParameter"];
 const PARAMETER_CONSTANT_TYPES = ["UserID", "UserLanguageID", "UICultureCode"];
 const PARAMETER_SET_DATA_TYPES = [
@@ -209,7 +251,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     if (ctx.currentTag) {
-      return this.completeAttributes(document, ctx.currentTag, ctx.currentAttributeNames);
+      return this.completeAttributes(document, ctx.currentTag, ctx.currentAttributeNames, ctx.currentTagFragment);
     }
 
     return undefined;
@@ -298,8 +340,19 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     return item;
   }
 
-  private completeAttributes(_document: vscode.TextDocument, tagName: string, alreadyPresent: Set<string>): vscode.CompletionItem[] {
-    const attrs = ATTRIBUTES_BY_TAG[tagName.toLowerCase()] ?? [];
+  private completeAttributes(
+    _document: vscode.TextDocument,
+    tagName: string,
+    alreadyPresent: Set<string>,
+    tagFragment?: string
+  ): vscode.CompletionItem[] {
+    let attrs = ATTRIBUTES_BY_TAG[tagName.toLowerCase()] ?? [];
+    if (tagName.toLowerCase() === "action" && tagFragment) {
+      const actionType = (extractAttributeValue(tagFragment, "xsi:type") ?? extractAttributeValue(tagFragment, "type") ?? "").toLowerCase();
+      if (actionType === "actionvalue") {
+        attrs = attrs.filter((attr) => attr.toLowerCase() !== "value");
+      }
+    }
     const items: vscode.CompletionItem[] = [];
 
     for (const attr of attrs) {
@@ -328,6 +381,10 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     if (attr === "xsi:type" || attr === "type") {
       if (tag === "parameter" || tag === "dsp:parameter") {
         return asValueItems(PARAMETER_TYPES, vscode.CompletionItemKind.EnumMember);
+      }
+
+      if (tag === "action") {
+        return asValueItems(ACTION_TYPES, vscode.CompletionItemKind.EnumMember);
       }
 
       if (tag === "control") {
@@ -889,6 +946,118 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       ];
     }
 
+    if (parentTag === "actionsharecodes") {
+      return [
+        actionSnippetItem(
+          "actionsharecode",
+          "ActionShareCode",
+          `<ActionShareCode Ident="$1ActionShareCode">\n\t<Actions>\n\t\t<Action xsi:type="ShareCode" Ident="$2" ActionStart="\${3|AfterPermission,AfterSave|}" />\n\t</Actions>\n</ActionShareCode>$0`,
+          2
+        )
+      ];
+    }
+
+    if (
+      parentTag === "globalactions" ||
+      parentTag === "beforeopenactions" ||
+      parentTag === "actions" ||
+      parentTag === "trueactions" ||
+      parentTag === "falseactions"
+    ) {
+      return [
+        actionSnippetItem(
+          "action changestate",
+          "Action ChangeState",
+          `<Action xsi:type="ChangeState" State="$1" ActionStart="\${2|AfterSave,AfterPermission,AfterValidation|}" $0/>`,
+          1
+        ),
+        actionSnippetItem(
+          "action changestate datasource statedatasource",
+          "Action ChangeState (StateDataSource)",
+          `<Action xsi:type="ChangeState" ActionStart="\${1|AfterSave,AfterPermission,AfterValidation|}">\n\t<StateDataSource>\n\t\t<SQL><![CDATA[\n\t\t\tSELECT $2\n\t\t]]></SQL>\n\t\t<Parameters>\n\t\t\t<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />\n\t\t</Parameters>\n\t</StateDataSource>\n</Action>$0`,
+          2
+        ),
+        actionSnippetItem(
+          "action sharecode",
+          "Action ShareCode",
+          `<Action xsi:type="ShareCode" Ident="$1ActionShareCode" ActionStart="\${2|AfterPermission,AfterSave,BeforeValidation|}" $0/>`,
+          3
+        ),
+        actionSnippetItem(
+          "action trigger datasource",
+          "Action ActionTrigger",
+          `<Action xsi:type="ActionTrigger" Ident="$1ActionTrigger" ActionStart="\${2|AfterSave,AfterPermission,AfterValidation|}">\n\t<DataSource>\n\t\t<SQL><![CDATA[\n\t\t\t$3\n\t\t]]></SQL>\n\t\t<Parameters>\n\t\t\t<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />\n\t\t</Parameters>\n\t</DataSource>\n</Action>$0`,
+          4
+        ),
+        actionSnippetItem(
+          "action required",
+          "Action Required",
+          `<Action xsi:type="Required" ActionStart="\${1|BeforeValidation,AfterValidation|}">\n\t<Idents>\n\t\t<string>$2</string>\n\t</Idents>\n</Action>$0`,
+          7
+        ),
+        actionSnippetItem(
+          "action globalvalidation",
+          "Action GlobalValidation",
+          `<Action xsi:type="GlobalValidation" ActionStart="BeforeValidation" ErrorMessageResourceKey="$1_Error_${packageIdent}">\n\t<Condition>\n\t\t<SQL><![CDATA[\n\t\t\tSELECT IIF($2, 1, 0)\n\t\t]]></SQL>\n\t\t<Parameters>\n\t\t\t<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />\n\t\t</Parameters>\n\t</Condition>\n\t<ControlIdents>\n\t\t<string>$3</string>\n\t</ControlIdents>\n</Action>$0`,
+          6
+        ),
+        actionSnippetItem(
+          "action actionvalue",
+          "Action ActionValue",
+          `<Action xsi:type="ActionValue" Ident="$1ActionValue" ControlIdent="$2" ActionStart="\${3|AfterValidation,AfterPermission,AfterSave|}">\n\t<DataSource>\n\t\t<SQL><![CDATA[\n\t\t\tSELECT @$4\n\t\t]]></SQL>\n\t\t<Parameters>\n\t\t\t<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="$4" DataType="\${5|Number,String,Guid,VarChar|}" />\n\t\t</Parameters>\n\t</DataSource>\n</Action>$0`,
+          5
+        ),
+        actionSnippetItem(
+          "action setvalue",
+          "Action SetValue",
+          `<Action xsi:type="SetValue" Ident="$1" Value="$2" ActionStart="\${3|AfterValidation,AfterSave,AfterPermission|}" $0/>`,
+          10
+        ),
+        actionSnippetItem(
+          "action if",
+          "Action IF",
+          `<Action xsi:type="IF" ActionStart="\${1|AfterPermission,AfterSave,BeforeValidation|}">\n\t<Condition>\n\t\t<SQL><![CDATA[\n\t\t\tSELECT IIF($2, 1, 0)\n\t\t]]></SQL>\n\t\t<Parameters>\n\t\t\t<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />\n\t\t</Parameters>\n\t</Condition>\n\t<TrueActions>\n\t\t$0\n\t</TrueActions>\n\t<FalseActions>\n\t</FalseActions>\n</Action>`,
+          11
+        ),
+        actionSnippetItem(
+          "action communication",
+          "Action Communication",
+          `<Action xsi:type="Communication" ControlIdent="$1" Type="\${2|Comment,State,System|}" ActionStart="\${3|AfterSave,AfterPermission|}" $0/>`,
+          8
+        ),
+        actionSnippetItem(
+          "action email",
+          "Action Email",
+          `<Action xsi:type="Email" Ident="$1_Email_${packageIdent}" EmailIdent="$1_Email_${packageIdent}" SubjectResourceKey="$2Subject_Email_${packageIdent}" BodyResourceKey="$3Body_Email_${packageIdent}" ActionStart="\${4|AfterPermission,AfterSave|}" IsStopSendActionCreator="\${5|true,false|}">\n\t<Recipients>\n\t\t<Recipient RecipientType="To" SourceType="Permission" Value="$6" />\n\t</Recipients>\n</Action>$0`,
+          9
+        ),
+        actionSnippetItem(
+          "action alert",
+          "Action Alert",
+          `<Action xsi:type="Alert" Ident="$1_Alert_${packageIdent}" AlertIdent="$1_Alert_${packageIdent}" MessageResourceKey="$2_Alert_${packageIdent}" IconCssClass="$3" IconColor="$4" ActionStart="\${5|AfterPermission,AfterSave|}" IsStopSendActionCreator="\${6|true,false|}">\n\t<Recipients>\n\t\t<Recipient SourceType="Permission" Value="$7"/>\n\t</Recipients>\n</Action>$0`,
+          9
+        ),
+        actionSnippetItem(
+          "action clearcache",
+          "Action ClearCache",
+          `<Action xsi:type="ClearCache" Ident="ClearCache" ActionStart="\${1|AfterSave,AfterPermission|}">\n\t<CacheKeys>\n\t\t<string>$2</string>\n\t</CacheKeys>\n</Action>$0`,
+          13
+        ),
+        actionSnippetItem(
+          "action generateform",
+          "Action GenerateForm",
+          `<Action xsi:type="GenerateForm" Ident="$1GenerateForm" FormIdent="$2" ActionStart="\${3|AfterPermission,AfterSave|}" ButtonIdent="$4">\n\t<Mappings>\n\t\t<Mapping FromIdent="$5" ToIdent="$6"/>\n\t</Mappings>\n\t<DataSource>\n\t\t<SQL><![CDATA[\n\t\t\tSELECT $7\n\t\t]]></SQL>\n\t</DataSource>\n</Action>$0`,
+          14
+        ),
+        actionSnippetItem(
+          "action generatesubform",
+          "Action GenerateSubForm",
+          `<Action xsi:type="GenerateSubForm" ControlIdent="$1" ActionStart="\${2|BeforeValidation,AfterValidation,AfterSave|}">\n\t<Mappings>\n\t\t<Mapping FromIdent="$3" ToIdent="$4" />\n\t</Mappings>\n</Action>$0`,
+          12
+        )
+      ];
+    }
+
     if (parentTag === "parameters") {
       const variable = snippetItem(
         "var variable parameter",
@@ -979,6 +1148,12 @@ function snippetItem(trigger: string, label: string, snippet: string): vscode.Co
   item.filterText = `${label} ${trigger}`;
   item.sortText = `0_${trigger}`;
   item.detail = "SFP XML snippet";
+  return item;
+}
+
+function actionSnippetItem(trigger: string, label: string, snippet: string, rank: number): vscode.CompletionItem {
+  const item = snippetItem(trigger, label, snippet);
+  item.sortText = `00_action_${rank.toString().padStart(2, "0")}_${trigger}`;
   return item;
 }
 

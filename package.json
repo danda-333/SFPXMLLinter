@@ -243,6 +243,12 @@
             "settings": {
               "foreground": "#7FDBFF"
             }
+          },
+          {
+            "scope": "keyword.other.sfp.sql-update",
+            "settings": {
+              "foreground": "#C586C0"
+            }
           }
         ]
       }

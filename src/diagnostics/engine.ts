@@ -551,12 +551,13 @@ export class DiagnosticsEngine {
         continue;
       }
 
+      const splitInfo = describeLookupIdentSplit(control.ident, targetCandidates);
       const parsed = parseLookupControlIdent(control.ident, targetCandidates);
       if (!parsed) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
-          message: `Lookup control Ident '${control.ident}' should follow [Purpose][FormOrTable][ForeignKey].`
+          message: `Lookup control Ident '${control.ident}' should follow [Purpose][FormOrTable][ForeignKey]. ${splitInfo}`
         });
         continue;
       }
@@ -578,7 +579,7 @@ export class DiagnosticsEngine {
           issues.push({
             ruleId: "ident-convention-lookup-control",
             range: control.range,
-            message: `System table lookup '${control.ident}' should use known system-table column (default 'ID'/'Ident' or configured external columns).`
+            message: `System table lookup '${control.ident}' should use known system-table column (default 'ID'/'Ident' or configured external columns). ${splitInfo}`
           });
         }
         continue;
@@ -597,7 +598,7 @@ export class DiagnosticsEngine {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
-          message: `Lookup control '${control.ident}' references '${parsed.targetName}', but foreign key '${parsed.foreignKey}' is not a known control/default column.`
+          message: `Lookup control '${control.ident}' references '${parsed.targetName}', but foreign key '${parsed.foreignKey}' is not a known control/default column. ${splitInfo}`
         });
       }
     }
@@ -882,6 +883,22 @@ function trimTrailingPluralS(value: string): string {
   }
 
   return value.slice(0, -1);
+}
+
+function describeLookupIdentSplit(
+  ident: string,
+  candidates: Array<{ name: string; kind: "form" | "system" }>
+): string {
+  const parsed = parseLookupControlIdent(ident, candidates);
+  if (!parsed) {
+    return "Split: purpose=?, formOrTable=?, foreignKey=?. Primary table/form candidate not found.";
+  }
+
+  const idx = ident.lastIndexOf(parsed.targetName);
+  const purposeRaw = idx > 0 ? ident.slice(0, idx) : "";
+  const purpose = purposeRaw.length > 0 ? purposeRaw : "(empty)";
+  const foreignKey = parsed.foreignKey.length > 0 ? parsed.foreignKey : "(empty)";
+  return `Split: purpose='${purpose}', formOrTable='${parsed.targetName}', foreignKey='${foreignKey}'.`;
 }
 
 function withDidYouMean(message: string, typed: string | undefined, candidates: Iterable<string>): string {

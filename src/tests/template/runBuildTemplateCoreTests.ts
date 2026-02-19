@@ -195,6 +195,36 @@ function run(): void {
       expected: `<Form>{{Component:Missing/Comp,Section:S}}</Form>`
     },
     {
+      name: "component-root-template-is-preserved",
+      components: [
+        {
+          key: "Shared/Sample",
+          text: `
+<Component>
+  <Section Name="Controls" Insert="append" TargetXPath="//Component/Controls" Root="Component">
+    <Control Ident="Injected" />
+  </Section>
+</Component>`
+        }
+      ],
+      template: `
+<Component Ident="RuntimeComponent" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters">
+  <Usings>
+    <Using Component="Shared/Sample" />
+  </Usings>
+  <Controls>
+    <Control Ident="Base" />
+  </Controls>
+</Component>`,
+      expected: `
+<Component Ident="RuntimeComponent" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters">
+  <Controls>
+    <Control Ident="Base" />
+    <Control Ident="Injected" />
+  </Controls>
+</Component>`
+    },
+    {
       name: "using-placeholder-sections-are-skipped-during-using-phase",
       components: [
         {

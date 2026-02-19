@@ -80,7 +80,7 @@ export function renderTemplateText(
   out = expandIncludes(out, templateParams, context);
   out = applyUsingSections(out, templateParams, context);
   out = replaceComponentPlaceholders(out, templateParams, context, 0);
-  out = sanitizeFinalXml(out);
+  out = sanitizeFinalXml(out, context.templateRoot);
   out = normalizeXmlTagSpacingLikeLegacy(out);
   out = trimWhitespaceLikeLegacy(out);
   out = out.replace(/\uFEFF/g, "");
@@ -613,14 +613,17 @@ function normalizeComponentContent(text: string): string {
   return out;
 }
 
-function sanitizeFinalXml(text: string): string {
+function sanitizeFinalXml(text: string, templateRoot: string): string {
   // Keep XML declaration if present, remove accidental component wrappers, and normalize common self-closing style.
   const declMatch = /^\s*<\?xml[^>]*\?>/.exec(text);
   const decl = declMatch?.[0] ?? "";
   let out = text;
   out = out.replace(/<\?xml[^>]*\?>/g, "");
-  out = out.replace(/\s*<Component\b[^>]*xmlns:[^>]*>\s*/g, "");
-  out = out.replace(/\s*<\/Component>\s*/g, "");
+  const isComponentTemplate = templateRoot.localeCompare("Component", undefined, { sensitivity: "accent" }) === 0;
+  if (!isComponentTemplate) {
+    out = out.replace(/\s*<Component\b[^>]*xmlns:[^>]*>\s*/g, "");
+    out = out.replace(/\s*<\/Component>\s*/g, "");
+  }
   if (decl.length > 0) {
     return `${decl}${out}`;
   }

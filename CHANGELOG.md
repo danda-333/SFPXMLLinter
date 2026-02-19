@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.12
+
+- Template builder fix:
+  - preserved valid root `<Component>` templates during output sanitization.
+  - component-wrapper cleanup now runs only for non-`Component` template roots.
+- Added regression coverage for `Component`-root template rendering in template core tests.
+- Updated template fixture expectations for `ITSMKnowledgeBaseComponent.xml`.
+
 ## 0.0.11
 
 - SQL highlighting improvements:

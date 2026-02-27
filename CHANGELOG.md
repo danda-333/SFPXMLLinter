@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.13
+
+- Template builder line endings:
+  - output XML now preserves line endings from the source template file (`LF`/`CRLF`).
+- Template tests:
+  - added dedicated template service EOL regression tests (`test:templates:service`).
+  - template fixture comparison is now strict (`expected === actual`), including line endings.
+
 ## 0.0.12
 
 - Template builder fix:

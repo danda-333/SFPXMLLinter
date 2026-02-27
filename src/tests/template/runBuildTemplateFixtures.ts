@@ -49,7 +49,7 @@ function run(): void {
 
     const isExpectedDiff = expectedDiffSet.has(rel);
 
-    if (normalize(expectedText) === normalize(actualText)) {
+    if (expectedText === actualText) {
       if (isExpectedDiff) {
         failures++;
         console.error(`FAIL: ${rel}`);
@@ -112,74 +112,6 @@ function collectFiles(root: string, ext: string): string[] {
   walk(root);
   out.sort((a, b) => a.localeCompare(b));
   return out;
-}
-
-function normalize(value: string): string {
-  let out = value.replace(/\r\n/g, "\n");
-
-  // Compare SQL/HTML payload equivalently whether wrapped in CDATA or not.
-  out = out.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-
-  // Compare XML tags by semantic form (normalized whitespace/attribute spacing).
-  out = out.replace(/<\/?[\w:.-]+(?:\s+[^<>]*?)?\s*\/?>/g, (tag) => normalizeTagForComparison(tag));
-
-  // Compare escaped and non-escaped text content equivalently (e.g. script bodies).
-  out = decodeXmlEntitiesForComparison(out);
-
-  // Ignore pure indentation/blank-line differences in fixture parity checks.
-  const lines = out
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  return lines.join("\n").trimEnd();
-}
-
-function decodeXmlEntitiesForComparison(value: string): string {
-  return value
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
-}
-
-function normalizeTagForComparison(tag: string): string {
-  if (tag.startsWith("<?") || tag.startsWith("<!") || tag.startsWith("<!--")) {
-    return tag;
-  }
-
-  const isClosing = /^<\s*\//.test(tag);
-  const isSelfClosing = /\/\s*>$/.test(tag);
-  const nameMatch = /^<\s*\/?\s*([A-Za-z_][\w:.-]*)/.exec(tag);
-  const name = nameMatch?.[1] ?? "";
-  if (!name) {
-    return tag;
-  }
-
-  if (isClosing) {
-    return `</${name}>`;
-  }
-
-  const attrs: string[] = [];
-  const attrRegex = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-  for (const match of tag.matchAll(attrRegex)) {
-    const key = match[1] ?? "";
-    if (!key) {
-      continue;
-    }
-    if (typeof match[2] === "string") {
-      attrs.push(`${key}="${match[2]}"`);
-      continue;
-    }
-    attrs.push(`${key}='${match[3] ?? ""}'`);
-  }
-
-  const attrText = attrs.length > 0 ? ` ${attrs.join(" ")}` : "";
-  if (isSelfClosing) {
-    return `<${name}${attrText}/>`;
-  }
-  return `<${name}${attrText}>`;
 }
 
 function resetDirectory(dir: string): void {

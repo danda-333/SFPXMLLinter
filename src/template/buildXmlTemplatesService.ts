@@ -7,6 +7,7 @@ import {
   renderTemplateText,
   stripXmlComponentExtension
 } from "./buildXmlTemplatesCore";
+import { normalizeLineEndingsForTemplate } from "./lineEndings";
 
 interface BuildRunOptions {
   silent?: boolean;
@@ -99,7 +100,7 @@ export class BuildXmlTemplatesService {
 
       try {
         const templateText = await readWorkspaceTextFile(templateUri);
-        const rendered = renderTemplateText(templateText, componentLibrary);
+        const rendered = normalizeLineEndingsForTemplate(renderTemplateText(templateText, componentLibrary), templateText);
         const outputUri = templateToRuntimeUri(templateUri);
         const existing = await readWorkspaceTextFile(outputUri).catch(() => undefined);
 

@@ -225,6 +225,40 @@ function run(): void {
 </Component>`
     },
     {
+      name: "nested-sfp-component-inside-form-is-preserved",
+      components: [
+        {
+          key: "Common/KnowledgeBase",
+          text: `
+<Component>
+  <Section Root="Form" Name="Component" TargetXPath="//Form/Components" Insert="append">
+    <Component ComponentIdent="ITSMKnowledgeBaseComponent" Ident="ITSMKnowledgeBase">
+      <KnowledgeBaseTree CountSectionIdent="KnowledgeBaseSection" Type="ArticleOnly" />
+    </Component>
+  </Section>
+</Component>`
+        }
+      ],
+      template: `
+<Form Ident="ITSMInovation">
+  <Usings>
+    <Using Component="Common/KnowledgeBase" />
+  </Usings>
+  <Components>
+    <Component ComponentIdent="TimeLineComponent" Ident="TimeLine" />
+  </Components>
+</Form>`,
+      expected: `
+<Form Ident="ITSMInovation">
+  <Components>
+    <Component ComponentIdent="TimeLineComponent" Ident="TimeLine" />
+    <Component ComponentIdent="ITSMKnowledgeBaseComponent" Ident="ITSMKnowledgeBase">
+      <KnowledgeBaseTree CountSectionIdent="KnowledgeBaseSection" Type="ArticleOnly" />
+    </Component>
+  </Components>
+</Form>`
+    },
+    {
       name: "using-placeholder-sections-are-skipped-during-using-phase",
       components: [
         {

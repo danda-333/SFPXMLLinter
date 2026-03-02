@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.14
+
+- Template builder `Component` collision fix:
+  - fixed case where SFP runtime `<Component>...</Component>` inside a form was corrupted by templating cleanup.
+  - outer templating `<Component>` wrapper stripping is now limited to the actual root wrapper only and no longer removes nested SFP component closing tags.
+- Added regression coverage for nested SFP component rendering inside form template components.
+
 ## 0.0.13
 
 - Template builder line endings:

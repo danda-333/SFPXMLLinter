@@ -621,13 +621,37 @@ function sanitizeFinalXml(text: string, templateRoot: string): string {
   out = out.replace(/<\?xml[^>]*\?>/g, "");
   const isComponentTemplate = templateRoot.localeCompare("Component", undefined, { sensitivity: "accent" }) === 0;
   if (!isComponentTemplate) {
-    out = out.replace(/\s*<Component\b[^>]*xmlns:[^>]*>\s*/g, "");
-    out = out.replace(/\s*<\/Component>\s*/g, "");
+    out = stripOuterComponentWrapper(out);
   }
   if (decl.length > 0) {
     return `${decl}${out}`;
   }
   return out;
+}
+
+function stripOuterComponentWrapper(text: string): string {
+  const trimmedStart = text.trimStart();
+  if (!/^<Component\b/i.test(trimmedStart)) {
+    return text;
+  }
+
+  const offset = text.length - trimmedStart.length;
+  const startEnd = text.indexOf(">", offset);
+  if (startEnd < 0) {
+    return text;
+  }
+
+  const trimmedEnd = text.trimEnd();
+  if (!/<\/Component>\s*$/i.test(trimmedEnd)) {
+    return text;
+  }
+
+  const endStart = text.lastIndexOf("</Component>");
+  if (endStart <= startEnd) {
+    return text;
+  }
+
+  return `${text.slice(0, offset)}${text.slice(startEnd + 1, endStart)}${text.slice(endStart + "</Component>".length)}`;
 }
 
 function normalizeXmlTagSpacingLikeLegacy(text: string): string {

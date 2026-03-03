@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.16
+
+- VSIX packaging fix:
+  - included runtime dependencies `@xmldom/xmldom` and `xpath` in the packaged extension.
+  - fixes activation failure `Cannot find module '@xmldom/xmldom'` after installing the VSIX.
+
 ## 0.0.15
 
 - Template builder XPath targeting:

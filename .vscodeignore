@@ -1,5 +1,8 @@
 .vscode/**
 node_modules/**
+!node_modules/@xmldom/**
+!node_modules/@xmldom/xmldom/**
+!node_modules/xpath/**
 src/**
 tests/**
 Scripts/**

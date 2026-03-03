@@ -66,6 +66,11 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - Build command:
   - `SFP XML Linter: Build XML Templates`
   - Native TypeScript `BuildXmlTemplates` builder (no PowerShell fallback)
+  - `TargetXPath` is evaluated as real XPath during section insertion
+  - if multiple nodes match:
+    - first match is used by default
+    - `AllowMultipleInserts="true"` applies the insert to all matches
+    - build log prints a debug line for the multi-match case
   - Placeholder sections support custom inline params:
     - `{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}`
     - enables replacements inside inserted section content (e.g. `{{CustomParam}}`)

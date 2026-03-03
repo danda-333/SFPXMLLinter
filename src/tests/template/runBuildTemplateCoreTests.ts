@@ -7,6 +7,7 @@ interface Case {
   template: string;
   expected: string;
   maxDepth?: number;
+  expectedDebugLogs?: string[];
 }
 
 function run(): void {
@@ -110,6 +111,81 @@ function run(): void {
   </Target>
   <After />
 </Form>`
+    },
+    {
+      name: "xpath-multiple-matches-use-first-by-default",
+      components: [
+        {
+          key: "Common/MultiFirst",
+          text: `
+<Component>
+  <Section Name="S" Root="Form" TargetXPath="//Form/Controls | //Form/Buttons" Insert="append">
+    <Inserted />
+  </Section>
+</Component>`
+        }
+      ],
+      template: `
+<Form>
+  <Usings>
+    <Using Component="Common/MultiFirst" />
+  </Usings>
+  <Controls>
+    <Control Ident="Base" />
+  </Controls>
+  <Buttons>
+    <Button Ident="SaveButton" />
+  </Buttons>
+</Form>`,
+      expected: `
+<Form>
+  <Controls>
+    <Control Ident="Base" />
+    <Inserted />
+  </Controls>
+  <Buttons>
+    <Button Ident="SaveButton" />
+  </Buttons>
+</Form>`,
+      expectedDebugLogs: ["[TargetXPath] '//Form/Controls | //Form/Buttons' matched 2 nodes; using first match only"]
+    },
+    {
+      name: "xpath-multiple-matches-allow-multiple-inserts",
+      components: [
+        {
+          key: "Common/MultiAll",
+          text: `
+<Component>
+  <Section Name="S" Root="Form" TargetXPath="//Form/Controls | //Form/Buttons" Insert="append" AllowMultipleInserts="true">
+    <Inserted />
+  </Section>
+</Component>`
+        }
+      ],
+      template: `
+<Form>
+  <Usings>
+    <Using Component="Common/MultiAll" />
+  </Usings>
+  <Controls>
+    <Control Ident="Base" />
+  </Controls>
+  <Buttons>
+    <Button Ident="SaveButton" />
+  </Buttons>
+</Form>`,
+      expected: `
+<Form>
+  <Controls>
+    <Control Ident="Base" />
+    <Inserted />
+  </Controls>
+  <Buttons>
+    <Button Ident="SaveButton" />
+    <Inserted />
+  </Buttons>
+</Form>`,
+      expectedDebugLogs: ["[TargetXPath] '//Form/Controls | //Form/Buttons' matched 2 nodes; applying to all matches"]
     },
     {
       name: "include-with-section-and-params",
@@ -289,8 +365,12 @@ function run(): void {
   for (const c of cases) {
     try {
       const library = buildComponentLibrary(c.components);
-      const actual = renderTemplateText(c.template, library, c.maxDepth ?? 12);
+      const debugLogs: string[] = [];
+      const actual = renderTemplateText(c.template, library, c.maxDepth ?? 12, (line) => debugLogs.push(line));
       assert.equal(normalize(actual), normalize(c.expected));
+      if (c.expectedDebugLogs) {
+        assert.deepEqual(debugLogs, c.expectedDebugLogs);
+      }
       console.log(`PASS: ${c.name}`);
     } catch (error) {
       failures++;

@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -270,5 +270,9 @@
     "@types/node": "^20.14.10",
     "@types/vscode": "^1.90.0",
     "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.8.11",
+    "xpath": "^0.0.34"
   }
 }

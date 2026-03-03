@@ -1,3 +1,6 @@
+import { DOMParser } from "@xmldom/xmldom";
+import * as xpath from "xpath";
+
 export interface ComponentSource {
   key: string;
   text: string;
@@ -13,6 +16,7 @@ interface ComponentSection {
   name?: string;
   insert?: string;
   targetXPath?: string;
+  allowMultipleInserts?: boolean;
   root?: string;
   content: string;
 }
@@ -26,6 +30,7 @@ interface RenderContext {
   library: BuildComponentLibrary;
   maxDepth: number;
   templateRoot: string;
+  onDebugLog?: (line: string) => void;
 }
 
 interface UsingDirective {
@@ -65,13 +70,15 @@ export function buildComponentLibrary(sources: readonly ComponentSource[]): Buil
 export function renderTemplateText(
   templateText: string,
   library: BuildComponentLibrary,
-  maxDepth = 12
+  maxDepth = 12,
+  onDebugLog?: (line: string) => void
 ): string {
   const normalizedTemplate = templateText.replace(/^\uFEFF/, "");
   const context: RenderContext = {
     library,
     maxDepth,
-    templateRoot: detectRootTagName(normalizedTemplate)
+    templateRoot: detectRootTagName(normalizedTemplate),
+    onDebugLog
   };
 
   const templateParams = buildTemplateParams(normalizedTemplate);
@@ -252,7 +259,7 @@ function applyUsingSections(text: string, templateParams: Map<string, string>, c
       }
 
       const renderedInner = replaceComponentPlaceholders(applyParamSubstitution(section.content, params), params, context, 1);
-      out = insertSectionContent(out, section, renderedInner);
+      out = insertSectionContent(out, section, renderedInner, context);
     }
   }
 
@@ -347,6 +354,7 @@ function parseComponentSections(text: string): ComponentSection[] {
           name: attrs.get("Name"),
           insert: attrs.get("Insert"),
           targetXPath: attrs.get("TargetXPath"),
+          allowMultipleInserts: parseBooleanAttribute(attrs.get("AllowMultipleInserts")),
           root: attrs.get("Root"),
           content: ""
         });
@@ -367,6 +375,7 @@ function parseComponentSections(text: string): ComponentSection[] {
         name: attrs.get("Name"),
         insert: attrs.get("Insert"),
         targetXPath: attrs.get("TargetXPath"),
+        allowMultipleInserts: parseBooleanAttribute(attrs.get("AllowMultipleInserts")),
         root: attrs.get("Root"),
         content: text.slice(currentContentStart, start)
       });
@@ -387,99 +396,251 @@ function pickComponentSection(sections: readonly ComponentSection[], requestedNa
   return sections.find((s) => (s.insert ?? "").toLowerCase() === "placeholder") ?? sections[0];
 }
 
-function insertSectionContent(text: string, section: ComponentSection, content: string): string {
-  const targetTag = resolveTargetTagName(section);
-  if (!targetTag) {
+function insertSectionContent(text: string, section: ComponentSection, content: string, context?: RenderContext): string {
+  const targetXPath = section.targetXPath?.trim() ?? "";
+  if (targetXPath.length === 0) {
     return text;
   }
 
-  const range = findTagRange(text, targetTag);
-  if (!range) {
+  const ranges = findTargetRanges(text, targetXPath, context);
+  if (ranges.length === 0) {
     return text;
+  }
+
+  if (ranges.length > 1 && context?.onDebugLog) {
+    context.onDebugLog(
+      `[TargetXPath] '${targetXPath}' matched ${ranges.length} nodes; ` +
+      `${section.allowMultipleInserts ? "applying to all matches" : "using first match only"}`
+    );
   }
 
   const insertMode = (section.insert ?? "append").toLowerCase();
-  if (insertMode === "prepend") {
-    const insertAt = range.openEnd;
-    return text.slice(0, insertAt) + content + text.slice(insertAt);
+  const applicableRanges = section.allowMultipleInserts ? ranges : [ranges[0]];
+  const sortedRanges = [...applicableRanges].sort((a, b) => insertionPointForMode(b, insertMode) - insertionPointForMode(a, insertMode));
+
+  let out = text;
+  for (const range of sortedRanges) {
+    if (insertMode === "prepend") {
+      out = out.slice(0, range.openEnd) + content + out.slice(range.openEnd);
+      continue;
+    }
+    if (insertMode === "before") {
+      out = out.slice(0, range.openStart) + content + out.slice(range.openStart);
+      continue;
+    }
+    if (insertMode === "after") {
+      out = out.slice(0, range.closeEnd) + content + out.slice(range.closeEnd);
+      continue;
+    }
+    out = out.slice(0, range.closeStart) + content + out.slice(range.closeStart);
   }
 
-  if (insertMode === "before") {
-    return text.slice(0, range.openStart) + content + text.slice(range.openStart);
-  }
-
-  if (insertMode === "after") {
-    return text.slice(0, range.closeEnd) + content + text.slice(range.closeEnd);
-  }
-
-  return text.slice(0, range.closeStart) + content + text.slice(range.closeStart);
+  return out;
 }
 
-function resolveTargetTagName(section: ComponentSection): string | undefined {
-  const xpath = section.targetXPath?.trim() ?? "";
-  if (xpath.length > 0) {
-    const parts = xpath.split("/").map((p) => p.trim()).filter((p) => p.length > 0 && p !== "/");
-    const last = parts.at(-1);
-    if (last) {
-      const clean = last.replace(/^\/*/, "").replace(/\[.*$/, "");
-      if (clean.length > 0) {
-        return clean;
+function insertionPointForMode(
+  range: { openStart: number; openEnd: number; closeStart: number; closeEnd: number },
+  insertMode: string
+): number {
+  if (insertMode === "prepend") {
+    return range.openEnd;
+  }
+  if (insertMode === "before") {
+    return range.openStart;
+  }
+  if (insertMode === "after") {
+    return range.closeEnd;
+  }
+  return range.closeStart;
+}
+
+function findTargetRanges(
+  text: string,
+  targetXPath: string,
+  context?: RenderContext
+): Array<{ openStart: number; openEnd: number; closeStart: number; closeEnd: number }> {
+  try {
+    const document = new DOMParser({
+      errorHandler: {
+        warning: () => undefined,
+        error: () => undefined,
+        fatalError: () => undefined
+      }
+    }).parseFromString(text, "text/xml");
+    const selected = xpath.select(targetXPath, document);
+    const selectedNodes = Array.isArray(selected) ? selected : [selected];
+    const matches = selectedNodes.filter(isElementNode);
+    if (matches.length === 0) {
+      return [];
+    }
+
+    const rangeBySignature = buildRangeBySignature(text);
+    const out: Array<{ openStart: number; openEnd: number; closeStart: number; closeEnd: number }> = [];
+    for (const match of matches) {
+      const signature = buildDomNodeSignature(match);
+      if (!signature) {
+        continue;
+      }
+      const range = rangeBySignature.get(signature);
+      if (range) {
+        out.push(range);
+      } else if (context?.onDebugLog) {
+        context.onDebugLog(`[TargetXPath] unable to map XPath match '${targetXPath}' back to source range (${signature}).`);
       }
     }
+    return out;
+  } catch (error) {
+    if (context?.onDebugLog) {
+      const message = error instanceof Error ? error.message : String(error);
+      context.onDebugLog(`[TargetXPath] '${targetXPath}' evaluation failed: ${message}`);
+    }
+    return [];
+  }
+}
+
+interface RangeNode {
+  name: string;
+  openStart: number;
+  openEnd: number;
+  closeStart: number;
+  closeEnd: number;
+  elementIndex: number;
+  parent?: RangeNode;
+  children: RangeNode[];
+}
+
+function buildRangeBySignature(text: string): Map<string, { openStart: number; openEnd: number; closeStart: number; closeEnd: number }> {
+  const rootNodes = parseRangeNodes(text);
+  const out = new Map<string, { openStart: number; openEnd: number; closeStart: number; closeEnd: number }>();
+  const walk = (node: RangeNode): void => {
+    out.set(buildRangeNodeSignature(node), {
+      openStart: node.openStart,
+      openEnd: node.openEnd,
+      closeStart: node.closeStart,
+      closeEnd: node.closeEnd
+    });
+    for (const child of node.children) {
+      walk(child);
+    }
+  };
+  for (const node of rootNodes) {
+    walk(node);
+  }
+  return out;
+}
+
+function parseRangeNodes(text: string): RangeNode[] {
+  const tokenRegex = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<!DOCTYPE[\s\S]*?>|<\/?[A-Za-z_][\w:.-]*\b[^>]*?>/gi;
+  const roots: RangeNode[] = [];
+  const stack: RangeNode[] = [];
+
+  for (const match of text.matchAll(tokenRegex)) {
+    const token = match[0] ?? "";
+    const start = typeof match.index === "number" ? match.index : -1;
+    if (start < 0) {
+      continue;
+    }
+    if (token.startsWith("<!--") || token.startsWith("<![CDATA[") || token.startsWith("<?") || token.startsWith("<!DOCTYPE")) {
+      continue;
+    }
+
+    const isClosing = /^<\s*\//.test(token);
+    const isSelfClosing = /\/\s*>$/.test(token);
+    const nameMatch = /^<\s*\/?\s*([A-Za-z_][\w:.-]*)/.exec(token);
+    const name = nameMatch?.[1] ?? "";
+    if (!name) {
+      continue;
+    }
+
+    const end = start + token.length;
+    if (!isClosing) {
+      const parent: RangeNode | undefined = stack.at(-1);
+      const node: RangeNode = {
+        name,
+        openStart: start,
+        openEnd: end,
+        closeStart: start,
+        closeEnd: end,
+        elementIndex: parent ? parent.children.length + 1 : roots.length + 1,
+        parent,
+        children: []
+      };
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        roots.push(node);
+      }
+      if (!isSelfClosing) {
+        stack.push(node);
+      }
+      continue;
+    }
+
+    for (let i = stack.length - 1; i >= 0; i--) {
+      if (stack[i].name !== name) {
+        continue;
+      }
+      stack[i].closeStart = start;
+      stack[i].closeEnd = end;
+      stack.length = i;
+      break;
+    }
+  }
+
+  return roots;
+}
+
+function buildRangeNodeSignature(node: RangeNode): string {
+  const parts: string[] = [];
+  let current: RangeNode | undefined = node;
+  while (current) {
+    parts.push(`${current.name}[${current.elementIndex}]`);
+    current = current.parent;
+  }
+  return parts.reverse().join("/");
+}
+
+function buildDomNodeSignature(node: Node): string | undefined {
+  const parts: string[] = [];
+  let current: Node | null = node;
+  while (current && current.nodeType === current.ELEMENT_NODE) {
+    const currentElement: Node = current;
+    const parent: Node | null = currentElement.parentNode;
+    let elementIndex = 1;
+    if (parent) {
+      for (let sibling = parent.firstChild; sibling && sibling !== currentElement; sibling = sibling.nextSibling) {
+        if (sibling.nodeType === sibling.ELEMENT_NODE) {
+          elementIndex++;
+        }
+      }
+    }
+    parts.push(`${currentElement.nodeName}[${elementIndex}]`);
+    current = parent;
+    if (current?.nodeType === 9) {
+      break;
+    }
+  }
+  return parts.length > 0 ? parts.reverse().join("/") : undefined;
+}
+
+function isElementNode(value: unknown): value is Node {
+  return Boolean(value) && typeof value === "object" && "nodeType" in (value as Record<string, unknown>) && (value as Node).nodeType === 1;
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
   }
 
   return undefined;
-}
-
-function findTagRange(text: string, tagName: string): { openStart: number; openEnd: number; closeStart: number; closeEnd: number } | undefined {
-  const escaped = escapeRegex(tagName);
-  const openRegex = new RegExp(`<\\s*${escaped}(?=\\s|>|/)`, "i");
-  const openMatch = openRegex.exec(text);
-  if (!openMatch || openMatch.index < 0) {
-    return undefined;
-  }
-
-  const openStart = openMatch.index;
-  const openEnd = text.indexOf(">", openStart);
-  if (openEnd < 0) {
-    return undefined;
-  }
-
-  const fullTagRegex = new RegExp(`<\\s*(/)?\\s*${escaped}(?=\\s|>|/)[^>]*>`, "gi");
-  fullTagRegex.lastIndex = openStart;
-
-  let depth = 0;
-  let closeStart = -1;
-  let closeEnd = -1;
-  for (;;) {
-    const match = fullTagRegex.exec(text);
-    if (!match || match.index < 0) {
-      break;
-    }
-
-    const token = match[0];
-    const isClosing = Boolean(match[1]);
-    const isSelfClosing = /\/\s*>$/.test(token);
-    if (!isClosing) {
-      depth++;
-      if (isSelfClosing) {
-        depth--;
-      }
-    } else {
-      depth--;
-      if (depth === 0) {
-        closeStart = match.index;
-        closeEnd = match.index + token.length;
-        break;
-      }
-    }
-  }
-
-  if (closeStart < 0 || closeEnd < 0) {
-    return undefined;
-  }
-
-  return { openStart, openEnd: openEnd + 1, closeStart, closeEnd };
 }
 
 function buildTemplateParams(text: string): Map<string, string> {

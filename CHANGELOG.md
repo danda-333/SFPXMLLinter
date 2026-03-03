@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.15
+
+- Template builder XPath targeting:
+  - replaced legacy pseudo-`TargetXPath` matching with real XPath evaluation.
+  - when multiple nodes match, builder now logs a debug message and uses the first match by default.
+  - added `AllowMultipleInserts="true"` for template component sections to apply one insert to all matched nodes (for example XPath unions using `|`).
+- Template builder internals:
+  - build output now surfaces XPath debug lines in the build log.
+- Added regression coverage for:
+  - multi-match XPath first-result behavior
+  - multi-match XPath insertion with `AllowMultipleInserts`
+
 ## 0.0.14
 
 - Template builder `Component` collision fix:

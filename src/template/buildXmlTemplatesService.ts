@@ -100,7 +100,10 @@ export class BuildXmlTemplatesService {
 
       try {
         const templateText = await readWorkspaceTextFile(templateUri);
-        const rendered = normalizeLineEndingsForTemplate(renderTemplateText(templateText, componentLibrary), templateText);
+        const rendered = normalizeLineEndingsForTemplate(
+          renderTemplateText(templateText, componentLibrary, 12, (line) => options.onLogLine?.(`DEBUG: ${line}`)),
+          templateText
+        );
         const outputUri = templateToRuntimeUri(templateUri);
         const existing = await readWorkspaceTextFile(outputUri).catch(() => undefined);
 

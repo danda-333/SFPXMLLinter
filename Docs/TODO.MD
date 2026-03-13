@@ -18,3 +18,6 @@ Sem budeme prubezne zapisovat vylepseni pro pozdejsi implementaci.
 7. Opravit bug indexace, nekdy se deje ze se nektere soubory nezaindexuji (podezreni na castecny update indexu pri pridani using)
 8. Implementovat validace pro zastupne znaky v SQL
 9. Paralelizovat validacni worker (batch/worker pool) pro rychlejsi full revalidaci velkych projektu
+10. Pridat moznost sdilet `Using` dle formulare (pro `WorkFlow` a `DataView`).
+11. Pridat moznost programove definovatelnych komponent (napr. JS logika typu: pokud existuje sloupec `xy`, pridat do komponenty `yz`).
+12. Umoznit templating i nad existujicim zakladnim XML modelem, tedy nejen append/inject, ale i modifikaci, merge a mazani casti XML.

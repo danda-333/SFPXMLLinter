@@ -1,0 +1,473 @@
+{
+  "source": "sfpdocs MCP get_xml_model",
+  "scope": "root-and-first-level",
+  "models": [
+    {
+      "name": "ActionAreaData",
+      "root": "ActionAreaData",
+      "attributes": [
+        "Ident",
+        "Title",
+        "TitleResourceKey",
+        "FormIdent",
+        "ButtonIdent",
+        "IsRazorEngine",
+        "SuccessTitle",
+        "SuccessTitleResourceKey"
+      ],
+      "elements": [
+        { "name": "DataSource", "kind": "object", "type": "DataSource" },
+        { "name": "HTMLTemplate", "kind": "string" },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "MappingDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" }
+      ]
+    },
+    {
+      "name": "AutomaticOperation",
+      "root": "AutomaticOperation",
+      "attributes": [
+        "Ident",
+        "FormIdent",
+        "IsOnlyWorkFlowAction",
+        "IsComputePermission"
+      ],
+      "elements": [
+        { "name": "Source", "kind": "object", "type": "DataSource" },
+        { "name": "Actions", "kind": "list", "itemType": "Action", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" }
+      ]
+    },
+    {
+      "name": "Component",
+      "root": "Component",
+      "attributes": [
+        "Ident"
+      ],
+      "elements": [
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DenyPermissions", "kind": "list", "itemType": "String" },
+        { "name": "CssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "JavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "Setting", "kind": "object", "type": "ComponentSetting" },
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "Configuration",
+      "root": "Configuration",
+      "attributes": [
+        "Ident"
+      ],
+      "elements": [
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "Course",
+      "root": "Course",
+      "attributes": [
+        "Ident",
+        "FormIdent",
+        "IsRazorEngine",
+        "IsShowFinishButton",
+        "IsDefaultLayout"
+      ],
+      "elements": [
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true },
+        { "name": "Source", "kind": "object", "type": "DataSource" },
+        { "name": "HTMLTemplate", "kind": "string" },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "ExternalCssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "ExternalJavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "FinishCondition", "kind": "object", "type": "DataSource" },
+        { "name": "DictionaryHintDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "CourseStateDataSource", "kind": "object", "type": "DataSource" }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "root": "Dashboard",
+      "attributes": [
+        "Ident",
+        "SegmentType",
+        "IsRazorEngine",
+        "IsShowMenu"
+      ],
+      "elements": [
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DenyPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DataPermissions", "kind": "list", "itemType": "String" },
+        { "name": "Widgets", "kind": "list", "itemType": "Widget", "polymorphic": true },
+        { "name": "HTMLTemplate", "kind": "string" },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "Controls", "kind": "list", "itemType": "Control", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "ExternalCssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "ExternalJavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "Components", "kind": "list", "itemType": "RegistrationComponent", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "DataMonitor",
+      "root": "DataMonitor",
+      "inherits": "Dashboard",
+      "attributes": [
+        "Ident",
+        "IsRazorEngine",
+        "IsShowMenu"
+      ],
+      "elements": [
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DenyPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DataPermissions", "kind": "list", "itemType": "String" },
+        { "name": "Widgets", "kind": "list", "itemType": "Widget", "polymorphic": true },
+        { "name": "HTMLTemplate", "kind": "string" },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "ExternalCssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "ExternalJavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "Components", "kind": "list", "itemType": "RegistrationComponent", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "DataView",
+      "root": "DataView",
+      "attributes": [
+        "MenuType",
+        "IsHiddenMenu",
+        "ViewType",
+        "Ident",
+        "IconCssClass",
+        "IconColor",
+        "IsSystem",
+        "CountColorCssClass",
+        "IsDynamicCountColor",
+        "SegmentType",
+        "ShareFilterIdent",
+        "ShareColumnSettingIdent",
+        "Priority",
+        "IsVisible",
+        "Title",
+        "TitleResourceKey",
+        "ToolTip",
+        "ToolTipResourceKey",
+        "GroupTitle",
+        "GroupTitleResourceKey",
+        "IsAutoOpenFirst",
+        "DefaultFilterIdent",
+        "ActionAreaDataIdent",
+        "IsCheckBox",
+        "FolderGroupSegmentIdent",
+        "IsManualPaging",
+        "IsGeneratePaging",
+        "IsDetail",
+        "IsAutoRefresh",
+        "AutoRefreshInterval",
+        "IsCountAutoRefresh",
+        "CountAutoRefreshInterval",
+        "IsResultList",
+        "IsRazorEngine",
+        "IsSegmentFilter",
+        "IsMenuCount"
+      ],
+      "elements": [
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "QueryStringDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DenyPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DataSource", "kind": "object", "type": "DataSource" },
+        { "name": "HeadDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "RowDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "CountDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "Exports", "kind": "list", "itemType": "DataSource", "polymorphic": true },
+        { "name": "Buttons", "kind": "list", "itemType": "Button", "polymorphic": true },
+        { "name": "Filter", "kind": "object", "type": "Filter" },
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true },
+        { "name": "HTMLTemplate", "kind": "string" },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "BreadcrumbSource", "kind": "object", "type": "DataSource" },
+        { "name": "ExternalCssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "ExternalJavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "Variables", "kind": "list", "itemType": "IdentValue", "polymorphic": true },
+        { "name": "QueryStringData", "kind": "list", "itemType": "DataItem" },
+        { "name": "Components", "kind": "list", "itemType": "RegistrationComponent", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "Filter",
+      "root": "Filter",
+      "attributes": [
+        "Ident",
+        "Description",
+        "DescriptionResourceKey",
+        "SetButtonTitle",
+        "SetButtonTitleResourceKey",
+        "OpenButtonTitle",
+        "OpenButtonTitleResourceKey",
+        "IsAdvancedSetting",
+        "IsClickOutsideClose",
+        "IsApplyImmediately",
+        "IsShowButton",
+        "IsShowSelected",
+        "IsOnlyQueryString",
+        "IsSave",
+        "Priority",
+        "IsSegmnetFilterToStorageIdent",
+        "FilterRenderType"
+      ],
+      "elements": [
+        { "name": "Controls", "kind": "list", "itemType": "Control", "polymorphic": true },
+        { "name": "ExtensionControls", "kind": "list", "itemType": "Control", "polymorphic": true },
+        { "name": "FullText", "kind": "object", "type": "FullTextFilter" },
+        { "name": "ResultList", "kind": "object", "type": "ResultListFilter" },
+        { "name": "SelectedRow", "kind": "object", "type": "SelectedRowFilter" },
+        { "name": "DirectFilterControls", "kind": "list", "itemType": "Control", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "Form",
+      "root": "Form",
+      "attributes": [
+        "IsFolderTreePermission",
+        "IsPublic",
+        "IsPaging",
+        "IsPublicTokenRequired",
+        "IsOnlyPublicUser",
+        "IsReCaptcha",
+        "LayoutType",
+        "PublicUserLogin",
+        "IsUnloadConfirm",
+        "Ident",
+        "MainIdent",
+        "SegmentType",
+        "FormType",
+        "FolderLevel",
+        "FolderGroupSegmentIdent",
+        "IsSubForm",
+        "IsSubFormDetailOpenAsForm",
+        "Title",
+        "TitleResourceKey",
+        "IsRazorEngine",
+        "IsOverwriteCheck",
+        "IsDebug",
+        "IsCache",
+        "CacheAbsoluteExpiration",
+        "Width",
+        "IsCreateTable"
+      ],
+      "elements": [
+        { "name": "QueryStringRemoveParameters", "kind": "list", "itemType": "String" },
+        { "name": "DataPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DynamicPermission", "kind": "object", "type": "DataSource" },
+        { "name": "CreatePermissions", "kind": "list", "itemType": "String" },
+        { "name": "AccessToken", "kind": "object", "type": "DataSource" },
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true },
+        { "name": "Buttons", "kind": "list", "itemType": "Button", "polymorphic": true },
+        { "name": "Controls", "kind": "list", "itemType": "Control", "polymorphic": true },
+        { "name": "SLACriteriaControls", "kind": "list", "itemType": "Control", "polymorphic": true },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "Indexes", "kind": "list", "itemType": "Index", "polymorphic": true },
+        { "name": "Sequences", "kind": "list", "itemType": "Sequence", "polymorphic": true },
+        { "name": "Imports", "kind": "list", "itemType": "Import", "polymorphic": true },
+        { "name": "BreadcrumbSource", "kind": "object", "type": "DataSource" },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "ExternalCssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "ExternalJavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "SetSegmentFilterDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "Components", "kind": "list", "itemType": "RegistrationComponent", "polymorphic": true },
+        { "name": "Wizard", "kind": "object", "type": "Wizard" }
+      ]
+    },
+    {
+      "name": "Library",
+      "root": "Library",
+      "attributes": [
+        "Ident",
+        "LibraryType"
+      ],
+      "elements": [
+        { "name": "Description", "kind": "string" },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "Command", "kind": "string" }
+      ]
+    },
+    {
+      "name": "MasterPageWeb",
+      "root": "MasterPageWeb",
+      "attributes": [
+        "Ident",
+        "PackageIdents",
+        "MasterPageIdent"
+      ],
+      "elements": [
+        { "name": "Renders", "kind": "list", "itemType": "Render", "polymorphic": true },
+        { "name": "Widgets", "kind": "list", "itemType": "Widget", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "Package",
+      "root": "Package",
+      "attributes": [
+        "Ident"
+      ],
+      "elements": [
+        { "name": "Sources", "kind": "list", "itemType": "String" }
+      ]
+    },
+    {
+      "name": "PageWeb",
+      "root": "PageWeb",
+      "attributes": [
+        "Ident",
+        "PackageIdents",
+        "MasterPageIdent"
+      ],
+      "elements": [
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true },
+        { "name": "Widgets", "kind": "list", "itemType": "Widget", "polymorphic": true },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "PartialRender",
+      "root": "PartialRender",
+      "attributes": [
+        "Ident"
+      ],
+      "elements": [
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DenyPermissions", "kind": "list", "itemType": "String" },
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "Report",
+      "root": "Report",
+      "attributes": [
+        "Ident",
+        "SegmentType",
+        "Priority",
+        "IsVisible",
+        "IsReportBuilder",
+        "CssClass",
+        "Color",
+        "Title",
+        "TitleResourceKey",
+        "Description",
+        "DescriptionResourceKey",
+        "DescriptionUnderLine",
+        "DescriptionUnderLineResourceKey",
+        "DefaultFilterIdent",
+        "IsRazorEngine",
+        "IsFilterRequired",
+        "IsDefaultPDFExport",
+        "IsWebData"
+      ],
+      "elements": [
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DenyPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DataPermissions", "kind": "list", "itemType": "String" },
+        { "name": "AccessDataSource", "kind": "object", "type": "DataSource" },
+        { "name": "Sections", "kind": "list", "itemType": "Section", "polymorphic": true },
+        { "name": "Filter", "kind": "object", "type": "Filter" },
+        { "name": "Exports", "kind": "list", "itemType": "DataSource", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "ColumnSettings", "kind": "list", "itemType": "Column", "polymorphic": true },
+        { "name": "ExternalCssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "ExternalJavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "Widgets", "kind": "list", "itemType": "Widget", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "ShareWidgetWeb",
+      "root": "ShareWidgetWeb",
+      "attributes": [
+        "Ident",
+        "PackageIdents"
+      ],
+      "elements": [
+        { "name": "Widgets", "kind": "list", "itemType": "Widget", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "TaskScheduler",
+      "root": "TaskScheduler",
+      "attributes": [
+        "Ident",
+        "Title",
+        "TitleResourceKey",
+        "LogPath",
+        "EncryptType",
+        "IsRunUnderDiffUser"
+      ],
+      "elements": [
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "Scheduler", "kind": "object", "type": "Scheduler" },
+        { "name": "RunApps", "kind": "list", "itemType": "RunApp", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "Variable",
+      "root": "Variable",
+      "attributes": [
+        "Ident"
+      ],
+      "elements": [
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "Items", "kind": "list", "itemType": "Item", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "WebViewWidget",
+      "root": "WebViewWidget",
+      "inherits": "Dashboard",
+      "attributes": [
+        "Ident",
+        "IsRazorEngine",
+        "IsShowMenu"
+      ],
+      "elements": [
+        { "name": "AccessPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DenyPermissions", "kind": "list", "itemType": "String" },
+        { "name": "DataPermissions", "kind": "list", "itemType": "String" },
+        { "name": "Widgets", "kind": "list", "itemType": "Widget", "polymorphic": true },
+        { "name": "HTMLTemplate", "kind": "string" },
+        { "name": "Settings", "kind": "list", "itemType": "Setting", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "ExternalCssRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "ExternalJavaScriptRelativePaths", "kind": "list", "itemType": "String" },
+        { "name": "Components", "kind": "list", "itemType": "RegistrationComponent", "polymorphic": true }
+      ]
+    },
+    {
+      "name": "WorkFlow",
+      "root": "WorkFlow",
+      "attributes": [
+        "Ident",
+        "StartState",
+        "DeleteState",
+        "FormIdent"
+      ],
+      "elements": [
+        { "name": "Steps", "kind": "list", "itemType": "Step", "polymorphic": true },
+        { "name": "Definition", "kind": "object", "type": "Definition" },
+        { "name": "GlobalActions", "kind": "list", "itemType": "Action", "polymorphic": true },
+        { "name": "GlobalJavaScripts", "kind": "list", "itemType": "JavaScript", "polymorphic": true },
+        { "name": "ActionShareCodes", "kind": "list", "itemType": "ActionShareCode", "polymorphic": true },
+        { "name": "ButtonShareCodes", "kind": "list", "itemType": "ButtonShareCode", "polymorphic": true },
+        { "name": "ControlShareCodes", "kind": "list", "itemType": "ControlShareCode", "polymorphic": true },
+        { "name": "JavaScriptShareCodes", "kind": "list", "itemType": "JavaScriptShareCode", "polymorphic": true },
+        { "name": "PackageIdents", "kind": "list", "itemType": "String" },
+        { "name": "ControlDataSource", "kind": "object", "type": "DataSource" }
+      ]
+    }
+  ]
+}

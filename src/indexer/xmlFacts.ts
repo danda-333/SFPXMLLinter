@@ -93,9 +93,12 @@ export interface ParsedDocumentFacts {
   identOccurrences: IdentOccurrence[];
   declaredControlShareCodes: Set<string>;
   controlShareCodeDefinitions: Map<string, vscode.Range>;
+  declaredActionShareCodes: Set<string>;
+  actionShareCodeDefinitions: Map<string, vscode.Range>;
   declaredButtonShareCodes: Set<string>;
   buttonShareCodeDefinitions: Map<string, vscode.Range>;
   buttonShareCodeButtonIdents: Map<string, Set<string>>;
+  actionShareCodeReferences: NamedIdent[];
   declaredControlInfos: NamedIdent[];
   declaredButtonInfos: NamedIdent[];
 }
@@ -134,9 +137,12 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     identOccurrences: [],
     declaredControlShareCodes: new Set<string>(),
     controlShareCodeDefinitions: new Map<string, vscode.Range>(),
+    declaredActionShareCodes: new Set<string>(),
+    actionShareCodeDefinitions: new Map<string, vscode.Range>(),
     declaredButtonShareCodes: new Set<string>(),
     buttonShareCodeDefinitions: new Map<string, vscode.Range>(),
     buttonShareCodeButtonIdents: new Map<string, Set<string>>(),
+    actionShareCodeReferences: [],
     declaredControlInfos: [],
     declaredButtonInfos: []
   };
@@ -189,8 +195,8 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     }
   }
 
-  const canDeclareFormNodes = rootTagLower === "form" || rootTagLower === "component";
-  const canHaveWorkflowNodes = rootTagLower === "workflow" || rootTagLower === "component";
+  const canDeclareFormNodes = rootTagLower === "form" || rootTagLower === "component" || rootTagLower === "feature";
+  const canHaveWorkflowNodes = rootTagLower === "workflow" || rootTagLower === "component" || rootTagLower === "feature";
 
   if (canDeclareFormNodes && text.includes("<Control")) {
     for (const m of text.matchAll(/<Control\b([^>]*)>/gi)) {
@@ -292,6 +298,21 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     }
   }
 
+  if (canHaveWorkflowNodes && text.includes("<ActionShareCode")) {
+    for (const m of text.matchAll(/<ActionShareCode\b([^>]*)>/gi)) {
+      const attr = findAttribute(m[1], "Ident", text, attributeStartIndex(m));
+      if (!attr?.value || !attr.valueRange) {
+        continue;
+      }
+
+      const key = attr.value;
+      facts.declaredActionShareCodes.add(key);
+      if (!facts.actionShareCodeDefinitions.has(key)) {
+        facts.actionShareCodeDefinitions.set(key, attr.valueRange);
+      }
+    }
+  }
+
   if (canHaveWorkflowNodes && text.includes("<ButtonShareCode")) {
     for (const share of collectButtonShareCodeContents(text)) {
       const key = share.ident;
@@ -330,12 +351,12 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
   if (text.includes("<Using")) {
     for (const m of text.matchAll(/<Using\b([^>]*)>/gi)) {
       const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-      const componentAttr = attrs.get("Component") ?? attrs.get("Name");
+      const componentAttr = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
       if (!componentAttr?.value || !componentAttr.valueRange) {
         continue;
       }
 
-      const sectionAttr = attrs.get("Section");
+      const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
       facts.usingReferences.push({
         componentKey: normalizeComponentKey(componentAttr.value),
         rawComponentValue: componentAttr.value,
@@ -423,6 +444,14 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     for (const actionTag of text.matchAll(/<Action\b([^>]*)>/gi)) {
       const attrs = parseAttributes(actionTag[1] ?? "", text, attributeStartIndex(actionTag));
       const actionType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
+      const identAttr = getAttributeCaseInsensitive(attrs, "Ident");
+      if (actionType === "sharecode" && identAttr?.value && identAttr.valueRange) {
+        facts.actionShareCodeReferences.push({
+          ident: identAttr.value,
+          range: identAttr.valueRange
+        });
+      }
+
       if (actionType !== "actionvalue") {
         continue;
       }

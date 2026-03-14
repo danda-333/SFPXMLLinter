@@ -172,8 +172,8 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
       }
 
       if (usingRef.sectionValueRange?.contains(position)) {
-        const sectionKey = usingRef.sectionValue ?? "";
-        return component.sectionDefinitions.get(sectionKey) ?? component.componentLocation;
+        const contributionKey = usingRef.sectionValue ?? "";
+        return component.contributionDefinitions.get(contributionKey) ?? component.componentLocation;
       }
     }
 

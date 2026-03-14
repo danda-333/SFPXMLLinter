@@ -22,6 +22,8 @@ import { formatXmlSelectionWithContext } from "./formatter/selection";
 import { FormatterOptions } from "./formatter/types";
 import { WorkspaceIndex } from "./indexer/types";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
+import { FeatureRegistryStore } from "./composition/registry";
+import { CompositionTreeProvider } from "./composition/treeView";
 
 const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-form-ident",
@@ -35,8 +37,8 @@ const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-workflow-action-value-control-ident",
   "unknown-workflow-show-hide-control-ident",
   "unknown-html-template-control-ident",
-  "unknown-using-component",
-  "unknown-using-section",
+  "unknown-using-feature",
+  "unknown-using-contribution",
   "ident-convention-lookup-control"
 ]);
 
@@ -46,8 +48,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const buildOutput = vscode.window.createOutputChannel("SFP XML Linter Build");
   const indexOutput = vscode.window.createOutputChannel("SFP XML Linter Index");
   const formatterOutput = vscode.window.createOutputChannel("SFP XML Linter Formatter");
+  const compositionOutput = vscode.window.createOutputChannel("SFP XML Linter Composition");
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
+  const featureRegistryStore = new FeatureRegistryStore();
+  const compositionTreeProvider = new CompositionTreeProvider(
+    () => vscode.window.activeTextEditor?.document,
+    (uri) => getIndexForUri(uri),
+    () => featureRegistryStore.getRegistry()
+  );
   const engine = new DiagnosticsEngine();
   const buildService = new BuildXmlTemplatesService();
   const emptyIndex: WorkspaceIndex = {
@@ -60,9 +69,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     buttonReferenceLocationsByFormIdent: new Map(),
     sectionReferenceLocationsByFormIdent: new Map(),
     componentReferenceLocationsByKey: new Map(),
-    componentSectionReferenceLocationsByKey: new Map(),
+    componentContributionReferenceLocationsByKey: new Map(),
     componentUsageFormIdentsByKey: new Map(),
-    componentSectionUsageFormIdentsByKey: new Map(),
+    componentContributionUsageFormIdentsByKey: new Map(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),
     formsReady: false,
@@ -104,6 +113,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(buildOutput);
   context.subscriptions.push(indexOutput);
   context.subscriptions.push(formatterOutput);
+  context.subscriptions.push(compositionOutput);
+  context.subscriptions.push(
+    vscode.window.createTreeView("sfpXmlLinter.compositionView", {
+      treeDataProvider: compositionTreeProvider,
+      showCollapseAll: true
+    })
+  );
 
   function logBuild(message: string): void {
     const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
@@ -125,6 +141,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function logSingleFile(message: string): void {
     logIndex(`[single-file] ${message}`);
+  }
+
+  function logComposition(message: string): void {
+    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
+    compositionOutput.appendLine(line);
+    console.log(line);
   }
 
   function formatIndexProgress(event: RebuildIndexProgressEvent): string {
@@ -270,6 +292,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     return getIndexerForUri(uri).getIndex();
+  }
+
+  function rebuildFeatureRegistry(): void {
+    const roots = (vscode.workspace.workspaceFolders ?? [])
+      .map((folder) => folder.uri.fsPath)
+      .filter((value) => !!value);
+    if (roots.length === 0) {
+      featureRegistryStore.rebuildMany([]);
+      return;
+    }
+
+    const registry = featureRegistryStore.rebuildMany(roots);
+    logComposition(
+      `Registry rebuilt: features=${registry.manifestsByFeature.size}, sources=${registry.manifestsBySource.size}, issues=${registry.issues.length}`
+    );
+    for (const issue of registry.issues) {
+      logComposition(`ISSUE ${issue.source}: ${issue.message}`);
+    }
+    for (const [feature, model] of registry.effectiveModelsByFeature.entries()) {
+      const total = model.contributions.length;
+      const effective = model.contributions.filter((item) => item.usage === "effective").length;
+      const partial = model.contributions.filter((item) => item.usage === "partial").length;
+      const unused = model.contributions.filter((item) => item.usage === "unused").length;
+      logComposition(
+        `Feature ${feature}: items=${model.items.length}, contributions=${total}, effective=${effective}, partial=${partial}, unused=${unused}, conflicts=${model.conflicts.length}`
+      );
+
+      for (const contribution of model.contributions.filter((item) => item.usage !== "effective")) {
+        const label = contribution.name ?? contribution.contributionId;
+        const missingBits = [
+          ...contribution.missingExpectationKeys.map((item) => `expect ${item}`),
+          ...contribution.missingExpectedXPaths.map((item) => `xpath ${item}`)
+        ];
+        const suffix = missingBits.length > 0 ? ` missing=[${missingBits.join(", ")}]` : "";
+        logComposition(`  ${feature}/${contribution.partId}/${label}: ${contribution.usage}${suffix}`);
+      }
+    }
+    compositionTreeProvider.refresh();
   }
 
   function createBuildRunOptions(silent: boolean): {
@@ -662,11 +722,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             parsedFacts: cachedFacts,
             settingsOverride: options?.settingsSnapshot,
             metadataOverride: options?.metadataSnapshot,
-            skipConfiguredRootsCheck: true
+            skipConfiguredRootsCheck: true,
+            featureRegistry: featureRegistryStore.getRegistry()
           }
         : {
             settingsOverride: options?.settingsSnapshot,
-            metadataOverride: options?.metadataSnapshot
+            metadataOverride: options?.metadataSnapshot,
+            featureRegistry: featureRegistryStore.getRegistry()
           }
     );
     const diagnosticsMs = Date.now() - diagnosticsStartedAt;
@@ -735,6 +797,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       logIndex("Initial indexing DONE");
     }
 
+    rebuildFeatureRegistry();
+
     hasInitialIndex = true;
     validateOpenDocuments();
     if (!hasCompletedInitialWorkspaceValidation) {
@@ -783,6 +847,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (verbose) {
       logIndex("Bootstrap indexing DONE (components + forms)");
     }
+
+    rebuildFeatureRegistry();
 
     hasInitialIndex = true;
     validateOpenDocuments();
@@ -1331,7 +1397,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
-    const result = engine.buildDiagnostics(document, getIndexerForUri(document.uri).getIndex());
+    const result = engine.buildDiagnostics(document, getIndexerForUri(document.uri).getIndex(), {
+      featureRegistry: featureRegistryStore.getRegistry()
+    });
     diagnostics.set(document.uri, result);
     if (result.length > 0 || isUserOpenDocument(document.uri)) {
       const key = document.uri.toString();
@@ -1386,9 +1454,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         logIndex(`onDidOpenTextDocument xml: ${relOrPath}`);
       }
       validateDocument(document);
+      compositionTreeProvider.refresh();
       if (isUserOpenDocument(document.uri) && documentInConfiguredRoots(document)) {
         enqueueValidation(document.uri, "high");
       }
+    }),
+    vscode.window.onDidChangeActiveTextEditor(() => {
+      compositionTreeProvider.refresh();
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
       if (document.languageId !== "xml") {
@@ -1405,11 +1477,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         indexedValidationLogSignatureByUri.delete(document.uri.toString());
         logSingleFile(`closed standalone file, diagnostics cleared: ${relOrPath}`);
       }
+      compositionTreeProvider.refresh();
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       scheduleSqlSuggestOnTyping(event);
       pendingContentChangesSinceLastSave.add(event.document.uri.toString());
       validateDocument(event.document);
+      compositionTreeProvider.refresh();
       if (isUserOpenDocument(event.document.uri) && documentInConfiguredRoots(event.document)) {
         enqueueValidation(event.document.uri, "high");
       }
@@ -1417,6 +1491,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.onDidChangeVisibleTextEditors(() => {
       validateOpenDocuments();
       clearClosedStandaloneDiagnostics();
+      compositionTreeProvider.refresh();
       for (const uri of getUserOpenUris()) {
         const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
         if (!doc || !documentInConfiguredRoots(doc)) {
@@ -1428,6 +1503,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.tabGroups.onDidChangeTabs(() => {
       validateOpenDocuments();
       clearClosedStandaloneDiagnostics();
+      compositionTreeProvider.refresh();
       for (const uri of getUserOpenUris()) {
         const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
         if (!doc || !documentInConfiguredRoots(doc)) {
@@ -1449,6 +1525,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       pendingContentChangesSinceLastSave.delete(saveKey);
 
       validateDocument(document);
+      compositionTreeProvider.refresh();
       if (isUserOpenDocument(document.uri) && documentInConfiguredRoots(document)) {
         enqueueValidation(document.uri, "high");
       }
@@ -1492,6 +1569,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (event.files.some((uri) => isReindexRelevantUri(uri))) {
         void queueReindex("all");
       }
+      compositionTreeProvider.refresh();
     }),
     vscode.workspace.onDidDeleteFiles((event) => {
       if (event.files.some((uri) => isSfpSettingsUri(uri))) {
@@ -1505,6 +1583,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (event.files.some((uri) => isReindexRelevantUri(uri))) {
         void queueReindex("all");
       }
+      compositionTreeProvider.refresh();
     }),
     vscode.workspace.onDidRenameFiles((event) => {
       if (event.files.some((item) => isSfpSettingsUri(item.oldUri) || isSfpSettingsUri(item.newUri))) {
@@ -1518,6 +1597,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (event.files.some((item) => isReindexRelevantUri(item.oldUri) || isReindexRelevantUri(item.newUri))) {
         void queueReindex("all");
       }
+      compositionTreeProvider.refresh();
     }),
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (event.affectsConfiguration("sfpXmlLinter")) {
@@ -1525,6 +1605,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         documentationHoverResolver.markDirty();
         refreshHoverDocsWatchers();
         validateOpenDocuments();
+        compositionTreeProvider.refresh();
         await queueReindex("all");
       }
     })
@@ -1593,6 +1674,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       validateDocument(doc);
     }
   }
+  compositionTreeProvider.refresh();
 
   context.subscriptions.push(
     vscode.commands.registerCommand("sfpXmlLinter.suppressNextSqlSuggest", () => {
@@ -1706,6 +1788,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.showCompositionLog", () => {
+      compositionOutput.show(true);
+      logComposition("Opened composition log");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.refreshCompositionView", () => {
+      compositionTreeProvider.refresh();
+      logComposition("Composition view refreshed");
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("sfpXmlLinter.rebuildIndex", async () => {
       const start = Date.now();
       await queueReindex("all");
@@ -1749,7 +1845,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       for (const uri of uris) {
         const doc = await vscode.workspace.openTextDocument(uri);
-        const ds = engine.buildDiagnostics(doc, getIndexerForUri(uri).getIndex());
+        const ds = engine.buildDiagnostics(doc, getIndexerForUri(uri).getIndex(), {
+          featureRegistry: featureRegistryStore.getRegistry()
+        });
         if (ds.length === 0) {
           continue;
         }

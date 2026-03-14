@@ -1,5 +1,5 @@
 ﻿import * as vscode from "vscode";
-import { getSettings, mapSeverityToDiagnostic, SfpXmlLinterSettings } from "../config/settings";
+import { getSettings, mapSeverityToDiagnostic, resolveRuleSeverity, SfpXmlLinterSettings } from "../config/settings";
 import { parseIgnoreState, isRuleIgnored } from "./ignore";
 import { WorkspaceIndex } from "../indexer/types";
 import { parseDocumentFacts, parseDocumentFactsFromMaskedText } from "../indexer/xmlFacts";
@@ -9,6 +9,10 @@ import { getSystemMetadata, isKnownSystemTableForeignKey, SystemMetadata } from 
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 import { maskXmlComments } from "../utils/xmlComments";
 import { getAllFormIdentCandidates, isKnownFormIdent, resolveSystemTableName } from "../utils/formIdents";
+import { FeatureCapabilityReport } from "../composition/model";
+import { matchesExpectedXPathInEffectiveModel } from "../composition/effectiveModel";
+import { FeatureManifestRegistry } from "../composition/workspace";
+import { analyzeUsingImpact } from "../composition/usingImpact";
 
 export interface RuleDiagnostic {
   ruleId: string;
@@ -24,6 +28,7 @@ export interface BuildDiagnosticsOptions {
   settingsOverride?: SfpXmlLinterSettings;
   metadataOverride?: SystemMetadata;
   skipConfiguredRootsCheck?: boolean;
+  featureRegistry?: FeatureManifestRegistry;
 }
 
 export class DiagnosticsEngine {
@@ -39,6 +44,7 @@ export class DiagnosticsEngine {
     const facts = options?.parsedFacts ?? parseDocumentFactsFromMaskedText(maskedText);
     const metadata = options?.metadataOverride ?? getSystemMetadata();
     const settings = options?.settingsOverride ?? getSettings();
+    const featureRegistry = options?.featureRegistry;
     const formIdentCandidates = getAllFormIdentCandidates(index, metadata);
     const issues: RuleDiagnostic[] = [];
     let cachedResolvableControlIdents: Set<string> | undefined;
@@ -63,6 +69,7 @@ export class DiagnosticsEngine {
     this.validateWorkflowControlIdentReferences(facts, issues, getResolvableControlIdents);
     this.validateUsingReferences(facts, index, issues);
     this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
+    this.validateFeatureCompositionReferences(document, facts, issues, featureRegistry);
     if (!fastBackgroundMode) {
       this.validateCommonAttributeTypos(document, issues, maskedText);
       this.validateSqlEqualsSpacing(document, issues, maskedText);
@@ -72,7 +79,7 @@ export class DiagnosticsEngine {
 
     const diagnostics: vscode.Diagnostic[] = [];
     for (const issue of issues) {
-      const severitySetting = settings.ruleSeverities[issue.ruleId] ?? "warning";
+      const severitySetting = resolveRuleSeverity(settings, issue.ruleId);
       const severity = mapSeverityToDiagnostic(severitySetting);
       if (severity === undefined) {
         continue;
@@ -388,10 +395,10 @@ export class DiagnosticsEngine {
       const component = resolveComponentByKey(index, ref.componentKey);
       if (!component) {
         issues.push({
-          ruleId: "unknown-using-component",
+          ruleId: "unknown-using-feature",
           range: ref.componentValueRange,
           message: withDidYouMean(
-            `Using component '${ref.rawComponentValue}' was not found in indexed components.`,
+            `Using feature '${ref.rawComponentValue}' was not found in indexed features.`,
             ref.componentKey,
             index.componentsByKey.keys()
           )
@@ -399,15 +406,34 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      if (ref.sectionValue && !component.sections.has(ref.sectionValue) && component.sections.size > 0) {
+      if (ref.sectionValue && !component.contributions.has(ref.sectionValue) && component.contributions.size > 0) {
         issues.push({
-          ruleId: "unknown-using-section",
+          ruleId: "unknown-using-contribution",
           range: ref.sectionValueRange ?? ref.componentValueRange,
           message: withDidYouMean(
-            `Section '${ref.sectionValue}' was not found in component '${ref.rawComponentValue}'.`,
+            `Contribution '${ref.sectionValue}' was not found in feature '${ref.rawComponentValue}'.`,
             ref.sectionValue,
-            component.sections
+            component.contributions
           )
+        });
+        continue;
+      }
+
+      const impact = analyzeUsingImpact(facts, ref.rawComponentValue, ref.sectionValue, component);
+      if (impact.kind === "unused") {
+        issues.push({
+          ruleId: "unused-using",
+          range: ref.sectionValueRange ?? ref.componentValueRange,
+          message: impact.message ?? `Using '${ref.rawComponentValue}' has no effective impact.`
+        });
+        continue;
+      }
+
+      if (impact.kind === "partial") {
+        issues.push({
+          ruleId: "partial-using",
+          range: ref.sectionValueRange ?? ref.componentValueRange,
+          message: impact.message ?? `Using '${ref.rawComponentValue}' is only partially effective.`
         });
       }
     }
@@ -685,6 +711,314 @@ export class DiagnosticsEngine {
       }
     }
   }
+
+  private validateFeatureCompositionReferences(
+    document: vscode.TextDocument,
+    facts: ReturnType<typeof parseDocumentFacts>,
+    issues: RuleDiagnostic[],
+    featureRegistry: FeatureManifestRegistry | undefined
+  ): void {
+    if (!featureRegistry) {
+      return;
+    }
+
+    const root = (facts.rootTag ?? "").toLowerCase();
+    const relPath = vscode.workspace.asRelativePath(document.uri, false).replace(/\\/g, "/");
+    const isFeatureFile = relPath.toLowerCase().endsWith(".feature.xml");
+    if (root !== "feature" && !isFeatureFile) {
+      return;
+    }
+
+    const feature = findFeatureForRelativePath(featureRegistry, relPath);
+    if (!feature) {
+      return;
+    }
+
+    const capabilityReport = featureRegistry.capabilityReportsByFeature.get(feature.feature);
+    const effectiveModel = featureRegistry.effectiveModelsByFeature.get(feature.feature);
+    const providedKeys = new Set((effectiveModel?.items ?? []).map((item) => item.key));
+    const providedIdents = new Set((effectiveModel?.items ?? []).map((item) => item.ident));
+
+    const text = document.getText();
+    for (const ref of collectFeatureRequiresFeatureRefs(text, document)) {
+      if (featureRegistry.manifestsByFeature.has(ref.ident)) {
+        continue;
+      }
+
+      issues.push({
+        ruleId: "unknown-feature-requirement",
+        range: ref.range,
+        message: withDidYouMean(
+          `Required feature '${ref.ident}' was not found in the loaded feature registry.`,
+          ref.ident,
+          featureRegistry.manifestsByFeature.keys()
+        )
+      });
+    }
+
+    for (const expectation of collectFeatureExpectsRefs(text, document)) {
+      const key = `${expectation.kind}:${expectation.ident}`;
+      if (providedKeys.has(key)) {
+        continue;
+      }
+
+      issues.push({
+        ruleId: "missing-feature-expectation",
+        range: expectation.range,
+        message: withDidYouMean(
+          `Expected symbol '${expectation.kind}:${expectation.ident}' is not provided by feature '${feature.feature}'.`,
+          expectation.ident,
+          providedIdents
+        )
+      });
+    }
+
+    for (const expectedXPath of collectFeatureExpectedXPathRefs(text, document)) {
+      if (effectiveModel && matchesExpectedXPathInEffectiveModel(expectedXPath.xpath, effectiveModel.items, capabilityReport)) {
+        continue;
+      }
+
+      issues.push({
+        ruleId: "missing-feature-expected-xpath",
+        range: expectedXPath.range,
+        message: `Expected XPath '${expectedXPath.xpath}' is not satisfied by the effective feature composition.`
+      });
+    }
+
+    const matchingPart = feature.parts.find((part) => part.file === relPath);
+    if (!matchingPart || !effectiveModel) {
+      return;
+    }
+
+    const contributionRanges = collectFeatureContributionRanges(text, document);
+    for (const contribution of effectiveModel.contributions.filter((item) => item.partId === matchingPart.id)) {
+      const range = contributionRanges.get((contribution.name ?? contribution.contributionId).toLowerCase());
+      if (!range) {
+        continue;
+      }
+
+      if (contribution.usage === "unused") {
+        issues.push({
+          ruleId: "unused-feature-contribution",
+          range,
+          message: `Contribution '${contribution.name ?? contribution.contributionId}' has no effective impact in current feature composition.`
+        });
+        continue;
+      }
+
+      if (contribution.usage === "partial") {
+        const missing = [
+          ...contribution.missingExpectationKeys.map((item) => `'${item}'`),
+          ...contribution.missingExpectedXPaths.map((item) => `'${item}'`)
+        ];
+        const suffix = missing.length > 0 ? ` Missing: ${missing.join(", ")}.` : "";
+        issues.push({
+          ruleId: "partial-feature-contribution",
+          range,
+          message: `Contribution '${contribution.name ?? contribution.contributionId}' is only partially effective.${suffix}`
+        });
+      }
+    }
+  }
+}
+
+function findFeatureForRelativePath(
+  featureRegistry: FeatureManifestRegistry,
+  relativePath: string
+): FeatureCapabilityReport | undefined {
+  const normalized = relativePath.replace(/\\/g, "/");
+  for (const manifest of featureRegistry.manifestsByFeature.values()) {
+    if (manifest.entrypoint === normalized) {
+      return featureRegistry.capabilityReportsByFeature.get(manifest.feature);
+    }
+
+    if (manifest.parts.some((part) => part.file === normalized)) {
+      return featureRegistry.capabilityReportsByFeature.get(manifest.feature);
+    }
+  }
+
+  return undefined;
+}
+
+function collectFeatureRequiresFeatureRefs(
+  text: string,
+  document: vscode.TextDocument
+): Array<{ ident: string; range: vscode.Range }> {
+  const out: Array<{ ident: string; range: vscode.Range }> = [];
+  const requiresRegex = /<\s*Requires\b[^>]*>([\s\S]*?)<\/\s*Requires\s*>/gi;
+  const refRegex = /<\s*Ref\b([^>]*?)\/>/gi;
+
+  for (const block of text.matchAll(requiresRegex)) {
+    const body = block[1] ?? "";
+    const whole = block[0] ?? "";
+    const blockStart = block.index ?? 0;
+    const bodyOffset = whole.indexOf(body);
+    if (bodyOffset < 0) {
+      continue;
+    }
+
+    const bodyStart = blockStart + bodyOffset;
+    for (const ref of body.matchAll(refRegex)) {
+      const rawAttrs = ref[1] ?? "";
+      const attrsOffset = (ref[0] ?? "").indexOf(rawAttrs);
+      const attrsStart = bodyStart + (ref.index ?? 0) + (attrsOffset >= 0 ? attrsOffset : 0);
+      const attrs = parseFeatureXmlAttributes(rawAttrs, text, attrsStart, document);
+      const kind = getAttributeCaseInsensitiveXml(attrs, "Kind");
+      const ident = getAttributeCaseInsensitiveXml(attrs, "Ident");
+      if (!kind || !ident || kind.value.toLowerCase() !== "feature") {
+        continue;
+      }
+
+      out.push({
+        ident: ident.value,
+        range: ident.range
+      });
+    }
+  }
+
+  return out;
+}
+
+function collectFeatureExpectsRefs(
+  text: string,
+  document: vscode.TextDocument
+): Array<{ kind: string; ident: string; range: vscode.Range }> {
+  const out: Array<{ kind: string; ident: string; range: vscode.Range }> = [];
+  const expectsRegex = /<\s*Expects\b[^>]*>([\s\S]*?)<\/\s*Expects\s*>/gi;
+  const symbolRegex = /<\s*Symbol\b([^>]*?)\/>/gi;
+
+  for (const block of text.matchAll(expectsRegex)) {
+    const body = block[1] ?? "";
+    const whole = block[0] ?? "";
+    const blockStart = block.index ?? 0;
+    const bodyOffset = whole.indexOf(body);
+    if (bodyOffset < 0) {
+      continue;
+    }
+
+    const bodyStart = blockStart + bodyOffset;
+    for (const symbol of body.matchAll(symbolRegex)) {
+      const rawAttrs = symbol[1] ?? "";
+      const attrsOffset = (symbol[0] ?? "").indexOf(rawAttrs);
+      const attrsStart = bodyStart + (symbol.index ?? 0) + (attrsOffset >= 0 ? attrsOffset : 0);
+      const attrs = parseFeatureXmlAttributes(rawAttrs, text, attrsStart, document);
+      const kind = getAttributeCaseInsensitiveXml(attrs, "Kind");
+      const ident = getAttributeCaseInsensitiveXml(attrs, "Ident");
+      if (!kind || !ident) {
+        continue;
+      }
+
+      out.push({
+        kind: kind.value,
+        ident: ident.value,
+        range: ident.range
+      });
+    }
+  }
+
+  return out;
+}
+
+function collectFeatureExpectedXPathRefs(
+  text: string,
+  document: vscode.TextDocument
+): Array<{ xpath: string; range: vscode.Range }> {
+  const out: Array<{ xpath: string; range: vscode.Range }> = [];
+  const expectsXPathRegex = /<\s*ExpectsXPath(s)?\b[^>]*>([\s\S]*?)<\/\s*ExpectsXPath(s)?\s*>/gi;
+  const xpathRegex = /<\s*XPath\b[^>]*>([\s\S]*?)<\/\s*XPath\s*>/gi;
+
+  for (const block of text.matchAll(expectsXPathRegex)) {
+    const body = block[2] ?? "";
+    const whole = block[0] ?? "";
+    const blockStart = block.index ?? 0;
+    const bodyOffset = whole.indexOf(body);
+    if (bodyOffset < 0) {
+      continue;
+    }
+
+    const bodyStart = blockStart + bodyOffset;
+    for (const xpathMatch of body.matchAll(xpathRegex)) {
+      const xpath = (xpathMatch[1] ?? "").trim();
+      if (!xpath) {
+        continue;
+      }
+
+      const rawValue = xpathMatch[1] ?? "";
+      const valueOffset = (xpathMatch[0] ?? "").indexOf(rawValue);
+      const start = bodyStart + (xpathMatch.index ?? 0) + (valueOffset >= 0 ? valueOffset : 0);
+      out.push({
+        xpath,
+        range: new vscode.Range(document.positionAt(start), document.positionAt(start + rawValue.length))
+      });
+    }
+  }
+
+  return out;
+}
+
+function collectFeatureContributionRanges(
+  text: string,
+  document: vscode.TextDocument
+): Map<string, vscode.Range> {
+  const out = new Map<string, vscode.Range>();
+  const contributionRegex = /<\s*(Contribution|Section)\b([^>]*?)(?:\/>|>)/gi;
+
+  for (const match of text.matchAll(contributionRegex)) {
+    const rawAttrs = match[2] ?? "";
+    const attrsOffset = (match[0] ?? "").indexOf(rawAttrs);
+    const attrsStart = (match.index ?? 0) + (attrsOffset >= 0 ? attrsOffset : 0);
+    const attrs = parseFeatureXmlAttributes(rawAttrs, text, attrsStart, document);
+    const name = getAttributeCaseInsensitiveXml(attrs, "Name");
+    if (name?.value) {
+      out.set(name.value.toLowerCase(), name.range);
+      continue;
+    }
+
+    const tagName = match[1] ?? "Contribution";
+    const tagStart = match.index ?? 0;
+    out.set(
+      tagName.toLowerCase(),
+      new vscode.Range(document.positionAt(tagStart), document.positionAt(tagStart + tagName.length + 1))
+    );
+  }
+
+  return out;
+}
+
+function parseFeatureXmlAttributes(
+  rawAttrs: string,
+  fullText: string,
+  attrsStartIndex: number,
+  document: vscode.TextDocument
+): Map<string, { value: string; range: vscode.Range }> {
+  const map = new Map<string, { value: string; range: vscode.Range }>();
+  const attrRegex = /([A-Za-z_][\w:.-]*)\s*=\s*(\"([^\"]*)\"|'([^']*)')/g;
+  let match: RegExpExecArray | null;
+  while ((match = attrRegex.exec(rawAttrs)) !== null) {
+    const name = match[1];
+    const value = match[3] ?? match[4] ?? "";
+    const valueOffset = match[0].indexOf(value);
+    const absoluteStart = attrsStartIndex + match.index + valueOffset;
+    map.set(name, {
+      value,
+      range: new vscode.Range(document.positionAt(absoluteStart), document.positionAt(absoluteStart + value.length))
+    });
+  }
+
+  return map;
+}
+
+function getAttributeCaseInsensitiveXml(
+  attrs: Map<string, { value: string; range: vscode.Range }>,
+  name: string
+): { value: string; range: vscode.Range } | undefined {
+  for (const [key, value] of attrs.entries()) {
+    if (key.toLowerCase() === name.toLowerCase()) {
+      return value;
+    }
+  }
+
+  return undefined;
 }
 
 function collectWorkflowControlShareCodes(

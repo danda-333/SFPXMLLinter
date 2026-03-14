@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" FormIdent="ValidForm" Ident="ErrPartialUsingWorkFlow">
+
+  <States>
+    <State Value="1">
+      <Group>
+        <Controls>
+          <FormControl xsi:type="ShareCodeControl" Ident="ComponentControlShareCode" />
+        </Controls>
+        <Buttons>
+          <Button xsi:type="ShareCodeButton" Ident="ComponentButtonShareCode" />
+        </Buttons>
+      </Group>
+    </State>
+  </States>
+</WorkFlow>

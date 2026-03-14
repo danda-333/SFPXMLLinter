@@ -66,22 +66,22 @@ Priklad:
 Common/
   Features/
     Assign/
-      Assign.feature.component.xml
-      Assign.Form.component.xml
-      Assign.WorkFlow.component.xml
-      Assign.View.component.xml
+      Assign.feature.xml
+      Assign.Form.feature.xml
+      Assign.WorkFlow.feature.xml
+      Assign.View.feature.xml
 ```
 
 Vyklad:
 
-- `Assign.feature.component.xml`
+- `Assign.feature.xml`
   - hlavni vstupni bod
   - sklada feature jako celek
-- `Assign.Form.component.xml`
+- `Assign.Form.feature.xml`
   - controls / sections / pripadne button deklarace vazane na form
-- `Assign.WorkFlow.component.xml`
+- `Assign.WorkFlow.feature.xml`
   - sharecody / akce / wiring
-- `Assign.View.component.xml`
+- `Assign.View.feature.xml`
   - sloupce / filter / datasourcy pro view vrstvu
 
 ## Proc to vypada jako dobra cesta
@@ -143,9 +143,9 @@ Common/
   Features/
     Assign/
       Assign.feature.json
-      Assign.Form.component.xml
-      Assign.WorkFlow.component.xml
-      Assign.View.component.xml
+      Assign.Form.feature.xml
+      Assign.WorkFlow.feature.xml
+      Assign.View.feature.xml
 ```
 
 Manifest nemusi byt velky. Jeho smyslem neni duplikovat XML, ale popsat feature jako celek.
@@ -190,21 +190,12 @@ Priklad:
 {
   "feature": "Assign",
   "parts": [
-    "Assign.Form.component.xml",
-    "Assign.WorkFlow.component.xml",
-    "Assign.View.component.xml"
+    "Assign.Form.feature.xml",
+    "Assign.WorkFlow.feature.xml",
+    "Assign.View.feature.xml"
   ],
   "requires": [
     "feature:FolderGroupSegment"
-  ],
-  "recommends": [
-    "feature:ReporterControls"
-  ],
-  "expects": [
-    "control:AssignedGroupID",
-    "control:AssignedAccountID",
-    "buttonShareCode:AssignButtonShare",
-    "actionShareCode:AssignActionShare"
   ]
 }
 ```
@@ -213,16 +204,18 @@ Poznamka:
 
 - `requires`
   - bez teto zavislosti feature nedava smysl nebo nebude fungovat
-- `recommends`
-  - bez teto zavislosti muze feature fungovat, ale nejspis nebude kompletni
 - `expects`
-  - semanticke prvky, ktere musi po slozeni feature existovat ve vyslednem modelu
+  - pouzivat primarne na urovni konkretni `Contribution`, kdy cast potrebuje neco, co sama primo nedodava
+- `expectsXPath`
+  - nejspodnejsi technicka vrstva kontraktu; explicitne rika, jaka XPath musi ve slozenem modelu existovat
 
-### Proc `expects` misto jen `requires`
+### Proc `expects` a `expectsXPath` vedle `requires`
 
-`requires` popisuje zavislost na jine feature.
+`requires` popisuje zavislost na jine feature nebo vedome reuse jednotce.
 
-`expects` popisuje pozadovany vysledek po slozeni vsech casti.
+`expects` popisuje symbolickou zavislost konkretni contribution.
+
+`expectsXPath` popisuje nejpresnejsi technicky kontrakt: jaka struktura musi po slozeni existovat.
 
 To je dulezite, protoze nekdy neni podstatne, ktera feature neco dodala, ale pouze to, ze po slozeni existuje:
 
@@ -231,7 +224,11 @@ To je dulezite, protoze nekdy neni podstatne, ktera feature neco dodala, ale pou
 - column
 - section
 
-Tento model je pro validator vyrazne praktictejsi.
+Tento model je pro validator vyrazne praktictejsi, protoze:
+
+- `requires` hlida explicitni reuse zavislosti
+- `expects` hlida citelne symbolicke vazby
+- `expectsXPath` hlida presny finalni cil ve slozenem XML
 
 ### Co by validator mohl hlasit
 
@@ -259,8 +256,8 @@ Feature je pritomna jen castecne.
 
 Priklad:
 
-- je pouzita `Assign.Form.component.xml`
-- chybi `Assign.WorkFlow.component.xml`
+- je pouzita `Assign.Form.feature.xml`
+- chybi `Assign.WorkFlow.feature.xml`
 - feature manifest pritom rika, ze obe casti patri k sobe
 
 #### 4. `duplicate-feature-provider`
@@ -1676,6 +1673,78 @@ Aktualni pracovni preference:
 - zachovat business / feature orientaci
 - rozdelovat jen uvnitr feature
 - neprenest projekt do ciste technicke kategorizace
+
+## Feature manifest authoring model
+
+Pro feature manifests se jako vhodny smer jevi hybridni model:
+
+- `*.feature.json` zustane podporovany jako explicitni, rucne ladena varianta
+- pokud `*.feature.json` neexistuje, provede se automaticka stavba zakladniho manifestu primo z templating XML
+
+Prakticky to znamena:
+
+- system nebude vyzadovat JSON manifest pro kazdou feature hned od zacatku
+- jednodussi feature budou moci fungovat pouze ze sve XML definice
+- JSON manifest bude slouzit hlavne jako:
+  - override
+  - doplneni semantickych zavislosti
+  - zpresneni summary / contribution-level popisu
+  - misto pro rucni metadata, ktera z XML nejdou dobre dopoctit
+
+### Doporuceny precedence model
+
+1. Pokud existuje `*.feature.json`, je to primarni zdroj manifestu.
+2. Pokud neexistuje, vytvori se auto-manifest z templating XML.
+3. Casem muze existovat i kombinovany model:
+   - XML -> auto-extract zakladu
+   - JSON -> override / doplneni
+
+### Co ma auto-manifest umet
+
+Minimalni pozadavky:
+
+- najit root feature definici
+- najit vsechny `Contribution` / legacy `Section`
+- zkusit dopoctit:
+  - `parts`
+  - zakladni `provides`
+  - contribution-level summary
+  - contribution target
+  - contribution kind (`provide`, `extend-existing`, `placeholder`, `asset`, ...)
+
+### Proc je to dulezite
+
+- snizi se bariery pro zavedeni feature manifests
+- nebude nutne rucne psat velke mnozstvi boilerplate JSON
+- ergonomie zustane blizko samotnemu authoring XML
+- detailni JSON pujde dopsat az tam, kde to bude opravdu potreba
+
+### Aktualni preference
+
+Preferovany smer:
+
+- JSON podporovat dal
+- ale nevyzadovat ho povinne
+- vychozi chovani postavit jako "manifest by convention from XML"
+
+## Templating naming rozhodnuti
+
+Pro authoring templating vrstvy je preferovany novy naming:
+
+- root `Feature`
+- child `Contribution`
+- soubory `*.feature.xml`
+
+Legacy podpora zustane docasne zachovana pro:
+
+- root `Component`
+- child `Section`
+- soubory `*.component.xml`
+
+Prakticke pravidlo:
+
+- nove soubory, dokumentace, priklady a generatory maji pouzivat pouze novy naming
+- legacy naming zustava jen kvuli postupne migraci stavajicich sablon
 
 ## Kandidati na pilotni refaktor
 

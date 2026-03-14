@@ -29,6 +29,8 @@
     "onCommand:sfpXmlLinter.buildXmlTemplatesAll",
     "onCommand:sfpXmlLinter.showBuildQueueLog",
     "onCommand:sfpXmlLinter.showIndexLog",
+    "onCommand:sfpXmlLinter.showCompositionLog",
+    "onCommand:sfpXmlLinter.refreshCompositionView",
     "onCommand:sfpXmlLinter.rebuildIndex",
     "onCommand:sfpXmlLinter.revalidateWorkspace",
     "onCommand:sfpXmlLinter.revalidateProject",
@@ -95,6 +97,14 @@
         "title": "SFP XML Linter: Show Index Log"
       },
       {
+        "command": "sfpXmlLinter.showCompositionLog",
+        "title": "SFP XML Linter: Show Composition Log"
+      },
+      {
+        "command": "sfpXmlLinter.refreshCompositionView",
+        "title": "SFP XML Linter: Refresh Composition View"
+      },
+      {
         "command": "sfpXmlLinter.workspaceDiagnosticsReport",
         "title": "SFP XML Linter: Workspace Diagnostics Report"
       },
@@ -123,6 +133,23 @@
         "title": "SFP XML Linter: Format Selection (Tolerant)"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "sfpXmlLinter.compositionView",
+          "name": "SFP Composition"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "sfpXmlLinter.refreshCompositionView",
+          "when": "view == sfpXmlLinter.compositionView",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "SFP XML Linter",
       "properties": {
@@ -176,17 +203,24 @@
             "duplicate-control-ident": "warning",
             "duplicate-button-ident": "warning",
             "duplicate-section-ident": "warning",
-            "unknown-using-component": "error",
-            "unknown-using-section": "warning",
+            "unknown-using-feature": "error",
+            "unknown-using-contribution": "warning",
+            "unused-using": "information",
+            "partial-using": "information",
             "typo-maxlenght-attribute": "warning",
             "sql-convention-equals-spacing": "warning",
             "ident-convention-button-postfix": "warning",
             "ident-convention-group-button-postfix": "warning",
             "ident-convention-workflow-postfix": "warning",
             "ident-convention-view-postfix": "warning",
-            "ident-convention-lookup-control": "warning"
+            "ident-convention-lookup-control": "warning",
+            "unknown-feature-requirement": "warning",
+            "missing-feature-expectation": "warning",
+            "missing-feature-expected-xpath": "warning",
+            "unused-feature-contribution": "information",
+            "partial-feature-contribution": "information"
           },
-          "description": "Per-rule severity mapping. Allowed values: off, warning, error."
+          "description": "Per-rule severity mapping. Allowed values: off, information, warning, error."
         },
         "sfpXmlLinter.incompleteMode": {
           "type": "boolean",
@@ -260,6 +294,7 @@
     "test:formatter": "npm run compile && node out/tests/formatter/runFormatterFixtures.js && node out/tests/formatter/runSelectionFormatterTests.js",
     "test:linter": "npm run compile && node out/tests/linter/runLinterFixtures.js",
     "test:linter:perf": "npm run compile && node out/tests/linter/runLinterPerformance.js",
+    "test:composition": "npm run compile && node out/tests/composition/runCompositionModelTests.js && node out/tests/composition/runCompositionWorkspaceTests.js && node out/tests/composition/runCompositionDiagnosticsTests.js",
     "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js",
     "test:templates:service": "npm run compile && node out/tests/template/runBuildTemplateServiceTests.js",
     "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runBuildTemplateServiceTests.js && node out/tests/template/runBuildTemplateFixtures.js",

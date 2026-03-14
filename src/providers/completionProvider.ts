@@ -477,8 +477,8 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         return [];
       }
 
-      const sections = [...component.sections].sort((a, b) => a.localeCompare(b));
-      return asValueItems(sections, vscode.CompletionItemKind.Reference);
+      const contributions = [...component.contributions].sort((a, b) => a.localeCompare(b));
+      return asValueItems(contributions, vscode.CompletionItemKind.Reference);
     }
 
     if (attr === "ident") {

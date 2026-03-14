@@ -19,7 +19,7 @@
 				<!-- Local -->
 				<FormControl Ident="LocalControl" />
 
-				<!-- Component from Sample.component.xml -->
+				<!-- Component from Sample.feature.xml -->
 				<FormControl Ident="ComponentControl" />
 			</Controls>
 		</ControlShareCode>
@@ -48,7 +48,7 @@
 						<!-- Local -->
 						<Action xsi:type="ActionValue" ControlIdent="LocalControl" />
 
-						<!-- Component from Sample.component.xml -->
+						<!-- Component from Sample.feature.xml -->
 						<Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
 					</Actions>
 				</Action>
@@ -66,7 +66,7 @@
 						<!-- Local -->
 						<Action xsi:type="ActionValue" ControlIdent="LocalControl" />
 
-						<!-- Component from Sample.component.xml -->
+						<!-- Component from Sample.feature.xml -->
 						<Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
 					</Actions>
 				</Action>
@@ -117,7 +117,7 @@
 						<!-- Local -->
 						<Action xsi:type="ActionValue" ControlIdent="LocalControl" />
 
-						<!-- Component from Sample.component.xml -->
+						<!-- Component from Sample.feature.xml -->
 						<Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
 					</Actions>
 				</Button>
@@ -135,7 +135,7 @@
 						<!-- Local -->
 						<Action xsi:type="ActionValue" ControlIdent="LocalControl" />
 
-						<!-- Component from Sample.component.xml -->
+						<!-- Component from Sample.feature.xml -->
 						<Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
 					</Actions>
 				</Button>
@@ -151,7 +151,7 @@
 						<!-- Local -->
 						<Action xsi:type="ShareCode" Ident="LocalActionShareCode" />
 
-						<!-- Component from Sample.component.xml -->
+						<!-- Component from Sample.feature.xml -->
 						<Action xsi:type="ShareCode" Ident="ComponentActionShareCode" />
 					</Actions>
 				</Button>
@@ -161,7 +161,7 @@
 						<!-- Local -->
 						<Action xsi:type="ShareCode" Ident="LocalActionShareCode" />
 
-						<!-- Component from Sample.component.xml -->
+						<!-- Component from Sample.feature.xml -->
 						<Action xsi:type="ShareCode" Ident="ComponentActionShareCode" />
 					</Actions>
 				</Button>
@@ -185,7 +185,7 @@
 		<!-- Local -->
 		<JavaScript xsi:type="ShowHide" ControlIdent="LocalControl" />
 
-		<!-- Component from Sample.component.xml -->
+		<!-- Component from Sample.feature.xml -->
 		<JavaScript xsi:type="ShowHide" ControlIdent="ComponentControl" />
 	</GlobalJavaScripts>
 
@@ -204,7 +204,7 @@
 			<!-- Local -->
 			<string>LocalControl</string>
 
-			<!-- Component from Sample.component.xml -->
+			<!-- Component from Sample.feature.xml -->
 			<string>ComponentControl</string>
 		</Action>
 
@@ -227,7 +227,7 @@
 					<FormControl Ident="LocalControl" />
 					<FormControl xsi:type="ShareCodeControl" Ident="LocalControlShareCode" />
 
-					<!-- Component from Sample.component.xml -->
+					<!-- Component from Sample.feature.xml -->
 					<FormControl Ident="ComponentControl" />
 					<FormControl xsi:type="ShareCodeControl" Ident="ComponentControlShareCode" />
 
@@ -247,13 +247,13 @@
 							<!-- Local -->
 							<Action xsi:type="ActionValue" ControlIdent="LocalControl" />
 
-							<!-- Component from Sample.component.xml -->
+							<!-- Component from Sample.feature.xml -->
 							<Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
 						</Actions>
 					</Button>
 					<Button xsi:type="ShareCodeButton" Ident="LocalButtonShareCode" />
 
-					<!-- Component from Sample.component.xml -->
+					<!-- Component from Sample.feature.xml -->
 					<Button Ident="ComponentButton" IsVisible="true">
 						<Actions>
 							<!-- DefaultControls -->
@@ -267,7 +267,7 @@
 							<!-- Local -->
 							<Action xsi:type="ActionValue" ControlIdent="LocalControl" />
 
-							<!-- Component from Sample.component.xml -->
+							<!-- Component from Sample.feature.xml -->
 							<Action xsi:type="ActionValue" ControlIdent="ComponentControl" />
 						</Actions>
 					</Button>

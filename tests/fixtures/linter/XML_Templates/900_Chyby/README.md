@@ -1,4 +1,4 @@
-# Linter Error Scenarios
+﻿# Linter Error Scenarios
 
 Minimal scenarios for each validation rule.
 
@@ -12,8 +12,8 @@ Minimal scenarios for each validation rule.
 - `chyba-08-unknown-form-section-ident.xml` -> `unknown-form-section-ident`
 - `chyba-09-unknown-mapping-ident.xml` -> `unknown-mapping-ident`
 - `chyba-10-unknown-mapping-form-ident.xml` -> `unknown-mapping-form-ident`
-- `chyba-11-unknown-using-component.xml` -> `unknown-using-component`
-- `chyba-12-unknown-using-section.xml` -> `unknown-using-section`
+- `chyba-11-unknown-using-feature.xml` -> `unknown-using-feature`
+- `chyba-12-unknown-using-contribution.xml` -> `unknown-using-contribution`
 - `chyba-13-unknown-required-action-ident.xml` -> `unknown-required-action-ident`
 - `chyba-14-unknown-workflow-action-value-control-ident.xml` -> `unknown-workflow-action-value-control-ident`
 - `chyba-15-unknown-workflow-show-hide-control-ident.xml` -> `unknown-workflow-show-hide-control-ident`
@@ -26,3 +26,6 @@ Minimal scenarios for each validation rule.
 - `chyba-22-sql-convention-equals-spacing.xml` -> `sql-convention-equals-spacing`
 - `chyba-23-typo-maxlenght-attribute.xml` -> `typo-maxlenght-attribute`
 - `chyba-24-ident-convention-lookup-missing-plural.xml` -> `ident-convention-lookup-control` (missing plural `s` on multi-select lookup)
+- `chyba-25-unused-using.xml` -> `unused-using`
+- `chyba-26-partial-using.xml` -> `partial-using`
+

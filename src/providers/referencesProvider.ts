@@ -71,7 +71,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
 
     if (target.kind === "componentSection") {
       const componentKey = target.componentKey ?? "";
-      for (const location of index.componentSectionReferenceLocationsByKey.get(componentKey)?.get(target.ident) ?? []) {
+      for (const location of index.componentContributionReferenceLocationsByKey.get(componentKey)?.get(target.ident) ?? []) {
         pushUniqueLocation(out, seen, location);
       }
       return out;
@@ -213,7 +213,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       if (usingRef.sectionValue && usingRef.sectionValueRange?.contains(position)) {
         const component = resolveComponentByKey(index, usingRef.componentKey);
         if (component) {
-          const sectionDecl = component.sectionDefinitions.get(usingRef.sectionValue);
+          const sectionDecl = component.contributionDefinitions.get(usingRef.sectionValue);
           if (sectionDecl) {
             return {
               formIdent: "",
@@ -249,7 +249,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
           };
         }
 
-        for (const [section, location] of component.sectionDefinitions.entries()) {
+        for (const [section, location] of component.contributionDefinitions.entries()) {
           if (!location.range.contains(position)) {
             continue;
           }

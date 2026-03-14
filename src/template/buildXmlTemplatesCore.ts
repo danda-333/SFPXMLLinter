@@ -26,6 +26,8 @@ interface ComponentDefinition {
   sections: ComponentSection[];
 }
 
+const TEMPLATE_DEFINITION_TAGS = ["Feature", "Component"] as const;
+
 interface RenderContext {
   library: BuildComponentLibrary;
   maxDepth: number;
@@ -100,7 +102,10 @@ export function extractUsingComponentRefs(text: string): string[] {
 
   for (const match of text.matchAll(/<Using\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
-    const componentValue = extractAttributeValue(attrs, "Component") ?? extractAttributeValue(attrs, "Name");
+    const componentValue =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
     if (!componentValue) {
       continue;
     }
@@ -109,7 +114,10 @@ export function extractUsingComponentRefs(text: string): string[] {
 
   for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
     const body = match[1] ?? "";
-    const componentValue = extractPlaceholderField(body, "Component") ?? extractPlaceholderField(body, "Name");
+    const componentValue =
+      extractPlaceholderField(body, "Feature") ??
+      extractPlaceholderField(body, "Component") ??
+      extractPlaceholderField(body, "Name");
     if (!componentValue) {
       continue;
     }
@@ -125,6 +133,9 @@ export function normalizePath(value: string): string {
 
 export function stripXmlComponentExtension(value: string): string {
   const lower = value.toLowerCase();
+  if (lower.endsWith(".feature.xml")) {
+    return value.slice(0, value.length - ".feature.xml".length);
+  }
   if (lower.endsWith(".component.xml")) {
     return value.slice(0, value.length - ".component.xml".length);
   }
@@ -187,7 +198,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
       cursor = start + full.length;
 
       const attrs = parseXmlAttributes(full);
-      const componentKey = attrs.get("Component") ?? attrs.get("Name");
+      const componentKey = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
       if (!componentKey) {
         next += full;
         continue;
@@ -201,7 +212,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
 
       const includeParams = new Map<string, string>();
       for (const [k, v] of attrs.entries()) {
-        if (k === "Component" || k === "Name") {
+        if (k === "Feature" || k === "Component" || k === "Name") {
           continue;
         }
         includeParams.set(k, v);
@@ -209,7 +220,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
       const mergedParams = mergeParams(baseParams, includeParams);
 
       let componentText = source.text;
-      const sectionName = attrs.get("Section");
+      const sectionName = attrs.get("Contribution") ?? attrs.get("Section");
       if (sectionName && sectionName.trim().length > 0) {
         const def = resolveComponentByKey(context.library, source.key);
         const section = def?.sections.find((s) => (s.name ?? "") === sectionName) ?? def?.sections[0];
@@ -243,7 +254,7 @@ function applyUsingSections(text: string, templateParams: Map<string, string>, c
       continue;
     }
 
-    const sectionFilter = using.attrs.get("Section");
+    const sectionFilter = using.attrs.get("Contribution") ?? using.attrs.get("Section");
     const params = mergeParams(templateParams, using.attrs);
     const sections = sectionFilter
       ? component.sections.filter((s) => (s.name ?? "") === sectionFilter)
@@ -287,7 +298,7 @@ function replaceComponentPlaceholders(
     out += text.slice(cursor, token.start);
 
     const fields = parsePlaceholderFields(token.body);
-    const componentKey = fields.get("Component") ?? fields.get("Name");
+    const componentKey = fields.get("Feature") ?? fields.get("Component") ?? fields.get("Name");
     if (!componentKey) {
       const value = inheritedParams.get(token.body.trim());
       out += value ?? token.full;
@@ -302,7 +313,7 @@ function replaceComponentPlaceholders(
       continue;
     }
 
-    const sectionName = fields.get("Section");
+    const sectionName = fields.get("Contribution") ?? fields.get("Section");
     const section = pickComponentSection(component.sections, sectionName);
     if (!section) {
       out += token.full;
@@ -322,7 +333,7 @@ function replaceComponentPlaceholders(
 
 function parseComponentSections(text: string): ComponentSection[] {
   const sections: ComponentSection[] = [];
-  const tagRegex = /<\s*(\/?)\s*Section\b([^>]*)>/gi;
+  const tagRegex = /<\s*(\/?)\s*(Contribution|Section)\b([^>]*)>/gi;
   let depth = 0;
   let currentOpenEnd = -1;
   let currentAttrsRaw = "";
@@ -331,7 +342,7 @@ function parseComponentSections(text: string): ComponentSection[] {
   for (const match of text.matchAll(tagRegex)) {
     const token = match[0] ?? "";
     const slash = match[1] ?? "";
-    const attrsRaw = match[2] ?? "";
+    const attrsRaw = match[3] ?? "";
     const start = typeof match.index === "number" ? match.index : -1;
     if (start < 0) {
       continue;
@@ -677,7 +688,7 @@ function parseUsingDirectives(text: string): UsingDirective[] {
   const regex = /<Using\b([^>]*)\/?>/gi;
   for (const m of text.matchAll(regex)) {
     const attrs = parseXmlAttributes(m[1] ?? "");
-    const componentValue = attrs.get("Component") ?? attrs.get("Name");
+    const componentValue = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
     if (!componentValue) {
       continue;
     }
@@ -763,10 +774,14 @@ function removeStandaloneUsingTags(text: string): string {
 function normalizeComponentContent(text: string): string {
   let out = text.replace(/<\?xml[^>]*\?>/gi, "");
   out = out.replace(/^\uFEFF/, "");
-  const start = out.indexOf("<Component");
-  if (start >= 0) {
+  for (const tagName of TEMPLATE_DEFINITION_TAGS) {
+    const start = out.indexOf(`<${tagName}`);
+    if (start < 0) {
+      continue;
+    }
+
     const startEnd = out.indexOf(">", start);
-    const end = out.lastIndexOf("</Component>");
+    const end = out.lastIndexOf(`</${tagName}>`);
     if (startEnd >= 0 && end > startEnd) {
       return out.slice(startEnd + 1, end);
     }
@@ -780,9 +795,9 @@ function sanitizeFinalXml(text: string, templateRoot: string): string {
   const decl = declMatch?.[0] ?? "";
   let out = text;
   out = out.replace(/<\?xml[^>]*\?>/g, "");
-  const isComponentTemplate = templateRoot.localeCompare("Component", undefined, { sensitivity: "accent" }) === 0;
-  if (!isComponentTemplate) {
-    out = stripOuterComponentWrapper(out);
+  const isSfpComponentTemplate = templateRoot.localeCompare("Component", undefined, { sensitivity: "accent" }) === 0;
+  if (!isSfpComponentTemplate) {
+    out = stripOuterTemplateDefinitionWrapper(out);
   }
   if (decl.length > 0) {
     return `${decl}${out}`;
@@ -790,9 +805,21 @@ function sanitizeFinalXml(text: string, templateRoot: string): string {
   return out;
 }
 
-function stripOuterComponentWrapper(text: string): string {
+function stripOuterTemplateDefinitionWrapper(text: string): string {
+  for (const tagName of TEMPLATE_DEFINITION_TAGS) {
+    const stripped = stripOuterWrapperForTag(text, tagName);
+    if (stripped !== text) {
+      return stripped;
+    }
+  }
+
+  return text;
+}
+
+function stripOuterWrapperForTag(text: string, tagName: string): string {
   const trimmedStart = text.trimStart();
-  if (!/^<Component\b/i.test(trimmedStart)) {
+  const openRegex = new RegExp(`^<${tagName}\\b`, "i");
+  if (!openRegex.test(trimmedStart)) {
     return text;
   }
 
@@ -803,16 +830,18 @@ function stripOuterComponentWrapper(text: string): string {
   }
 
   const trimmedEnd = text.trimEnd();
-  if (!/<\/Component>\s*$/i.test(trimmedEnd)) {
+  const closeRegex = new RegExp(`</${tagName}>\\s*$`, "i");
+  if (!closeRegex.test(trimmedEnd)) {
     return text;
   }
 
-  const endStart = text.lastIndexOf("</Component>");
+  const closingToken = `</${tagName}>`;
+  const endStart = text.lastIndexOf(closingToken);
   if (endStart <= startEnd) {
     return text;
   }
 
-  return `${text.slice(0, offset)}${text.slice(startEnd + 1, endStart)}${text.slice(endStart + "</Component>".length)}`;
+  return `${text.slice(0, offset)}${text.slice(startEnd + 1, endStart)}${text.slice(endStart + closingToken.length)}`;
 }
 
 function normalizeXmlTagSpacingLikeLegacy(text: string): string {

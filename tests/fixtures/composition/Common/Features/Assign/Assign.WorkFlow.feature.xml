@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+	<Manifest Description="Full workflow part mirrored from SFPExampleProject Assign feature." Tags="itsm, assign, workflow">
+		<ContributionContracts>
+			<ContributionContract For="ControlShareCodes" Kind="provide" Summary="Exposes assignee controls through workflow share codes.">
+				<ExpectsXPath>
+					<XPath>//WorkFlow/ControlShareCodes</XPath>
+				</ExpectsXPath>
+			</ContributionContract>
+			<ContributionContract For="ActionShareCodes" Kind="provide" Summary="Adds workflow actions for assignment flows.">
+				<ExpectsXPath>
+					<XPath>//Form/Controls/Control[@Ident='AssignedGroupID']</XPath>
+					<XPath>//Form/Controls/Control[@Ident='AssignedAccountID']</XPath>
+					<XPath>//Form/Controls/Control[@Ident='DialogAssignedGroupID']</XPath>
+					<XPath>//Form/Controls/Control[@Ident='DialogAssignedAccountID']</XPath>
+					<XPath>//Form/Controls/Control[@Ident='DialogAssignedToMyGroupID']</XPath>
+				</ExpectsXPath>
+			</ContributionContract>
+			<ContributionContract For="ButtonShareCodes" Kind="extend-existing" Summary="Binds assign buttons to workflow action share codes.">
+				<ExpectsXPath>
+					<XPath>//Form/Buttons/Button[@Ident='AssignButton']</XPath>
+					<XPath>//WorkFlow/ButtonShareCodes/ButtonShareCode[@Ident='AssignButton']</XPath>
+				</ExpectsXPath>
+			</ContributionContract>
+			<ContributionContract For="GlobalActions" Kind="provide" Summary="Adds global assignment workflow actions.">
+				<ExpectsXPath>
+					<XPath>//WorkFlow/GlobalActions</XPath>
+				</ExpectsXPath>
+			</ContributionContract>
+		</ContributionContracts>
+	</Manifest>
+
+	<Contribution Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+
+		<ControlShareCode Ident="ShowAssigneeControlShare">
+			<Controls>
+				<FormControl Ident="AssignedGroupID" IsVisible="true" />
+				<FormControl Ident="AssignedAccountID" IsVisible="true" />
+				<FormControl Ident="AssignedCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowAssigneeControlShare" /> -->
+
+	</Contribution>
+
+	<Contribution Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+
+		<!-- Assignee controls updates-->
+		<ActionShareCode Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare">
+			<Actions>
+
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="Required" ActionStart="BeforeValidation">
+							<Idents>
+								<string>DialogCommunication</string>
+							</Idents>
+						</Action>
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>DialogAssignedGroupID</string>
+					</Idents>
+				</Action>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_GroupOnlyFromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT @DialogAssignedGroupID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Update_FromDialog_ActionShare">
+			<Actions>
+
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="Required" ActionStart="BeforeValidation">
+							<Idents>
+								<string>DialogCommunication</string>
+							</Idents>
+						</Action>
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>DialogAssignedGroupID</string>
+						<string>DialogAssignedAccountID</string>
+					</Idents>
+				</Action>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_FromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT @DialogAssignedGroupID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="AssignedAccountID_FromDialog_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT @DialogAssignedAccountID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedAccountID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Clear_ActionShare">
+			<Actions>
+				<Action xsi:type="SetValue" Ident="AssignedGroupID" Value="" ActionStart="AfterValidation" />
+				<Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Clear_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Update_ToMe_ActionShare">
+			<Actions>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMe_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+							SELECT TOP(1)
+									itsGagvftap.GroupID
+							FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+									COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+									@PermissionIDs
+							) AS itsGagvftap
+							INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMe_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT @UserID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" /> -->
+		<ActionShareCode Ident="Assignee_Update_ToMeMultipleGroup_ActionShare">
+			<Actions>
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+					<Idents>
+						<string>DialogAssignedToMyGroupID</string>
+					</Idents>
+				</Action>
+
+				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT @DialogAssignedToMyGroupID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedToMyGroupID" DataType="Number" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT @UserID
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMeMultipleGroup_ActionShare" /> -->
+
+	</Contribution>
+
+	<Contribution Root="WorkFlow" Name="GlobalActions" TargetXPath="//WorkFlow/GlobalActions" Insert="append">
+
+		<Action xsi:type="ActionTrigger" Ident="AssignedGroupID_Update_GroupFromCategory_Action" ActionStart="AfterSave">
+			<DataSource>
+				<SQL><![CDATA[
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @UpdateOutput TABLE (OldAssignedGroupID INT, NewAssignedGroupID INT)
+
+					UPDATE itsReq
+						SET AssignedGroupID = ISNULL(itsCat.DefaultAssignedGroupID, itsGagbttap.GroupID)
+					OUTPUT DELETED.AssignedGroupID AS OldAssignedGroupID, INSERTED.AssignedGroupID AS NewAssignedGroupID
+					INTO @UpdateOutput (OldAssignedGroupID, NewAssignedGroupID)
+					FROM usr.{{FormIdent}} AS itsReq
+					LEFT JOIN dbo.FolderTree AS fot ON fot.Ident = COALESCE(itsReq.ITSMCategoryLevel5Ident, itsReq.ITSMCategoryLevel4Ident, itsReq.ITSMCategoryLevel3Ident, itsReq.ITSMCategoryLevel2Ident)
+					LEFT JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+					LEFT JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND fol.FormIdent = 'ITSMCategory'
+					OUTER APPLY (
+						SELECT TOP(1) *
+						FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission (COALESCE(itsReq.ITSMCategoryLevel5Ident, itsReq.ITSMCategoryLevel4Ident, itsReq.ITSMCategoryLevel3Ident, itsReq.ITSMCategoryLevel2Ident),@PermissionIDs)
+					) AS itsGagbttap
+					WHERE
+						itsReq.ID = @ID
+						AND itsReq.[State] = 110
+						AND itsReq.AssignedGroupID IS NULL
+
+					IF EXISTS(
+						SELECT NULL
+						FROM @UpdateOutput
+						WHERE ISNULL(OldAssignedGroupID, -1) != ISNULL(NewAssignedGroupID, -1)
+					) BEGIN
+
+						DECLARE @LastHistoryID INT = usr.ITSM_GetLastHistoryID_ByFormIdentTableIDHistoryTypeIDAccountID('{{FormIdent}}', @ID, 'Save', @UserID)
+
+						IF @LastHistoryID IS NOT NULL BEGIN
+
+							DECLARE
+								@OldAssignedGroupID VARCHAR(MAX)
+								,@NewAssignedGroupID VARCHAR(MAX)
+
+							SELECT
+								@OldAssignedGroupID = ISNULL(CAST(OldAssignedGroupID AS VARCHAR(MAX)), '')
+								,@NewAssignedGroupID = ISNULL(CAST(NewAssignedGroupID AS VARCHAR(MAX)), '')
+							FROM @UpdateOutput
+
+							EXEC usr.ITSM_HistoryDataInsert @LastHistoryID, 'AssignedGroupID', @OldAssignedGroupID, @NewAssignedGroupID
+
+						END
+
+					END
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataSource>
+		</Action>
+
+	</Contribution>
+
+</Feature>

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Templating naming migration:
+  - added first-class support for `Feature` / `Contribution` authoring while keeping legacy `Component` / `Section` compatibility.
+  - added `Feature="..."` alias support for `Using` / `Include` and `{{Feature:...}}` placeholder references.
+- Diagnostics naming cleanup:
+  - renamed `unknown-using-component` -> `unknown-using-feature`
+  - renamed `unknown-using-section` -> `unknown-using-contribution`
+  - kept legacy settings compatibility for old rule ids.
+- Indexing and validation fixes:
+  - updated runtime/workspace indexing to recognize `Feature` roots and `Contribution` blocks, so real validation matches fixture behavior.
+  - fixed `unused-using` / `partial-using` fixture coverage to validate the intended rule instead of side-effect diagnostics.
+- Tests and fixtures:
+  - migrated linter/template/composition fixtures to the new `Feature` / `Contribution` naming.
+  - refreshed invalid fixture mappings and regression coverage for `unused-using` / `partial-using`.
+
 ## 0.0.16
 
 - VSIX packaging fix:

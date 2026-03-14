@@ -1,6 +1,6 @@
 ﻿import * as vscode from "vscode";
 
-export type RuleSeverity = "off" | "warning" | "error";
+export type RuleSeverity = "off" | "warning" | "error" | "information";
 
 export interface SfpXmlLinterSettings {
   workspaceRoots: string[];
@@ -28,8 +28,10 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "duplicate-control-ident": "warning",
   "duplicate-button-ident": "warning",
   "duplicate-section-ident": "warning",
-  "unknown-using-component": "error",
-  "unknown-using-section": "warning",
+  "unknown-using-feature": "error",
+  "unknown-using-contribution": "warning",
+  "unused-using": "information",
+  "partial-using": "information",
   "typo-maxlenght-attribute": "warning",
   "sql-convention-equals-spacing": "warning",
   "ident-convention-button-postfix": "warning",
@@ -37,6 +39,11 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "ident-convention-workflow-postfix": "warning",
   "ident-convention-view-postfix": "warning",
   "ident-convention-lookup-control": "warning"
+};
+
+const LEGACY_RULE_ALIASES: Record<string, string> = {
+  "unknown-using-component": "unknown-using-feature",
+  "unknown-using-section": "unknown-using-contribution"
 };
 
 export function getSettings(): SfpXmlLinterSettings {
@@ -50,8 +57,17 @@ export function getSettings(): SfpXmlLinterSettings {
 
   const ruleSeverities: Record<string, RuleSeverity> = { ...DEFAULT_RULES };
   for (const [ruleId, value] of Object.entries(rawRules)) {
-    if (value === "off" || value === "warning" || value === "error") {
+    if (value === "off" || value === "warning" || value === "error" || value === "information") {
       ruleSeverities[ruleId] = value;
+    }
+  }
+
+  for (const [legacyRuleId, currentRuleId] of Object.entries(LEGACY_RULE_ALIASES)) {
+    if (rawRules[currentRuleId] === undefined && rawRules[legacyRuleId] !== undefined) {
+      const value = rawRules[legacyRuleId];
+      if (value === "off" || value === "warning" || value === "error" || value === "information") {
+        ruleSeverities[currentRuleId] = value;
+      }
     }
   }
 
@@ -70,10 +86,33 @@ export function getSettings(): SfpXmlLinterSettings {
   };
 }
 
+export function resolveRuleSeverity(settings: SfpXmlLinterSettings, ruleId: string): RuleSeverity {
+  const direct = settings.ruleSeverities[ruleId];
+  if (direct) {
+    return direct;
+  }
+
+  for (const [legacyRuleId, currentRuleId] of Object.entries(LEGACY_RULE_ALIASES)) {
+    if (currentRuleId === ruleId && settings.ruleSeverities[legacyRuleId]) {
+      return settings.ruleSeverities[legacyRuleId];
+    }
+  }
+
+  return "warning";
+}
+
 export function mapSeverityToDiagnostic(severity: RuleSeverity): vscode.DiagnosticSeverity | undefined {
   if (severity === "off") {
     return undefined;
   }
 
-  return severity === "error" ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
+  if (severity === "error") {
+    return vscode.DiagnosticSeverity.Error;
+  }
+
+  if (severity === "information") {
+    return vscode.DiagnosticSeverity.Information;
+  }
+
+  return vscode.DiagnosticSeverity.Warning;
 }

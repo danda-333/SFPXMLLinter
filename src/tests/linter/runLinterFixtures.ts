@@ -305,12 +305,12 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
   // Pass 1: components
   for (const entry of parsedEntries) {
     const { rel, doc, facts, root } = entry;
-    if (root === "component") {
+    if (root === "component" || root === "feature") {
       const componentKey = normalizeComponentKeyFromRel(rel);
-      const sectionNames = collectSectionNames(doc.getText());
-      const sectionDefinitions = new Map<string, Location>();
-      for (const sectionName of sectionNames) {
-        sectionDefinitions.set(sectionName, new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))));
+      const contributionNames = collectContributionNames(doc.getText());
+      const contributionDefinitions = new Map<string, Location>();
+      for (const contributionName of contributionNames) {
+        contributionDefinitions.set(contributionName, new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))));
       }
       const formControlDefinitions = new Map<string, Location>();
       for (const item of facts.declaredControlInfos) {
@@ -331,6 +331,10 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
       for (const [ident, range] of facts.controlShareCodeDefinitions.entries()) {
         workflowControlShareCodeDefinitions.set(ident, new Location(doc.uri, range as unknown as Range));
       }
+      const workflowActionShareCodeDefinitions = new Map<string, Location>();
+      for (const [ident, range] of facts.actionShareCodeDefinitions.entries()) {
+        workflowActionShareCodeDefinitions.set(ident, new Location(doc.uri, range as unknown as Range));
+      }
       const workflowButtonShareCodeDefinitions = new Map<string, Location>();
       for (const [ident, range] of facts.buttonShareCodeDefinitions.entries()) {
         workflowButtonShareCodeDefinitions.set(ident, new Location(doc.uri, range as unknown as Range));
@@ -338,12 +342,14 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
       componentsByKey.set(componentKey, {
         key: componentKey,
         uri: doc.uri as unknown as import("vscode").Uri,
-        sections: sectionNames,
+        contributions: contributionNames,
         componentLocation: new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))) as unknown as import("vscode").Location,
-        sectionDefinitions: sectionDefinitions as unknown as Map<string, import("vscode").Location>,
+        contributionDefinitions: contributionDefinitions as unknown as Map<string, import("vscode").Location>,
+        contributionSummaries: collectComponentContributionSummaries(doc.getText()) as unknown as import("../../indexer/types").IndexedComponent["contributionSummaries"],
         formControlDefinitions: formControlDefinitions as unknown as Map<string, import("vscode").Location>,
         formButtonDefinitions: formButtonDefinitions as unknown as Map<string, import("vscode").Location>,
         formSectionDefinitions: formSectionDefinitions as unknown as Map<string, import("vscode").Location>,
+        workflowActionShareCodeDefinitions: workflowActionShareCodeDefinitions as unknown as Map<string, import("vscode").Location>,
         workflowControlShareCodeDefinitions: workflowControlShareCodeDefinitions as unknown as Map<string, import("vscode").Location>,
         workflowButtonShareCodeDefinitions: workflowButtonShareCodeDefinitions as unknown as Map<string, import("vscode").Location>,
         workflowButtonShareCodeButtonIdents: facts.buttonShareCodeButtonIdents
@@ -434,9 +440,9 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     buttonReferenceLocationsByFormIdent: new Map<string, Map<string, import("vscode").Location[]>>(),
     sectionReferenceLocationsByFormIdent: new Map<string, Map<string, import("vscode").Location[]>>(),
     componentReferenceLocationsByKey: emptyMapLocations as unknown as Map<string, import("vscode").Location[]>,
-    componentSectionReferenceLocationsByKey: emptyNestedRef as unknown as Map<string, Map<string, import("vscode").Location[]>>,
+    componentContributionReferenceLocationsByKey: emptyNestedRef as unknown as Map<string, Map<string, import("vscode").Location[]>>,
     componentUsageFormIdentsByKey: emptyUsageMap,
-    componentSectionUsageFormIdentsByKey: emptyNestedUsage,
+    componentContributionUsageFormIdentsByKey: emptyNestedUsage,
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),
     formsReady: true,
@@ -496,14 +502,15 @@ function collectFiles(root: string, extension: string): string[] {
 function normalizeComponentKeyFromRel(relPath: string): string {
   let normalized = relPath.replace(/\\/g, "/");
   normalized = normalized.replace(/^xml_components\//i, "");
+  normalized = normalized.replace(/\.feature\.xml$/i, "");
   normalized = normalized.replace(/\.component\.xml$/i, "");
   normalized = normalized.replace(/\.xml$/i, "");
   return normalized;
 }
 
-function collectSectionNames(text: string): Set<string> {
+function collectContributionNames(text: string): Set<string> {
   const out = new Set<string>();
-  for (const match of text.matchAll(/<Section\b([^>]*)>/gi)) {
+  for (const match of text.matchAll(/<(?:Contribution|Section)\b([^>]*)>/gi)) {
     const attrs = match[1] ?? "";
     const m = /\bName\s*=\s*("([^"]*)"|'([^']*)')/i.exec(attrs);
     const value = (m?.[2] ?? m?.[3] ?? "").trim();
@@ -511,6 +518,71 @@ function collectSectionNames(text: string): Set<string> {
       continue;
     }
     out.add(value);
+  }
+  return out;
+}
+
+function collectComponentContributionSummaries(text: string): Map<string, import("../../indexer/types").IndexedComponentContributionSummary> {
+  const out = new Map<string, import("../../indexer/types").IndexedComponentContributionSummary>();
+  for (const match of text.matchAll(/<(Contribution|Section)\b([^>]*)>([\s\S]*?)<\/\1>/gi)) {
+    const attrs = match[2] ?? "";
+    const body = match[3] ?? "";
+    const name = extractAttributeValue(attrs, "Name");
+    if (!name) {
+      continue;
+    }
+
+    const rootRaw = (extractAttributeValue(attrs, "Root") ?? "").trim().toLowerCase();
+    const root: import("../../indexer/types").IndexedComponentContributionSummary["root"] =
+      rootRaw.length === 0 || rootRaw === "form" ? "form" : rootRaw === "workflow" ? "workflow" : "other";
+
+    out.set(name, {
+      contributionName: name,
+      root,
+      formControlIdents: collectAttributeIdents(body, /<Control\b([^>]*)>/gi, "Ident"),
+      formButtonIdents: collectAttributeIdents(body, /<Button\b([^>]*)>/gi, "Ident"),
+      formSectionIdents: collectAttributeIdents(body, /<Section\b([^>]*)>/gi, "Ident"),
+      workflowReferencedActionShareCodeIdents: collectActionShareCodeReferenceIdents(body),
+      workflowActionShareCodeIdents: collectAttributeIdents(body, /<ActionShareCode\b([^>]*)>/gi, "Ident"),
+      workflowControlShareCodeIdents: collectAttributeIdents(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
+      workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident")
+    });
+  }
+
+  return out;
+}
+
+function extractAttributeValue(attrs: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`${escaped}\\s*=\\s*(\"([^\"]*)\"|'([^']*)')`, "i");
+  const match = regex.exec(attrs);
+  return (match?.[2] ?? match?.[3] ?? "").trim() || undefined;
+}
+
+function collectAttributeIdents(text: string, tagRegex: RegExp, attributeName: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(tagRegex)) {
+    const value = extractAttributeValue(match[1] ?? "", attributeName);
+    if (value) {
+      out.add(value);
+    }
+  }
+  return out;
+}
+
+function collectActionShareCodeReferenceIdents(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(/<Action\b([^>]*)>/gi)) {
+    const attrs = match[1] ?? "";
+    const actionType = (extractAttributeValue(attrs, "xsi:type") ?? extractAttributeValue(attrs, "type") ?? "").trim().toLowerCase();
+    if (actionType !== "sharecode") {
+      continue;
+    }
+
+    const ident = extractAttributeValue(attrs, "Ident");
+    if (ident) {
+      out.add(ident);
+    }
   }
   return out;
 }

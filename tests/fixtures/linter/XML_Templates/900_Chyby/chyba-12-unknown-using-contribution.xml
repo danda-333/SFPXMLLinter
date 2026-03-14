@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ErrUnknownUsingSectionForm">
   <Usings>
-    <Using Component="Shared/Sample" Section="NoSuchSection" />
+    <Using Feature="Shared/Sample" Contribution="NoSuchSection" />
   </Usings>
 </Form>

@@ -108,7 +108,7 @@
         <ControlLabel ControlID="LocalControl" />
         <ControlPlaceHolder ControlID="LocalControl" />
 
-        <!-- Component from Sample.component.xml -->
+        <!-- Component from Sample.feature.xml -->
         <Control ID="ComponentControl" />
         <ControlLabel ControlID="ComponentControl" />
         <ControlPlaceHolder ControlID="ComponentControl" />

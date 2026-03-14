@@ -9,6 +9,58 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
 - zpruhledni finalni dopad builderu v editoru,
 - vytvori zaklad pro dalsi ergonomicka rozsireni a programovatelne generovani.
 
+## Aktualni stav implementace
+### Hotovo
+- novy authoring naming:
+  - `Feature`
+  - `Contribution`
+  - `*.feature.xml`
+- docasna legacy podpora:
+  - `Component`
+  - `Section`
+  - `*.component.xml`
+- XML-first composition fixtures pro pilot feature `Assign`
+- auto-manifest builder z XML:
+  - pokud `*.feature.json` neexistuje, manifest se postavi z `Feature/Contribution` XML
+- podpora metadata primo v XML:
+  - top-level `Manifest`
+  - centralni `ContributionContract`
+  - inline metadata primo na `Contribution`
+- aktivni model kontraktu:
+  - `provides`
+  - `expects`
+  - `expectsXPath`
+  - `requires`
+- `FeatureRegistryStore`
+- capability report
+- builder/extension composition output channel
+- prvni feature-aware diagnostiky:
+  - `unknown-feature-requirement`
+  - `missing-feature-expectation`
+  - `missing-feature-expected-xpath`
+- prvni `Using impact analysis` nad beznymi XML soubory:
+  - `unused-using`
+  - `partial-using`
+
+### Prave probiha
+- prvni verze `effective composition model`
+- napojeni feature validace na skutecny slozeny model misto pouheho capability reportu
+- prvni vrstva usage stavu:
+  - `provided`
+  - `applied`
+  - `consumed`
+  - `unused`
+- doplnovani dalsich inference pravidel nad `Assign`
+
+### Zatim pred nami
+- form-owned inheritance
+- Tree View
+- hlubsi Using impact analysis
+- ordering model
+- authoring sugar vrstvy
+- final output quality nad novym feature systemem
+- programovatelne generovani uvnitr feature
+
 ## Hlavni principy
 1. Zachovat XML komponenty jako hlavni authoring mechanizmus.
 2. Drzet komponenty a jejich kategorizaci feature-oriented, ne ciste technicky.
@@ -26,6 +78,12 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
 6. Provenance markery ve finalnim XML budou jen jako volitelna feature a musi byt context-aware.
 7. Konflikty se muzou deterministicky vyresit prvnim moznym zpusobem, ale musi se reportovat do `Tree View` a output channelu.
 8. Builder ma mit oddelene rezimy `fast`, `debug`, `release`.
+9. `*.feature.json` zustava podporovany, ale pokud neexistuje, system ma umet postavit zakladni manifest automaticky z templating XML.
+10. Novy authoring naming je:
+   - `Feature`
+   - `Contribution`
+   - `*.feature.xml`
+   Legacy `Component` / `Section` / `*.component.xml` zustava docasne podporovany.
 
 ## Rozsah v1
 - Feature-oriented struktura komponent.
@@ -52,10 +110,10 @@ Kazda business feature ma jeden hlavni vstupni bod a muze byt rozdelena na mensi
 Common/
   Features/
     Assign/
-      Assign.feature.component.xml
-      Assign.Form.component.xml
-      Assign.WorkFlow.component.xml
-      Assign.View.component.xml
+      Assign.feature.xml
+      Assign.Form.feature.xml
+      Assign.WorkFlow.feature.xml
+      Assign.View.feature.xml
 ```
 
 Hlavni feature root sklada vsechny souvisejici casti dohromady, ale feature zustava dohledatelna jako jeden celek.
@@ -71,8 +129,9 @@ Hlavni feature root sklada vsechny souvisejici casti dohromady, ale feature zust
 ### 3. Feature contracts
 Feature bude umet deklarovat:
 - co poskytuje (`provides`),
-- co ocekava (`expects`),
-- na cem zavisi (`requires`, `recommends`),
+- co contribution ocekava (`expects`),
+- jaky presny cil musi ve slozenem XML existovat (`expectsXPath`),
+- na cem zavisi (`requires`),
 - z jakych casti se sklada (`parts`).
 
 ### 4. Form-owned feature model
@@ -82,16 +141,22 @@ Feature bude umet deklarovat:
 - lokalne nektere prebit.
 
 ## Implementacni faze
-### Faze T1: Stabilizace domenoveho modelu
+### Faze T1: Stabilizace domenoveho modelu `[HOTOVO]`
 Cil:
 - z notes udelat explicitni datovy model, nad kterym pujde builder i editor.
 
 Vystupy:
 - navrh feature manifestu,
-- navrh `provides / expects / requires / recommends / parts`,
+- navrh `provides / expects / expectsXPath / requires / parts`,
 - navrh capability reportu,
 - navrh ordering modelu,
-- navrh builder modes.
+- navrh builder modes,
+- navrh dokumentace k feature manifestum a composition modelu,
+- navrh bootstrap generatoru pro vytvoreni zakladniho `*.feature.json`,
+- navrh precedence modelu:
+  - explicitni JSON manifest
+  - auto-manifest z XML
+  - pripadny budouci merge model XML + JSON override.
 
 Poznamky:
 - v teto fazi jeste bez integrace do buildu,
@@ -100,14 +165,26 @@ Poznamky:
 Definition of Done:
 - je popsany format feature manifestu,
 - je popsany format capability reportu,
-- je rozhodnuto, jaka metadata pocitame automaticky a jaka se deklaruji rucne.
+- je rozhodnuto, jaka metadata pocitame automaticky a jaka se deklaruji rucne,
+- je popsano, jak manifest autorovat a jaky minimalni bootstrap umi generator vytvorit,
+- je rozhodnuto, co se deje kdyz `*.feature.json` chybi.
 
-### Faze T2: Feature manifest + dependency validator
+### Faze T2: Feature manifest + dependency validator `[PROBIHA]`
 Cil:
 - zavadet feature contracts a zacit hlidat nekompletni nebo rozbite feature.
 
 Implementace:
 - nacitani feature manifestu,
+- fallback auto-manifest builder z templating XML, pokud `*.feature.json` neexistuje,
+- bootstrap generator `*.feature.json`, ktery z existujicich casti vytvori zakladni strukturu a predvyplni `provides`,
+- dokumentace s priklady:
+  - kdy pouzit `provides`,
+  - kdy pouzit `expects`,
+  - kdy pouzit `requires`,
+  - kdy pouzit `expects`,
+  - kdy pouzit `expectsXPath`,
+  - jak delit feature na `parts`,
+  - kdy staci auto-manifest a kdy ma smysl dopsat rucni JSON,
 - automaticka extrakce `provides` a casti `requires` z XML,
 - slouceni s rucne deklarovanymi semantickymi zavislostmi,
 - nove diagnostiky:
@@ -119,12 +196,21 @@ Implementace:
 
 Definition of Done:
 - validace umi nahlasit nekompletni feature,
-- pilot feature ma funkcni manifest a regression testy.
+- pilot feature ma funkcni manifest a regression testy,
+- existuje pouzitelna dokumentace a bootstrap generator pro zalozeni nove feature,
+- feature bez JSON manifestu umi fungovat aspon v auto-manifest rezimu.
+
+Aktualni stav:
+- XML-first auto-manifest rezim je hotovy
+- pilot `Assign` je hotovy
+- prvni feature-aware diagnostiky jsou hotove
+- bootstrap generator a uzivatelska dokumentace manifestu jeste chybi
+- chybi dalsi semanticke diagnostiky typu `duplicate-feature-provider` a `incomplete-feature`
 
 Doporuceny pilot:
 - `Assign`
 
-### Faze T3: Form-owned feature inheritance
+### Faze T3: Form-owned feature inheritance `[PLAN]`
 Cil:
 - odstranit nutnost duplikovat `Using` napric `Form`, `WorkFlow`, `DataView`.
 
@@ -142,7 +228,7 @@ Definition of Done:
 - feature aktivni na formulari se promita i do odpovidajiciho `WorkFlow` a `DataView`,
 - redundantni a chybejici deklarace jsou viditelne v diagnostice.
 
-### Faze T4: Effective composition model
+### Faze T4: Effective composition model `[PROBIHA]`
 Cil:
 - zavest jednotnou mezivrstvu, nad kterou budou stavet builder, validator, reference a editor tooling.
 
@@ -166,7 +252,15 @@ Definition of Done:
 - nove funkcionality uz se nepridavaji prime do parseru faktu a ad-hoc validaci,
 - validator a editor cteji stejny slozeny stav.
 
-### Faze T5: Builder observability
+Aktualni stav:
+- datovy model je zaveden
+- registry uz drzi `effectiveModelsByFeature`
+- feature validace uz pouziva effective model pro `expects` a `expectsXPath`
+- model uz nese i prvni usage stavy `provided / applied / consumed / unused`
+- model uz napaji i prvni contribution-level a `Using` impact diagnostiky
+- model zatim jeste nepokryva inheritance a Tree View potreby v plnem rozsahu
+
+### Faze T5: Builder observability `[CAST HOTOVO]`
 Cil:
 - builder musi byt sam o sobe debugovatelný, i bez validatoru.
 
@@ -185,6 +279,11 @@ Implementace:
 Definition of Done:
 - pri problemu jde z outputu zjistit, proc se cast vlozila nebo nevlozila,
 - builder umi prepnout chovani dle modu `fast/debug/release`.
+
+Aktualni stav:
+- existuje samostatny composition output channel
+- loguje se registry rebuild a composition issues
+- plnohodnotny builder debug output a builder modes jeste nejsou hotove
 
 ### Faze T6: Tree View nad finalnim modelem
 Cil:
@@ -359,8 +458,8 @@ Poznamka:
 ## Doporucene poradi realizace
 1. `T1` Stabilizace domenoveho modelu
 2. `T2` Feature manifest + dependency validator
-3. `T3` Form-owned feature inheritance
-4. `T4` Effective composition model
+3. `T4` Effective composition model
+4. `T3` Form-owned feature inheritance
 5. `T5` Builder observability
 6. `T6` Tree View
 7. `T7` Using impact analysis
@@ -371,6 +470,9 @@ Poznamka:
 
 ## Milestones
 ### Milestone M1: Feature contracts foundation
+Stav:
+- `[HOTOVO]`
+
 Obsah:
 - `T1` Stabilizace domenoveho modelu
 
@@ -378,7 +480,9 @@ Vystup:
 - finalni navrh feature manifestu,
 - finalni navrh capability reportu,
 - finalni navrh builder modes,
-- rozhodnuti co se pocita automaticky a co rucne.
+- rozhodnuti co se pocita automaticky a co rucne,
+- osnovy dokumentace pro authoring feature manifestu,
+- navrh bootstrap generatoru.
 
 Test checkpoint:
 - zde jeste neimplementujeme runtime funkcionalitu,
@@ -398,17 +502,23 @@ Gate pro dalsi milestone:
 - manifest i capability report umi bez hacku popsat aspon jednu realnou feature end-to-end.
 
 ### Milestone M2: Dependency-safe features
+Stav:
+- `[PROBIHA]`
+
 Obsah:
 - `T2` Feature manifest + dependency validator
 
 Vystup:
 - prvni implementace feature manifests,
 - nove diagnostiky pro nekompletni nebo rozbite feature,
-- regression fixture testy pro pilot feature.
+- regression fixture testy pro pilot feature,
+- prvni verze dokumentace s priklady,
+- prvni verze bootstrap generatoru `*.feature.json`.
 
 Test checkpoint:
 - male fixture testy nad zamerne rozbitou a kompletni feature,
 - regression testy nad `Assign`,
+- smoke test bootstrap generatoru nad realnou feature komponentou,
 - manualni overeni v editoru:
   - feature kompletni
   - chybi workflow cast
@@ -419,9 +529,18 @@ Smysl testu:
 - overit, ze validace hlida skutecne problemy feature a negeneruje sum.
 
 Gate pro dalsi milestone:
-- pilot feature ma stabilni manifest a validace umi zachytit hlavni tridY nekompletnosti.
+- pilot feature ma stabilni manifest a validace umi zachytit hlavni tridy nekompletnosti,
+- nova feature jde zalozit pomoci generatoru a dopsat podle dokumentace bez studia implementace.
+
+Aktualne chybi do gate:
+- bootstrap generator
+- uzivatelska dokumentace manifest authoringu
+- sirsi sada semantickych diagnostik
 
 ### Milestone M3: Form-owned inheritance
+Stav:
+- `[PLAN]`
+
 Obsah:
 - `T3` Form-owned feature inheritance
 
@@ -444,6 +563,9 @@ Gate pro dalsi milestone:
 - feature set je dohledatelny z formulare a nevyzaduje duplicitni zapis napric XML.
 
 ### Milestone M4: Effective composition model
+Stav:
+- `[PROBIHA]`
+
 Obsah:
 - `T4` Effective composition model
 
@@ -465,7 +587,21 @@ Smysl testu:
 Gate pro dalsi milestone:
 - nove funkcionality lze stavet nad jednim sdilenym slozenym modelem.
 
+Aktualne hotovo:
+- model typove existuje
+- registry ho sestavuje
+- validator ho uz pouziva pro prvni feature kontrakty
+- usage vrstva je rozbehnuta na pilot feature
+
+Aktualne chybi do gate:
+- consumed/applied/unused vrstva
+- inheritance v modelu
+- pouziti pro Tree View a dalsi providery
+
 ### Milestone M5: Builder observability
+Stav:
+- `[CAST HOTOVO]`
+
 Obsah:
 - `T5` Builder observability
 

@@ -13,21 +13,21 @@ interface Case {
 function run(): void {
   const cases: Case[] = [
     {
-      name: "placeholder-section-custom-params",
+      name: "placeholder-contribution-custom-params",
       components: [
         {
           key: "Common/Shared/Assign",
           text: `
-<Component>
-  <Section Name="Html" Insert="placeholder" Root="Form">
+<Feature>
+  <Contribution Name="Html" Insert="placeholder" Root="Form">
     <Wrap>{{CustomParam}}|{{FormIdent}}</Wrap>
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
       template: `
 <Form Ident="ITSMRequest">
-  <Body>{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}</Body>
+  <Body>{{Feature:Common/Shared/Assign,Contribution:Html,CustomParam:ParamValue}}</Body>
 </Form>`,
       expected: `
 <Form Ident="ITSMRequest">
@@ -37,25 +37,55 @@ function run(): void {
 </Form>`
     },
     {
-      name: "using-append-section-filter-and-root",
+      name: "legacy-component-section-tags-still-work",
       components: [
         {
-          key: "Common/CompA",
+          key: "Common/Legacy",
           text: `
 <Component>
   <Section Name="Controls" Root="Form" TargetXPath="//Form/Controls" Insert="append">
-    <Control Ident="AddedByUsing" />
-  </Section>
-  <Section Name="Controls" Root="WorkFlow" TargetXPath="//WorkFlow/Controls" Insert="append">
-    <Control Ident="MustNotBeAdded" />
+    <Control Ident="LegacyAdded" />
   </Section>
 </Component>`
         }
       ],
       template: `
+<Form>
+  <Usings>
+    <Using Feature="Common/Legacy" />
+  </Usings>
+  <Controls>
+    <Control Ident="Base" />
+  </Controls>
+</Form>`,
+      expected: `
+<Form>
+  <Controls>
+    <Control Ident="Base" />
+    <Control Ident="LegacyAdded" />
+  </Controls>
+</Form>`
+    },
+    {
+      name: "using-append-contribution-filter-and-root",
+      components: [
+        {
+          key: "Common/CompA",
+          text: `
+<Feature>
+  <Contribution Name="Controls" Root="Form" TargetXPath="//Form/Controls" Insert="append">
+    <Control Ident="AddedByUsing" />
+  </Contribution>
+  <Contribution Name="Controls" Root="WorkFlow" TargetXPath="//WorkFlow/Controls" Insert="append">
+    <Control Ident="MustNotBeAdded" />
+  </Contribution>
+</Feature>`
+        }
+      ],
+      template: `
 <Form Ident="A">
   <Usings>
-    <Using Component="Common/CompA" Section="Controls" />
+    <Using Feature="Common/CompA" Contribution="Controls" />
   </Usings>
   <Controls>
     <Control Ident="Base" />
@@ -74,28 +104,28 @@ function run(): void {
       components: [
         {
           key: "Common/Prepend",
-          text: `<Component><Section Name="S" Root="Form" TargetXPath="//Form/Target" Insert="prepend"><Prepend /></Section></Component>`
+          text: `<Feature><Contribution Name="S" Root="Form" TargetXPath="//Form/Target" Insert="prepend"><Prepend /></Contribution></Feature>`
         },
         {
           key: "Common/Before",
-          text: `<Component><Section Name="S" Root="Form" TargetXPath="//Form/Target" Insert="before"><Before /></Section></Component>`
+          text: `<Feature><Contribution Name="S" Root="Form" TargetXPath="//Form/Target" Insert="before"><Before /></Contribution></Feature>`
         },
         {
           key: "Common/After",
-          text: `<Component><Section Name="S" Root="Form" TargetXPath="//Form/Target" Insert="after"><After /></Section></Component>`
+          text: `<Feature><Contribution Name="S" Root="Form" TargetXPath="//Form/Target" Insert="after"><After /></Contribution></Feature>`
         },
         {
           key: "Common/Append",
-          text: `<Component><Section Name="S" Root="Form" TargetXPath="//Form/Target" Insert="append"><Append /></Section></Component>`
+          text: `<Feature><Contribution Name="S" Root="Form" TargetXPath="//Form/Target" Insert="append"><Append /></Contribution></Feature>`
         }
       ],
       template: `
 <Form>
   <Usings>
-    <Using Component="Common/Prepend" />
-    <Using Component="Common/Before" />
-    <Using Component="Common/After" />
-    <Using Component="Common/Append" />
+    <Using Feature="Common/Prepend" />
+    <Using Feature="Common/Before" />
+    <Using Feature="Common/After" />
+    <Using Feature="Common/Append" />
   </Usings>
   <Target>
     <Base />
@@ -118,17 +148,17 @@ function run(): void {
         {
           key: "Common/MultiFirst",
           text: `
-<Component>
-  <Section Name="S" Root="Form" TargetXPath="//Form/Controls | //Form/Buttons" Insert="append">
+<Feature>
+  <Contribution Name="S" Root="Form" TargetXPath="//Form/Controls | //Form/Buttons" Insert="append">
     <Inserted />
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
       template: `
 <Form>
   <Usings>
-    <Using Component="Common/MultiFirst" />
+    <Using Feature="Common/MultiFirst" />
   </Usings>
   <Controls>
     <Control Ident="Base" />
@@ -155,17 +185,17 @@ function run(): void {
         {
           key: "Common/MultiAll",
           text: `
-<Component>
-  <Section Name="S" Root="Form" TargetXPath="//Form/Controls | //Form/Buttons" Insert="append" AllowMultipleInserts="true">
+<Feature>
+  <Contribution Name="S" Root="Form" TargetXPath="//Form/Controls | //Form/Buttons" Insert="append" AllowMultipleInserts="true">
     <Inserted />
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
       template: `
 <Form>
   <Usings>
-    <Using Component="Common/MultiAll" />
+    <Using Feature="Common/MultiAll" />
   </Usings>
   <Controls>
     <Control Ident="Base" />
@@ -188,22 +218,22 @@ function run(): void {
       expectedDebugLogs: ["[TargetXPath] '//Form/Controls | //Form/Buttons' matched 2 nodes; applying to all matches"]
     },
     {
-      name: "include-with-section-and-params",
+      name: "include-with-contribution-and-params",
       components: [
         {
           key: "Lib/Renderable",
           text: `
-<Component>
-  <Section Name="Main" Insert="placeholder" Root="Form">
+<Feature>
+  <Contribution Name="Main" Insert="placeholder" Root="Form">
     <Rendered Value="{{Custom}}" Form="{{FormIdent}}" />
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
       template: `
 <Form Ident="REQ">
   <Host>
-    <Include Component="Lib/Renderable" Section="Main" Custom="X" />
+    <Include Feature="Lib/Renderable" Contribution="Main" Custom="X" />
   </Host>
 </Form>`,
       expected: `
@@ -214,21 +244,21 @@ function run(): void {
 </Form>`
     },
     {
-      name: "include-without-section-uses-component-inner-content",
+      name: "include-without-contribution-uses-feature-inner-content",
       components: [
         {
           key: "Lib/Whole",
           text: `
-<Component>
+<Feature>
   <A />
   <B Attr="{{FormIdent}}" />
-</Component>`
+</Feature>`
         }
       ],
       template: `
 <Form Ident="REQ">
   <Host>
-    <Include Component="Lib/Whole" />
+    <Include Feature="Lib/Whole" />
   </Host>
 </Form>`,
       expected: `
@@ -245,48 +275,48 @@ function run(): void {
         {
           key: "C/A",
           text: `
-<Component>
-  <Section Name="Main" Insert="placeholder">
-    <A>{{Component:C/B,Section:Main,Nested:{{Value}}}}</A>
-  </Section>
-</Component>`
+<Feature>
+  <Contribution Name="Main" Insert="placeholder">
+    <A>{{Feature:C/B,Contribution:Main,Nested:{{Value}}}}</A>
+  </Contribution>
+</Feature>`
         },
         {
           key: "C/B",
           text: `
-<Component>
-  <Section Name="Main" Insert="placeholder">
+<Feature>
+  <Contribution Name="Main" Insert="placeholder">
     <B>{{Nested}}</B>
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
-      template: `<Form>{{Component:C/A,Section:Main,Value:42}}</Form>`,
+      template: `<Form>{{Feature:C/A,Contribution:Main,Value:42}}</Form>`,
       expected: `<Form><A><B>42</B></A></Form>`
     },
     {
       name: "unknown-component-placeholder-stays-unchanged",
       components: [],
-      template: `<Form>{{Component:Missing/Comp,Section:S}}</Form>`,
-      expected: `<Form>{{Component:Missing/Comp,Section:S}}</Form>`
+      template: `<Form>{{Feature:Missing/Comp,Contribution:S}}</Form>`,
+      expected: `<Form>{{Feature:Missing/Comp,Contribution:S}}</Form>`
     },
     {
-      name: "component-root-template-is-preserved",
+      name: "sfp-component-root-template-is-preserved",
       components: [
         {
           key: "Shared/Sample",
           text: `
-<Component>
-  <Section Name="Controls" Insert="append" TargetXPath="//Component/Controls" Root="Component">
+<Feature>
+  <Contribution Name="Controls" Insert="append" TargetXPath="//Component/Controls" Root="Component">
     <Control Ident="Injected" />
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
       template: `
 <Component Ident="RuntimeComponent" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters">
   <Usings>
-    <Using Component="Shared/Sample" />
+    <Using Feature="Shared/Sample" />
   </Usings>
   <Controls>
     <Control Ident="Base" />
@@ -306,19 +336,19 @@ function run(): void {
         {
           key: "Common/KnowledgeBase",
           text: `
-<Component>
-  <Section Root="Form" Name="Component" TargetXPath="//Form/Components" Insert="append">
+<Feature>
+  <Contribution Root="Form" Name="Component" TargetXPath="//Form/Components" Insert="append">
     <Component ComponentIdent="ITSMKnowledgeBaseComponent" Ident="ITSMKnowledgeBase">
       <KnowledgeBaseTree CountSectionIdent="KnowledgeBaseSection" Type="ArticleOnly" />
     </Component>
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
       template: `
 <Form Ident="ITSMInovation">
   <Usings>
-    <Using Component="Common/KnowledgeBase" />
+    <Using Feature="Common/KnowledgeBase" />
   </Usings>
   <Components>
     <Component ComponentIdent="TimeLineComponent" Ident="TimeLine" />
@@ -335,24 +365,24 @@ function run(): void {
 </Form>`
     },
     {
-      name: "using-placeholder-sections-are-skipped-during-using-phase",
+      name: "using-placeholder-contributions-are-skipped-during-using-phase",
       components: [
         {
           key: "C/Place",
           text: `
-<Component>
-  <Section Name="Html" Insert="placeholder" Root="Form">
+<Feature>
+  <Contribution Name="Html" Insert="placeholder" Root="Form">
     <Block>OK</Block>
-  </Section>
-</Component>`
+  </Contribution>
+</Feature>`
         }
       ],
       template: `
 <Form>
   <Usings>
-    <Using Component="C/Place" Section="Html" />
+    <Using Feature="C/Place" Contribution="Html" />
   </Usings>
-  <Host>{{Component:C/Place,Section:Html}}</Host>
+  <Host>{{Feature:C/Place,Contribution:Html}}</Host>
 </Form>`,
       expected: `
 <Form>
@@ -395,11 +425,11 @@ function runRefsTest(): void {
   const input = `
 <Form>
   <Usings>
-    <Using Component="Common\\Shared\\Assign.component.xml" />
+    <Using Feature="Common\\Shared\\Assign.feature.xml" />
     <Using Name="Library/One.xml" />
   </Usings>
-  <X>{{Component:Common/Two.xml,Section:S}}</X>
-  <Y>{{Name:Common/Three.component.xml,Section:S}}</Y>
+  <X>{{Feature:Common/Two.xml,Contribution:S}}</X>
+  <Y>{{Name:Common/Three.feature.xml,Contribution:S}}</Y>
 </Form>`;
   const refs = extractUsingComponentRefs(input).sort((a, b) => a.localeCompare(b));
   const expected = ["Common/Shared/Assign", "Common/Three", "Common/Two", "Library/One"].sort((a, b) => a.localeCompare(b));

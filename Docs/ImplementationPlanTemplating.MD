@@ -321,7 +321,13 @@ Definition of Done:
 Aktualni stav:
 - existuje samostatny composition output channel
 - loguje se registry rebuild a composition issues
-- plnohodnotny builder debug output a builder modes jeste nejsou hotove
+- build pipeline loguje i composition snapshot nad stejnym `DocumentCompositionModel`:
+  - per-template status `effective/partial/unused`
+  - detail non-effective usingu (`successful/relevant`)
+  - souhrn za build run + pocet `TargetXPath` debug udalosti
+- chybi jeste:
+  - builder modes `fast/debug/release`
+  - navazani ordering/debug detailu na stejnou vrstvu
 
 ### Faze T6: Tree View nad finalnim modelem `[PROBIHA]`
 Cil:
@@ -683,7 +689,7 @@ Aktualne hotovo:
 
 Aktualne chybi do gate:
 - inheritance v modelu
-- napojit builder output/debug na stejny model
+- dodelat builder modes a ordering/debug detail na stejne vrstve
 - plne napojeni dalsich provideru na stejny model
 
 ### Milestone M5: Builder observability
@@ -711,6 +717,17 @@ Smysl testu:
 
 Gate pro dalsi milestone:
 - builder output realne pomaha debugovat build bez nutnosti zasahovat do kodu.
+
+Aktualne hotovo:
+- build output je napojeny na `DocumentCompositionModel`
+- po buildu se loguje per-template composition snapshot:
+  - `effective/partial/unused`
+  - non-effective detail (`successful/relevant`)
+  - sumarizace runu + `TargetXPath` debug count
+
+Aktualne chybi do gate:
+- builder modes `fast/debug/release`
+- ordering/debug detail nad stejnou composition vrstvou
 
 ### Milestone M6: Tree View MVP
 Stav:

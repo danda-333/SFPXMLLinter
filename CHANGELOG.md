@@ -27,12 +27,14 @@
 - Indexing and validation fixes:
   - updated runtime/workspace indexing to recognize `Feature` roots and `Contribution` blocks, so real validation matches fixture behavior.
   - fixed `unused-using` / `partial-using` fixture coverage to validate the intended rule instead of side-effect diagnostics.
+  - added `Include` reference indexing in parsed facts so composition/index model stays in sync with template build behavior.
 - Tests and fixtures:
   - migrated linter/template/composition fixtures to the new `Feature` / `Contribution` naming.
   - refreshed invalid fixture mappings and regression coverage for `unused-using` / `partial-using`.
 - Composition effective trace and using impact:
   - indexed per-contribution insert trace (`strategy`, XPath matches, clamped count, placeholder count, fallback symbol count, final insert count).
   - Tree View `Using/Contribution -> Meta` now shows indexed insert trace details and uses insert count as the single effective/unused signal.
+  - Tree View now includes dedicated `Includes` group for normal XML documents.
 - Feature conflict handling:
   - `duplicate-provider` conflict message now includes source file and applies-to context for each conflicting provider.
   - suppressed false-positive `duplicate-provider` conflict for control providers limited to `form` + `filter` context overlap.

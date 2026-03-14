@@ -93,6 +93,7 @@ export interface ParsedDocumentFacts {
   workflowReferences: WorkflowReference[];
   usingReferences: UsingReference[];
   usingContributionInsertCounts: Map<string, number>;
+  usingContributionInsertTraces: Map<string, UsingContributionInsertTrace>;
   placeholderReferences: PlaceholderReference[];
   formIdentReferences: FormIdentReference[];
   mappingIdentReferences: MappingIdentReference[];
@@ -111,6 +112,17 @@ export interface ParsedDocumentFacts {
   actionShareCodeReferences: NamedIdent[];
   declaredControlInfos: NamedIdent[];
   declaredButtonInfos: NamedIdent[];
+}
+
+export interface UsingContributionInsertTrace {
+  strategy: "placeholder" | "targetXPath" | "symbolCount";
+  finalInsertCount: number;
+  placeholderCount: number;
+  targetXPathExpression?: string;
+  targetXPathMatchCount: number;
+  targetXPathClampedCount: number;
+  allowMultipleInserts: boolean;
+  fallbackSymbolCount: number;
 }
 
 const ATTR_REGEX = /([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
@@ -139,6 +151,7 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     workflowReferences: [],
     usingReferences: [],
     usingContributionInsertCounts: new Map<string, number>(),
+    usingContributionInsertTraces: new Map<string, UsingContributionInsertTrace>(),
     placeholderReferences: [],
     formIdentReferences: [],
     mappingIdentReferences: [],

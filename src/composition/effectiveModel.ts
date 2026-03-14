@@ -82,8 +82,18 @@ export function buildEffectiveCompositionModel(
       continue;
     }
 
+    if (isAllowedProviderOverlap(item.kind, providerContextSets)) {
+      continue;
+    }
+
     const providers = item.origins
-      .map((origin) => origin.note ?? [origin.feature, origin.partId, origin.section].filter(Boolean).join("/"))
+      .map((origin) => {
+        const source = origin.note ?? [origin.feature, origin.partId, origin.section].filter(Boolean).join("/");
+        const part = manifest.parts.find((candidate) => candidate.id === origin.partId);
+        const appliesTo = part?.appliesTo?.join(",") ?? "unknown";
+        const file = part?.file ?? "unknown-file";
+        return `${source} [file=${file}, appliesTo=${appliesTo}]`;
+      })
       .filter((value): value is string => !!value)
       .join(", ");
 
@@ -198,11 +208,7 @@ function addProviderContexts(
   contexts: readonly FeatureContextKind[]
 ): void {
   const current = target.get(itemKey) ?? [];
-  const incoming = new Set(contexts);
-  const incomingKey = [...incoming].sort((a, b) => a.localeCompare(b)).join("|");
-  if (!current.some((set) => [...set].sort((a, b) => a.localeCompare(b)).join("|") === incomingKey)) {
-    current.push(incoming);
-  }
+  current.push(new Set(contexts));
   target.set(itemKey, current);
 }
 
@@ -220,6 +226,48 @@ function hasOverlappingProviderContexts(contextSets: readonly ReadonlySet<Featur
   }
 
   return false;
+}
+
+function isAllowedProviderOverlap(
+  kind: FeatureSymbolKind,
+  contextSets: readonly ReadonlySet<FeatureContextKind>[]
+): boolean {
+  if (kind !== "control") {
+    return false;
+  }
+
+  for (let i = 0; i < contextSets.length; i++) {
+    for (let j = i + 1; j < contextSets.length; j++) {
+      const left = contextSets[i];
+      const right = contextSets[j];
+      const overlap = intersectContexts(left, right);
+      if (overlap.length === 0) {
+        continue;
+      }
+
+      const union = [...new Set([...left, ...right])];
+      const inFormFilterScope = union.every((context) => context === "form" || context === "filter");
+      const includesFilter = union.includes("filter");
+      if (!inFormFilterScope || !includesFilter) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function intersectContexts(
+  left: ReadonlySet<FeatureContextKind>,
+  right: ReadonlySet<FeatureContextKind>
+): FeatureContextKind[] {
+  const out: FeatureContextKind[] = [];
+  for (const context of left) {
+    if (right.has(context)) {
+      out.push(context);
+    }
+  }
+  return out;
 }
 
 export function matchesExpectedXPathInEffectiveModel(

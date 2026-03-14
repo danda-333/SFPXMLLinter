@@ -47,22 +47,38 @@ interface PlaceholderToken {
   end: number;
 }
 
+export interface XPathInsertTargetStats {
+  matchCount: number;
+  insertCount: number;
+}
+
 export function countXPathInsertTargets(
   text: string,
   targetXPath: string | undefined,
   allowMultipleInserts?: boolean
 ): number {
+  return analyzeXPathInsertTargets(text, targetXPath, allowMultipleInserts).insertCount;
+}
+
+export function analyzeXPathInsertTargets(
+  text: string,
+  targetXPath: string | undefined,
+  allowMultipleInserts?: boolean
+): XPathInsertTargetStats {
   const xpathExpr = (targetXPath ?? "").trim();
   if (!xpathExpr) {
-    return 0;
+    return { matchCount: 0, insertCount: 0 };
   }
 
   const ranges = findTargetRanges(text, xpathExpr);
   if (ranges.length === 0) {
-    return 0;
+    return { matchCount: 0, insertCount: 0 };
   }
 
-  return allowMultipleInserts ? ranges.length : 1;
+  return {
+    matchCount: ranges.length,
+    insertCount: allowMultipleInserts ? ranges.length : 1
+  };
 }
 
 export function buildComponentLibrary(sources: readonly ComponentSource[]): BuildComponentLibrary {

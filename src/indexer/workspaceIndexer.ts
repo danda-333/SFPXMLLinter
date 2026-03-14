@@ -4,7 +4,7 @@ import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
 import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
 import { maskXmlComments } from "../utils/xmlComments";
-import { countXPathInsertTargets } from "../template/buildXmlTemplatesCore";
+import { analyzeXPathInsertTargets } from "../template/buildXmlTemplatesCore";
 
 interface ParsedEntry {
   uri: vscode.Uri;
@@ -1070,6 +1070,7 @@ function populateUsingContributionInsertCounts(
   index: WorkspaceIndex
 ): void {
   const out = new Map<string, number>();
+  const traceOut = new Map<string, import("./xmlFacts").UsingContributionInsertTrace>();
   const placeholderCounts = new Map<string, number>();
   for (const ref of facts.placeholderReferences) {
     const componentKey = ref.componentKey;
@@ -1098,23 +1099,54 @@ function populateUsingContributionInsertCounts(
       const key = makeUsingContributionInsertKey(usingRef.componentKey, contribution.contributionName);
       const insertMode = (contribution.insert ?? "").trim().toLowerCase();
       if (insertMode === "placeholder") {
-        out.set(key, placeholderCounts.get(key) ?? 0);
+        const placeholderCount = placeholderCounts.get(key) ?? 0;
+        out.set(key, placeholderCount);
+        traceOut.set(key, {
+          strategy: "placeholder",
+          finalInsertCount: placeholderCount,
+          placeholderCount,
+          targetXPathExpression: contribution.targetXPath?.trim() || undefined,
+          targetXPathMatchCount: 0,
+          targetXPathClampedCount: 0,
+          allowMultipleInserts: !!contribution.allowMultipleInserts,
+          fallbackSymbolCount: 0
+        });
         continue;
       }
 
       if ((contribution.targetXPath ?? "").trim().length > 0) {
-        out.set(
-          key,
-          countXPathInsertTargets(maskedText, contribution.targetXPath, contribution.allowMultipleInserts)
-        );
+        const xpathStats = analyzeXPathInsertTargets(maskedText, contribution.targetXPath, contribution.allowMultipleInserts);
+        out.set(key, xpathStats.insertCount);
+        traceOut.set(key, {
+          strategy: "targetXPath",
+          finalInsertCount: xpathStats.insertCount,
+          placeholderCount: placeholderCounts.get(key) ?? 0,
+          targetXPathExpression: contribution.targetXPath?.trim() || undefined,
+          targetXPathMatchCount: xpathStats.matchCount,
+          targetXPathClampedCount: xpathStats.insertCount,
+          allowMultipleInserts: !!contribution.allowMultipleInserts,
+          fallbackSymbolCount: 0
+        });
         continue;
       }
 
-      out.set(key, countIndexedContributionSymbolsForRoot(facts.rootTag, contribution));
+      const fallbackSymbolCount = countIndexedContributionSymbolsForRoot(facts.rootTag, contribution);
+      out.set(key, fallbackSymbolCount);
+      traceOut.set(key, {
+        strategy: "symbolCount",
+        finalInsertCount: fallbackSymbolCount,
+        placeholderCount: placeholderCounts.get(key) ?? 0,
+        targetXPathExpression: undefined,
+        targetXPathMatchCount: 0,
+        targetXPathClampedCount: 0,
+        allowMultipleInserts: !!contribution.allowMultipleInserts,
+        fallbackSymbolCount
+      });
     }
   }
 
   facts.usingContributionInsertCounts = out;
+  facts.usingContributionInsertTraces = traceOut;
 }
 
 function makeUsingContributionInsertKey(componentKey: string, contributionName: string): string {

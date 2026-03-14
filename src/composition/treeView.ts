@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
+import { parseDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
 import { WorkspaceIndex, IndexedComponentContributionSummary } from "../indexer/types";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { FeatureManifestRegistry } from "./workspace";
@@ -519,12 +519,11 @@ function buildUsingContributionNode(
   const location = component.contributionDefinitions.get(contribution.contributionName);
   const rootRelevant = contributionMatchesDocumentRoot(facts.rootTag, contribution);
   const insertMode = (contribution.insert ?? "").trim().toLowerCase();
-  const insertions = getIndexedContributionInsertCount(facts, componentKey, contribution.contributionName);
-  const hasUntypedContent = contribution.hasContent && insertions === 0 && insertMode !== "placeholder";
+  const insertTrace = getIndexedContributionInsertTrace(facts, componentKey, contribution.contributionName);
+  const insertions = insertTrace?.finalInsertCount;
   const hasIndexedInsertCount = insertions !== undefined;
-  const usageState: "effective" | "unused" =
-    rootRelevant && hasIndexedInsertCount && (insertions > 0 || hasUntypedContent) ? "effective" : "unused";
-  const metaGroup = buildUsingContributionMetaGroup(nodeId, contribution);
+  const usageState: "effective" | "unused" = rootRelevant && hasIndexedInsertCount && insertions > 0 ? "effective" : "unused";
+  const metaGroup = buildUsingContributionMetaGroup(nodeId, contribution, insertTrace);
   const placeholderLocations = collectPlaceholderUsageLocations(
     document,
     facts,
@@ -539,9 +538,6 @@ function buildUsingContributionNode(
     details.push(`not relevant for root '${facts.rootTag ?? "unknown"}'`);
   }
   details.push(hasIndexedInsertCount ? `inserts=${insertions}` : "inserts=index-missing");
-  if (hasUntypedContent) {
-    details.push("untyped-content");
-  }
 
   return {
     type: "contribution",
@@ -565,12 +561,13 @@ function buildUsingContributionNode(
 
 function buildUsingContributionMetaGroup(
   contributionNodeId: string,
-  contribution: IndexedComponentContributionSummary
+  contribution: IndexedComponentContributionSummary,
+  insertTrace: ReturnType<typeof getIndexedContributionInsertTrace>
 ): GroupNode {
   const rootValue = contribution.rootExpression ?? contribution.root ?? "form";
   const insertValue = contribution.insert ?? "append";
   const targetXPathValue = contribution.targetXPath ?? "(none)";
-  const summary = `${rootValue}, ${insertValue}, ${targetXPathValue}`;
+  const summary = `${rootValue}, ${insertValue}, ${targetXPathValue}${insertTrace ? `, inserts=${insertTrace.finalInsertCount}` : ""}`;
   const children: CompositionTreeNode[] = [
     detailNode(`Root: ${rootValue}`),
     detailNode(`Insert: ${insertValue}`),
@@ -581,6 +578,16 @@ function buildUsingContributionMetaGroup(
     children.push(detailNode(`AllowMultipleInserts: ${contribution.allowMultipleInserts ? "true" : "false"}`));
   }
   children.push(detailNode(`HasContent: ${contribution.hasContent ? "true" : "false"}`));
+  if (insertTrace) {
+    children.push(detailNode(`InsertStrategy: ${insertTrace.strategy}`));
+    children.push(detailNode(`InsertCount: ${insertTrace.finalInsertCount}`));
+    children.push(detailNode(`PlaceholderCount: ${insertTrace.placeholderCount}`));
+    children.push(detailNode(`TargetXPathMatches: ${insertTrace.targetXPathMatchCount}`));
+    children.push(detailNode(`TargetXPathClamped: ${insertTrace.targetXPathClampedCount}`));
+    children.push(detailNode(`FallbackSymbolCount: ${insertTrace.fallbackSymbolCount}`));
+  } else {
+    children.push(detailNode("InsertTrace: missing in index"));
+  }
 
   return {
     type: "group",
@@ -679,6 +686,15 @@ function getIndexedContributionInsertCount(
 ): number | undefined {
   const key = `${componentKey}::${contributionName}`;
   return facts.usingContributionInsertCounts.get(key);
+}
+
+function getIndexedContributionInsertTrace(
+  facts: ReturnType<typeof parseDocumentFacts>,
+  componentKey: string,
+  contributionName: string
+): UsingContributionInsertTrace | undefined {
+  const key = `${componentKey}::${contributionName}`;
+  return facts.usingContributionInsertTraces.get(key);
 }
 
 function evaluateUsingInsertImpact(
@@ -911,6 +927,7 @@ function buildActionsNode(root: string, nodeId: string): GroupNode {
   const actions: CompositionTreeNode[] = [
     actionNode("Refresh View", "sfpXmlLinter.refreshCompositionView", "refresh"),
     actionNode("Show Composition Log", "sfpXmlLinter.showCompositionLog", "output"),
+    actionNode("Generate Feature Manifest Bootstrap", "sfpXmlLinter.generateFeatureManifestBootstrap", "new-file"),
     actionNode("Revalidate Workspace", "sfpXmlLinter.revalidateWorkspace", "workspace-trusted"),
     actionNode("Revalidate Project", "sfpXmlLinter.revalidateProject", "folder-active")
   ];

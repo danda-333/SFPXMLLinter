@@ -30,6 +30,7 @@
     "onCommand:sfpXmlLinter.showBuildQueueLog",
     "onCommand:sfpXmlLinter.showIndexLog",
     "onCommand:sfpXmlLinter.showCompositionLog",
+    "onCommand:sfpXmlLinter.generateFeatureManifestBootstrap",
     "onCommand:sfpXmlLinter.refreshCompositionView",
     "onCommand:sfpXmlLinter.compositionOpenSource",
     "onCommand:sfpXmlLinter.compositionOpenSourceBeside",
@@ -103,6 +104,10 @@
       {
         "command": "sfpXmlLinter.showCompositionLog",
         "title": "SFP XML Linter: Show Composition Log"
+      },
+      {
+        "command": "sfpXmlLinter.generateFeatureManifestBootstrap",
+        "title": "SFP XML Linter: Generate Feature Manifest Bootstrap"
       },
       {
         "command": "sfpXmlLinter.refreshCompositionView",
@@ -347,7 +352,7 @@
     "test:formatter": "npm run compile && node out/tests/formatter/runFormatterFixtures.js && node out/tests/formatter/runSelectionFormatterTests.js",
     "test:linter": "npm run compile && node out/tests/linter/runLinterFixtures.js",
     "test:linter:perf": "npm run compile && node out/tests/linter/runLinterPerformance.js",
-    "test:composition": "npm run compile && node out/tests/composition/runCompositionModelTests.js && node out/tests/composition/runCompositionWorkspaceTests.js && node out/tests/composition/runCompositionDiagnosticsTests.js",
+    "test:composition": "npm run compile && node out/tests/composition/runCompositionModelTests.js && node out/tests/composition/runCompositionWorkspaceTests.js && node out/tests/composition/runCompositionDiagnosticsTests.js && node out/tests/composition/runCompositionBootstrapTests.js",
     "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js",
     "test:templates:service": "npm run compile && node out/tests/template/runBuildTemplateServiceTests.js",
     "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runBuildTemplateServiceTests.js && node out/tests/template/runBuildTemplateFixtures.js",

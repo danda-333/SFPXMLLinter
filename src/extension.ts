@@ -1,5 +1,6 @@
-﻿import * as vscode from "vscode";
+import * as vscode from "vscode";
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
 import { DiagnosticsEngine } from "./diagnostics/engine";
 import { documentInConfiguredRoots, getXmlIndexDomainByUri, XmlIndexDomain } from "./utils/paths";
@@ -24,6 +25,7 @@ import { WorkspaceIndex } from "./indexer/types";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
 import { FeatureRegistryStore } from "./composition/registry";
 import { CompositionTreeProvider } from "./composition/treeView";
+import { buildBootstrapManifestDraft } from "./composition/bootstrapManifest";
 
 const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-form-ident",
@@ -922,11 +924,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       const durationMs = Date.now() - startedAt;
       logIndex(`REINDEX all passes DONE in ${durationMs} ms`);
-      vscode.window.setStatusBarMessage(`SFP XML Linter: Indexace dokončena (${durationMs} ms)`, 4000);
+      vscode.window.setStatusBarMessage(`SFP XML Linter: Indexace dokoncena (${durationMs} ms)`, 4000);
 
       if (!hasShownInitialIndexReadyNotification) {
         hasShownInitialIndexReadyNotification = true;
-        vscode.window.showInformationMessage(`SFP XML Linter: Úvodní indexace dokončena (${durationMs} ms).`);
+        vscode.window.showInformationMessage(`SFP XML Linter: �vodn� indexace dokoncena (${durationMs} ms).`);
       }
     } finally {
       isReindexRunning = false;
@@ -1834,6 +1836,59 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("sfpXmlLinter.refreshCompositionView", () => {
       compositionTreeProvider.refresh();
       logComposition("Composition view refreshed");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.generateFeatureManifestBootstrap", async () => {
+      const activeUri = vscode.window.activeTextEditor?.document.uri;
+      if (!activeUri || activeUri.scheme !== "file") {
+        vscode.window.showInformationMessage("SFP XML Linter: Open a feature XML file first.");
+        return;
+      }
+
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(activeUri);
+      if (!workspaceFolder) {
+        vscode.window.showInformationMessage("SFP XML Linter: Active file must be inside a workspace folder.");
+        return;
+      }
+
+      const draft = buildBootstrapManifestDraft(workspaceFolder.uri.fsPath, activeUri.fsPath);
+      if (!draft) {
+        vscode.window.showInformationMessage(
+          "SFP XML Linter: No feature candidate found for this file. Open a *.feature.xml inside XML_Components."
+        );
+        return;
+      }
+
+      const targetUri = vscode.Uri.file(draft.manifestPath);
+      const alreadyExists = await fs
+        .access(draft.manifestPath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (alreadyExists) {
+        const choice = await vscode.window.showWarningMessage(
+          `SFP XML Linter: '${vscode.workspace.asRelativePath(targetUri, false)}' already exists. Overwrite?`,
+          { modal: true },
+          "Overwrite"
+        );
+        if (choice !== "Overwrite") {
+          return;
+        }
+      }
+
+      await fs.mkdir(path.dirname(draft.manifestPath), { recursive: true });
+      await fs.writeFile(draft.manifestPath, draft.manifestText, "utf8");
+      logComposition(
+        `Bootstrap manifest generated for feature '${draft.feature}': ${vscode.workspace.asRelativePath(targetUri, false)}`
+      );
+      const opened = await vscode.workspace.openTextDocument(targetUri);
+      await vscode.window.showTextDocument(opened, { preview: false });
+      vscode.window.showInformationMessage(
+        `SFP XML Linter: Generated bootstrap manifest for '${draft.feature}'.`
+      );
+      compositionTreeProvider.refresh();
     })
   );
 

@@ -74,6 +74,12 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - Placeholder sections support custom inline params:
     - `{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}`
     - enables replacements inside inserted section content (e.g. `{{CustomParam}}`)
+- Feature manifest bootstrap command:
+  - `SFP XML Linter: Generate Feature Manifest Bootstrap`
+  - Generates `*.feature.json` next to the active feature from current XML-first feature composition.
+  - Uses the same auto-manifest inference as runtime (`Feature`/`Contribution`, contracts, `expectsXPath`, `requires`, `provides`).
+  - If target file already exists, asks for explicit overwrite confirmation.
+  - Full usage guide: `Docs/FeatureManifestBootstrap.md`
 - Report command:
   - `SFP XML Linter: Workspace Diagnostics Report`
   - Prints diagnostics summary and per-rule counts to output channel

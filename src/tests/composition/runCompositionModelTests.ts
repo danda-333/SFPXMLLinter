@@ -145,6 +145,95 @@ function run(): void {
   assert.deepEqual(parsed.parts[0]?.contributions[0]?.expectsXPath, ["//DataView/Columns"]);
   assert.deepEqual(parsed.parts[0]?.contributions[0]?.touches, [{ kind: "column", ident: "ApprovalState" }]);
 
+  const duplicateAllowedManifest = normalizeFeatureManifest(
+    {
+      feature: "AssignFilter",
+      parts: [
+        {
+          id: "Assign.Form",
+          file: "Assign.Form.feature.xml",
+          appliesTo: ["form"],
+          contributions: [
+            {
+              id: "controls-form",
+              name: "Controls",
+              appliesTo: ["form"],
+              provides: ["control:AssignedGroupID"]
+            }
+          ]
+        },
+        {
+          id: "Assign.Filter",
+          file: "Assign.Filter.feature.xml",
+          appliesTo: ["filter"],
+          contributions: [
+            {
+              id: "controls-filter",
+              name: "Controls",
+              appliesTo: ["filter"],
+              provides: ["control:AssignedGroupID"]
+            }
+          ]
+        }
+      ]
+    },
+    "AssignFilter.feature.json"
+  );
+  const duplicateAllowedRegistry = emptyFeatureManifestRegistry();
+  duplicateAllowedRegistry.manifestsByFeature.set(duplicateAllowedManifest.feature, duplicateAllowedManifest);
+  duplicateAllowedRegistry.capabilityReportsByFeature.set(
+    duplicateAllowedManifest.feature,
+    buildFeatureCapabilityReport(duplicateAllowedManifest)
+  );
+  const duplicateAllowedModel = buildEffectiveCompositionModel(duplicateAllowedManifest, duplicateAllowedRegistry);
+  assert.ok(!duplicateAllowedModel.conflicts.some((conflict) => conflict.code === "duplicate-provider"));
+
+  const duplicateConflictManifest = normalizeFeatureManifest(
+    {
+      feature: "AssignWorkflowDup",
+      parts: [
+        {
+          id: "Assign.Form",
+          file: "Assign.Form.feature.xml",
+          appliesTo: ["form"],
+          contributions: [
+            {
+              id: "controls-form",
+              name: "Controls",
+              appliesTo: ["form"],
+              provides: ["control:AssignedGroupID"]
+            }
+          ]
+        },
+        {
+          id: "Assign.WorkFlow",
+          file: "Assign.WorkFlow.feature.xml",
+          appliesTo: ["form"],
+          contributions: [
+            {
+              id: "controls-wf",
+              name: "Controls",
+              appliesTo: ["form"],
+              provides: ["control:AssignedGroupID"]
+            }
+          ]
+        }
+      ]
+    },
+    "AssignWorkflowDup.feature.json"
+  );
+  const duplicateConflictRegistry = emptyFeatureManifestRegistry();
+  duplicateConflictRegistry.manifestsByFeature.set(duplicateConflictManifest.feature, duplicateConflictManifest);
+  duplicateConflictRegistry.capabilityReportsByFeature.set(
+    duplicateConflictManifest.feature,
+    buildFeatureCapabilityReport(duplicateConflictManifest)
+  );
+  const duplicateConflictModel = buildEffectiveCompositionModel(duplicateConflictManifest, duplicateConflictRegistry);
+  const duplicateConflict = duplicateConflictModel.conflicts.find((conflict) => conflict.code === "duplicate-provider");
+  assert.ok(duplicateConflict);
+  assert.ok(duplicateConflict?.message.includes("Assign.Form.feature.xml"));
+  assert.ok(duplicateConflict?.message.includes("Assign.WorkFlow.feature.xml"));
+
   assert.throws(
     () =>
       normalizeFeatureManifest(

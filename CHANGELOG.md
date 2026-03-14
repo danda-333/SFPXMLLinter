@@ -15,6 +15,16 @@
 - Tests and fixtures:
   - migrated linter/template/composition fixtures to the new `Feature` / `Contribution` naming.
   - refreshed invalid fixture mappings and regression coverage for `unused-using` / `partial-using`.
+- Composition effective trace and using impact:
+  - indexed per-contribution insert trace (`strategy`, XPath matches, clamped count, placeholder count, fallback symbol count, final insert count).
+  - Tree View `Using/Contribution -> Meta` now shows indexed insert trace details and uses insert count as the single effective/unused signal.
+- Feature conflict handling:
+  - `duplicate-provider` conflict message now includes source file and applies-to context for each conflicting provider.
+  - suppressed false-positive `duplicate-provider` conflict for control providers limited to `form` + `filter` context overlap.
+- Feature manifest bootstrap:
+  - added command `SFP XML Linter: Generate Feature Manifest Bootstrap`.
+  - generates `*.feature.json` draft from XML-first feature composition near the active feature file (with overwrite confirmation).
+  - added composition bootstrap regression tests.
 
 ## 0.0.16
 

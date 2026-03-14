@@ -1010,6 +1010,10 @@ Aktualne hotovo:
     - formatter pass po buildu
     - zachovani specialnich bloku (`SQL`, `Command`, `HTMLTemplate`, `CDATA`)
     - provenance rezimy (`off` / `fileComment`)
+  - fixture-level quality scenar nad realnymi templaty (`runBuildTemplateFixtures`):
+    - vzorek 30 realnych template souboru
+    - `postBuildFormat=true` + `provenanceMode=fileComment`
+    - kontrola markeru, pozice markeru po XML deklaraci a ochrana CDATA
   - doplneny composition settings stub pro nove builder volby
 
 ### Milestone M11: Programovatelne generovani

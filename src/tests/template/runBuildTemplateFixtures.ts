@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { buildComponentLibrary, normalizePath, renderTemplateText, stripXmlComponentExtension } from "../../template/buildXmlTemplatesCore";
+import { applyTemplateOutputQuality } from "../../template/outputQuality";
 
 const workspaceRoot = path.resolve(__dirname, "../../../");
 const fixtureRoot = path.join(workspaceRoot, "tests", "fixtures", "template-builder");
@@ -86,6 +87,11 @@ function run(): void {
     }
   }
 
+  const qualityScenarioFailures = runOutputQualityFixtureScenarios(templateFiles, library);
+  if (qualityScenarioFailures > 0) {
+    throw new Error(`Template builder output quality fixture scenario failed (${qualityScenarioFailures} case(s)).`);
+  }
+
   if (failures > 0) {
     throw new Error(
       `Template builder fixture test failed (${failures} case(s), checked ${checked}, expectedDiffsSeen ${expectedDiffsSeen}/${expectedDiffSet.size}).`
@@ -101,6 +107,63 @@ function run(): void {
   console.log(
     `Template builder fixture test passed (${checked} templates checked, expectedDiffs ${expectedDiffsSeen}/${expectedDiffSet.size}, outputs in XML_actual).`
   );
+}
+
+function runOutputQualityFixtureScenarios(
+  templateFiles: readonly string[],
+  library: ReturnType<typeof buildComponentLibrary>
+): number {
+  const scenarioRoot = path.join(actualRoot, "_quality_fileComment");
+  resetDirectory(scenarioRoot);
+  const sample = templateFiles.slice(0, Math.min(30, templateFiles.length));
+  let failures = 0;
+
+  for (const templateFile of sample) {
+    const rel = normalizePath(path.relative(templatesRoot, templateFile));
+    const templateText = fs.readFileSync(templateFile, "utf8");
+    const rendered = renderTemplateText(templateText, library);
+    const quality = applyTemplateOutputQuality(rendered, templateText, {
+      postBuildFormat: true,
+      provenanceMode: "fileComment",
+      provenanceLabel: "fixture",
+      relativeTemplatePath: rel,
+      formatterMaxConsecutiveBlankLines: 2
+    });
+
+    const outPath = path.join(scenarioRoot, rel);
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.writeFileSync(outPath, quality, "utf8");
+
+    const marker = `<!-- Template builder: fixture - ${rel} -->`;
+    if (!quality.includes(marker)) {
+      failures++;
+      console.error(`FAIL (quality): ${rel}`);
+      console.error("  missing provenance marker.");
+      continue;
+    }
+
+    if (/<\?xml\b/i.test(templateText)) {
+      if (!/^\s*<\?xml\b[\s\S]*?\?>\s*\r?\n\s*<!-- Template builder:/i.test(quality)) {
+        failures++;
+        console.error(`FAIL (quality): ${rel}`);
+        console.error("  provenance marker should be directly after XML declaration.");
+        continue;
+      }
+    }
+
+    const templateCdataCount = (templateText.match(/<!\[CDATA\[/g) ?? []).length;
+    const qualityCdataCount = (quality.match(/<!\[CDATA\[/g) ?? []).length;
+    if (qualityCdataCount < templateCdataCount) {
+      failures++;
+      console.error(`FAIL (quality): ${rel}`);
+      console.error(`  CDATA count regressed (${qualityCdataCount} < ${templateCdataCount}).`);
+      continue;
+    }
+
+    console.log(`PASS (quality): ${rel}`);
+  }
+
+  return failures;
 }
 
 function collectFiles(root: string, ext: string): string[] {

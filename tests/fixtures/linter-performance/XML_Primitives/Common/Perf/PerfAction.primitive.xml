@@ -1,0 +1,10 @@
+<Primitive>
+  <Param Name="ActionIdent" Required="true" />
+  <Template Name="Default">
+    <ActionShareCode Ident="{{ActionIdent}}">
+      <Actions>
+        <Action xsi:type="Value" Value="1" />
+      </Actions>
+    </ActionShareCode>
+  </Template>
+</Primitive>

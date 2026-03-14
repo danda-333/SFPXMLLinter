@@ -1,0 +1,25 @@
+{
+  "cases": [
+    {
+      "name": "unknown-primitive-keeps-original-tag",
+      "components": [],
+      "template": "<Form><Body><UsePrimitive Name=\"Common/Missing/Primitive\" /></Body></Form>",
+      "expectedDebugLogs": [
+        "[Primitive] 'Common/Missing/Primitive' not found."
+      ]
+    },
+    {
+      "name": "unknown-template-keeps-original-tag",
+      "components": [
+        {
+          "key": "Common/Badge",
+          "text": "<Primitive><Template Name=\"Short\"><Badge>{{Text}}</Badge></Template></Primitive>"
+        }
+      ],
+      "template": "<Form><Body><UsePrimitive Name=\"Common/Badge\" Template=\"Long\" Text=\"X\" /></Body></Form>",
+      "expectedDebugLogs": [
+        "[Primitive] 'Common/Badge' has no usable template."
+      ]
+    }
+  ]
+}

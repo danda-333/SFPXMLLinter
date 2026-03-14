@@ -228,7 +228,9 @@ function collectComponentContributionSummaries(text: string): Map<string, import
       workflowButtonShareCodeIdents: collectTagIdentSet(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
       workflowReferencedActionShareCodeIdents: collectActionShareCodeUsageSet(body),
       primitiveUsageCountByKey: new Map(),
-      primitiveTemplateNamesByKey: new Map()
+      primitiveTemplateNamesByKey: new Map(),
+      primitiveProvidedParamNamesByKey: new Map(),
+      primitiveProvidedSlotNamesByKey: new Map()
     });
   }
   return out;

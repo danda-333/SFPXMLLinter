@@ -52,6 +52,8 @@ export interface IndexedComponentContributionSummary {
   workflowButtonShareCodeIdents: Set<string>;
   primitiveUsageCountByKey: Map<string, number>;
   primitiveTemplateNamesByKey: Map<string, Set<string>>;
+  primitiveProvidedParamNamesByKey: Map<string, Set<string>>;
+  primitiveProvidedSlotNamesByKey: Map<string, Set<string>>;
 }
 
 export interface WorkspaceIndex {

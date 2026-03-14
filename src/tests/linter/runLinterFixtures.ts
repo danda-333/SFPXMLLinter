@@ -575,7 +575,9 @@ function collectComponentContributionSummaries(text: string): Map<string, import
       workflowControlShareCodeIdents: collectAttributeIdents(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
       workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
       primitiveUsageCountByKey: new Map(),
-      primitiveTemplateNamesByKey: new Map()
+      primitiveTemplateNamesByKey: new Map(),
+      primitiveProvidedParamNamesByKey: new Map(),
+      primitiveProvidedSlotNamesByKey: new Map()
     });
   }
 

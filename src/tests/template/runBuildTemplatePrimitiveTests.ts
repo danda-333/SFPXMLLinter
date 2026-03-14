@@ -1,4 +1,6 @@
 import { strict as assert } from "node:assert";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { buildComponentLibrary, renderTemplateText, type ComponentSource } from "../../template/buildXmlTemplatesCore";
 
 interface PrimitiveCase {
@@ -100,7 +102,40 @@ function run(): void {
   if (failures > 0) {
     throw new Error(`Template primitive tests failed (${failures} case(s)).`);
   }
+  runPrimitiveFallbackLogSnapshotTests();
   console.log(`Template primitive tests passed (${cases.length} cases).`);
+}
+
+function runPrimitiveFallbackLogSnapshotTests(): void {
+  const snapshotPath = path.resolve(__dirname, "../../../tests/fixtures/template-builder/snapshots/primitive-debug-snapshots.json");
+  const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as {
+    readonly cases: ReadonlyArray<{
+      readonly name: string;
+      readonly components: ReadonlyArray<{ readonly key: string; readonly text: string }>;
+      readonly template: string;
+      readonly expectedDebugLogs: readonly string[];
+    }>;
+  };
+
+  for (const testCase of snapshot.cases) {
+    const library = buildComponentLibrary([...testCase.components]);
+    const debugLogs: string[] = [];
+    renderTemplateText(testCase.template, library, 12, (line) => debugLogs.push(line));
+    const compactedDebugLogs = compactDebugLogs(debugLogs);
+    assert.deepEqual(compactedDebugLogs, [...testCase.expectedDebugLogs], `Primitive fallback debug snapshot mismatch: ${testCase.name}`);
+    console.log(`PASS: primitive-debug-snapshot ${testCase.name}`);
+  }
+}
+
+function compactDebugLogs(lines: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const line of lines) {
+    if (out.includes(line)) {
+      continue;
+    }
+    out.push(line);
+  }
+  return out;
 }
 
 function normalize(value: string): string {

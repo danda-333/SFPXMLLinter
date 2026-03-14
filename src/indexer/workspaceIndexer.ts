@@ -746,7 +746,9 @@ export class WorkspaceIndexer {
         workflowControlShareCodeIdents: collectAttributeIdents(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
         workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
         primitiveUsageCountByKey: primitiveUsage.usageCountByKey,
-        primitiveTemplateNamesByKey: primitiveUsage.templateNamesByKey
+        primitiveTemplateNamesByKey: primitiveUsage.templateNamesByKey,
+        primitiveProvidedParamNamesByKey: primitiveUsage.providedParamNamesByKey,
+        primitiveProvidedSlotNamesByKey: primitiveUsage.providedSlotNamesByKey
       });
     }
 
@@ -1027,9 +1029,13 @@ function collectActionShareCodeReferenceIdents(text: string): Set<string> {
 function collectPrimitiveUsageSummary(text: string): {
   usageCountByKey: Map<string, number>;
   templateNamesByKey: Map<string, Set<string>>;
+  providedParamNamesByKey: Map<string, Set<string>>;
+  providedSlotNamesByKey: Map<string, Set<string>>;
 } {
   const usageCountByKey = new Map<string, number>();
   const templateNamesByKey = new Map<string, Set<string>>();
+  const providedParamNamesByKey = new Map<string, Set<string>>();
+  const providedSlotNamesByKey = new Map<string, Set<string>>();
   for (const match of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
     const primitiveKey =
@@ -1044,6 +1050,17 @@ function collectPrimitiveUsageSummary(text: string): {
     const normalized = normalizeComponentKey(primitiveKey);
     usageCountByKey.set(normalized, (usageCountByKey.get(normalized) ?? 0) + 1);
 
+    const providedParams = providedParamNamesByKey.get(normalized) ?? new Set<string>();
+    for (const attrName of collectAttributeNames(attrs)) {
+      if (["primitive", "name", "feature", "component", "template", "contribution", "section"].includes(attrName.toLowerCase())) {
+        continue;
+      }
+      providedParams.add(attrName);
+    }
+    if (providedParams.size > 0) {
+      providedParamNamesByKey.set(normalized, providedParams);
+    }
+
     const templateName =
       extractAttributeValue(attrs, "Template") ??
       extractAttributeValue(attrs, "Contribution") ??
@@ -1057,7 +1074,44 @@ function collectPrimitiveUsageSummary(text: string): {
     templateNamesByKey.set(normalized, existingNames);
   }
 
-  return { usageCountByKey, templateNamesByKey };
+  for (const block of text.matchAll(/<UsePrimitive\b([^>]*)>([\s\S]*?)<\/UsePrimitive>/gi)) {
+    const attrs = block[1] ?? "";
+    const body = block[2] ?? "";
+    const primitiveKey =
+      extractAttributeValue(attrs, "Primitive") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component");
+    if (!primitiveKey) {
+      continue;
+    }
+
+    const normalized = normalizeComponentKey(primitiveKey);
+    const providedSlots = providedSlotNamesByKey.get(normalized) ?? new Set<string>();
+    for (const slotMatch of body.matchAll(/<Slot\b([^>]*)>([\s\S]*?)<\/Slot>/gi)) {
+      const slotName = extractAttributeValue(slotMatch[1] ?? "", "Name");
+      if (slotName) {
+        providedSlots.add(slotName);
+      }
+    }
+    if (providedSlots.size > 0) {
+      providedSlotNamesByKey.set(normalized, providedSlots);
+    }
+  }
+
+  return { usageCountByKey, templateNamesByKey, providedParamNamesByKey, providedSlotNamesByKey };
+}
+
+function collectAttributeNames(attrs: string): string[] {
+  const out: string[] = [];
+  for (const match of attrs.matchAll(/([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g)) {
+    const name = (match[1] ?? "").trim();
+    if (!name) {
+      continue;
+    }
+    out.push(name);
+  }
+  return out;
 }
 
 function countTagOccurrences(text: string, regex: RegExp): number {

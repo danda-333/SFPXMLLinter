@@ -837,17 +837,33 @@ function buildUsingContributionTypeGroups(
       icon: new vscode.ThemeIcon("symbol-snippet"),
       children: primitiveEntries.map(([primitiveKey, usageCount], idx) => {
         const templateNames = [...(contribution.primitiveTemplateNamesByKey.get(primitiveKey) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
-        const templateSuffix = templateNames.length > 0 ? `, template=${templateNames.join("|")}` : "";
         const effectiveInserts = usageCount * Math.max(1, contributionInsertions);
         const uri = resolvePrimitiveSourceUri(primitiveKey);
+        const providedParams = [...(contribution.primitiveProvidedParamNamesByKey.get(primitiveKey) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
+        const providedSlots = [...(contribution.primitiveProvidedSlotNamesByKey.get(primitiveKey) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
+        const contract = uri ? resolvePrimitiveContract(uri, templateNames) : undefined;
+        const requiredParams = [...(contract?.requiredParams ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
+        const requiredSlots = [...(contract?.requiredSlots ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
+        const missingParams = requiredParams.filter((name) => !providedParams.includes(name));
+        const missingSlots = requiredSlots.filter((name) => !providedSlots.includes(name));
         return {
-          type: "detail",
+          type: "group",
           id: `${contributionNodeId}:type:primitives:item:${idx}`,
           label: primitiveKey,
-          description: `uses=${usageCount}, inserts=${effectiveInserts}${templateSuffix}`,
+          description: `uses=${usageCount}, inserts=${effectiveInserts}`,
           icon: new vscode.ThemeIcon("symbol-file"),
-          ...(uri ? { resourceUri: uri, sourceLocation: toUriStartLocation(uri), contextValue: "compositionSymbol" } : {})
-        } satisfies DetailNode;
+          collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+          ...(uri ? { resourceUri: uri, sourceLocation: toUriStartLocation(uri), contextValue: "compositionSymbol" } : {}),
+          children: [
+            detailNode(`Templates: ${templateNames.length > 0 ? templateNames.join(", ") : "(default)"}`),
+            detailNode(`RequiredParams: ${requiredParams.length > 0 ? requiredParams.join(", ") : "(none)"}`),
+            detailNode(`ProvidedParams: ${providedParams.length > 0 ? providedParams.join(", ") : "(none)"}`),
+            detailNode(`MissingParams: ${missingParams.length > 0 ? missingParams.join(", ") : "(none)"}`),
+            detailNode(`RequiredSlots: ${requiredSlots.length > 0 ? requiredSlots.join(", ") : "(none)"}`),
+            detailNode(`ProvidedSlots: ${providedSlots.length > 0 ? providedSlots.join(", ") : "(none)"}`),
+            detailNode(`MissingSlots: ${missingSlots.length > 0 ? missingSlots.join(", ") : "(none)"}`)
+          ]
+        } satisfies GroupNode;
       })
     });
   }
@@ -1355,6 +1371,93 @@ function resolvePrimitiveSourceUri(primitiveKey: string): vscode.Uri | undefined
   }
 
   return undefined;
+}
+
+interface PrimitiveContract {
+  requiredParams: Set<string>;
+  requiredSlots: Set<string>;
+}
+
+const primitiveContractCache = new Map<string, PrimitiveContract>();
+
+function resolvePrimitiveContract(uri: vscode.Uri, selectedTemplateNames: readonly string[]): PrimitiveContract | undefined {
+  const cacheKey = `${uri.toString()}::${selectedTemplateNames.join("|")}`;
+  const cached = primitiveContractCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  if (!fs.existsSync(uri.fsPath)) {
+    return undefined;
+  }
+
+  const text = fs.readFileSync(uri.fsPath, "utf8");
+  const templates = parsePrimitiveTemplateBlocks(text);
+  const selectedTemplates = selectedTemplateNames.length > 0
+    ? templates.filter((template) => selectedTemplateNames.includes(template.name ?? ""))
+    : templates.length > 0
+      ? [templates[0]]
+      : [];
+  const templateText = selectedTemplates.map((template) => template.body).join("\n");
+  const requiredParams = collectRequiredPrimitiveParamNames(text, templateText);
+  const requiredSlots = collectRequiredSlotNames(templateText);
+  const contract: PrimitiveContract = { requiredParams, requiredSlots };
+  primitiveContractCache.set(cacheKey, contract);
+  return contract;
+}
+
+function parsePrimitiveTemplateBlocks(text: string): Array<{ name?: string; body: string }> {
+  const out: Array<{ name?: string; body: string }> = [];
+  for (const match of text.matchAll(/<Template\b([^>]*)>([\s\S]*?)<\/Template>/gi)) {
+    const attrs = match[1] ?? "";
+    const body = match[2] ?? "";
+    out.push({
+      name: extractXmlAttributeValue(attrs, "Name"),
+      body
+    });
+  }
+  return out;
+}
+
+function collectRequiredPrimitiveParamNames(primitiveText: string, templateText: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of primitiveText.matchAll(/<Param\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const name = extractXmlAttributeValue(attrs, "Name");
+    const required = (extractXmlAttributeValue(attrs, "Required") ?? "").trim().toLowerCase();
+    if (name && (required === "true" || required === "1")) {
+      out.add(name);
+    }
+  }
+
+  for (const token of templateText.matchAll(/\{\{([A-Za-z_][\w.-]*)\}\}/g)) {
+    const name = (token[1] ?? "").trim();
+    if (!name || name.toLowerCase().startsWith("slot:")) {
+      continue;
+    }
+    out.add(name);
+  }
+
+  return out;
+}
+
+function collectRequiredSlotNames(templateText: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of templateText.matchAll(/\{\{Slot:([A-Za-z_][\w.-]*)\}\}/g)) {
+    const name = (match[1] ?? "").trim();
+    if (name) {
+      out.add(name);
+    }
+  }
+  return out;
+}
+
+function extractXmlAttributeValue(attrsText: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`\\b${escaped}\\s*=\\s*(\"([^\"]*)\"|'([^']*)')`, "i");
+  const match = regex.exec(attrsText);
+  const value = (match?.[2] ?? match?.[3] ?? "").trim();
+  return value.length > 0 ? value : undefined;
 }
 
 function toUriStartLocation(uri: vscode.Uri): vscode.Location {

@@ -62,6 +62,20 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - `Side Preview` bez ztraty focusu (`preserveFocus`)
   - `Using` strom: root-relevant contribution + `Filtered`
   - detailni `Meta` + placeholder usage lokace
+- primitive ergonomie v editoru:
+  - quick-fix akce pro primitive diagnostiky:
+    - `unknown-primitive` (create/open primitive source)
+    - `primitive-missing-slot` (doplnit `Slot`)
+    - `primitive-missing-param` (doplnit chybejici parametr)
+    - `primitive-cycle` (rychle odstraneni cyklickeho `UsePrimitive`)
+- Tree View primitive contracts:
+  - detail `required/provided/missing` pro params a slots
+  - data jdou z indexu (bez extra fallback parseru v Tree View)
+- linter-performance fixture rozsireno o primitive-heavy scenar:
+  - nova sada primitive souboru + template/workflow usage scenar
+  - scenar drzi startup threshold do 2 s
+- primitive fallback debug snapshot testy:
+  - snapshot fixture + test runner validuje fallback debug logy deterministicky
 
 ### Prave probiha
 - dokonceni `effective composition model` jako jednotneho zdroje i pro builder/debug vrstvu

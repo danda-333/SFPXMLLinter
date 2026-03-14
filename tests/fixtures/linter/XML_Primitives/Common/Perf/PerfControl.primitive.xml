@@ -1,0 +1,7 @@
+<Primitive>
+  <Param Name="Ident" Required="true" />
+  <Param Name="Title" Required="true" />
+  <Template>
+    <Control xsi:type="TextBoxControl" Ident="{{Ident}}" TitleResourceKey="{{Title}}" />
+  </Template>
+</Primitive>

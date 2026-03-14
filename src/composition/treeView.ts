@@ -723,7 +723,7 @@ function buildUsingContributionNode(
   );
   const placeholderGroup = buildPlaceholderUsageGroup(nodeId, placeholderLocations, contribution.insert);
 
-  const typeGroups = buildUsingContributionTypeGroups(nodeId, contribution, insertions);
+  const typeGroups = buildUsingContributionTypeGroups(nodeId, contribution, insertions, location);
   const details: string[] = [];
   if (!rootRelevant && !contributionModel.explicit) {
     details.push(`not relevant for root '${facts.rootTag ?? "unknown"}'`);
@@ -794,7 +794,8 @@ function buildUsingContributionMetaGroup(
 function buildUsingContributionTypeGroups(
   contributionNodeId: string,
   contribution: IndexedComponentContributionSummary,
-  contributionInsertions: number
+  contributionInsertions: number,
+  contributionLocation?: vscode.Location
 ): GroupNode[] {
   const groups: GroupNode[] = [];
   const add = (label: string, suffix: string, idents: ReadonlySet<string>, iconId: string): void => {
@@ -846,6 +847,26 @@ function buildUsingContributionTypeGroups(
         const requiredSlots = [...(contract?.requiredSlots ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
         const missingParams = requiredParams.filter((name) => !providedParams.includes(name));
         const missingSlots = requiredSlots.filter((name) => !providedSlots.includes(name));
+        const missingParamNodes = missingParams.map((name, missingIdx) =>
+          primitiveQuickFixDetailNode(
+            `MissingParam: ${name}`,
+            `${contributionNodeId}:type:primitives:item:${idx}:missing-param:${missingIdx}`,
+            "param",
+            name,
+            primitiveKey,
+            contributionLocation
+          )
+        );
+        const missingSlotNodes = missingSlots.map((name, missingIdx) =>
+          primitiveQuickFixDetailNode(
+            `MissingSlot: ${name}`,
+            `${contributionNodeId}:type:primitives:item:${idx}:missing-slot:${missingIdx}`,
+            "slot",
+            name,
+            primitiveKey,
+            contributionLocation
+          )
+        );
         return {
           type: "group",
           id: `${contributionNodeId}:type:primitives:item:${idx}`,
@@ -859,9 +880,11 @@ function buildUsingContributionTypeGroups(
             detailNode(`RequiredParams: ${requiredParams.length > 0 ? requiredParams.join(", ") : "(none)"}`),
             detailNode(`ProvidedParams: ${providedParams.length > 0 ? providedParams.join(", ") : "(none)"}`),
             detailNode(`MissingParams: ${missingParams.length > 0 ? missingParams.join(", ") : "(none)"}`),
+            ...missingParamNodes,
             detailNode(`RequiredSlots: ${requiredSlots.length > 0 ? requiredSlots.join(", ") : "(none)"}`),
             detailNode(`ProvidedSlots: ${providedSlots.length > 0 ? providedSlots.join(", ") : "(none)"}`),
-            detailNode(`MissingSlots: ${missingSlots.length > 0 ? missingSlots.join(", ") : "(none)"}`)
+            detailNode(`MissingSlots: ${missingSlots.length > 0 ? missingSlots.join(", ") : "(none)"}`),
+            ...missingSlotNodes
           ]
         } satisfies GroupNode;
       })
@@ -869,6 +892,38 @@ function buildUsingContributionTypeGroups(
   }
 
   return groups;
+}
+
+function primitiveQuickFixDetailNode(
+  label: string,
+  id: string,
+  kind: "param" | "slot",
+  name: string,
+  primitiveKey: string,
+  contributionLocation?: vscode.Location
+): DetailNode {
+  if (!contributionLocation) {
+    return detailNode(label, id);
+  }
+
+  return {
+    type: "detail",
+    id,
+    label,
+    icon: new vscode.ThemeIcon("wrench"),
+    command: {
+      command: "sfpXmlLinter.compositionApplyPrimitiveQuickFix",
+      title: "Apply primitive quick fix",
+      arguments: [
+        {
+          uri: contributionLocation.uri,
+          kind,
+          name,
+          primitiveKey
+        }
+      ]
+    }
+  };
 }
 
 function buildPlaceholderUsageGroup(

@@ -2243,6 +2243,84 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "sfpXmlLinter.compositionApplyPrimitiveQuickFix",
+      async (payload?: { uri?: vscode.Uri; kind?: "param" | "slot"; name?: string; primitiveKey?: string }) => {
+        const targetUri = payload?.uri;
+        const fixKind = payload?.kind;
+        const fixName = (payload?.name ?? "").trim();
+        const primitiveKey = (payload?.primitiveKey ?? "").trim();
+        if (!targetUri || !fixKind || !fixName) {
+          vscode.window.showInformationMessage("SFP XML Linter: Primitive quick fix payload is incomplete.");
+          return;
+        }
+
+        const diagnostics = vscode.languages
+          .getDiagnostics(targetUri)
+          .filter((diagnostic) => diagnostic.source === "sfp-xml-linter");
+        const expectedRule = fixKind === "param" ? "primitive-missing-param" : "primitive-missing-slot";
+        const expectedTitle = fixKind === "param"
+          ? `Add missing parameter '${fixName}'`
+          : `Add missing Slot '${fixName}'`;
+        const matchingDiagnostic = diagnostics.find((diagnostic) => {
+          if (String(diagnostic.code ?? "") !== expectedRule) {
+            return false;
+          }
+
+          const message = diagnostic.message;
+          if (!message.includes(fixName)) {
+            return false;
+          }
+
+          if (primitiveKey.length > 0 && !message.includes(primitiveKey)) {
+            return false;
+          }
+
+          return true;
+        });
+
+        if (!matchingDiagnostic) {
+          vscode.window.showInformationMessage(
+            `SFP XML Linter: No matching diagnostic found for ${expectedRule} (${fixName}).`
+          );
+          return;
+        }
+
+        const codeActions =
+          (await vscode.commands.executeCommand<(vscode.CodeAction | vscode.Command)[]>(
+            "vscode.executeCodeActionProvider",
+            targetUri,
+            matchingDiagnostic.range,
+            vscode.CodeActionKind.QuickFix
+          )) ?? [];
+        const matchingAction = codeActions.find((action) => action.title === expectedTitle);
+        if (!matchingAction) {
+          vscode.window.showInformationMessage(
+            `SFP XML Linter: Quick fix '${expectedTitle}' is not available at this location.`
+          );
+          return;
+        }
+
+        if (matchingAction instanceof vscode.CodeAction) {
+          if (matchingAction.edit) {
+            await vscode.workspace.applyEdit(matchingAction.edit);
+          }
+          if (matchingAction.command) {
+            await vscode.commands.executeCommand(
+              matchingAction.command.command,
+              ...(matchingAction.command.arguments ?? [])
+            );
+          }
+        } else {
+          await vscode.commands.executeCommand(matchingAction.command, ...(matchingAction.arguments ?? []));
+        }
+
+        await validateDocument(await vscode.workspace.openTextDocument(targetUri));
+      }
+    )
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("sfpXmlLinter.compositionShowUsages", async (node?: {
       usageLocations?: vscode.Location[];
       label?: string;

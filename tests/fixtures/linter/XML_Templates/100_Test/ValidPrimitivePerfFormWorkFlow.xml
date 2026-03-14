@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" FormIdent="ValidPrimitivePerfForm">
+  <ActionShareCodes>
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction01" />
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction02" />
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction03" />
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction04" />
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction05" />
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction06" />
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction07" />
+    <UsePrimitive Name="Common/Perf/PerfAction" ActionIdent="PerfAction08" />
+  </ActionShareCodes>
+</WorkFlow>

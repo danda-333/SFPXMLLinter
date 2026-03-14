@@ -37,6 +37,7 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "workflow-redundant-feature-using": "warning",
   "dataview-redundant-feature-using": "warning",
   "feature-inheritance-override": "information",
+  "suppression-conflict": "warning",
   "typo-maxlenght-attribute": "warning",
   "sql-convention-equals-spacing": "warning",
   "ident-convention-button-postfix": "warning",

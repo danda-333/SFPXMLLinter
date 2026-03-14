@@ -5,6 +5,7 @@ import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
 import { maskXmlComments } from "../utils/xmlComments";
 import { populateUsingInsertTraceFromText } from "../composition/usingImpact";
+import { collectEffectiveUsingRefs } from "../utils/effectiveUsings";
 
 interface ParsedEntry {
   uri: vscode.Uri;
@@ -388,7 +389,7 @@ export class WorkspaceIndexer {
       const buttons = new Set([...entry.facts.declaredButtons]);
       const sections = new Set([...entry.facts.declaredSections]);
 
-      for (const usingRef of entry.facts.usingReferences) {
+      for (const usingRef of collectEffectiveUsingRefs(entry.facts, provisionalIndex)) {
         const component = resolveComponentByKey(provisionalIndex, usingRef.componentKey);
         if (!component) {
           continue;
@@ -471,7 +472,7 @@ export class WorkspaceIndexer {
 
       const owningFormIdent = root === "workflow" ? facts.workflowFormIdent : facts.formIdent;
       if (owningFormIdent) {
-        for (const ref of facts.usingReferences) {
+        for (const ref of collectEffectiveUsingRefs(facts, provisionalIndex)) {
           addNestedSetMapValue(componentUsageFormIdentsByKey, ref.componentKey, owningFormIdent);
           if (ref.sectionValue) {
             addNestedNestedSetMapValue(componentContributionUsageFormIdentsByKey, ref.componentKey, ref.sectionValue, owningFormIdent);

@@ -421,8 +421,26 @@ export class DiagnosticsEngine {
     }
 
     const tracesReady = facts.usingContributionInsertTraces.size > 0;
+    const suppressedFull = new Set<string>();
+    const suppressedSections = new Map<string, Set<string>>();
+    for (const ref of facts.usingReferences) {
+      if (!ref.suppressInheritance) {
+        continue;
+      }
+      if (ref.sectionValue) {
+        const current = suppressedSections.get(ref.componentKey) ?? new Set<string>();
+        current.add(ref.sectionValue);
+        suppressedSections.set(ref.componentKey, current);
+      } else {
+        suppressedFull.add(ref.componentKey);
+      }
+    }
 
     for (const ref of facts.usingReferences) {
+      if (ref.suppressInheritance) {
+        continue;
+      }
+
       const component = resolveComponentByKey(index, ref.componentKey);
       if (!component) {
         issues.push({
@@ -462,6 +480,13 @@ export class DiagnosticsEngine {
         }
       }
 
+      const suppressionConflict =
+        suppressedFull.has(ref.componentKey) ||
+        (ref.sectionValue ? suppressedSections.get(ref.componentKey)?.has(ref.sectionValue) === true : false);
+      if (suppressionConflict) {
+        continue;
+      }
+
       if (!tracesReady) {
         continue;
       }
@@ -488,7 +513,87 @@ export class DiagnosticsEngine {
       }
     }
 
+    this.validateUsingSuppressionConflicts(facts, issues);
     this.validateFormOwnedUsingInheritance(facts, index, issues);
+  }
+
+  private validateUsingSuppressionConflicts(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    issues: RuleDiagnostic[]
+  ): void {
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root !== "workflow" && root !== "dataview") {
+      return;
+    }
+
+    const localFullByFeature = new Map<string, vscode.Range[]>();
+    const localSectionsByFeature = new Map<string, Map<string, vscode.Range[]>>();
+    const suppressFullByFeature = new Map<string, vscode.Range[]>();
+    const suppressSectionsByFeature = new Map<string, Map<string, vscode.Range[]>>();
+
+    for (const ref of facts.usingReferences) {
+      const targetRange = ref.sectionValueRange ?? ref.componentValueRange;
+      if (ref.suppressInheritance) {
+        if (ref.sectionValue) {
+          addNestedRangeMapValue(suppressSectionsByFeature, ref.componentKey, ref.sectionValue, targetRange);
+        } else {
+          addRangeMapValue(suppressFullByFeature, ref.componentKey, targetRange);
+        }
+        continue;
+      }
+
+      if (ref.sectionValue) {
+        addNestedRangeMapValue(localSectionsByFeature, ref.componentKey, ref.sectionValue, targetRange);
+      } else {
+        addRangeMapValue(localFullByFeature, ref.componentKey, targetRange);
+      }
+    }
+
+    for (const [featureKey, localRanges] of localFullByFeature.entries()) {
+      if (!suppressFullByFeature.has(featureKey)) {
+        continue;
+      }
+
+      for (const range of localRanges) {
+        issues.push({
+          ruleId: "suppression-conflict",
+          range,
+          message: `Using feature '${featureKey}' conflicts with suppression of the same inherited feature.`
+        });
+      }
+    }
+
+    for (const [featureKey, localSections] of localSectionsByFeature.entries()) {
+      if (suppressFullByFeature.has(featureKey)) {
+        for (const ranges of localSections.values()) {
+          for (const range of ranges) {
+            issues.push({
+              ruleId: "suppression-conflict",
+              range,
+              message: `Using contribution of feature '${featureKey}' conflicts with full suppression of the same inherited feature.`
+            });
+          }
+        }
+      }
+
+      const suppressedSections = suppressSectionsByFeature.get(featureKey);
+      if (!suppressedSections) {
+        continue;
+      }
+
+      for (const [sectionName, ranges] of localSections.entries()) {
+        if (!suppressedSections.has(sectionName)) {
+          continue;
+        }
+        for (const range of ranges) {
+          issues.push({
+            ruleId: "suppression-conflict",
+            range,
+            message: `Using '${featureKey}#${sectionName}' conflicts with suppression of the same inherited contribution.`
+          });
+        }
+      }
+    }
   }
 
   private validateFormOwnedUsingInheritance(
@@ -522,8 +627,31 @@ export class DiagnosticsEngine {
       return;
     }
 
+    const suppressedFull = new Set<string>();
+    const suppressedSections = new Map<string, Set<string>>();
+    for (const ref of facts.usingReferences) {
+      if (!ref.suppressInheritance) {
+        continue;
+      }
+
+      if (ref.sectionValue) {
+        const current = suppressedSections.get(ref.componentKey) ?? new Set<string>();
+        current.add(ref.sectionValue);
+        suppressedSections.set(ref.componentKey, current);
+      } else {
+        suppressedFull.add(ref.componentKey);
+      }
+    }
+
     for (const ref of facts.usingReferences) {
       if (ref.suppressInheritance) {
+        continue;
+      }
+
+      if (suppressedFull.has(ref.componentKey)) {
+        continue;
+      }
+      if (ref.sectionValue && suppressedSections.get(ref.componentKey)?.has(ref.sectionValue)) {
         continue;
       }
 
@@ -1565,4 +1693,23 @@ function collectUsingRefsByFeature(
     out.set(ref.componentKey, current);
   }
   return out;
+}
+
+function addRangeMapValue(target: Map<string, vscode.Range[]>, key: string, range: vscode.Range): void {
+  const current = target.get(key) ?? [];
+  current.push(range);
+  target.set(key, current);
+}
+
+function addNestedRangeMapValue(
+  target: Map<string, Map<string, vscode.Range[]>>,
+  key: string,
+  nestedKey: string,
+  range: vscode.Range
+): void {
+  const nested = target.get(key) ?? new Map<string, vscode.Range[]>();
+  const current = nested.get(nestedKey) ?? [];
+  current.push(range);
+  nested.set(nestedKey, current);
+  target.set(key, nested);
 }

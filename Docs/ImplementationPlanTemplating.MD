@@ -303,6 +303,12 @@ Aktualni stav:
   - `DefinitionProvider` workflow resolution (controls/buttons/sections/share codes)
   - `ReferencesProvider` workflow target resolution
   - `CompletionProvider` workflow ident/share code completion + `SuppressInheritance`/`Inherit` value completion
+  - `RenameProvider` workflow target resolution
+- index usage mapy pouzivaji effective using vrstvu:
+  - `componentUsageFormIdentsByKey`
+  - `componentContributionUsageFormIdentsByKey`
+- pridana diagnostika konfliktu:
+  - `suppression-conflict`
 - fixture composition testy overuji stabilitu modelu
 - dalsi krok:
   - napojit builder output/debug na stejnou mezivrstvu
@@ -702,6 +708,9 @@ Aktualne hotovo:
 - injected symbol agregace v Tree View cte jednotny model
 - workflow reference validace i workflow control-id resolution ctou jednotny model (vcetne inheritance)
 - `DefinitionProvider`, `ReferencesProvider` a `CompletionProvider` workflow vetve ctou jednotny model
+- `RenameProvider` workflow vetve ctou jednotny model
+- index usage mapy jsou plnene z effective using vrstvy (ne raw `Using` listu)
+- pridano pravidlo `suppression-conflict` + fixture coverage
 - pridany snapshot test `runDocumentCompositionModelTests`
 
 Aktualne chybi do gate:

@@ -116,6 +116,17 @@ export class WorkspaceIndexer {
       mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
     }
 
+    for (const includeRef of facts.includeReferences) {
+      const component = resolveComponentByKey(this.index, includeRef.componentKey);
+      if (!component) {
+        continue;
+      }
+
+      mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
+      mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
+      mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
+    }
+
     const form: IndexedForm = {
       ident: facts.formIdent,
       uri: document.uri,
@@ -400,6 +411,17 @@ export class WorkspaceIndexer {
         mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
       }
 
+      for (const includeRef of entry.facts.includeReferences) {
+        const component = resolveComponentByKey(provisionalIndex, includeRef.componentKey);
+        if (!component) {
+          continue;
+        }
+
+        mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
+        mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
+        mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
+      }
+
       const form: IndexedForm = {
         ident: entry.facts.formIdent,
         uri: entry.uri,
@@ -459,6 +481,18 @@ export class WorkspaceIndexer {
       }
 
       for (const ref of facts.usingReferences) {
+        addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
+        if (ref.sectionValue && ref.sectionValueRange) {
+          addNestedLocationMapValue(
+            componentContributionReferenceLocationsByKey,
+            ref.componentKey,
+            ref.sectionValue,
+            new vscode.Location(uri, ref.sectionValueRange)
+          );
+        }
+      }
+
+      for (const ref of facts.includeReferences) {
         addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
         if (ref.sectionValue && ref.sectionValueRange) {
           addNestedLocationMapValue(

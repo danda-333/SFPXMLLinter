@@ -206,6 +206,18 @@ export function extractUsingComponentRefs(text: string): string[] {
     refs.add(stripXmlComponentExtension(normalizePath(primitiveValue)));
   }
 
+  for (const match of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const featureValue =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
+    if (!featureValue) {
+      continue;
+    }
+    refs.add(stripXmlComponentExtension(normalizePath(featureValue)));
+  }
+
   for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
     const body = match[1] ?? "";
     const componentValue =

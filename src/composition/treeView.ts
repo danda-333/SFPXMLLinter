@@ -424,6 +424,10 @@ function buildRegularXmlTree(
   if (usingTree.length > 0) {
     children.push(...usingTree);
   }
+  const includeTree = buildIncludeTree(facts, index);
+  if (includeTree.length > 0) {
+    children.push(...includeTree);
+  }
 
   return [
     {
@@ -634,6 +638,61 @@ function buildUsingTree(
       "Usings",
       usingNodes,
       `using-group:${facts.rootTag ?? "xml"}:${facts.formIdent ?? facts.workflowFormIdent ?? "unknown"}`
+    )
+  ];
+}
+
+function buildIncludeTree(
+  facts: ReturnType<typeof parseDocumentFacts>,
+  index: WorkspaceIndex
+): CompositionTreeNode[] {
+  if (facts.includeReferences.length === 0) {
+    return [];
+  }
+
+  const includeNodes: CompositionTreeNode[] = facts.includeReferences.map((includeRef, idx) => {
+    const component = resolveComponentByKey(index, includeRef.componentKey);
+    if (!component) {
+      return {
+        id: `include:${includeRef.componentKey}:${includeRef.sectionValue ?? "*"}:${idx}`,
+        type: "using",
+        label: includeRef.rawComponentValue,
+        description: "missing feature",
+        tooltip: `Include feature '${includeRef.rawComponentValue}' was not found in indexed features.`,
+        icon: new vscode.ThemeIcon("error")
+      } satisfies UsingNode;
+    }
+
+    const contributionName = includeRef.sectionValue?.trim();
+    const contributionExists = contributionName
+      ? component.contributionSummaries.has(contributionName)
+      : true;
+    const description = contributionName
+      ? contributionExists ? `contribution=${contributionName}` : `missing contribution=${contributionName}`
+      : "whole feature";
+
+    return {
+      id: `include:${includeRef.componentKey}:${contributionName ?? "*"}:${idx}`,
+      type: "using",
+      label: includeRef.rawComponentValue,
+      description,
+      tooltip: contributionName
+        ? `Include '${includeRef.rawComponentValue}' contribution '${contributionName}'.`
+        : `Include whole feature '${includeRef.rawComponentValue}'.`,
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      icon: contributionExists ? new vscode.ThemeIcon("link") : new vscode.ThemeIcon("warning"),
+      contextValue: "compositionUsing",
+      resourceUri: component.uri,
+      sourceLocation: contributionName ? component.contributionDefinitions.get(contributionName) : component.componentLocation,
+      command: getUsingOpenCommand(component, contributionName)
+    } satisfies UsingNode;
+  });
+
+  return [
+    infoGroupNode(
+      "Includes",
+      includeNodes,
+      `include-group:${facts.rootTag ?? "xml"}:${facts.formIdent ?? facts.workflowFormIdent ?? "unknown"}`
     )
   ];
 }

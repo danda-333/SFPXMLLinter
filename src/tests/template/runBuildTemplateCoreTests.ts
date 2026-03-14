@@ -623,11 +623,21 @@ function runRefsTest(): void {
     <Using Name="Library/One.xml" />
   </Usings>
   <UsePrimitive Name="Common/Dialogs/ConfirmFormDialogSection.primitive.xml" />
+  <Include Feature="Common/IncA.feature.xml" />
+  <Include Name="Common/IncB.xml" />
   <X>{{Feature:Common/Two.xml,Contribution:S}}</X>
   <Y>{{Name:Common/Three.feature.xml,Contribution:S}}</Y>
 </Form>`;
   const refs = extractUsingComponentRefs(input).sort((a, b) => a.localeCompare(b));
-  const expected = ["Common/Dialogs/ConfirmFormDialogSection", "Common/Shared/Assign", "Common/Three", "Common/Two", "Library/One"].sort((a, b) => a.localeCompare(b));
+  const expected = [
+    "Common/Dialogs/ConfirmFormDialogSection",
+    "Common/IncA",
+    "Common/IncB",
+    "Common/Shared/Assign",
+    "Common/Three",
+    "Common/Two",
+    "Library/One"
+  ].sort((a, b) => a.localeCompare(b));
   assert.deepEqual(refs, expected);
   console.log("PASS: extract-using-component-refs");
 }

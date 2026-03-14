@@ -24,6 +24,14 @@ export interface UsingReference {
   suppressInheritance?: boolean;
 }
 
+export interface IncludeReference {
+  componentKey: string;
+  rawComponentValue: string;
+  componentValueRange: vscode.Range;
+  sectionValue?: string;
+  sectionValueRange?: vscode.Range;
+}
+
 export interface PlaceholderReference {
   rawToken: string;
   range: vscode.Range;
@@ -95,6 +103,7 @@ export interface ParsedDocumentFacts {
   declaredSections: Set<string>;
   workflowReferences: WorkflowReference[];
   usingReferences: UsingReference[];
+  includeReferences: IncludeReference[];
   usingContributionInsertCounts: Map<string, number>;
   usingContributionInsertTraces: Map<string, UsingContributionInsertTrace>;
   placeholderReferences: PlaceholderReference[];
@@ -153,6 +162,7 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     declaredSections: new Set<string>(),
     workflowReferences: [],
     usingReferences: [],
+    includeReferences: [],
     usingContributionInsertCounts: new Map<string, number>(),
     usingContributionInsertTraces: new Map<string, UsingContributionInsertTrace>(),
     placeholderReferences: [],
@@ -409,6 +419,25 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
         sectionValue: sectionAttr?.value,
         sectionValueRange: sectionAttr?.valueRange,
         ...(suppressInheritance ? { suppressInheritance: true } : {})
+      });
+    }
+  }
+
+  if (text.includes("<Include")) {
+    for (const m of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const componentAttr = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+      if (!componentAttr?.value || !componentAttr.valueRange) {
+        continue;
+      }
+
+      const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
+      facts.includeReferences.push({
+        componentKey: normalizeComponentKey(componentAttr.value),
+        rawComponentValue: componentAttr.value,
+        componentValueRange: componentAttr.valueRange,
+        sectionValue: sectionAttr?.value,
+        sectionValueRange: sectionAttr?.valueRange
       });
     }
   }

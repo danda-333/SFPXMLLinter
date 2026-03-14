@@ -360,7 +360,7 @@ Aktualni stav:
 - navazujici rozsirovani:
   - ordering/debug detail je dalsi rozsireni nad hotovou observability vrstvou
 
-### Faze T6: Tree View nad finalnim modelem `[PROBIHA]`
+### Faze T6: Tree View nad finalnim modelem `[HOTOVO]`
 Cil:
 - v editoru videt, co na finalnim formulari a workflow realne existuje.
 
@@ -398,12 +398,12 @@ Aktualni stav:
 - umi source navigation a usage navigation pres inline tlacitka
 - umi open mody pro debug (`newTab/current/side/sidePreview/peek`)
 - cte `Using` i injected symboly ze sdileneho `DocumentCompositionModel`
-- chybi jeste:
-  - dedicated quick actions vrstva pro composition operace
-  - statistiky v samostatne UX vrstve
-  - pozdeji inheritance-aware finalni strom
+- samostatna UX vrstva pro statistiky a quick actions:
+  - `Statistics` sekce (impact/inserts/trace coverage)
+  - `Copy Summary`
+  - `Log Non-effective Usings`
 
-### Faze T7: Using impact analysis `[CAST HOTOVO]`
+### Faze T7: Using impact analysis `[HOTOVO]`
 Cil:
 - zviditelnit, ktere `Using` maji realny dopad a ktere jsou zbytecne.
 
@@ -437,10 +437,8 @@ Aktualni stav:
   - runtime diagnostics
   - Tree View
   - linter fixture runner
-- chybi jeste:
-  - detailni insert trace expose primo z effective modelu pro builder/debug vrstvu
-  - jemnejsi usage heuristiky pro dalsi workflow scenare (nad stejnym modelem)
-  - navazani na inheritance
+- builder/debug vrstva expose detailni contribution insert trace:
+  - `insert`, `strategy`, `placeholder`, `xpath`, `clamp`, `fallback` pro non-effective usingy v `debug` modu
 
 ### Faze T8: Ordering model
 Cil:
@@ -776,7 +774,7 @@ Navazujici tema mimo gate:
 
 ### Milestone M6: Tree View MVP
 Stav:
-- `[PROBIHA]`
+- `[HOTOVO]`
 Obsah:
 - `T6` Tree View nad finalnim modelem
 
@@ -805,14 +803,11 @@ Aktualne hotovo:
 - root-relevant `Using` contribution + `Filtered` podstrom
 - placeholder usage list a metadata (`Meta`) u contribution
 - `Using` i injected symboly jdou ze sdileneho `DocumentCompositionModel`
-
-Aktualne chybi do gate:
-- quick actions vrstva (actions/statistiky)
-- dalsi statistiky a inheritance-aware finalni model
+- samostatna statisticka sekce + quick actions vrstva (`Copy Summary`, `Log Non-effective Usings`)
 
 ### Milestone M7: Using impact analysis
 Stav:
-- `[CAST HOTOVO]`
+- `[HOTOVO]`
 Obsah:
 - `T7` Using impact analysis
 
@@ -840,10 +835,7 @@ Aktualne hotovo:
 - insert-based status nad indexovanou insert metrikou contribution
 - zobrazeni dopadu v `Tree View`
 - sjednoceny evaluator impactu pro indexer/diagnostics/Tree View/fixture runner
-
-Aktualne chybi do gate:
-- expose detailniho trace v builder/debug vrstve nad stejnym modelem
-- navazani na inheritance a finalni composed model napric XML
+- detailni contribution-level insert trace je exponovan v builder debug vystupu
 
 ### Milestone M8: Ordering model
 Obsah:

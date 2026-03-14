@@ -467,6 +467,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           logComposition(
             `  using ${usingLabel}: ${usingItem.impact.kind} (${usingItem.impact.successfulCount}/${usingItem.impact.relevantCount})`
           );
+          if (mode === "debug") {
+            for (const contribution of usingItem.contributions) {
+              const trace = contribution.insertTrace;
+              const traceLabel = trace
+                ? `insert=${trace.finalInsertCount}, strategy=${trace.strategy}, placeholder=${trace.placeholderCount}, xpath=${trace.targetXPathMatchCount}, clamp=${trace.targetXPathClampedCount}, fallback=${trace.fallbackSymbolCount}`
+                : "trace=missing";
+              logComposition(
+                `    contribution ${contribution.contribution.contributionName}: usage=${contribution.usage}, rootRelevant=${contribution.rootRelevant}, ${traceLabel}`
+              );
+            }
+          }
         }
         logged++;
       }
@@ -1989,6 +2000,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       compositionTreeProvider.refresh();
       logComposition("Composition view refreshed");
     })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.compositionCopySummary", async (payload?: { text?: string }) => {
+      const text = payload?.text?.trim();
+      if (!text) {
+        vscode.window.showInformationMessage("SFP XML Linter: No composition summary available for current selection.");
+        return;
+      }
+
+      await vscode.env.clipboard.writeText(text);
+      vscode.window.showInformationMessage("SFP XML Linter: Composition summary copied to clipboard.");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "sfpXmlLinter.compositionLogNonEffectiveUsings",
+      (payload?: { title?: string; lines?: string[] }) => {
+        const lines = payload?.lines ?? [];
+        if (lines.length === 0) {
+          vscode.window.showInformationMessage("SFP XML Linter: No non-effective usings for current document.");
+          return;
+        }
+
+        logComposition(payload?.title ? `${payload.title}:` : "Non-effective usings:");
+        for (const line of lines) {
+          logComposition(`  ${line}`);
+        }
+        compositionOutput.show(true);
+      }
+    )
   );
 
   context.subscriptions.push(

@@ -332,7 +332,8 @@ function buildRegularXmlTree(
   const composition = buildDocumentCompositionModel(facts, index);
   const children: CompositionTreeNode[] = [];
   children.push(buildDocumentSummaryNode(document, facts, index, composition, sharedSectionNodeId("Summary")));
-  children.push(buildActionsNode(root, sharedSectionNodeId("Actions")));
+  children.push(buildDocumentStatisticsNode(composition, sharedSectionNodeId("Statistics")));
+  children.push(buildActionsNode(root, sharedSectionNodeId("Actions"), composition));
 
   if (root === "form") {
     const controls = aggregateFormControls(document.uri, facts, index, composition);
@@ -441,6 +442,47 @@ function buildDocumentSummaryNode(
     collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
     icon: new vscode.ThemeIcon("dashboard"),
     children: summary
+  };
+}
+
+function buildDocumentStatisticsNode(
+  composition: DocumentCompositionModel,
+  nodeId: string
+): GroupNode {
+  const usingEffective = composition.usings.filter((item) => item.impact.kind === "effective").length;
+  const usingPartial = composition.usings.filter((item) => item.impact.kind === "partial").length;
+  const usingUnused = composition.usings.filter((item) => item.impact.kind === "unused").length;
+
+  let contributionEffective = 0;
+  let contributionUnused = 0;
+  let totalInsertCount = 0;
+  let contributionWithTrace = 0;
+  for (const using of composition.usings) {
+    for (const contribution of using.contributions) {
+      if (contribution.usage === "effective") {
+        contributionEffective++;
+      } else {
+        contributionUnused++;
+      }
+      totalInsertCount += contribution.insertCount;
+      if (contribution.insertTrace) {
+        contributionWithTrace++;
+      }
+    }
+  }
+
+  return {
+    id: nodeId,
+    type: "group",
+    label: "Statistics",
+    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    icon: new vscode.ThemeIcon("graph"),
+    children: [
+      detailNode(`Using impact: effective=${usingEffective}, partial=${usingPartial}, unused=${usingUnused}`),
+      detailNode(`Contribution usage: effective=${contributionEffective}, unused=${contributionUnused}`),
+      detailNode(`Total inserts: ${totalInsertCount}`),
+      detailNode(`Insert traces: ${contributionWithTrace}`)
+    ]
   };
 }
 
@@ -936,10 +978,33 @@ function buildSymbolGroup(label: string, symbols: readonly AggregatedSymbol[], i
   };
 }
 
-function buildActionsNode(root: string, nodeId: string): GroupNode {
+function buildActionsNode(root: string, nodeId: string, composition?: DocumentCompositionModel): GroupNode {
+  const summaryText = composition ? buildCompositionQuickSummary(root, composition) : undefined;
+  const nonEffectiveUsingRows = composition
+    ? composition.usings
+        .filter((item) => item.impact.kind !== "effective")
+        .map((item) => {
+          const label = item.sectionValue ? `${item.rawComponentValue}#${item.sectionValue}` : item.rawComponentValue;
+          return `${label}: ${item.impact.kind} (${item.impact.successfulCount}/${item.impact.relevantCount})`;
+        })
+    : [];
+
   const actions: CompositionTreeNode[] = [
     actionNode("Refresh View", "sfpXmlLinter.refreshCompositionView", "refresh"),
     actionNode("Show Composition Log", "sfpXmlLinter.showCompositionLog", "output"),
+    ...(summaryText
+      ? [actionNode("Copy Summary", "sfpXmlLinter.compositionCopySummary", "clippy", [{ text: summaryText }])]
+      : []),
+    ...(nonEffectiveUsingRows.length > 0
+      ? [
+          actionNode("Log Non-effective Usings", "sfpXmlLinter.compositionLogNonEffectiveUsings", "warning", [
+            {
+              title: "Non-effective usings",
+              lines: nonEffectiveUsingRows
+            }
+          ])
+        ]
+      : []),
     actionNode("Generate Feature Manifest Bootstrap", "sfpXmlLinter.generateFeatureManifestBootstrap", "new-file"),
     actionNode("Revalidate Workspace", "sfpXmlLinter.revalidateWorkspace", "workspace-trusted"),
     actionNode("Revalidate Project", "sfpXmlLinter.revalidateProject", "folder-active")
@@ -959,16 +1024,40 @@ function buildActionsNode(root: string, nodeId: string): GroupNode {
   };
 }
 
-function actionNode(label: string, command: string, iconId: string): DetailNode {
+function actionNode(label: string, command: string, iconId: string, args?: unknown[]): DetailNode {
   return {
     type: "detail",
     label,
     icon: new vscode.ThemeIcon(iconId),
     command: {
       command,
-      title: label
+      title: label,
+      ...(args ? { arguments: args } : {})
     }
   };
+}
+
+function buildCompositionQuickSummary(root: string, composition: DocumentCompositionModel): string {
+  const usings = composition.usings.length;
+  const usingEffective = composition.usings.filter((item) => item.impact.kind === "effective").length;
+  const usingPartial = composition.usings.filter((item) => item.impact.kind === "partial").length;
+  const usingUnused = composition.usings.filter((item) => item.impact.kind === "unused").length;
+  let contributions = 0;
+  let inserts = 0;
+  for (const using of composition.usings) {
+    for (const contribution of using.contributions) {
+      contributions++;
+      inserts += contribution.insertCount;
+    }
+  }
+
+  return [
+    `Root: ${root}`,
+    `Usings: ${usings}`,
+    `Using impact: effective=${usingEffective}, partial=${usingPartial}, unused=${usingUnused}`,
+    `Contributions: ${contributions}`,
+    `Total inserts: ${inserts}`
+  ].join("\n");
 }
 
 function findContributionLocationForPart(

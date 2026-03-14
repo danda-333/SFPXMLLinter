@@ -84,7 +84,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       target.kind === "componentSectionDeclaration"
     ) {
       const componentKey = target.componentKey ?? "";
-      const formIdents = index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
+      const formIdents = collectFormIdentsForComponentDeclarationTarget(index, componentKey, target.ident, target.kind);
       for (const formIdent of formIdents) {
         const byForm =
           target.kind === "componentControlDeclaration"
@@ -506,6 +506,54 @@ function collectWorkflowControlDefinitions(
         continue;
       }
       out.set(ident, location);
+    }
+  }
+
+  return out;
+}
+
+function collectFormIdentsForComponentDeclarationTarget(
+  index: WorkspaceIndex,
+  componentKey: string,
+  ident: string,
+  kind: "componentControlDeclaration" | "componentButtonDeclaration" | "componentSectionDeclaration"
+): Set<string> {
+  const component = resolveComponentByKey(index, componentKey);
+  if (!component) {
+    return index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
+  }
+
+  const relevantContributionNames: string[] = [];
+  for (const contribution of component.contributionSummaries.values()) {
+    const idents =
+      kind === "componentControlDeclaration"
+        ? contribution.formControlIdents
+        : kind === "componentButtonDeclaration"
+          ? contribution.formButtonIdents
+          : contribution.formSectionIdents;
+    if (!idents.has(ident)) {
+      continue;
+    }
+    relevantContributionNames.push(contribution.contributionName);
+  }
+
+  if (relevantContributionNames.length === 0) {
+    return index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
+  }
+
+  const usageByContribution = index.componentContributionUsageFormIdentsByKey.get(componentKey);
+  if (!usageByContribution) {
+    return new Set<string>();
+  }
+
+  const out = new Set<string>();
+  for (const contributionName of relevantContributionNames) {
+    const contributionFormIdents = usageByContribution.get(contributionName);
+    if (!contributionFormIdents) {
+      continue;
+    }
+    for (const formIdent of contributionFormIdents) {
+      out.add(formIdent);
     }
   }
 

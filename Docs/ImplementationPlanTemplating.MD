@@ -261,7 +261,7 @@ Aktualni stav:
   - suppression zablokuje dedeni odpovidajici feature/contribution z `Form`
   - suppression-only `Using` negeneruje redundant/override diagnostiky
 
-### Faze T4: Effective composition model `[PROBIHA]`
+### Faze T4: Effective composition model `[HOTOVO]`
 Cil:
 - zavest jednotnou mezivrstvu, nad kterou budou stavet builder, validator, reference a editor tooling.
 
@@ -302,6 +302,7 @@ Aktualni stav:
 - provider vrstva je dal sjednocena na stejnem modelu:
   - `DefinitionProvider` workflow resolution (controls/buttons/sections/share codes)
   - `ReferencesProvider` workflow target resolution
+  - `ReferencesProvider` component declaration usage (`control/button/section`) je contribution-aware podle effective usage map
   - `CompletionProvider` workflow ident/share code completion + `SuppressInheritance`/`Inherit` value completion
   - `RenameProvider` workflow target resolution
   - `DefinitionProvider` + `CompletionProvider` mapping edge-cases ve workflow (`FromIdent`/`ToIdent`) ctou modelovou injected vrstvu
@@ -323,8 +324,7 @@ Aktualni stav:
   - `runWorkspaceIndexerUsageTests` overuje `componentUsageFormIdentsByKey` a `componentContributionUsageFormIdentsByKey` nad effective using scenari
 - fixture composition testy overuji stabilitu modelu
 - dalsi krok:
-  - napojit builder output/debug na stejnou mezivrstvu
-  - dopsat inheritance-aware vetve finalniho modelu
+  - navazujici rozsireni (ordering/debug detaily) resit v T8/T5 nad stejnou mezivrstvou
 
 ### Faze T5: Builder observability `[HOTOVO]`
 Cil:
@@ -685,7 +685,7 @@ Aktualne hotovo navic:
 
 ### Milestone M4: Effective composition model
 Stav:
-- `[PROBIHA]`
+- `[HOTOVO]`
 
 Obsah:
 - `T4` Effective composition model
@@ -721,6 +721,7 @@ Aktualne hotovo:
 - workflow reference validace i workflow control-id resolution ctou jednotny model (vcetne inheritance)
 - `DefinitionProvider`, `ReferencesProvider` a `CompletionProvider` workflow vetve ctou jednotny model
 - `RenameProvider` workflow vetve ctou jednotny model
+- `ReferencesProvider` component declaration references (`control/button/section`) pouzivaji contribution-level effective usage mapu
 - index usage mapy jsou plnene z effective using vrstvy (ne raw `Using` listu)
 - pridano pravidlo `suppression-conflict` + fixture coverage
 - pridano pravidlo `suppression-noop` + fixture coverage
@@ -730,10 +731,9 @@ Aktualne hotovo:
 - pridany test runner `runWorkspaceIndexerUsageTests` + fixture `tests/fixtures/indexer-usage`
 - pridany snapshot test `runDocumentCompositionModelTests`
 
-Aktualne chybi do gate:
-- inheritance v modelu
-- ordering/debug detail na stejne vrstve
-- plne napojeni zbyvajicich editorovych cest (napr. rename) na stejny model
+Gate splnen:
+- validator + provider vrstva ctou jednotnou mezivrstvu pro finalni skladani
+- editorove cesty maji sjednocene source-of-truth nad composition/index modelem
 
 ### Milestone M5: Builder observability
 Stav:

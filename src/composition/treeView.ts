@@ -367,7 +367,7 @@ function buildRegularXmlTree(
   index: WorkspaceIndex
 ): CompositionTreeNode[] {
   const root = (facts.rootTag ?? "").toLowerCase();
-  if (root !== "form" && root !== "workflow") {
+  if (root !== "form" && root !== "workflow" && root !== "dataview") {
     return [];
   }
   const composition = buildDocumentCompositionModel(facts, index);
@@ -383,7 +383,7 @@ function buildRegularXmlTree(
     children.push(buildSymbolGroup("Controls", controls, "symbol-field", sharedSectionNodeId("Controls")));
     children.push(buildSymbolGroup("Buttons", buttons, "symbol-event", sharedSectionNodeId("Buttons")));
     children.push(buildSymbolGroup("Sections", sections, "symbol-structure", sharedSectionNodeId("Sections")));
-  } else {
+  } else if (root === "workflow") {
     const controlShareCodes = aggregateWorkflowShareCodes(
       document.uri,
       facts,
@@ -428,16 +428,20 @@ function buildRegularXmlTree(
   if (includeTree.length > 0) {
     children.push(...includeTree);
   }
+  const placeholderTree = buildPlaceholderTree(document, facts);
+  if (placeholderTree.length > 0) {
+    children.push(...placeholderTree);
+  }
 
   return [
     {
       id: sharedSectionNodeId("ModelRoot"),
       type: "group",
-      label: root === "form" ? "Final Form Model" : "Final WorkFlow Model",
+      label: root === "form" ? "Final Form Model" : root === "workflow" ? "Final WorkFlow Model" : "Final DataView Model",
       description: vscode.workspace.asRelativePath(document.uri, false),
       tooltip: document.uri.fsPath,
       collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      icon: new vscode.ThemeIcon(root === "form" ? "file-code" : "symbol-class"),
+      icon: new vscode.ThemeIcon(root === "form" ? "file-code" : root === "workflow" ? "symbol-class" : "table"),
       children
     }
   ];
@@ -494,9 +498,10 @@ function buildDocumentStatisticsNode(
   composition: DocumentCompositionModel,
   nodeId: string
 ): GroupNode {
-  const usingEffective = composition.usings.filter((item) => item.impact.kind === "effective").length;
-  const usingPartial = composition.usings.filter((item) => item.impact.kind === "partial").length;
-  const usingUnused = composition.usings.filter((item) => item.impact.kind === "unused").length;
+  const usingEffective = composition.usings.filter((item) => item.impactStatus === "effective").length;
+  const usingPartial = composition.usings.filter((item) => item.impactStatus === "partial").length;
+  const usingUnused = composition.usings.filter((item) => item.impactStatus === "unused").length;
+  const usingInert = composition.usings.filter((item) => item.impactStatus === "inert").length;
 
   let contributionEffective = 0;
   let contributionUnused = 0;
@@ -523,7 +528,7 @@ function buildDocumentStatisticsNode(
     collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
     icon: new vscode.ThemeIcon("graph"),
     children: [
-      detailNode(`Using impact: effective=${usingEffective}, partial=${usingPartial}, unused=${usingUnused}`),
+      detailNode(`Using impact: effective=${usingEffective}, partial=${usingPartial}, unused=${usingUnused}, inert=${usingInert}`),
       detailNode(`Contribution usage: effective=${contributionEffective}, unused=${contributionUnused}`),
       detailNode(`Total inserts: ${totalInsertCount}`),
       detailNode(`Insert traces: ${contributionWithTrace}`)
@@ -562,8 +567,26 @@ function buildUsingTree(
     const filteredRows = usingModel.filteredContributions.map((contribution) =>
       buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
     );
+    const placeholderRows = usingModel.placeholderContributions.map((contribution) =>
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+    );
+    const filteredPlaceholderRows = usingModel.filteredPlaceholderContributions.map((contribution) =>
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+    );
     const children: CompositionTreeNode[] =
       contributionRows.length > 0 ? [...contributionRows] : [detailNode("No root-relevant contributions found.")];
+    if (placeholderRows.length > 0 || filteredPlaceholderRows.length > 0) {
+      const groupedPlaceholders = [...placeholderRows, ...filteredPlaceholderRows];
+      children.push({
+        type: "group",
+        id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}:placeholders`,
+        label: "Placeholders",
+        description: `${groupedPlaceholders.length}`,
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("symbol-key"),
+        children: groupedPlaceholders
+      });
+    }
     if (filteredRows.length > 0) {
       children.push({
         type: "group",
@@ -580,10 +603,10 @@ function buildUsingTree(
       id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}`,
       type: "using",
       label: usingModel.rawComponentValue,
-      description: usingModel.source === "inherited" ? `${usingModel.impact.kind}, inherited` : usingModel.impact.kind,
+      description: usingModel.source === "inherited" ? `${usingModel.impactStatus}, inherited` : usingModel.impactStatus,
       tooltip: usingModel.impact.message ?? usingModel.rawComponentValue,
       collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-      icon: iconForUsage(usingModel.impact.kind),
+      icon: iconForUsage(usingModel.impactStatus),
       contextValue: "compositionUsing",
       resourceUri: component.uri,
       sourceLocation: usingModel.sectionValue ? component.contributionDefinitions.get(usingModel.sectionValue) : component.componentLocation,
@@ -693,6 +716,37 @@ function buildIncludeTree(
       "Includes",
       includeNodes,
       `include-group:${facts.rootTag ?? "xml"}:${facts.formIdent ?? facts.workflowFormIdent ?? "unknown"}`
+    )
+  ];
+}
+
+function buildPlaceholderTree(
+  document: vscode.TextDocument,
+  facts: ReturnType<typeof parseDocumentFacts>
+): CompositionTreeNode[] {
+  if (facts.placeholderReferences.length === 0) {
+    return [];
+  }
+
+  const nodes: CompositionTreeNode[] = facts.placeholderReferences.map((ref, idx) => {
+    const featureLabel = ref.rawComponentValue ?? "(unknown feature)";
+    const contributionLabel = (ref.contributionValue ?? "").trim();
+    const label = contributionLabel.length > 0 ? `${featureLabel}#${contributionLabel}` : featureLabel;
+    return {
+      type: "detail",
+      id: `placeholder:${idx}`,
+      label,
+      description: ref.rawToken,
+      icon: new vscode.ThemeIcon("references"),
+      command: openLocationCommand(new vscode.Location(document.uri, ref.range), "Open placeholder")
+    } satisfies DetailNode;
+  });
+
+  return [
+    infoGroupNode(
+      "Placeholders",
+      nodes,
+      `placeholder-group:${facts.rootTag ?? "xml"}:${facts.formIdent ?? facts.workflowFormIdent ?? "unknown"}`
     )
   ];
 }
@@ -1191,10 +1245,10 @@ function buildActionsNode(root: string, nodeId: string, composition?: DocumentCo
   const summaryText = composition ? buildCompositionQuickSummary(root, composition) : undefined;
   const nonEffectiveUsingRows = composition
     ? composition.usings
-        .filter((item) => item.impact.kind !== "effective")
+        .filter((item) => item.impactStatus !== "effective")
         .map((item) => {
           const label = item.sectionValue ? `${item.rawComponentValue}#${item.sectionValue}` : item.rawComponentValue;
-          return `${label}: ${item.impact.kind} (${item.impact.successfulCount}/${item.impact.relevantCount})`;
+          return `${label}: ${item.impactStatus} (${item.impact.successfulCount}/${item.impact.relevantCount})`;
         })
     : [];
 
@@ -1248,9 +1302,10 @@ function actionNode(label: string, command: string, iconId: string, args?: unkno
 
 function buildCompositionQuickSummary(root: string, composition: DocumentCompositionModel): string {
   const usings = composition.usings.length;
-  const usingEffective = composition.usings.filter((item) => item.impact.kind === "effective").length;
-  const usingPartial = composition.usings.filter((item) => item.impact.kind === "partial").length;
-  const usingUnused = composition.usings.filter((item) => item.impact.kind === "unused").length;
+  const usingEffective = composition.usings.filter((item) => item.impactStatus === "effective").length;
+  const usingPartial = composition.usings.filter((item) => item.impactStatus === "partial").length;
+  const usingUnused = composition.usings.filter((item) => item.impactStatus === "unused").length;
+  const usingInert = composition.usings.filter((item) => item.impactStatus === "inert").length;
   let contributions = 0;
   let inserts = 0;
   for (const using of composition.usings) {
@@ -1263,7 +1318,7 @@ function buildCompositionQuickSummary(root: string, composition: DocumentComposi
   return [
     `Root: ${root}`,
     `Usings: ${usings}`,
-    `Using impact: effective=${usingEffective}, partial=${usingPartial}, unused=${usingUnused}`,
+    `Using impact: effective=${usingEffective}, partial=${usingPartial}, unused=${usingUnused}, inert=${usingInert}`,
     `Contributions: ${contributions}`,
     `Total inserts: ${inserts}`
   ].join("\n");
@@ -1420,12 +1475,14 @@ function findFeatureForRelativePath(
   return undefined;
 }
 
-function iconForUsage(usage: "effective" | "partial" | "unused"): vscode.ThemeIcon {
+function iconForUsage(usage: "effective" | "partial" | "unused" | "inert"): vscode.ThemeIcon {
   switch (usage) {
     case "effective":
       return new vscode.ThemeIcon("pass");
     case "partial":
       return new vscode.ThemeIcon("warning");
+    case "inert":
+      return new vscode.ThemeIcon("circle-large-outline");
     case "unused":
       return new vscode.ThemeIcon("circle-slash");
   }

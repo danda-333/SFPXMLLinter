@@ -26,8 +26,11 @@ export interface DocumentUsingModel {
   source: "local" | "inherited";
   sectionValue?: string;
   impact: UsingImpactSummary;
+  impactStatus: "effective" | "partial" | "unused" | "inert";
   contributions: DocumentUsingContributionModel[];
   filteredContributions: DocumentUsingContributionModel[];
+  placeholderContributions: DocumentUsingContributionModel[];
+  filteredPlaceholderContributions: DocumentUsingContributionModel[];
   hasResolvedFeature: boolean;
 }
 
@@ -163,8 +166,11 @@ export function buildDocumentCompositionModel(
           relevantCount: 0,
           successfulCount: 0
         },
+        impactStatus: "unused",
         contributions: [],
         filteredContributions: [],
+        placeholderContributions: [],
+        filteredPlaceholderContributions: [],
         hasResolvedFeature: false
       });
       continue;
@@ -175,33 +181,56 @@ export function buildDocumentCompositionModel(
     const selectedContributions = explicit
       ? selectUsingContributions(component, usingRef.sectionValue)
       : allContributions;
+    const selectedPlaceholderContributions = selectedContributions.filter((contribution) => isPlaceholderContribution(contribution));
+    const selectedNonPlaceholderContributions = selectedContributions.filter((contribution) => !isPlaceholderContribution(contribution));
     const visibleContributions = explicit
-      ? selectedContributions
-      : selectedContributions.filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution));
+      ? selectedNonPlaceholderContributions
+      : selectedNonPlaceholderContributions.filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution));
     const filteredContributions = explicit
       ? allContributions.filter(
           (contribution) =>
             !selectedContributions.some((selected) => selected.contributionName === contribution.contributionName)
         )
-      : selectedContributions.filter((contribution) => !contributionMatchesDocumentRoot(facts.rootTag, contribution));
+      : selectedNonPlaceholderContributions.filter((contribution) => !contributionMatchesDocumentRoot(facts.rootTag, contribution));
+    const filteredPlaceholderContributions = explicit
+      ? []
+      : selectedPlaceholderContributions.filter((contribution) => !contributionMatchesDocumentRoot(facts.rootTag, contribution));
+    const relevantNonPlaceholderContributions = explicit
+      ? selectedNonPlaceholderContributions
+      : selectedNonPlaceholderContributions.filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution));
     const impact = evaluateUsingImpactFromContributions(
       facts,
       usingRef.componentKey,
-      selectedContributions,
+      selectedNonPlaceholderContributions,
       `Using feature '${usingRef.rawComponentValue}'`,
       explicit ? { ignoreRootFilter: true } : undefined
     );
+    const inert = usingRef.source === "inherited" && relevantNonPlaceholderContributions.length === 0;
+    const impactStatus: "effective" | "partial" | "unused" | "inert" = inert ? "inert" : impact.kind;
+    const normalizedImpact: UsingImpactSummary = inert
+      ? {
+          ...impact,
+          message: `Using feature '${usingRef.rawComponentValue}' is inherited but not applicable for root '${facts.rootTag ?? "unknown"}'.`
+        }
+      : impact;
 
     usings.push({
       componentKey: usingRef.componentKey,
       rawComponentValue: usingRef.rawComponentValue,
       source: usingRef.source,
       ...(usingRef.sectionValue ? { sectionValue: usingRef.sectionValue } : {}),
-      impact,
+      impact: normalizedImpact,
+      impactStatus,
       contributions: visibleContributions.map((contribution) =>
         buildUsingContributionModel(facts, usingRef.componentKey, contribution, explicit)
       ),
       filteredContributions: filteredContributions.map((contribution) =>
+        buildUsingContributionModel(facts, usingRef.componentKey, contribution, false)
+      ),
+      placeholderContributions: selectedPlaceholderContributions.map((contribution) =>
+        buildUsingContributionModel(facts, usingRef.componentKey, contribution, explicit)
+      ),
+      filteredPlaceholderContributions: filteredPlaceholderContributions.map((contribution) =>
         buildUsingContributionModel(facts, usingRef.componentKey, contribution, false)
       ),
       hasResolvedFeature: true
@@ -209,6 +238,10 @@ export function buildDocumentCompositionModel(
   }
 
   return { usings };
+}
+
+function isPlaceholderContribution(contribution: IndexedComponentContributionSummary): boolean {
+  return (contribution.insert ?? "").trim().toLowerCase() === "placeholder";
 }
 
 function buildUsingContributionModel(

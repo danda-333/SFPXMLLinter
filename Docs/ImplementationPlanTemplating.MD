@@ -106,10 +106,10 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - auto-vytvoreni souboru v `XML_Generators` vcetne unikátního suffixu pri kolizi jmena
 
 ### Prave probiha
-- dokonceni `effective composition model` jako jednotneho zdroje i pro builder/debug vrstvu
-  - odstranit zbytkove duplikace mezi build debug a composition modelem
-- doplnovani dalsich inference pravidel nad `Assign`
-- priprava form-owned inheritance vrstvy nad stabilizovanym modelem
+- dokonceni `M11` (programovatelne generovani):
+  - uzavrit release gate (determinismus, vykon, bez side effectu)
+  - dopsat finalni fixture scenare nad realnymi feature patterny
+  - formalne prepnout milestone na `[HOTOVO]`
 
 ### Zatim pred nami
 - form-owned inheritance
@@ -902,7 +902,7 @@ Aktualne hotovo:
 
 ### Milestone M8: Ordering model
 Stav:
-- `[PROBIHA]`
+- `[HOTOVO]`
 Obsah:
 - `T8` Ordering model
 
@@ -927,6 +927,10 @@ Aktualne hotovo:
 - `ordering-conflict` diagnostika v feature entrypointu
 - Tree View ordering debug vrstva
 - composition regression testy pro conflict/cycle/missing anchor
+
+Gate splnen:
+- poradi je riditelne mimo samotne poradi `Using`
+- konflikty/cykly jsou reportovane diagnostikou i viditelne v debug vrstvach
 
 ### Milestone M9: Authoring ergonomie
 Stav:
@@ -974,6 +978,9 @@ Aktualne hotovo:
 - samostatny template primitive test runner + fixture-level edge scenare (`998_T9PrimitiveEdge`)
 
 ### Milestone M10: Final output quality
+Stav:
+- `[HOTOVO]`
+
 Obsah:
 - `T10` Final output quality
 
@@ -1082,6 +1089,19 @@ Aktualne hotovo:
   - fixture scenar nad realnym template-workflow vstupem (`999_T11GeneratorDemo`) s kontrolou liftu + idempotence
   - snippet+primitive scenar (`999_T11ButtonDialogDemo`) pro `UseGenerator` flow
   - command scaffold je integrovany v extension (`src/extension.ts`, `package.json`)
+
+Checklist pro uzavreni M11:
+- doplnit fixture scenar pro vice document+snippet generatoru v jednom souboru (order + determinismus)
+- doplnit fixture scenar pro fail-safe chovani:
+  - chyba v jednom user generatoru nesmi rozbit cely build
+  - warning/error musi byt citelne v output logu
+- doplnit vykonnostni checkpoint:
+  - porovnani buildu s `templateBuilder.generators.enabled=true/false`
+  - overit, ze overhead generator pass je v akceptovatelnem limitu
+- uzavrit release gate:
+  - stejne vstupy => stejne vystupy napric opakovanymi behy
+  - bez vedlejsich efektu mimo zpracovavany dokument
+  - aktualizovat stav milestone na `[HOTOVO]`
 
 ## Prvni pilot
 Prvni implementacni vlna by mela byt vedena nad jednou feature s vysokou slozitosti a zaroven dobrou citelnosti zavislosti.

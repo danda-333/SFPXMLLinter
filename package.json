@@ -267,8 +267,12 @@
             "ident-convention-view-postfix": "warning",
             "ident-convention-lookup-control": "warning",
             "unknown-feature-requirement": "warning",
+            "missing-feature-dependency": "warning",
             "missing-feature-expectation": "warning",
             "missing-feature-expected-xpath": "warning",
+            "duplicate-feature-provider": "warning",
+            "orphan-feature-part": "warning",
+            "incomplete-feature": "warning",
             "unused-feature-contribution": "information",
             "partial-feature-contribution": "information"
           },

@@ -188,7 +188,7 @@ Definition of Done:
 - je popsano, jak manifest autorovat a jaky minimalni bootstrap umi generator vytvorit,
 - je rozhodnuto, co se deje kdyz `*.feature.json` chybi.
 
-### Faze T2: Feature manifest + dependency validator `[PROBIHA]`
+### Faze T2: Feature manifest + dependency validator `[HOTOVO]`
 Cil:
 - zavadet feature contracts a zacit hlidat nekompletni nebo rozbite feature.
 
@@ -222,9 +222,13 @@ Definition of Done:
 Aktualni stav:
 - XML-first auto-manifest rezim je hotovy
 - pilot `Assign` je hotovy
-- prvni feature-aware diagnostiky jsou hotove
-- bootstrap generator a uzivatelska dokumentace manifestu jeste chybi
-- chybi dalsi semanticke diagnostiky typu `duplicate-feature-provider` a `incomplete-feature`
+- feature-aware diagnostiky jsou rozsirene:
+  - `missing-feature-dependency`
+  - `duplicate-feature-provider`
+  - `orphan-feature-part`
+  - `incomplete-feature`
+- bootstrap generator je hotovy (`SFP XML Linter: Generate Feature Manifest Bootstrap`)
+- uzivatelska dokumentace manifest authoringu je hotova (`Docs/FeatureManifestAuthoring.md`)
 
 Doporuceny pilot:
 - `Assign`
@@ -610,7 +614,7 @@ Gate pro dalsi milestone:
 
 ### Milestone M2: Dependency-safe features
 Stav:
-- `[PROBIHA]`
+- `[HOTOVO]`
 
 Obsah:
 - `T2` Feature manifest + dependency validator
@@ -639,10 +643,10 @@ Gate pro dalsi milestone:
 - pilot feature ma stabilni manifest a validace umi zachytit hlavni tridy nekompletnosti,
 - nova feature jde zalozit pomoci generatoru a dopsat podle dokumentace bez studia implementace.
 
-Aktualne chybi do gate:
-- bootstrap generator
-- uzivatelska dokumentace manifest authoringu
-- sirsi sada semantickych diagnostik
+Gate splnen:
+- bootstrap generator existuje a je pokryty testem (`runCompositionBootstrapTests`)
+- dokumentace manifest authoringu je doplnena
+- semanticke diagnostiky pokryvaji dependency/provider/incomplete/orphan scenare
 
 ### Milestone M3: Form-owned inheritance
 Stav:

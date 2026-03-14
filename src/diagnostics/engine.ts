@@ -1077,6 +1077,68 @@ export class DiagnosticsEngine {
       });
     }
 
+    const featureManifest = featureRegistry.manifestsByFeature.get(feature.feature);
+    if (effectiveModel && featureManifest?.entrypoint === relPath) {
+      const diagnosticAnchor = findFeatureManifestRange(text, document);
+      const duplicateProviderConflicts = effectiveModel.conflicts.filter((conflict) => conflict.code === "duplicate-provider");
+      for (const conflict of duplicateProviderConflicts) {
+        issues.push({
+          ruleId: "duplicate-feature-provider",
+          range: diagnosticAnchor,
+          message: conflict.message
+        });
+      }
+
+      const missingDependencyConflicts = effectiveModel.conflicts.filter((conflict) => conflict.code === "missing-dependency");
+      for (const conflict of missingDependencyConflicts) {
+        issues.push({
+          ruleId: "missing-feature-dependency",
+          range: diagnosticAnchor,
+          message: conflict.message
+        });
+      }
+
+      const orphanParts = feature.parts
+        .map((part) => part.file)
+        .filter((partFile) => !featureRegistry.manifestsBySource.has(partFile));
+      if (orphanParts.length > 0) {
+        issues.push({
+          ruleId: "orphan-feature-part",
+          range: diagnosticAnchor,
+          message: `Feature '${feature.feature}' references part files that are not present in registry: ${orphanParts.join(", ")}.`
+        });
+      }
+
+      const partialContributionCount = effectiveModel.contributions.filter((contribution) => contribution.usage === "partial").length;
+      const missingExpectedXPathConflicts = effectiveModel.conflicts.filter(
+        (conflict) => conflict.code === "missing-expected-xpath"
+      ).length;
+      const incompleteReasons: string[] = [];
+      if (missingDependencyConflicts.length > 0) {
+        incompleteReasons.push(`missing dependencies=${missingDependencyConflicts.length}`);
+      }
+      if (duplicateProviderConflicts.length > 0) {
+        incompleteReasons.push(`duplicate providers=${duplicateProviderConflicts.length}`);
+      }
+      if (partialContributionCount > 0) {
+        incompleteReasons.push(`partial contributions=${partialContributionCount}`);
+      }
+      if (missingExpectedXPathConflicts > 0) {
+        incompleteReasons.push(`missing expected XPath=${missingExpectedXPathConflicts}`);
+      }
+      if (orphanParts.length > 0) {
+        incompleteReasons.push(`orphan parts=${orphanParts.length}`);
+      }
+
+      if (incompleteReasons.length > 0) {
+        issues.push({
+          ruleId: "incomplete-feature",
+          range: diagnosticAnchor,
+          message: `Feature '${feature.feature}' is incomplete: ${incompleteReasons.join(", ")}.`
+        });
+      }
+    }
+
     const matchingPart = feature.parts.find((part) => part.file === relPath);
     if (!matchingPart || !effectiveModel) {
       return;
@@ -1275,6 +1337,25 @@ function collectFeatureContributionRanges(
   }
 
   return out;
+}
+
+function findFeatureManifestRange(
+  text: string,
+  document: vscode.TextDocument
+): vscode.Range {
+  const manifestMatch = /<\s*Manifest\b/i.exec(text);
+  if (manifestMatch) {
+    const start = manifestMatch.index ?? 0;
+    return new vscode.Range(document.positionAt(start), document.positionAt(start + "<Manifest".length));
+  }
+
+  const featureMatch = /<\s*Feature\b/i.exec(text);
+  if (featureMatch) {
+    const start = featureMatch.index ?? 0;
+    return new vscode.Range(document.positionAt(start), document.positionAt(start + "<Feature".length));
+  }
+
+  return new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1));
 }
 
 function parseFeatureXmlAttributes(

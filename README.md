@@ -25,6 +25,14 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - `unknown-using-section`
   - `typo-maxlenght-attribute` (`MaxLenght` typo in `Control`/`Parameter`; expected `MaxLength`)
   - `sql-convention-equals-spacing` (`=` in `SQL`/`Command` must have spaces on both sides)
+  - feature-contract diagnostics:
+    - `unknown-feature-requirement`
+    - `missing-feature-dependency`
+    - `missing-feature-expectation`
+    - `missing-feature-expected-xpath`
+    - `duplicate-feature-provider`
+    - `orphan-feature-part`
+    - `incomplete-feature`
   - `FormControl xsi:type="ShareCodeControl"` is validated against `WorkFlow/ControlShareCodes/ControlShareCode` (local + injected via `Using`)
 - Per-rule severity config (`sfpXmlLinter.rules`) with values: `off`, `warning`, `error`
   - new form-owned inheritance diagnostics (default `warning`):
@@ -83,6 +91,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - Uses the same auto-manifest inference as runtime (`Feature`/`Contribution`, contracts, `expectsXPath`, `requires`, `provides`).
   - If target file already exists, asks for explicit overwrite confirmation.
   - Full usage guide: `Docs/FeatureManifestBootstrap.md`
+  - Authoring guide (contracts + diagnostics): `Docs/FeatureManifestAuthoring.md`
 - Report command:
   - `SFP XML Linter: Workspace Diagnostics Report`
   - Prints diagnostics summary and per-rule counts to output channel

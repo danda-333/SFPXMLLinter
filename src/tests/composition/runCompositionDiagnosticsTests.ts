@@ -232,6 +232,88 @@ function run(): void {
   });
   assertHasRule(formUsageDiagnostics, "partial-feature-contribution");
 
+  const duplicateProviderRegistry = loadFeatureManifestRegistry(workspaceRoot);
+  const duplicateModel = duplicateProviderRegistry.effectiveModelsByFeature.get("Assign");
+  if (!duplicateModel) {
+    throw new Error("Expected effective model for Assign.");
+  }
+  duplicateProviderRegistry.effectiveModelsByFeature.set("Assign", {
+    ...duplicateModel,
+    conflicts: [
+      ...duplicateModel.conflicts,
+      {
+        code: "duplicate-provider",
+        message: "Symbol 'control:AssignedGroupID' is provided by multiple parts.",
+        itemKeys: ["control:AssignedGroupID"]
+      }
+    ]
+  });
+  const duplicateProviderDiagnostics = engine.buildDiagnostics(
+    entrypointDoc as unknown as import("vscode").TextDocument,
+    emptyIndex,
+    {
+      standaloneMode: true,
+      featureRegistry: duplicateProviderRegistry
+    }
+  );
+  assertHasRule(duplicateProviderDiagnostics, "duplicate-feature-provider");
+  assertHasRule(duplicateProviderDiagnostics, "incomplete-feature");
+
+  const missingDependencyRegistry = loadFeatureManifestRegistry(workspaceRoot);
+  const missingDependencyModel = missingDependencyRegistry.effectiveModelsByFeature.get("Assign");
+  if (!missingDependencyModel) {
+    throw new Error("Expected effective model for Assign.");
+  }
+  missingDependencyRegistry.effectiveModelsByFeature.set("Assign", {
+    ...missingDependencyModel,
+    conflicts: [
+      ...missingDependencyModel.conflicts,
+      {
+        code: "missing-dependency",
+        message: "Required dependency 'feature:MissingFeature' is not satisfied.",
+        itemKeys: []
+      }
+    ]
+  });
+  const missingDependencyDiagnostics = engine.buildDiagnostics(
+    entrypointDoc as unknown as import("vscode").TextDocument,
+    emptyIndex,
+    {
+      standaloneMode: true,
+      featureRegistry: missingDependencyRegistry
+    }
+  );
+  assertHasRule(missingDependencyDiagnostics, "missing-feature-dependency");
+
+  const orphanPartRegistry = loadFeatureManifestRegistry(workspaceRoot);
+  const assignCapability = orphanPartRegistry.capabilityReportsByFeature.get("Assign");
+  if (!assignCapability) {
+    throw new Error("Expected capability report for Assign.");
+  }
+  orphanPartRegistry.capabilityReportsByFeature.set("Assign", {
+    ...assignCapability,
+    parts: [
+      ...assignCapability.parts,
+      {
+        id: "MissingPart",
+        file: "Common/Features/Assign/Missing.Part.feature.xml",
+        appliesTo: ["form"],
+        provides: [],
+        expects: [],
+        contributions: []
+      }
+    ]
+  });
+  const orphanPartDiagnostics = engine.buildDiagnostics(
+    entrypointDoc as unknown as import("vscode").TextDocument,
+    emptyIndex,
+    {
+      standaloneMode: true,
+      featureRegistry: orphanPartRegistry
+    }
+  );
+  assertHasRule(orphanPartDiagnostics, "orphan-feature-part");
+
   const inheritanceSettings = createInheritanceSettings();
   const formInheritanceText = `<?xml version="1.0" encoding="utf-8"?>
 <Form Ident="InheritanceForm">

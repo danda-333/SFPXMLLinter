@@ -35,6 +35,12 @@ export interface DocumentCompositionModel {
   usings: DocumentUsingModel[];
 }
 
+export interface EffectiveDocumentContributionRef {
+  componentKey: string;
+  source: "local" | "inherited";
+  contribution: IndexedComponentContributionSummary;
+}
+
 export interface DocumentInjectedSymbolSource {
   source: string;
   resourceUri?: vscode.Uri;
@@ -89,6 +95,52 @@ export function collectInjectedSymbols(
   }
 
   return injected;
+}
+
+export function collectEffectiveDocumentContributions(
+  model: DocumentCompositionModel
+): EffectiveDocumentContributionRef[] {
+  const out: EffectiveDocumentContributionRef[] = [];
+  for (const usingModel of model.usings) {
+    if (!usingModel.hasResolvedFeature) {
+      continue;
+    }
+
+    for (const contributionModel of usingModel.contributions) {
+      if (contributionModel.usage !== "effective") {
+        continue;
+      }
+
+      out.push({
+        componentKey: usingModel.componentKey,
+        source: usingModel.source,
+        contribution: contributionModel.contribution
+      });
+    }
+  }
+
+  return out;
+}
+
+export function collectSelectedDocumentContributions(
+  model: DocumentCompositionModel
+): EffectiveDocumentContributionRef[] {
+  const out: EffectiveDocumentContributionRef[] = [];
+  for (const usingModel of model.usings) {
+    if (!usingModel.hasResolvedFeature) {
+      continue;
+    }
+
+    for (const contributionModel of usingModel.contributions) {
+      out.push({
+        componentKey: usingModel.componentKey,
+        source: usingModel.source,
+        contribution: contributionModel.contribution
+      });
+    }
+  }
+
+  return out;
 }
 
 export function buildDocumentCompositionModel(

@@ -13,7 +13,12 @@ import { FeatureCapabilityReport } from "../composition/model";
 import { matchesExpectedXPathInEffectiveModel } from "../composition/effectiveModel";
 import { FeatureManifestRegistry } from "../composition/workspace";
 import { contributionMatchesDocumentRoot, populateUsingInsertTraceFromText } from "../composition/usingImpact";
-import { buildDocumentCompositionModel, findLocalUsingModelForReference } from "../composition/documentModel";
+import {
+  buildDocumentCompositionModel,
+  collectSelectedDocumentContributions,
+  DocumentCompositionModel,
+  findLocalUsingModelForReference
+} from "../composition/documentModel";
 import { collectEffectiveUsingRefs } from "../utils/effectiveUsings";
 
 export interface RuleDiagnostic {
@@ -57,29 +62,33 @@ export class DiagnosticsEngine {
     if (!standaloneMode && facts.usingContributionInsertTraces.size === 0 && index.componentsReady) {
       populateUsingInsertTraceFromText(facts, document.getText(), index);
     }
+    const documentComposition = buildDocumentCompositionModel(facts, index);
     const formIdentCandidates = getAllFormIdentCandidates(index, metadata);
     const issues: RuleDiagnostic[] = [];
     let cachedResolvableControlIdents: Set<string> | undefined;
     const getResolvableControlIdents = (): Set<string> => {
       if (!cachedResolvableControlIdents) {
-        cachedResolvableControlIdents = collectResolvableControlIdents(document, facts, index, { metadata, maskedText });
+        cachedResolvableControlIdents = collectResolvableControlIdents(document, facts, index, {
+          metadata,
+          maskedText,
+          compositionModel: documentComposition
+        });
       }
       return cachedResolvableControlIdents;
     };
 
     this.validateGeneralFormIdentReferences(facts, index, issues, metadata, formIdentCandidates, settings);
-    this.validateDuplicateIdents(facts, index, issues);
+    this.validateDuplicateIdents(facts, index, issues, documentComposition);
     this.validateIdentConventions(facts, index, issues, metadata);
 
     if (facts.rootTag?.toLowerCase() === "workflow") {
-      this.validateWorkflowReferences(facts, index, issues, metadata);
+      this.validateWorkflowReferences(facts, index, issues, metadata, documentComposition);
     }
 
     this.validateMappingFormIdentReferences(facts, index, issues, metadata, formIdentCandidates, settings);
     this.validateMappingReferences(facts, index, issues, metadata, getResolvableControlIdents, settings);
     this.validateRequiredActionIdentReferences(facts, issues, getResolvableControlIdents);
     this.validateWorkflowControlIdentReferences(facts, issues, getResolvableControlIdents);
-    const documentComposition = buildDocumentCompositionModel(facts, index);
     this.validateUsingReferences(facts, index, issues, documentComposition);
     this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
     this.validateFeatureCompositionReferences(document, facts, issues, featureRegistry);
@@ -114,10 +123,11 @@ export class DiagnosticsEngine {
   private validateDuplicateIdents(
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    documentComposition: DocumentCompositionModel
   ): void {
     const seen = new Map<string, { control?: boolean; buttonByScope: Set<string>; sectionByScope: Set<string> }>();
-    const occurrences = collectExpandedIdentOccurrences(facts, index);
+    const occurrences = collectExpandedIdentOccurrences(facts, index, documentComposition);
     for (const occurrence of occurrences) {
       const key = occurrence.ident;
       const flags = seen.get(key) ?? { buttonByScope: new Set<string>(), sectionByScope: new Set<string>() };
@@ -197,7 +207,8 @@ export class DiagnosticsEngine {
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
     issues: RuleDiagnostic[],
-    metadata: SystemMetadata
+    metadata: SystemMetadata,
+    documentComposition: DocumentCompositionModel
   ): void {
     const formIdent = facts.workflowFormIdent;
     if (!formIdent) {
@@ -209,10 +220,10 @@ export class DiagnosticsEngine {
       return;
     }
 
-    const availableControlShareCodes = collectWorkflowControlShareCodes(facts, index);
-    const availableButtonShareCodes = collectWorkflowButtonShareCodes(facts, index);
-    const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata);
-    const availableButtons = collectWorkflowAvailableButtons(facts, index, form);
+    const availableControlShareCodes = collectWorkflowControlShareCodes(facts, index, documentComposition);
+    const availableButtonShareCodes = collectWorkflowButtonShareCodes(facts, index, documentComposition);
+    const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata, documentComposition);
+    const availableButtons = collectWorkflowAvailableButtons(facts, index, form, documentComposition);
     for (const ref of facts.workflowReferences) {
       if (ref.kind === "formControl") {
         if (!availableControls.has(ref.ident)) {
@@ -1127,17 +1138,20 @@ function getAttributeCaseInsensitiveXml(
 
 function collectWorkflowControlShareCodes(
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
 ): Set<string> {
   const out = new Set<string>(facts.declaredControlShareCodes);
-  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
     if (!component) {
       continue;
     }
 
-    for (const key of component.workflowControlShareCodeDefinitions.keys()) {
-      out.add(key);
+    for (const key of contributionRef.contribution.workflowControlShareCodeIdents) {
+      if (component.workflowControlShareCodeDefinitions.has(key)) {
+        out.add(key);
+      }
     }
   }
 
@@ -1146,17 +1160,20 @@ function collectWorkflowControlShareCodes(
 
 function collectWorkflowButtonShareCodes(
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
 ): Set<string> {
   const out = new Set<string>(facts.declaredButtonShareCodes);
-  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
     if (!component) {
       continue;
     }
 
-    for (const key of component.workflowButtonShareCodeDefinitions.keys()) {
-      out.add(key);
+    for (const key of contributionRef.contribution.workflowButtonShareCodeIdents) {
+      if (component.workflowButtonShareCodeDefinitions.has(key)) {
+        out.add(key);
+      }
     }
   }
 
@@ -1165,14 +1182,15 @@ function collectWorkflowButtonShareCodes(
 
 function collectExpandedIdentOccurrences(
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
 ): ReturnType<typeof parseDocumentFacts>["identOccurrences"] {
   const out = [...facts.identOccurrences];
   if (facts.rootTag?.toLowerCase() !== "workflow") {
     return out;
   }
 
-  const buttonShareCodeButtons = collectWorkflowButtonShareCodeButtonIdents(facts, index);
+  const buttonShareCodeButtons = collectWorkflowButtonShareCodeButtonIdents(facts, index, documentComposition);
   for (const ref of facts.workflowReferences) {
     if (ref.kind !== "buttonShareCode") {
       continue;
@@ -1199,7 +1217,8 @@ function collectExpandedIdentOccurrences(
 
 function collectWorkflowButtonShareCodeButtonIdents(
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
 ): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
 
@@ -1211,13 +1230,18 @@ function collectWorkflowButtonShareCodeButtonIdents(
     out.set(shareCode, target);
   }
 
-  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
     if (!component) {
       continue;
     }
 
-    for (const [shareCode, buttonIds] of component.workflowButtonShareCodeButtonIdents.entries()) {
+    for (const shareCode of contributionRef.contribution.workflowButtonShareCodeIdents) {
+      const buttonIds = component.workflowButtonShareCodeButtonIdents.get(shareCode);
+      if (!buttonIds || buttonIds.size === 0) {
+        continue;
+      }
+
       const target = out.get(shareCode) ?? new Set<string>();
       for (const buttonId of buttonIds) {
         target.add(buttonId);
@@ -1233,19 +1257,16 @@ function collectWorkflowAvailableControls(
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   form: import("../indexer/types").IndexedForm,
-  metadata: ReturnType<typeof getSystemMetadata>
+  metadata: ReturnType<typeof getSystemMetadata>,
+  documentComposition: DocumentCompositionModel
 ): Set<string> {
   const out = new Set<string>(form.controls);
   for (const column of metadata.defaultFormColumns) {
     out.add(column);
   }
 
-  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
-    if (!component) {
-      continue;
-    }
-    for (const ident of component.formControlDefinitions.keys()) {
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    for (const ident of contributionRef.contribution.formControlIdents) {
       out.add(ident);
     }
   }
@@ -1256,15 +1277,12 @@ function collectWorkflowAvailableControls(
 function collectWorkflowAvailableButtons(
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
-  form: import("../indexer/types").IndexedForm
+  form: import("../indexer/types").IndexedForm,
+  documentComposition: DocumentCompositionModel
 ): Set<string> {
   const out = new Set<string>(form.buttons);
-  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
-    if (!component) {
-      continue;
-    }
-    for (const ident of component.formButtonDefinitions.keys()) {
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    for (const ident of contributionRef.contribution.formButtonIdents) {
       out.add(ident);
     }
   }

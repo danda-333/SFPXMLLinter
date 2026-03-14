@@ -294,7 +294,10 @@ Aktualni stav:
 - novy `DocumentCompositionModel` je zaveden jako sdilena mezivrstva pro bezne XML:
   - validator `Using` impact cte tento model
   - Tree View `Using` + injected symbol agregace ctou tento model
-  - fixture composition testy overuji stabilitu modelu
+- workflow diagnostiky a resolvovani control identu ctou stejny model:
+  - reference validace (`FormControl`, `ButtonShareCode`, `ControlShareCode`) uz jede pres contribution-level vyber + inheritance
+  - odpadla ad-hoc agregace symbolu pouze z raw `Using` seznamu
+- fixture composition testy overuji stabilitu modelu
 - dalsi krok:
   - napojit builder output/debug na stejnou mezivrstvu
   - dopsat inheritance-aware vetve finalniho modelu
@@ -691,6 +694,7 @@ Aktualne hotovo:
 - zaveden `DocumentCompositionModel` pro bezne XML
 - validator i Tree View cteji `Using` impact z jednotneho modelu
 - injected symbol agregace v Tree View cte jednotny model
+- workflow reference validace i workflow control-id resolution ctou jednotny model (vcetne inheritance)
 - pridany snapshot test `runDocumentCompositionModelTests`
 
 Aktualne chybi do gate:

@@ -84,6 +84,8 @@ export interface ParsedDocumentFacts {
   rootTag?: string;
   rootIdent?: string;
   rootIdentRange?: vscode.Range;
+  rootFormIdent?: string;
+  rootFormIdentRange?: vscode.Range;
   formIdent?: string;
   workflowFormIdent?: string;
   workflowFormIdentRange?: vscode.Range;
@@ -176,6 +178,20 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
   const rootTagLower = (rootMatch ? stripPrefix(rootMatch[1]) : "").toLowerCase();
   if (rootMatch) {
     facts.rootTag = stripPrefix(rootMatch[1]);
+
+    const rawRootName = rootMatch[1] ?? "";
+    const rootOpenTagRegex = new RegExp(`<\\s*${escapeRegExp(rawRootName)}\\b([^>]*)>`, "i");
+    const rootOpenTagMatch = rootOpenTagRegex.exec(text);
+    if (rootOpenTagMatch) {
+      const attrs = parseAttributes(rootOpenTagMatch[1] ?? "", text, attributeStartIndex(rootOpenTagMatch));
+      const formIdentAttr = attrs.get("FormIdent");
+      if (formIdentAttr?.value) {
+        facts.rootFormIdent = formIdentAttr.value;
+        if (formIdentAttr.valueRange) {
+          facts.rootFormIdentRange = formIdentAttr.valueRange;
+        }
+      }
+    }
   }
 
   const rootIdentMatch = /<\s*([A-Za-z_][\w:.-]*)\b[^>]*\bIdent\s*=\s*("([^"]*)"|'([^']*)')/i.exec(text);
@@ -634,6 +650,10 @@ function getLineStarts(text: string): number[] {
 function stripPrefix(value: string): string {
   const parts = value.split(":");
   return parts[parts.length - 1];
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function attributeStartIndex(match: RegExpMatchArray, attrsGroupIndex = 1): number {

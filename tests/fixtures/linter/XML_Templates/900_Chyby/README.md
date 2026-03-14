@@ -26,6 +26,8 @@ Minimal scenarios for each validation rule.
 - `chyba-22-sql-convention-equals-spacing.xml` -> `sql-convention-equals-spacing`
 - `chyba-23-typo-maxlenght-attribute.xml` -> `typo-maxlenght-attribute`
 - `chyba-24-ident-convention-lookup-missing-plural.xml` -> `ident-convention-lookup-control` (missing plural `s` on multi-select lookup)
-- `chyba-25-unused-using.xml` -> `unused-using`
+- `chyba-25-contribution-mismatch.xml` -> `contribution-mismatch`
 - `chyba-26-partial-using.xml` -> `partial-using`
+- `chyba-28-workflow-redundant-feature-using.xml` -> `workflow-redundant-feature-using`
+- `chyba-30-dataview-redundant-feature-using.xml` -> `dataview-redundant-feature-using`
 

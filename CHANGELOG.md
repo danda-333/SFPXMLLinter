@@ -25,6 +25,10 @@
   - added command `SFP XML Linter: Generate Feature Manifest Bootstrap`.
   - generates `*.feature.json` draft from XML-first feature composition near the active feature file (with overwrite confirmation).
   - added composition bootstrap regression tests.
+- Using impact + inheritance diagnostics:
+  - `unused-using` / `partial-using` now consume indexed insert traces as primary source.
+  - added form-owned inheritance diagnostics for `WorkFlow` and `DataView` (`*-redundant-feature-using`), default severity `warning`.
+  - added composition diagnostics tests covering redundant inheritance scenarios.
 
 ## 0.0.16
 

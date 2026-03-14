@@ -4,7 +4,7 @@ import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
 import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
 import { maskXmlComments } from "../utils/xmlComments";
-import { analyzeXPathInsertTargets } from "../template/buildXmlTemplatesCore";
+import { populateUsingInsertTraceFromText } from "../composition/usingImpact";
 
 interface ParsedEntry {
   uri: vscode.Uri;
@@ -127,7 +127,7 @@ export class WorkspaceIndexer {
       sectionDefinitions
     };
 
-    populateUsingContributionInsertCounts(facts, maskedText, this.index);
+    populateUsingInsertTraceFromText(facts, maskedText, this.index);
     this.index.formsByIdent.set(facts.formIdent, form);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
@@ -175,7 +175,7 @@ export class WorkspaceIndexer {
       workflowButtonShareCodeButtonIdents: workflowInjected.buttonShareCodeButtonIdents
     };
 
-    populateUsingContributionInsertCounts(facts, maskedText, this.index);
+    populateUsingInsertTraceFromText(facts, maskedText, this.index);
     this.index.componentsByKey.set(key, component);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
@@ -362,7 +362,7 @@ export class WorkspaceIndexer {
     };
 
     for (const entry of parsedEntries) {
-      populateUsingContributionInsertCounts(entry.facts, entry.maskedText, provisionalIndex);
+      populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
     }
 
     const formEntries = parsedEntries.filter((entry) => entry.root === "form" && !!entry.facts.formIdent);
@@ -430,6 +430,12 @@ export class WorkspaceIndexer {
       total: formEntries.length,
       message: `Built ${formEntries.length} forms in ${formsMs} ms.`
     });
+
+    // Recompute insert counts/traces once forms are available,
+    // so workflow/dataview inherited usings are reflected in indexed facts.
+    for (const entry of parsedEntries) {
+      populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+    }
 
     let processedRefEntries = 0;
     const referencesStart = Date.now();
@@ -1062,122 +1068,6 @@ function appliesToWorkflowRoot(root: string | undefined): boolean {
     .filter(Boolean);
 
   return parts.includes("workflow");
-}
-
-function populateUsingContributionInsertCounts(
-  facts: ReturnType<typeof parseDocumentFactsFromMaskedText>,
-  maskedText: string,
-  index: WorkspaceIndex
-): void {
-  const out = new Map<string, number>();
-  const traceOut = new Map<string, import("./xmlFacts").UsingContributionInsertTrace>();
-  const placeholderCounts = new Map<string, number>();
-  for (const ref of facts.placeholderReferences) {
-    const componentKey = ref.componentKey;
-    const contributionName = (ref.contributionValue ?? "").trim();
-    if (!componentKey || !contributionName) {
-      continue;
-    }
-
-    const key = makeUsingContributionInsertKey(componentKey, contributionName);
-    placeholderCounts.set(key, (placeholderCounts.get(key) ?? 0) + 1);
-  }
-
-  const processedComponents = new Set<string>();
-  for (const usingRef of facts.usingReferences) {
-    if (processedComponents.has(usingRef.componentKey)) {
-      continue;
-    }
-    processedComponents.add(usingRef.componentKey);
-
-    const component = resolveComponentByKey(index, usingRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const contribution of component.contributionSummaries.values()) {
-      const key = makeUsingContributionInsertKey(usingRef.componentKey, contribution.contributionName);
-      const insertMode = (contribution.insert ?? "").trim().toLowerCase();
-      if (insertMode === "placeholder") {
-        const placeholderCount = placeholderCounts.get(key) ?? 0;
-        out.set(key, placeholderCount);
-        traceOut.set(key, {
-          strategy: "placeholder",
-          finalInsertCount: placeholderCount,
-          placeholderCount,
-          targetXPathExpression: contribution.targetXPath?.trim() || undefined,
-          targetXPathMatchCount: 0,
-          targetXPathClampedCount: 0,
-          allowMultipleInserts: !!contribution.allowMultipleInserts,
-          fallbackSymbolCount: 0
-        });
-        continue;
-      }
-
-      if ((contribution.targetXPath ?? "").trim().length > 0) {
-        const xpathStats = analyzeXPathInsertTargets(maskedText, contribution.targetXPath, contribution.allowMultipleInserts);
-        out.set(key, xpathStats.insertCount);
-        traceOut.set(key, {
-          strategy: "targetXPath",
-          finalInsertCount: xpathStats.insertCount,
-          placeholderCount: placeholderCounts.get(key) ?? 0,
-          targetXPathExpression: contribution.targetXPath?.trim() || undefined,
-          targetXPathMatchCount: xpathStats.matchCount,
-          targetXPathClampedCount: xpathStats.insertCount,
-          allowMultipleInserts: !!contribution.allowMultipleInserts,
-          fallbackSymbolCount: 0
-        });
-        continue;
-      }
-
-      const fallbackSymbolCount = countIndexedContributionSymbolsForRoot(facts.rootTag, contribution);
-      out.set(key, fallbackSymbolCount);
-      traceOut.set(key, {
-        strategy: "symbolCount",
-        finalInsertCount: fallbackSymbolCount,
-        placeholderCount: placeholderCounts.get(key) ?? 0,
-        targetXPathExpression: undefined,
-        targetXPathMatchCount: 0,
-        targetXPathClampedCount: 0,
-        allowMultipleInserts: !!contribution.allowMultipleInserts,
-        fallbackSymbolCount
-      });
-    }
-  }
-
-  facts.usingContributionInsertCounts = out;
-  facts.usingContributionInsertTraces = traceOut;
-}
-
-function makeUsingContributionInsertKey(componentKey: string, contributionName: string): string {
-  return `${componentKey}::${contributionName}`;
-}
-
-function countIndexedContributionSymbolsForRoot(
-  rootTag: string | undefined,
-  contribution: IndexedComponentContributionSummary
-): number {
-  const root = (rootTag ?? "").trim().toLowerCase();
-  if (root === "workflow") {
-    return (
-      contribution.workflowActionShareCodeCount +
-      contribution.workflowControlShareCodeCount +
-      contribution.workflowButtonShareCodeCount
-    );
-  }
-
-  if (root === "form") {
-    return contribution.formControlCount + contribution.formButtonCount + contribution.formSectionCount;
-  }
-
-  return (
-    contribution.formControlCount +
-    contribution.formButtonCount +
-    contribution.formSectionCount +
-    contribution.workflowActionShareCodeCount +
-    contribution.workflowControlShareCodeCount +
-    contribution.workflowButtonShareCodeCount
-  );
 }
 
 function isLikelyBootstrapPath(uri: vscode.Uri): boolean {

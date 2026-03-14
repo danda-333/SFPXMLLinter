@@ -51,6 +51,15 @@ class Range {
   }
 }
 
+class Location {
+  public readonly uri: Uri;
+  public readonly range: Range;
+  constructor(uri: Uri, range: Range) {
+    this.uri = uri;
+    this.range = range;
+  }
+}
+
 enum DiagnosticSeverity {
   Error = 0,
   Warning = 1,
@@ -75,6 +84,7 @@ const vscodeMock = {
   Uri,
   Position,
   Range,
+  Location,
   Diagnostic,
   DiagnosticSeverity,
   workspace: {
@@ -117,6 +127,7 @@ moduleAny._load = function patchedLoad(request: string, parent: unknown, isMain:
 
 const { DiagnosticsEngine } = require("../../diagnostics/engine") as typeof import("../../diagnostics/engine");
 const { loadFeatureManifestRegistry } = require("../../composition/workspace") as typeof import("../../composition/workspace");
+const { parseDocumentFacts } = require("../../indexer/xmlFacts") as typeof import("../../indexer/xmlFacts");
 
 class MockTextDocument {
   public readonly uri: Uri;
@@ -197,8 +208,8 @@ function run(): void {
     "<ExpectsXPath>",
     "<Expects><Symbol Kind=\"control\" Ident=\"MissingControl\" /></Expects><ExpectsXPath>"
   );
-  const formDoc = new MockTextDocument(formPath, formText);
-  const formDiagnostics = engine.buildDiagnostics(formDoc as unknown as import("vscode").TextDocument, emptyIndex, {
+  const formFeatureDoc = new MockTextDocument(formPath, formText);
+  const formDiagnostics = engine.buildDiagnostics(formFeatureDoc as unknown as import("vscode").TextDocument, emptyIndex, {
     standaloneMode: true,
     featureRegistry: registry
   });
@@ -220,6 +231,51 @@ function run(): void {
     featureRegistry: registry
   });
   assertHasRule(formUsageDiagnostics, "partial-feature-contribution");
+
+  const inheritanceSettings = createInheritanceSettings();
+  const formInheritanceText = `<?xml version="1.0" encoding="utf-8"?>
+<Form Ident="InheritanceForm">
+  <Usings>
+    <Using Feature="Shared/Sample" />
+  </Usings>
+</Form>`;
+  const workflowRedundantText = `<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow FormIdent="InheritanceForm" Ident="InheritanceFormWorkFlow">
+  <Usings>
+    <Using Feature="Shared/Sample" />
+  </Usings>
+</WorkFlow>`;
+  const dataviewRedundantText = `<?xml version="1.0" encoding="utf-8"?>
+<DataView FormIdent="InheritanceForm" Ident="InheritanceFormView">
+  <Usings>
+    <Using Feature="Shared/Sample" />
+  </Usings>
+</DataView>`;
+
+  const formDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceForm.xml"), formInheritanceText);
+  const workflowRedundantDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormWorkFlow.redundant.xml"), workflowRedundantText);
+  const dataviewRedundantDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormView.redundant.xml"), dataviewRedundantText);
+  const inheritanceIndex = createInheritanceIndex(formDoc, workflowRedundantDoc, dataviewRedundantDoc);
+
+  const workflowRedundantDiagnostics = engine.buildDiagnostics(
+    workflowRedundantDoc as unknown as import("vscode").TextDocument,
+    inheritanceIndex,
+    {
+      parsedFacts: parseDocumentFacts(workflowRedundantDoc as unknown as import("vscode").TextDocument),
+      settingsOverride: inheritanceSettings
+    }
+  );
+  assertHasRule(workflowRedundantDiagnostics, "workflow-redundant-feature-using");
+
+  const dataviewRedundantDiagnostics = engine.buildDiagnostics(
+    dataviewRedundantDoc as unknown as import("vscode").TextDocument,
+    inheritanceIndex,
+    {
+      parsedFacts: parseDocumentFacts(dataviewRedundantDoc as unknown as import("vscode").TextDocument),
+      settingsOverride: inheritanceSettings
+    }
+  );
+  assertHasRule(dataviewRedundantDiagnostics, "dataview-redundant-feature-using");
 
   console.log("Composition diagnostics tests passed.");
 }
@@ -253,6 +309,82 @@ function createEmptyIndex(): import("../../indexer/types").WorkspaceIndex {
     componentsReady: true,
     fullReady: true
   };
+}
+
+function createInheritanceSettings(): import("../../config/settings").SfpXmlLinterSettings {
+  return {
+    workspaceRoots: ["Common"],
+    resourcesRoots: [],
+    hoverDocsFiles: [],
+    incompleteMode: false,
+    formatterMaxConsecutiveBlankLines: 2,
+    autoBuildOnSave: true,
+    componentSaveBuildScope: "dependents",
+    ruleSeverities: {
+      "workflow-redundant-feature-using": "warning",
+      "dataview-redundant-feature-using": "warning",
+      "unknown-using-feature": "error",
+      "unknown-using-contribution": "warning"
+    }
+  };
+}
+
+function createInheritanceIndex(
+  formDoc: MockTextDocument,
+  workflowRedundantDoc: MockTextDocument,
+  dataviewRedundantDoc: MockTextDocument
+): import("../../indexer/types").WorkspaceIndex {
+  const formFacts = parseDocumentFacts(formDoc as unknown as import("vscode").TextDocument);
+  const workflowRedundantFacts = parseDocumentFacts(workflowRedundantDoc as unknown as import("vscode").TextDocument);
+  const dataviewRedundantFacts = parseDocumentFacts(dataviewRedundantDoc as unknown as import("vscode").TextDocument);
+
+  const componentKey = "Shared/Sample";
+  const componentLocation = new Location(formDoc.uri, new Range(new Position(0, 0), new Position(0, 0))) as unknown as import("vscode").Location;
+  const component: import("../../indexer/types").IndexedComponent = {
+    key: componentKey,
+    uri: formDoc.uri as unknown as import("vscode").Uri,
+    contributions: new Set(),
+    componentLocation,
+    contributionDefinitions: new Map(),
+    contributionSummaries: new Map(),
+    formControlDefinitions: new Map(),
+    formButtonDefinitions: new Map(),
+    formSectionDefinitions: new Map(),
+    workflowActionShareCodeDefinitions: new Map(),
+    workflowControlShareCodeDefinitions: new Map(),
+    workflowButtonShareCodeDefinitions: new Map(),
+    workflowButtonShareCodeButtonIdents: new Map()
+  };
+
+  const formIdentLocation = new Location(formDoc.uri, new Range(new Position(1, 12), new Position(1, 27))) as unknown as import("vscode").Location;
+  const form: import("../../indexer/types").IndexedForm = {
+    ident: "InheritanceForm",
+    uri: formDoc.uri as unknown as import("vscode").Uri,
+    controls: new Set(),
+    buttons: new Set(),
+    sections: new Set(),
+    formIdentLocation,
+    controlDefinitions: new Map(),
+    buttonDefinitions: new Map(),
+    sectionDefinitions: new Map()
+  };
+
+  const parsedFactsByUri = new Map<string, import("../../indexer/xmlFacts").ParsedDocumentFacts>();
+  parsedFactsByUri.set(formDoc.uri.toString(), formFacts);
+  parsedFactsByUri.set(workflowRedundantDoc.uri.toString(), workflowRedundantFacts);
+  parsedFactsByUri.set(dataviewRedundantDoc.uri.toString(), dataviewRedundantFacts);
+
+  const componentsByKey = new Map<string, import("../../indexer/types").IndexedComponent>();
+  componentsByKey.set(componentKey, component);
+
+  const index = createEmptyIndex();
+  index.formsByIdent.set(form.ident, form);
+  index.componentsByKey = componentsByKey;
+  index.parsedFactsByUri = parsedFactsByUri;
+  index.componentsReady = true;
+  index.formsReady = true;
+  index.fullReady = true;
+  return index;
 }
 
 function computeLineStarts(text: string): number[] {

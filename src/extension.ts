@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+ï»¿import * as vscode from "vscode";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
@@ -41,6 +41,7 @@ const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-html-template-control-ident",
   "unknown-using-feature",
   "unknown-using-contribution",
+  "contribution-mismatch",
   "ident-convention-lookup-control"
 ]);
 
@@ -928,7 +929,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       if (!hasShownInitialIndexReadyNotification) {
         hasShownInitialIndexReadyNotification = true;
-        vscode.window.showInformationMessage(`SFP XML Linter: Úvodní indexace dokoncena (${durationMs} ms).`);
+        vscode.window.showInformationMessage(`SFP XML Linter: ÃšvodnÃ­ indexace dokoncena (${durationMs} ms).`);
       }
     } finally {
       isReindexRunning = false;
@@ -1435,7 +1436,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     const result = engine.buildDiagnostics(document, getIndexerForUri(document.uri).getIndex(), {
-      parsedFacts: getIndexerForUri(document.uri).getIndex().parsedFactsByUri.get(document.uri.toString()),
+      parsedFacts: parseDocumentFacts(document),
       featureRegistry: featureRegistryStore.getRegistry()
     });
     diagnostics.set(document.uri, result);
@@ -2584,4 +2585,5 @@ function offsetToPosition(lineStarts: readonly number[], offset: number, textLen
   const start = lineStarts[line] ?? 0;
   return new vscode.Position(line, safe - start);
 }
+
 

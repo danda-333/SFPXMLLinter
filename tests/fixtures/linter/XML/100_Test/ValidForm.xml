@@ -17,6 +17,19 @@
       </Mappings>
     </Button>
 
+    <Button xsi:type="FormButton" Ident="LocalLocal2MappingButton" TitleResourceKey="LocalMappingButton_Package" MappingFormIdent="ValidForm2">
+      <Mappings>
+        <Mapping FromIdent="ID" ToIdent="ComponentControl2" />
+        <Mapping FromIdent="State" ToIdent="LocalControl2" />
+        <Mapping FromIdent="AccountID" ToIdent="LastUpdateAccountID" />
+        <Mapping FromIdent="CreateDate" ToIdent="LastUpdate" />
+        <Mapping FromIdent="LastUpdate" ToIdent="CreateDate" />
+        <Mapping FromIdent="LastUpdateAccountID" ToIdent="AccountID" />
+        <Mapping FromIdent="LocalControl" ToIdent="State" />
+        <Mapping FromIdent="ComponentControl" ToIdent="ID" />
+      </Mappings>
+    </Button>
+
     <Button xsi:type="FormButton" Ident="LocalExternalMappingButton" TitleResourceKey="LocalMappingButton_Package" MappingFormIdent="ExternalForm">
       <Mappings>
         <Mapping FromIdent="LocalControl" ToIdent="ID" />

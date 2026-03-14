@@ -27,6 +27,9 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - `sql-convention-equals-spacing` (`=` in `SQL`/`Command` must have spaces on both sides)
   - `FormControl xsi:type="ShareCodeControl"` is validated against `WorkFlow/ControlShareCodes/ControlShareCode` (local + injected via `Using`)
 - Per-rule severity config (`sfpXmlLinter.rules`) with values: `off`, `warning`, `error`
+  - new form-owned inheritance diagnostics (default `warning`):
+    - `workflow-redundant-feature-using`
+    - `dataview-redundant-feature-using`
 - Ignore directives:
   - `<!-- @Ignore rule-id -->` (applies to next non-empty line)
   - `<!-- @IgnoreFile rule-id -->` (applies to whole file)

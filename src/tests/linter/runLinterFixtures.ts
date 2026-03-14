@@ -136,7 +136,7 @@ type ParsedDocumentFacts = import("../../indexer/xmlFacts").ParsedDocumentFacts;
 
 const { DiagnosticsEngine } = require("../../diagnostics/engine") as typeof import("../../diagnostics/engine");
 const { parseDocumentFactsFromText } = require("../../indexer/xmlFacts") as typeof import("../../indexer/xmlFacts");
-const { analyzeXPathInsertTargets, countXPathInsertTargets } = require("../../template/buildXmlTemplatesCore") as typeof import("../../template/buildXmlTemplatesCore");
+const { populateUsingInsertTraceFromText } = require("../../composition/usingImpact") as typeof import("../../composition/usingImpact");
 
 class MockTextDocument {
   public readonly uri: Uri;
@@ -430,16 +430,12 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
   const emptyNestedRef = new Map<string, Map<string, Location[]>>();
   const emptyUsageMap = new Map<string, Set<string>>();
   const emptyNestedUsage = new Map<string, Map<string, Set<string>>>();
-  for (const entry of parsedEntries) {
-    entry.facts.usingContributionInsertCounts = collectUsingContributionInsertCounts(entry.facts, entry.doc.getText(), componentsByKey, componentKeysByBaseName);
-    entry.facts.usingContributionInsertTraces = collectUsingContributionInsertTraces(entry.facts, entry.doc.getText(), componentsByKey, componentKeysByBaseName);
-  }
   const parsedFactsByUri = new Map<string, ParsedDocumentFacts>();
   for (const entry of parsedEntries) {
     parsedFactsByUri.set(entry.doc.uri.toString(), entry.facts);
   }
 
-  return {
+  const index: WorkspaceIndex = {
     formsByIdent: formsByIdent as unknown as Map<string, import("../../indexer/types").IndexedForm>,
     componentsByKey: componentsByKey as unknown as Map<string, import("../../indexer/types").IndexedComponent>,
     componentKeysByBaseName,
@@ -458,171 +454,12 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     componentsReady: true,
     fullReady: true
   };
-}
 
-function collectUsingContributionInsertCounts(
-  facts: ParsedDocumentFacts,
-  documentText: string,
-  componentsByKey: Map<string, IndexedComponent>,
-  componentKeysByBaseName: Map<string, Set<string>>
-): Map<string, number> {
-  const out = new Map<string, number>();
-  const placeholderCounts = new Map<string, number>();
-  for (const ref of facts.placeholderReferences) {
-    const componentKey = ref.componentKey;
-    const contributionName = (ref.contributionValue ?? "").trim();
-    if (!componentKey || !contributionName) {
-      continue;
-    }
-
-    const key = `${componentKey}::${contributionName}`;
-    placeholderCounts.set(key, (placeholderCounts.get(key) ?? 0) + 1);
+  for (const entry of parsedEntries) {
+    populateUsingInsertTraceFromText(entry.facts, entry.doc.getText(), index);
   }
 
-  const processed = new Set<string>();
-  for (const usingRef of facts.usingReferences) {
-    if (processed.has(usingRef.componentKey)) {
-      continue;
-    }
-    processed.add(usingRef.componentKey);
-    const component = resolveComponentFromFixtureIndex(componentsByKey, componentKeysByBaseName, usingRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const contribution of component.contributionSummaries.values()) {
-      const key = `${usingRef.componentKey}::${contribution.contributionName}`;
-      const insertMode = (contribution.insert ?? "").trim().toLowerCase();
-      if (insertMode === "placeholder") {
-        out.set(key, placeholderCounts.get(key) ?? 0);
-        continue;
-      }
-
-      if ((contribution.targetXPath ?? "").trim().length > 0) {
-        out.set(
-          key,
-          countXPathInsertTargets(
-            documentText,
-            contribution.targetXPath,
-            contribution.allowMultipleInserts
-          )
-        );
-        continue;
-      }
-
-      out.set(key, countIndexedContributionSymbolsForRoot(facts.rootTag, contribution));
-    }
-  }
-
-  return out;
-}
-
-function collectUsingContributionInsertTraces(
-  facts: ParsedDocumentFacts,
-  documentText: string,
-  componentsByKey: Map<string, IndexedComponent>,
-  componentKeysByBaseName: Map<string, Set<string>>
-): Map<string, import("../../indexer/xmlFacts").UsingContributionInsertTrace> {
-  const out = new Map<string, import("../../indexer/xmlFacts").UsingContributionInsertTrace>();
-  const placeholderCounts = new Map<string, number>();
-  for (const ref of facts.placeholderReferences) {
-    const componentKey = ref.componentKey;
-    const contributionName = (ref.contributionValue ?? "").trim();
-    if (!componentKey || !contributionName) {
-      continue;
-    }
-
-    const key = `${componentKey}::${contributionName}`;
-    placeholderCounts.set(key, (placeholderCounts.get(key) ?? 0) + 1);
-  }
-
-  const processed = new Set<string>();
-  for (const usingRef of facts.usingReferences) {
-    if (processed.has(usingRef.componentKey)) {
-      continue;
-    }
-    processed.add(usingRef.componentKey);
-    const component = resolveComponentFromFixtureIndex(componentsByKey, componentKeysByBaseName, usingRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const contribution of component.contributionSummaries.values()) {
-      const key = `${usingRef.componentKey}::${contribution.contributionName}`;
-      const insertMode = (contribution.insert ?? "").trim().toLowerCase();
-      const placeholderCount = placeholderCounts.get(key) ?? 0;
-
-      if (insertMode === "placeholder") {
-        out.set(key, {
-          strategy: "placeholder",
-          finalInsertCount: placeholderCount,
-          placeholderCount,
-          targetXPathExpression: contribution.targetXPath?.trim() || undefined,
-          targetXPathMatchCount: 0,
-          targetXPathClampedCount: 0,
-          allowMultipleInserts: !!contribution.allowMultipleInserts,
-          fallbackSymbolCount: 0
-        });
-        continue;
-      }
-
-      if ((contribution.targetXPath ?? "").trim().length > 0) {
-        const stats = analyzeXPathInsertTargets(documentText, contribution.targetXPath, contribution.allowMultipleInserts);
-        out.set(key, {
-          strategy: "targetXPath",
-          finalInsertCount: stats.insertCount,
-          placeholderCount,
-          targetXPathExpression: contribution.targetXPath?.trim() || undefined,
-          targetXPathMatchCount: stats.matchCount,
-          targetXPathClampedCount: stats.insertCount,
-          allowMultipleInserts: !!contribution.allowMultipleInserts,
-          fallbackSymbolCount: 0
-        });
-        continue;
-      }
-
-      const fallbackSymbolCount = countIndexedContributionSymbolsForRoot(facts.rootTag, contribution);
-      out.set(key, {
-        strategy: "symbolCount",
-        finalInsertCount: fallbackSymbolCount,
-        placeholderCount,
-        targetXPathExpression: undefined,
-        targetXPathMatchCount: 0,
-        targetXPathClampedCount: 0,
-        allowMultipleInserts: !!contribution.allowMultipleInserts,
-        fallbackSymbolCount
-      });
-    }
-  }
-
-  return out;
-}
-
-function countIndexedContributionSymbolsForRoot(
-  rootTag: string | undefined,
-  contribution: import("../../indexer/types").IndexedComponentContributionSummary
-): number {
-  const root = (rootTag ?? "").trim().toLowerCase();
-  if (root === "workflow") {
-    return (
-      contribution.workflowActionShareCodeCount +
-      contribution.workflowControlShareCodeCount +
-      contribution.workflowButtonShareCodeCount
-    );
-  }
-
-  if (root === "form") {
-    return contribution.formControlCount + contribution.formButtonCount + contribution.formSectionCount;
-  }
-
-  return (
-    contribution.formControlCount +
-    contribution.formButtonCount +
-    contribution.formSectionCount +
-    contribution.workflowActionShareCodeCount +
-    contribution.workflowControlShareCodeCount +
-    contribution.workflowButtonShareCodeCount
-  );
+  return index;
 }
 
 function resolveComponentFromFixtureIndex(

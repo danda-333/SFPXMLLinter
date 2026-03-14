@@ -4,10 +4,12 @@ import { WorkspaceIndex, IndexedComponentContributionSummary } from "../indexer/
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { FeatureManifestRegistry } from "./workspace";
 import {
-  contributionMatchesDocumentRoot,
-  selectRelevantUsingContributions,
-  selectUsingContributions,
-  unionContributionIdents
+  buildDocumentCompositionModel,
+  collectInjectedSymbols,
+  DocumentCompositionModel,
+  DocumentUsingContributionModel
+} from "./documentModel";
+import {
 } from "./usingImpact";
 import { FeatureCapabilityReport } from "./model";
 import { normalizeComponentKey } from "../utils/paths";
@@ -326,14 +328,15 @@ function buildRegularXmlTree(
   if (root !== "form" && root !== "workflow") {
     return [];
   }
+  const composition = buildDocumentCompositionModel(facts, index);
   const children: CompositionTreeNode[] = [];
-  children.push(buildDocumentSummaryNode(document, facts, index, sharedSectionNodeId("Summary")));
+  children.push(buildDocumentSummaryNode(document, facts, index, composition, sharedSectionNodeId("Summary")));
   children.push(buildActionsNode(root, sharedSectionNodeId("Actions")));
 
   if (root === "form") {
-    const controls = aggregateFormControls(document.uri, facts, index);
-    const buttons = aggregateFormButtons(document.uri, facts, index);
-    const sections = aggregateFormSections(document.uri, facts, index);
+    const controls = aggregateFormControls(document.uri, facts, index, composition);
+    const buttons = aggregateFormButtons(document.uri, facts, index, composition);
+    const sections = aggregateFormSections(document.uri, facts, index, composition);
     children.push(buildSymbolGroup("Controls", controls, "symbol-field", sharedSectionNodeId("Controls")));
     children.push(buildSymbolGroup("Buttons", buttons, "symbol-event", sharedSectionNodeId("Buttons")));
     children.push(buildSymbolGroup("Sections", sections, "symbol-structure", sharedSectionNodeId("Sections")));
@@ -342,6 +345,7 @@ function buildRegularXmlTree(
       document.uri,
       facts,
       index,
+      composition,
       (summary) => summary.workflowControlShareCodeIdents,
       [...facts.declaredControlShareCodes],
       facts.controlShareCodeDefinitions,
@@ -351,6 +355,7 @@ function buildRegularXmlTree(
       document.uri,
       facts,
       index,
+      composition,
       (summary) => summary.workflowButtonShareCodeIdents,
       [...facts.declaredButtonShareCodes],
       facts.buttonShareCodeDefinitions,
@@ -360,6 +365,7 @@ function buildRegularXmlTree(
       document.uri,
       facts,
       index,
+      composition,
       (summary) => summary.workflowActionShareCodeIdents,
       [...facts.declaredActionShareCodes],
       facts.actionShareCodeDefinitions,
@@ -371,7 +377,7 @@ function buildRegularXmlTree(
     children.push(buildSymbolGroup("ActionShareCodes", actionShareCodes, "symbol-key", sharedSectionNodeId("ActionShareCodes")));
   }
 
-  const usingTree = buildUsingTree(document, facts, index);
+  const usingTree = buildUsingTree(document, facts, index, composition);
   if (usingTree.length > 0) {
     children.push(...usingTree);
   }
@@ -394,17 +400,18 @@ function buildDocumentSummaryNode(
   document: vscode.TextDocument,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
+  composition: DocumentCompositionModel,
   nodeId: string
 ): GroupNode {
   const root = (facts.rootTag ?? "").toLowerCase();
-  const usingCount = facts.usingReferences.length;
-  const knownFeatureCount = facts.usingReferences.filter((usingRef) => !!resolveComponentByKey(index, usingRef.componentKey)).length;
+  const usingCount = composition.usings.length;
+  const knownFeatureCount = composition.usings.filter((usingRef) => usingRef.hasResolvedFeature).length;
   const localControlCount = facts.declaredControlInfos.length;
   const localButtonCount = facts.declaredButtonInfos.length;
   const localSectionCount = facts.identOccurrences.filter((item) => item.kind === "section").length;
-  const injectedControlCount = collectUsingSymbols(facts, index, (summary) => summary.formControlIdents).size;
-  const injectedButtonCount = collectUsingSymbols(facts, index, (summary) => summary.formButtonIdents).size;
-  const injectedSectionCount = collectUsingSymbols(facts, index, (summary) => summary.formSectionIdents).size;
+  const injectedControlCount = collectInjectedSymbols(composition, index, (summary) => summary.formControlIdents).size;
+  const injectedButtonCount = collectInjectedSymbols(composition, index, (summary) => summary.formButtonIdents).size;
+  const injectedSectionCount = collectInjectedSymbols(composition, index, (summary) => summary.formSectionIdents).size;
   const summary = [
     detailNode(`Root: ${facts.rootTag ?? "(unknown)"}`),
     detailNode(`Ident: ${facts.rootIdent ?? facts.formIdent ?? facts.workflowFormIdent ?? "(none)"}`),
@@ -439,45 +446,42 @@ function buildDocumentSummaryNode(
 function buildUsingTree(
   document: vscode.TextDocument,
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  compositionModel?: DocumentCompositionModel
 ): CompositionTreeNode[] {
-  if (facts.usingReferences.length === 0) {
+  const composition = compositionModel ?? buildDocumentCompositionModel(facts, index);
+  const effectiveUsings = composition.usings;
+  if (effectiveUsings.length === 0) {
     return [];
   }
 
   return [
     infoGroupNode(
       "Usings",
-      facts.usingReferences.map((usingRef) => {
-        const component = resolveComponentByKey(index, usingRef.componentKey);
-        if (!component) {
+      effectiveUsings.map((usingModel) => {
+        const component = resolveComponentByKey(index, usingModel.componentKey);
+        if (!component || !usingModel.hasResolvedFeature) {
           return {
             type: "using",
-            label: usingRef.rawComponentValue,
+            label: usingModel.rawComponentValue,
             description: "missing feature",
-            tooltip: usingRef.rawComponentValue,
+            tooltip: usingModel.rawComponentValue,
             icon: new vscode.ThemeIcon("error")
           } satisfies UsingNode;
         }
 
-        const contributions = selectUsingContributions(component);
-        const impact = evaluateUsingInsertImpact(facts, usingRef.componentKey, contributions);
-        const contributionRows = contributions
-          .filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution))
-          .map((contribution) =>
-            buildUsingContributionNode(document, facts, index, usingRef.componentKey, component, contribution)
-          );
-        const filteredRows = contributions
-          .filter((contribution) => !contributionMatchesDocumentRoot(facts.rootTag, contribution))
-          .map((contribution) =>
-            buildUsingContributionNode(document, facts, index, usingRef.componentKey, component, contribution)
-          );
+        const contributionRows = usingModel.contributions.map((contribution) =>
+          buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+        );
+        const filteredRows = usingModel.filteredContributions.map((contribution) =>
+          buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+        );
         const children: CompositionTreeNode[] =
           contributionRows.length > 0 ? [...contributionRows] : [detailNode("No root-relevant contributions found.")];
         if (filteredRows.length > 0) {
           children.push({
             type: "group",
-            id: `using:${usingRef.componentKey}:${usingRef.sectionValue ?? "*"}:filtered`,
+            id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}:filtered`,
             label: "Filtered",
             description: `${filteredRows.length}`,
             collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
@@ -487,18 +491,18 @@ function buildUsingTree(
         }
 
         return {
-          id: `using:${usingRef.componentKey}:${usingRef.sectionValue ?? "*"}`,
+          id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}`,
           type: "using",
-          label: usingRef.rawComponentValue,
-          description: impact.kind,
-          tooltip: impact.message ?? usingRef.rawComponentValue,
+          label: usingModel.rawComponentValue,
+          description: usingModel.source === "inherited" ? `${usingModel.impact.kind}, inherited` : usingModel.impact.kind,
+          tooltip: usingModel.impact.message ?? usingModel.rawComponentValue,
           collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-          icon: iconForUsage(impact.kind),
+          icon: iconForUsage(usingModel.impact.kind),
           contextValue: "compositionUsing",
           resourceUri: component.uri,
-          sourceLocation: usingRef.sectionValue ? component.contributionDefinitions.get(usingRef.sectionValue) : component.componentLocation,
-          usageLocations: getUsingUsageLocations(facts, index, usingRef.componentKey, usingRef.sectionValue),
-          command: getUsingOpenCommand(component, usingRef.sectionValue),
+          sourceLocation: usingModel.sectionValue ? component.contributionDefinitions.get(usingModel.sectionValue) : component.componentLocation,
+          usageLocations: getUsingUsageLocations(facts, index, usingModel.componentKey, usingModel.sectionValue),
+          command: getUsingOpenCommand(component, usingModel.sectionValue),
           children
         } satisfies UsingNode;
       }),
@@ -511,18 +515,20 @@ function buildUsingContributionNode(
   document: vscode.TextDocument,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
-  componentKey: string,
+  usingModel: { componentKey: string },
   component: NonNullable<ReturnType<typeof resolveComponentByKey>>,
-  contribution: IndexedComponentContributionSummary
+  contributionModel: DocumentUsingContributionModel
 ): ContributionNode {
+  const contribution = contributionModel.contribution;
+  const componentKey = usingModel.componentKey;
   const nodeId = `using:${componentKey}:contribution:${contribution.contributionName}`;
   const location = component.contributionDefinitions.get(contribution.contributionName);
-  const rootRelevant = contributionMatchesDocumentRoot(facts.rootTag, contribution);
+  const rootRelevant = contributionModel.rootRelevant;
   const insertMode = (contribution.insert ?? "").trim().toLowerCase();
-  const insertTrace = getIndexedContributionInsertTrace(facts, componentKey, contribution.contributionName);
-  const insertions = insertTrace?.finalInsertCount;
-  const hasIndexedInsertCount = insertions !== undefined;
-  const usageState: "effective" | "unused" = rootRelevant && hasIndexedInsertCount && insertions > 0 ? "effective" : "unused";
+  const insertTrace = contributionModel.insertTrace;
+  const insertions = contributionModel.insertCount;
+  const hasIndexedInsertCount = insertTrace !== undefined;
+  const usageState: "effective" | "unused" = contributionModel.usage;
   const metaGroup = buildUsingContributionMetaGroup(nodeId, contribution, insertTrace);
   const placeholderLocations = collectPlaceholderUsageLocations(
     document,
@@ -534,7 +540,7 @@ function buildUsingContributionNode(
 
   const typeGroups = buildUsingContributionTypeGroups(nodeId, contribution);
   const details: string[] = [];
-  if (!rootRelevant) {
+  if (!rootRelevant && !contributionModel.explicit) {
     details.push(`not relevant for root '${facts.rootTag ?? "unknown"}'`);
   }
   details.push(hasIndexedInsertCount ? `inserts=${insertions}` : "inserts=index-missing");
@@ -547,10 +553,10 @@ function buildUsingContributionNode(
     tooltip: [
       contribution.targetXPath ? `TargetXPath: ${contribution.targetXPath}` : undefined,
       contribution.insert ? `Insert: ${contribution.insert}` : undefined,
-      rootRelevant ? undefined : `Root mismatch (current root=${facts.rootTag ?? "unknown"})`
+      rootRelevant || contributionModel.explicit ? undefined : `Root mismatch (current root=${facts.rootTag ?? "unknown"})`
     ].filter(Boolean).join("\n"),
     collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-    icon: rootRelevant ? iconForUsage(usageState) : new vscode.ThemeIcon("circle-outline"),
+    icon: rootRelevant || contributionModel.explicit ? iconForUsage(usageState) : new vscode.ThemeIcon("circle-outline"),
     contextValue: "compositionContribution",
     resourceUri: component.uri,
     sourceLocation: location,
@@ -562,7 +568,7 @@ function buildUsingContributionNode(
 function buildUsingContributionMetaGroup(
   contributionNodeId: string,
   contribution: IndexedComponentContributionSummary,
-  insertTrace: ReturnType<typeof getIndexedContributionInsertTrace>
+  insertTrace: UsingContributionInsertTrace | undefined
 ): GroupNode {
   const rootValue = contribution.rootExpression ?? contribution.root ?? "form";
   const insertValue = contribution.insert ?? "append";
@@ -679,95 +685,39 @@ function collectPlaceholderUsageLocations(
     .sort(compareLocations);
 }
 
-function getIndexedContributionInsertCount(
-  facts: ReturnType<typeof parseDocumentFacts>,
-  componentKey: string,
-  contributionName: string
-): number | undefined {
-  const key = `${componentKey}::${contributionName}`;
-  return facts.usingContributionInsertCounts.get(key);
-}
-
-function getIndexedContributionInsertTrace(
-  facts: ReturnType<typeof parseDocumentFacts>,
-  componentKey: string,
-  contributionName: string
-): UsingContributionInsertTrace | undefined {
-  const key = `${componentKey}::${contributionName}`;
-  return facts.usingContributionInsertTraces.get(key);
-}
-
-function evaluateUsingInsertImpact(
-  facts: ReturnType<typeof parseDocumentFacts>,
-  componentKey: string,
-  contributions: readonly IndexedComponentContributionSummary[]
-): { kind: "effective" | "partial" | "unused"; message: string } {
-  const relevant = contributions.filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution));
-  if (relevant.length === 0) {
-    return {
-      kind: "unused",
-      message: `No contributions with matching root '${facts.rootTag ?? "unknown"}'.`
-    };
-  }
-
-  let successCount = 0;
-  for (const contribution of relevant) {
-    const inserts = getIndexedContributionInsertCount(facts, componentKey, contribution.contributionName) ?? 0;
-    if (inserts > 0) {
-      successCount++;
-    }
-  }
-
-  if (successCount === 0) {
-    return {
-      kind: "unused",
-      message: `Insert failed for all ${relevant.length} root-relevant contribution(s).`
-    };
-  }
-
-  if (successCount < relevant.length) {
-    return {
-      kind: "partial",
-      message: `Insert succeeded for ${successCount}/${relevant.length} root-relevant contribution(s).`
-    };
-  }
-
-  return {
-    kind: "effective",
-    message: `Insert succeeded for all ${relevant.length} root-relevant contribution(s).`
-  };
-}
-
 function aggregateFormControls(
   documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  composition: DocumentCompositionModel
 ): AggregatedSymbol[] {
   const local = facts.declaredControlInfos.map((item) => ({
     ident: item.ident,
     location: new vscode.Location(documentUri, item.range)
   }));
-  const injected = collectUsingSymbols(facts, index, (summary) => summary.formControlIdents);
+  const injected = collectInjectedSymbols(composition, index, (summary) => summary.formControlIdents);
   return mergeAggregatedSymbols(local, injected);
 }
 
 function aggregateFormButtons(
   documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  composition: DocumentCompositionModel
 ): AggregatedSymbol[] {
   const local = facts.declaredButtonInfos.map((item) => ({
     ident: item.ident,
     location: new vscode.Location(documentUri, item.range)
   }));
-  const injected = collectUsingSymbols(facts, index, (summary) => summary.formButtonIdents);
+  const injected = collectInjectedSymbols(composition, index, (summary) => summary.formButtonIdents);
   return mergeAggregatedSymbols(local, injected);
 }
 
 function aggregateFormSections(
   documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  composition: DocumentCompositionModel
 ): AggregatedSymbol[] {
   const local = facts.identOccurrences
     .filter((item) => item.kind === "section")
@@ -775,7 +725,7 @@ function aggregateFormSections(
       ident: item.ident,
       location: new vscode.Location(documentUri, item.range)
     }));
-  const injected = collectUsingSymbols(facts, index, (summary) => summary.formSectionIdents);
+  const injected = collectInjectedSymbols(composition, index, (summary) => summary.formSectionIdents);
   return mergeAggregatedSymbols(local, injected);
 }
 
@@ -783,6 +733,7 @@ function aggregateWorkflowShareCodes(
   documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
+  composition: DocumentCompositionModel,
   selector: (summary: IndexedComponentContributionSummary) => ReadonlySet<string>,
   localIdents: readonly string[],
   localDefinitions: ReadonlyMap<string, vscode.Range>,
@@ -795,61 +746,20 @@ function aggregateWorkflowShareCodes(
     usageLocations: usageLocationsByIdent.get(ident) ?? []
   }));
   const injected = new Map<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>();
-
-  for (const usingRef of facts.usingReferences) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
-    if (!component) {
+  for (const [ident, source] of collectInjectedSymbols(composition, index, selector)) {
+    if (injected.has(ident)) {
       continue;
     }
-
-    const selected = selectRelevantUsingContributions(facts, component, usingRef.sectionValue);
-    const sourceLabel = usingRef.sectionValue
-      ? `${usingRef.rawComponentValue}#${usingRef.sectionValue}`
-      : usingRef.rawComponentValue;
-    for (const ident of unionContributionIdents(selected, selector)) {
-      if (!injected.has(ident)) {
-        injected.set(ident, {
-          source: sourceLabel,
-          resourceUri: component.uri,
-          sourceLocation: findContributionLocationForIdent(component, selected, ident, selector),
-          usageCount: usageLocationsByIdent.get(ident)?.length ?? 0,
-          usageLocations: usageLocationsByIdent.get(ident) ?? []
-        });
-      }
-    }
+    injected.set(ident, {
+      source: source.source,
+      resourceUri: source.resourceUri,
+      sourceLocation: source.sourceLocation,
+      usageCount: usageLocationsByIdent.get(ident)?.length ?? 0,
+      usageLocations: usageLocationsByIdent.get(ident) ?? []
+    });
   }
 
   return mergeAggregatedSymbols(local, injected);
-}
-
-function collectUsingSymbols(
-  facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex,
-  selector: (summary: IndexedComponentContributionSummary) => ReadonlySet<string>
-): Map<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location }> {
-  const injected = new Map<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location }>();
-  for (const usingRef of facts.usingReferences) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    const selected = selectRelevantUsingContributions(facts, component, usingRef.sectionValue);
-    const sourceLabel = usingRef.sectionValue
-      ? `${usingRef.rawComponentValue}#${usingRef.sectionValue}`
-      : usingRef.rawComponentValue;
-    for (const ident of unionContributionIdents(selected, selector)) {
-      if (!injected.has(ident)) {
-        injected.set(ident, {
-          source: sourceLabel,
-          resourceUri: component.uri,
-          sourceLocation: findContributionLocationForIdent(component, selected, ident, selector)
-        });
-      }
-    }
-  }
-
-  return injected;
 }
 
 function mergeAggregatedSymbols(
@@ -956,25 +866,6 @@ function actionNode(label: string, command: string, iconId: string): DetailNode 
       title: label
     }
   };
-}
-
-function findContributionLocationForIdent(
-  component: NonNullable<ReturnType<typeof resolveComponentByKey>>,
-  selected: readonly IndexedComponentContributionSummary[],
-  ident: string,
-  selector: (summary: IndexedComponentContributionSummary) => ReadonlySet<string>
-): vscode.Location | undefined {
-  const matching = selected.filter((summary) => selector(summary).has(ident));
-  if (matching.length !== 1) {
-    return undefined;
-  }
-
-  const contributionName = matching[0]?.contributionName;
-  if (!contributionName) {
-    return undefined;
-  }
-
-  return component.contributionDefinitions.get(contributionName);
 }
 
 function findContributionLocationForPart(

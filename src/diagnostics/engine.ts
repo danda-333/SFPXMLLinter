@@ -12,7 +12,9 @@ import { getAllFormIdentCandidates, isKnownFormIdent, resolveSystemTableName } f
 import { FeatureCapabilityReport } from "../composition/model";
 import { matchesExpectedXPathInEffectiveModel } from "../composition/effectiveModel";
 import { FeatureManifestRegistry } from "../composition/workspace";
-import { analyzeUsingImpact } from "../composition/usingImpact";
+import { contributionMatchesDocumentRoot, populateUsingInsertTraceFromText } from "../composition/usingImpact";
+import { buildDocumentCompositionModel, findLocalUsingModelForReference } from "../composition/documentModel";
+import { collectEffectiveUsingRefs } from "../utils/effectiveUsings";
 
 export interface RuleDiagnostic {
   ruleId: string;
@@ -52,6 +54,9 @@ export class DiagnosticsEngine {
     const metadata = options?.metadataOverride ?? getSystemMetadata();
     const settings = options?.settingsOverride ?? getSettings();
     const featureRegistry = options?.featureRegistry;
+    if (!standaloneMode && facts.usingContributionInsertTraces.size === 0 && index.componentsReady) {
+      populateUsingInsertTraceFromText(facts, document.getText(), index);
+    }
     const formIdentCandidates = getAllFormIdentCandidates(index, metadata);
     const issues: RuleDiagnostic[] = [];
     let cachedResolvableControlIdents: Set<string> | undefined;
@@ -74,7 +79,8 @@ export class DiagnosticsEngine {
     this.validateMappingReferences(facts, index, issues, metadata, getResolvableControlIdents, settings);
     this.validateRequiredActionIdentReferences(facts, issues, getResolvableControlIdents);
     this.validateWorkflowControlIdentReferences(facts, issues, getResolvableControlIdents);
-    this.validateUsingReferences(facts, index, issues);
+    const documentComposition = buildDocumentCompositionModel(facts, index);
+    this.validateUsingReferences(facts, index, issues, documentComposition);
     this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
     this.validateFeatureCompositionReferences(document, facts, issues, featureRegistry);
     if (!fastBackgroundMode) {
@@ -393,10 +399,17 @@ export class DiagnosticsEngine {
     }
   }
 
-  private validateUsingReferences(facts: ReturnType<typeof parseDocumentFacts>, index: WorkspaceIndex, issues: RuleDiagnostic[]): void {
+  private validateUsingReferences(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
+    issues: RuleDiagnostic[],
+    documentComposition: ReturnType<typeof buildDocumentCompositionModel>
+  ): void {
     if (!index.componentsReady) {
       return;
     }
+
+    const tracesReady = facts.usingContributionInsertTraces.size > 0;
 
     for (const ref of facts.usingReferences) {
       const component = resolveComponentByKey(index, ref.componentKey);
@@ -426,7 +439,26 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      const impact = analyzeUsingImpact(facts, ref.rawComponentValue, ref.sectionValue, component, ref.componentKey);
+      if (ref.sectionValue) {
+        const contribution = component.contributionSummaries.get(ref.sectionValue);
+        if (contribution && !contributionMatchesDocumentRoot(facts.rootTag, contribution)) {
+          issues.push({
+            ruleId: "contribution-mismatch",
+            range: ref.sectionValueRange ?? ref.componentValueRange,
+            message: `Contribution '${ref.sectionValue}' in feature '${ref.rawComponentValue}' does not match current root '${facts.rootTag ?? "unknown"}'.`
+          });
+          continue;
+        }
+      }
+
+      if (!tracesReady) {
+        continue;
+      }
+
+      const impact = findLocalUsingModelForReference(documentComposition, ref)?.impact;
+      if (!impact) {
+        continue;
+      }
       if (impact.kind === "unused") {
         issues.push({
           ruleId: "unused-using",
@@ -443,6 +475,53 @@ export class DiagnosticsEngine {
           message: impact.message ?? `Using '${ref.rawComponentValue}' is only partially effective.`
         });
       }
+    }
+
+    this.validateFormOwnedUsingInheritance(facts, index, issues);
+  }
+
+  private validateFormOwnedUsingInheritance(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
+    issues: RuleDiagnostic[]
+  ): void {
+    const root = (facts.rootTag ?? "").toLowerCase();
+    const inheritanceRulePrefix = getInheritanceRulePrefix(root);
+    if (!inheritanceRulePrefix) {
+      return;
+    }
+
+    const owningFormIdent = getOwningFormIdentForInheritance(root, facts);
+    if (!owningFormIdent) {
+      return;
+    }
+
+    const form = index.formsByIdent.get(owningFormIdent);
+    if (!form) {
+      return;
+    }
+
+    const formFacts = index.parsedFactsByUri.get(form.uri.toString());
+    if (!formFacts) {
+      return;
+    }
+
+    const formFeatures = collectUsingFeatureKeys(formFacts);
+    if (formFeatures.size === 0) {
+      return;
+    }
+
+    const currentFeatures = collectUsingFeatureKeys(facts);
+    for (const ref of facts.usingReferences) {
+      if (!formFeatures.has(ref.componentKey)) {
+        continue;
+      }
+
+      issues.push({
+        ruleId: `${inheritanceRulePrefix}-redundant-feature-using`,
+        range: ref.sectionValueRange ?? ref.componentValueRange,
+        message: `Using '${ref.rawComponentValue}' is redundant because Form '${owningFormIdent}' already activates this feature.`
+      });
     }
   }
 
@@ -1033,7 +1112,7 @@ function collectWorkflowControlShareCodes(
   index: WorkspaceIndex
 ): Set<string> {
   const out = new Set<string>(facts.declaredControlShareCodes);
-  for (const usingRef of facts.usingReferences) {
+  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
     const component = resolveComponentByKey(index, usingRef.componentKey);
     if (!component) {
       continue;
@@ -1052,7 +1131,7 @@ function collectWorkflowButtonShareCodes(
   index: WorkspaceIndex
 ): Set<string> {
   const out = new Set<string>(facts.declaredButtonShareCodes);
-  for (const usingRef of facts.usingReferences) {
+  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
     const component = resolveComponentByKey(index, usingRef.componentKey);
     if (!component) {
       continue;
@@ -1114,7 +1193,7 @@ function collectWorkflowButtonShareCodeButtonIdents(
     out.set(shareCode, target);
   }
 
-  for (const usingRef of facts.usingReferences) {
+  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
     const component = resolveComponentByKey(index, usingRef.componentKey);
     if (!component) {
       continue;
@@ -1143,7 +1222,7 @@ function collectWorkflowAvailableControls(
     out.add(column);
   }
 
-  for (const usingRef of facts.usingReferences) {
+  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
     const component = resolveComponentByKey(index, usingRef.componentKey);
     if (!component) {
       continue;
@@ -1162,7 +1241,7 @@ function collectWorkflowAvailableButtons(
   form: import("../indexer/types").IndexedForm
 ): Set<string> {
   const out = new Set<string>(form.buttons);
-  for (const usingRef of facts.usingReferences) {
+  for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
     const component = resolveComponentByKey(index, usingRef.componentKey);
     if (!component) {
       continue;
@@ -1406,4 +1485,36 @@ function collectInvalidEqualsIndices(sql: string): number[] {
 
 function isWhitespace(ch: string): boolean {
   return ch === " " || ch === "\t" || ch === "\r" || ch === "\n";
+}
+
+function getInheritanceRulePrefix(root: string): "workflow" | "dataview" | undefined {
+  if (root === "workflow") {
+    return "workflow";
+  }
+
+  if (root === "dataview") {
+    return "dataview";
+  }
+
+  return undefined;
+}
+
+function getOwningFormIdentForInheritance(root: string, facts: ReturnType<typeof parseDocumentFacts>): string | undefined {
+  if (root === "workflow") {
+    return facts.workflowFormIdent ?? facts.rootFormIdent;
+  }
+
+  if (root === "dataview") {
+    return facts.rootFormIdent;
+  }
+
+  return undefined;
+}
+
+function collectUsingFeatureKeys(facts: ReturnType<typeof parseDocumentFacts>): Set<string> {
+  const out = new Set<string>();
+  for (const ref of facts.usingReferences) {
+    out.add(ref.componentKey);
+  }
+  return out;
 }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.0.17
+
 - Template generators (T11) completion:
   - finalized generator v2 contract with explicit kinds:
     - `document` (`kind + applies(ctx)? + run(ctx)`)

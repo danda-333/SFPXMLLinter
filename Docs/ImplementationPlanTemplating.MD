@@ -462,6 +462,16 @@ Definition of Done:
 - lze ridit poradi nezavisle pro `Form`, `WorkFlow`, `DataView`,
 - poradi uz neni zavisle jen na poradi `Using`.
 
+Aktualni stav:
+- ordering metadata (`OrderGroup`/`Before`/`After`) je napojena v effective modelu na urovni part
+- ordering validator hlasi:
+  - missing anchor
+  - conflicting ordering relations
+  - ordering cycles
+- diagnostika `ordering-conflict` je aktivni pro feature entrypoint
+- Tree View zobrazuje ordering debug u partu (`Ordering` sekce + konflikty)
+- composition testy pokryvaji ordering conflict/cycle scenare
+
 ### Faze T9: Authoring ergonomie
 Cil:
 - zkratit opakujici se XML patterny a zjednodusit zapis bez rozbiti finalniho SFP XML modelu.
@@ -842,6 +852,8 @@ Aktualne hotovo:
 - detailni contribution-level insert trace je exponovan v builder debug vystupu
 
 ### Milestone M8: Ordering model
+Stav:
+- `[PROBIHA]`
 Obsah:
 - `T8` Ordering model
 
@@ -860,6 +872,12 @@ Smysl testu:
 
 Gate pro dalsi milestone:
 - poradi uz neni zavisle na poradi `Using` a konflikty jsou jasne reportovane.
+
+Aktualne hotovo:
+- ordering conflict validator v effective modelu
+- `ordering-conflict` diagnostika v feature entrypointu
+- Tree View ordering debug vrstva
+- composition regression testy pro conflict/cycle/missing anchor
 
 ### Milestone M9: Authoring ergonomie
 Obsah:

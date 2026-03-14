@@ -271,6 +271,7 @@
             "missing-feature-expectation": "warning",
             "missing-feature-expected-xpath": "warning",
             "duplicate-feature-provider": "warning",
+            "ordering-conflict": "warning",
             "orphan-feature-part": "warning",
             "incomplete-feature": "warning",
             "unused-feature-contribution": "information",

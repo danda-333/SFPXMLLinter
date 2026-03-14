@@ -49,7 +49,7 @@ export function buildEffectiveCompositionModel(
         feature: manifest.feature,
         partId: part.id,
         note: `Part '${part.id}'`
-      });
+      }, undefined, part.ordering);
     }
 
     for (const contribution of part.contributions) {
@@ -62,11 +62,13 @@ export function buildEffectiveCompositionModel(
           feature: manifest.feature,
           partId: part.id,
           note: contribution.name ? `Contribution '${contribution.name}'` : `Contribution '${contribution.id}'`
-        }, contribution.summary);
+        }, contribution.summary, part.ordering);
       }
       contributionProvidedKeys.set(contribution.id, providedKeysForContribution);
     }
   }
+
+  validatePartOrdering(manifest, conflicts);
 
   const items = [...itemsByKey.values()];
   const providedKeys = new Set(items.map((item) => item.key));
@@ -331,7 +333,8 @@ function upsertItem(
   symbol: FeatureManifestSymbolRef,
   contexts: readonly FeatureContextKind[],
   origin: CompositionOrigin,
-  summary?: string
+  summary?: string,
+  ordering?: { group?: string; before: string[]; after: string[] }
 ): void {
   const key = toSymbolKey(symbol);
   const existing = itemsByKey.get(key);
@@ -344,6 +347,7 @@ function upsertItem(
       presence: "local",
       usage: "provided",
       origins: [origin],
+      ...(ordering ? { ordering: { group: ordering.group, before: [...ordering.before], after: [...ordering.after] } } : {}),
       notes: uniqueStrings([symbol.note, summary])
     });
     return;
@@ -351,7 +355,133 @@ function upsertItem(
 
   existing.contexts = uniqueContexts([...existing.contexts, ...contexts]);
   existing.origins = uniqueOrigins([...existing.origins, origin]);
+  if (ordering) {
+    const currentOrdering = existing.ordering ?? { before: [], after: [] };
+    existing.ordering = {
+      ...(ordering.group ? { group: ordering.group } : currentOrdering.group ? { group: currentOrdering.group } : {}),
+      before: uniqueStrings([...currentOrdering.before, ...ordering.before]),
+      after: uniqueStrings([...currentOrdering.after, ...ordering.after])
+    };
+  }
   existing.notes = uniqueStrings([...existing.notes, symbol.note, summary]);
+}
+
+function validatePartOrdering(
+  manifest: FeatureManifest,
+  conflicts: EffectiveCompositionConflict[]
+): void {
+  const partIds = new Set(manifest.parts.map((part) => part.id));
+  const edges = new Map<string, Set<string>>();
+  const addEdge = (from: string, to: string): void => {
+    const bucket = edges.get(from) ?? new Set<string>();
+    bucket.add(to);
+    edges.set(from, bucket);
+  };
+
+  for (const part of manifest.parts) {
+    const ordering = part.ordering;
+    if (!ordering) {
+      continue;
+    }
+
+    for (const target of ordering.before) {
+      if (!partIds.has(target)) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Part '${part.id}' declares 'before=${target}' but target part was not found.`,
+          itemKeys: [`part:${part.id}`]
+        });
+        continue;
+      }
+      if (target === part.id) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Part '${part.id}' cannot reference itself in 'before'.`,
+          itemKeys: [`part:${part.id}`]
+        });
+        continue;
+      }
+      addEdge(part.id, target);
+    }
+
+    for (const target of ordering.after) {
+      if (!partIds.has(target)) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Part '${part.id}' declares 'after=${target}' but target part was not found.`,
+          itemKeys: [`part:${part.id}`]
+        });
+        continue;
+      }
+      if (target === part.id) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Part '${part.id}' cannot reference itself in 'after'.`,
+          itemKeys: [`part:${part.id}`]
+        });
+        continue;
+      }
+      addEdge(target, part.id);
+    }
+
+    for (const target of ordering.before) {
+      if (ordering.after.includes(target)) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Part '${part.id}' declares both before and after relation for '${target}'.`,
+          itemKeys: [`part:${part.id}`]
+        });
+      }
+    }
+  }
+
+  for (const [from, targets] of edges.entries()) {
+    for (const to of targets) {
+      if (edges.get(to)?.has(from)) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Conflicting ordering between parts '${from}' and '${to}'.`,
+          itemKeys: [`part:${from}`, `part:${to}`]
+        });
+      }
+    }
+  }
+
+  const permanent = new Set<string>();
+  const temporary = new Set<string>();
+  const stack: string[] = [];
+  const reportCycle = (cycleNodes: string[]): void => {
+    conflicts.push({
+      code: "ordering-conflict",
+      message: `Ordering cycle detected: ${cycleNodes.join(" -> ")}.`,
+      itemKeys: cycleNodes.map((item) => `part:${item}`)
+    });
+  };
+
+  const visit = (node: string): void => {
+    if (permanent.has(node)) {
+      return;
+    }
+    if (temporary.has(node)) {
+      const start = stack.indexOf(node);
+      const cycle = start >= 0 ? [...stack.slice(start), node] : [node, node];
+      reportCycle(cycle);
+      return;
+    }
+
+    temporary.add(node);
+    stack.push(node);
+    for (const target of edges.get(node) ?? []) {
+      visit(target);
+    }
+    stack.pop();
+    temporary.delete(node);
+    permanent.add(node);
+  };
+
+  for (const part of manifest.parts) {
+    visit(part.id);
+  }
 }
 
 function collectAllRequirements(manifest: FeatureManifest): FeatureManifestDependencyRef[] {
@@ -539,6 +669,15 @@ function buildCapabilityReportFallback(manifest: FeatureManifest): FeatureCapabi
       appliesTo: [...part.appliesTo],
       provides: [...part.provides],
       expects: [...part.expects],
+      ...(part.ordering
+        ? {
+            ordering: {
+              ...(part.ordering.group ? { group: part.ordering.group } : {}),
+              before: [...part.ordering.before],
+              after: [...part.ordering.after]
+            }
+          }
+        : {}),
       contributions: part.contributions.map((contribution) => ({
         ...contribution,
         appliesTo: [...contribution.appliesTo],

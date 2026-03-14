@@ -234,6 +234,79 @@ function run(): void {
   assert.ok(duplicateConflict?.message.includes("Assign.Form.feature.xml"));
   assert.ok(duplicateConflict?.message.includes("Assign.WorkFlow.feature.xml"));
 
+  const orderingConflictManifest = normalizeFeatureManifest(
+    {
+      feature: "OrderingConflict",
+      parts: [
+        {
+          id: "A",
+          file: "A.Form.feature.xml",
+          ordering: {
+            before: ["MissingPart"],
+            after: ["B"]
+          }
+        },
+        {
+          id: "B",
+          file: "B.Form.feature.xml",
+          ordering: {
+            after: ["A"]
+          }
+        }
+      ]
+    },
+    "OrderingConflict.feature.json"
+  );
+  const orderingConflictRegistry = emptyFeatureManifestRegistry();
+  orderingConflictRegistry.manifestsByFeature.set(orderingConflictManifest.feature, orderingConflictManifest);
+  orderingConflictRegistry.capabilityReportsByFeature.set(
+    orderingConflictManifest.feature,
+    buildFeatureCapabilityReport(orderingConflictManifest)
+  );
+  const orderingConflictModel = buildEffectiveCompositionModel(orderingConflictManifest, orderingConflictRegistry);
+  const orderingConflicts = orderingConflictModel.conflicts.filter((conflict) => conflict.code === "ordering-conflict");
+  assert.ok(orderingConflicts.length >= 2);
+  assert.ok(orderingConflicts.some((conflict) => conflict.message.includes("target part was not found")));
+  assert.ok(orderingConflicts.some((conflict) => conflict.message.includes("Conflicting ordering")));
+
+  const orderingCycleManifest = normalizeFeatureManifest(
+    {
+      feature: "OrderingCycle",
+      parts: [
+        {
+          id: "A",
+          file: "A.Form.feature.xml",
+          ordering: {
+            before: ["B"]
+          }
+        },
+        {
+          id: "B",
+          file: "B.Form.feature.xml",
+          ordering: {
+            before: ["C"]
+          }
+        },
+        {
+          id: "C",
+          file: "C.Form.feature.xml",
+          ordering: {
+            before: ["A"]
+          }
+        }
+      ]
+    },
+    "OrderingCycle.feature.json"
+  );
+  const orderingCycleRegistry = emptyFeatureManifestRegistry();
+  orderingCycleRegistry.manifestsByFeature.set(orderingCycleManifest.feature, orderingCycleManifest);
+  orderingCycleRegistry.capabilityReportsByFeature.set(
+    orderingCycleManifest.feature,
+    buildFeatureCapabilityReport(orderingCycleManifest)
+  );
+  const orderingCycleModel = buildEffectiveCompositionModel(orderingCycleManifest, orderingCycleRegistry);
+  assert.ok(orderingCycleModel.conflicts.some((conflict) => conflict.code === "ordering-conflict" && conflict.message.includes("cycle")));
+
   assert.throws(
     () =>
       normalizeFeatureManifest(

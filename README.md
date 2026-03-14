@@ -31,6 +31,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - `missing-feature-expectation`
     - `missing-feature-expected-xpath`
     - `duplicate-feature-provider`
+    - `ordering-conflict`
     - `orphan-feature-part`
     - `incomplete-feature`
   - `FormControl xsi:type="ShareCodeControl"` is validated against `WorkFlow/ControlShareCodes/ControlShareCode` (local + injected via `Using`)

@@ -1098,6 +1098,15 @@ export class DiagnosticsEngine {
         });
       }
 
+      const orderingConflicts = effectiveModel.conflicts.filter((conflict) => conflict.code === "ordering-conflict");
+      for (const conflict of orderingConflicts) {
+        issues.push({
+          ruleId: "ordering-conflict",
+          range: diagnosticAnchor,
+          message: conflict.message
+        });
+      }
+
       const orphanParts = feature.parts
         .map((part) => part.file)
         .filter((partFile) => !featureRegistry.manifestsBySource.has(partFile));
@@ -1116,6 +1125,9 @@ export class DiagnosticsEngine {
       const incompleteReasons: string[] = [];
       if (missingDependencyConflicts.length > 0) {
         incompleteReasons.push(`missing dependencies=${missingDependencyConflicts.length}`);
+      }
+      if (orderingConflicts.length > 0) {
+        incompleteReasons.push(`ordering conflicts=${orderingConflicts.length}`);
       }
       if (duplicateProviderConflicts.length > 0) {
         incompleteReasons.push(`duplicate providers=${duplicateProviderConflicts.length}`);

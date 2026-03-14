@@ -156,6 +156,7 @@ export interface FeatureCapabilityReport {
     appliesTo: FeatureContextKind[];
     provides: FeatureManifestSymbolRef[];
     expects: FeatureManifestSymbolRef[];
+    ordering?: FeatureManifestOrdering;
     contributions: FeatureManifestContribution[];
   }>;
 }

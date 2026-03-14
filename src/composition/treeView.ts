@@ -219,9 +219,11 @@ function buildFeatureTree(
     const effective = model.contributions.filter((item) => item.usage === "effective").length;
     const partial = model.contributions.filter((item) => item.usage === "partial").length;
     const unused = model.contributions.filter((item) => item.usage === "unused").length;
+    const orderingConflicts = model.conflicts.filter((item) => item.code === "ordering-conflict").length;
     summaryChildren.push(detailNode(`Contributions: ${model.contributions.length}`));
     summaryChildren.push(detailNode(`Usage: effective=${effective}, partial=${partial}, unused=${unused}`));
     summaryChildren.push(detailNode(`Conflicts: ${model.conflicts.length}`));
+    summaryChildren.push(detailNode(`Ordering conflicts: ${orderingConflicts}`));
   }
 
   const partsNode = partGroupNode(
@@ -229,23 +231,38 @@ function buildFeatureTree(
     report.parts.map((part) => {
       const partComponentKey = toIndexedComponentKey(part.file);
       const contributionReports = model?.contributions.filter((item) => item.partId === part.id) ?? [];
-      return {
-        id: `${featureNodeId}:part:${part.id}`,
-        type: "part",
-        label: part.id,
-        description: part.appliesTo.join(", "),
-        tooltip: part.file,
-        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-        icon: new vscode.ThemeIcon("file-submodule"),
-        contextValue: "compositionFeaturePart",
-        resourceUri: featureManifest?.parts.find((item) => item.id === part.id)?.file
-          ? vscode.Uri.file(
-              toWorkspacePath(featureManifest.parts.find((item) => item.id === part.id)?.file ?? "", activeUri)
-            )
-          : undefined,
-        usageLocations: collectPartUsageLocations(index, partComponentKey, entrypointComponentKey),
-        children: contributionReports.length > 0
-          ? contributionReports.map((contribution) => ({
+      const partOrderingConflicts = (model?.conflicts ?? []).filter(
+        (conflict) => conflict.code === "ordering-conflict" && conflict.itemKeys.includes(`part:${part.id}`)
+      );
+      const orderingChildren: CompositionTreeNode[] = [];
+      if (part.ordering) {
+        orderingChildren.push(detailNode(`Group: ${part.ordering.group ?? "(none)"}`));
+        orderingChildren.push(detailNode(`Before: ${part.ordering.before.join(", ") || "(none)"}`));
+        orderingChildren.push(detailNode(`After: ${part.ordering.after.join(", ") || "(none)"}`));
+      } else {
+        orderingChildren.push(detailNode("No ordering metadata."));
+      }
+      if (partOrderingConflicts.length > 0) {
+        orderingChildren.push(...partOrderingConflicts.map((conflict, idx) =>
+          detailNode(`Conflict ${idx + 1}: ${conflict.message}`)
+        ));
+      }
+
+      const partChildren: CompositionTreeNode[] = [
+        {
+          type: "group",
+          id: `${featureNodeId}:part:${part.id}:ordering`,
+          label: "Ordering",
+          description: partOrderingConflicts.length > 0 ? `${partOrderingConflicts.length} conflict(s)` : "ok",
+          collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+          icon: new vscode.ThemeIcon(partOrderingConflicts.length > 0 ? "warning" : "list-ordered"),
+          children: orderingChildren
+        }
+      ];
+      if (contributionReports.length > 0) {
+        partChildren.push(
+          ...contributionReports.map((contribution) =>
+            ({
               type: "contribution",
               id: `${featureNodeId}:part:${part.id}:contribution:${contribution.name ?? contribution.contributionId}`,
               label: contribution.name ?? contribution.contributionId,
@@ -277,8 +294,29 @@ function buildFeatureTree(
                 ...contribution.missingExpectationKeys.map((item) => detailNode(`Missing expect: ${item}`)),
                 ...contribution.missingExpectedXPaths.map((item) => detailNode(`Missing xpath: ${item}`))
               ]
-            }))
-          : [detailNode("No contribution reports.")]
+            } satisfies ContributionNode)
+          )
+        );
+      } else {
+        partChildren.push(detailNode("No contribution reports."));
+      }
+
+      return {
+        id: `${featureNodeId}:part:${part.id}`,
+        type: "part",
+        label: part.id,
+        description: part.appliesTo.join(", "),
+        tooltip: part.file,
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("file-submodule"),
+        contextValue: "compositionFeaturePart",
+        resourceUri: featureManifest?.parts.find((item) => item.id === part.id)?.file
+          ? vscode.Uri.file(
+              toWorkspacePath(featureManifest.parts.find((item) => item.id === part.id)?.file ?? "", activeUri)
+            )
+          : undefined,
+        usageLocations: collectPartUsageLocations(index, partComponentKey, entrypointComponentKey),
+        children: partChildren
       } satisfies PartNode;
     }),
     sharedSectionNodeId("Parts")

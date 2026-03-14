@@ -314,6 +314,32 @@ function run(): void {
   );
   assertHasRule(orphanPartDiagnostics, "orphan-feature-part");
 
+  const orderingConflictRegistry = loadFeatureManifestRegistry(workspaceRoot);
+  const orderingModel = orderingConflictRegistry.effectiveModelsByFeature.get("Assign");
+  if (!orderingModel) {
+    throw new Error("Expected effective model for Assign.");
+  }
+  orderingConflictRegistry.effectiveModelsByFeature.set("Assign", {
+    ...orderingModel,
+    conflicts: [
+      ...orderingModel.conflicts,
+      {
+        code: "ordering-conflict",
+        message: "Ordering cycle detected: Assign.Form -> Assign.WorkFlow -> Assign.Form.",
+        itemKeys: ["part:Assign.Form", "part:Assign.WorkFlow"]
+      }
+    ]
+  });
+  const orderingConflictDiagnostics = engine.buildDiagnostics(
+    entrypointDoc as unknown as import("vscode").TextDocument,
+    emptyIndex,
+    {
+      standaloneMode: true,
+      featureRegistry: orderingConflictRegistry
+    }
+  );
+  assertHasRule(orderingConflictDiagnostics, "ordering-conflict");
+
   const inheritanceSettings = createInheritanceSettings();
   const formInheritanceText = `<?xml version="1.0" encoding="utf-8"?>
 <Form Ident="InheritanceForm">

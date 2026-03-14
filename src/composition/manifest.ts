@@ -84,6 +84,15 @@ export function buildFeatureCapabilityReport(manifest: FeatureManifest): Feature
       appliesTo: [...part.appliesTo],
       provides: [...part.provides],
       expects: [...part.expects],
+      ...(part.ordering
+        ? {
+            ordering: {
+              ...(part.ordering.group ? { group: part.ordering.group } : {}),
+              before: [...part.ordering.before],
+              after: [...part.ordering.after]
+            }
+          }
+        : {}),
       contributions: part.contributions.map((contribution) => ({
         ...contribution,
         appliesTo: [...contribution.appliesTo],

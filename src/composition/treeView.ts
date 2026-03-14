@@ -877,6 +877,14 @@ function buildUsingContributionTypeGroups(
           ...(uri ? { resourceUri: uri, sourceLocation: toUriStartLocation(uri), contextValue: "compositionSymbol" } : {}),
           children: [
             detailNode(`Templates: ${templateNames.length > 0 ? templateNames.join(", ") : "(default)"}`),
+            primitiveQuickFixDetailNode(
+              `PrimitiveSource: ${primitiveKey}`,
+              `${contributionNodeId}:type:primitives:item:${idx}:source`,
+              "unknown",
+              primitiveKey,
+              primitiveKey,
+              contributionLocation
+            ),
             detailNode(`RequiredParams: ${requiredParams.length > 0 ? requiredParams.join(", ") : "(none)"}`),
             detailNode(`ProvidedParams: ${providedParams.length > 0 ? providedParams.join(", ") : "(none)"}`),
             detailNode(`MissingParams: ${missingParams.length > 0 ? missingParams.join(", ") : "(none)"}`),
@@ -897,7 +905,7 @@ function buildUsingContributionTypeGroups(
 function primitiveQuickFixDetailNode(
   label: string,
   id: string,
-  kind: "param" | "slot",
+  kind: "param" | "slot" | "unknown",
   name: string,
   primitiveKey: string,
   contributionLocation?: vscode.Location

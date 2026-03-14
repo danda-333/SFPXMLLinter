@@ -70,6 +70,12 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
     - `primitive-cycle` (rychle odstraneni cyklickeho `UsePrimitive`)
   - Tree View quick-fix integrace:
     - u primitive detailu (`MissingParam` / `MissingSlot`) je akce, ktera aplikuje odpovidajici code action primo z tree view
+    - pridana i akce pro `unknown-primitive` (`PrimitiveSource`) primo z tree view
+  - command fallback/retry:
+    - composition quick-fix command umi nabidnout `Revalidate` a po revalidaci automaticky zkusit fix znovu
+  - command helper extrahovan do sdilene vrstvy:
+    - `composition/primitiveQuickFix.ts`
+    - oddelena logika vyberu diagnostiky a code action od VS Code glue vrstvy
 - Tree View primitive contracts:
   - detail `required/provided/missing` pro params a slots
   - data jdou z indexu (bez extra fallback parseru v Tree View)
@@ -80,6 +86,11 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - snapshot fixture + test runner validuje fallback debug logy deterministicky
 - test coverage pro primitive quick-fix:
   - samostatny linter test runner overuje `unknown-primitive`, `primitive-missing-slot`, `primitive-missing-param`, `primitive-cycle`
+  - pridany integration test runner pro composition quick-fix command flow:
+    - success path
+    - retry path po revalidate
+    - unknown primitive path
+    - missing action path
 - linter fixtures:
   - pridany valid primitive-heavy scenar v `tests/fixtures/linter` (Form + WorkFlow + primitive knihovna)
 

@@ -28,6 +28,7 @@ import { CompositionTreeProvider } from "./composition/treeView";
 import { buildBootstrapManifestDraft } from "./composition/bootstrapManifest";
 import { populateUsingInsertTraceFromText } from "./composition/usingImpact";
 import { buildDocumentCompositionModel } from "./composition/documentModel";
+import { applyCompositionPrimitiveQuickFix, CompositionPrimitiveQuickFixPayload } from "./composition/primitiveQuickFix";
 
 const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-form-ident",
@@ -2245,77 +2246,70 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "sfpXmlLinter.compositionApplyPrimitiveQuickFix",
-      async (payload?: { uri?: vscode.Uri; kind?: "param" | "slot"; name?: string; primitiveKey?: string }) => {
-        const targetUri = payload?.uri;
-        const fixKind = payload?.kind;
-        const fixName = (payload?.name ?? "").trim();
-        const primitiveKey = (payload?.primitiveKey ?? "").trim();
-        if (!targetUri || !fixKind || !fixName) {
+      async (payload?: CompositionPrimitiveQuickFixPayload) => {
+        if (!payload?.uri || !payload?.kind || !(payload?.name ?? "").trim()) {
           vscode.window.showInformationMessage("SFP XML Linter: Primitive quick fix payload is incomplete.");
           return;
         }
 
-        const diagnostics = vscode.languages
-          .getDiagnostics(targetUri)
-          .filter((diagnostic) => diagnostic.source === "sfp-xml-linter");
-        const expectedRule = fixKind === "param" ? "primitive-missing-param" : "primitive-missing-slot";
-        const expectedTitle = fixKind === "param"
-          ? `Add missing parameter '${fixName}'`
-          : `Add missing Slot '${fixName}'`;
-        const matchingDiagnostic = diagnostics.find((diagnostic) => {
-          if (String(diagnostic.code ?? "") !== expectedRule) {
-            return false;
-          }
+        const result = await applyCompositionPrimitiveQuickFix(payload, {
+          getDiagnostics(uri) {
+            return vscode.languages.getDiagnostics(uri as vscode.Uri);
+          },
+          async getCodeActions(uri, range) {
+            const actions =
+              (await vscode.commands.executeCommand<(vscode.CodeAction | vscode.Command)[]>(
+                "vscode.executeCodeActionProvider",
+                uri as vscode.Uri,
+                range as vscode.Range,
+                vscode.CodeActionKind.QuickFix
+              )) ?? [];
+            return actions.map((action) => {
+              if (action instanceof vscode.CodeAction) {
+                return {
+                  title: action.title,
+                  edit: action.edit,
+                  command: action.command
+                    ? {
+                        command: action.command.command,
+                        arguments: action.command.arguments
+                      }
+                    : undefined
+                };
+              }
 
-          const message = diagnostic.message;
-          if (!message.includes(fixName)) {
-            return false;
+              return {
+                title: action.title,
+                command: {
+                  command: action.command,
+                  arguments: action.arguments
+                }
+              };
+            });
+          },
+          async applyEdit(edit) {
+            await vscode.workspace.applyEdit(edit as vscode.WorkspaceEdit);
+          },
+          async executeCommand(command, ...args) {
+            await vscode.commands.executeCommand(command, ...args);
+          },
+          async openDocument(uri) {
+            return vscode.workspace.openTextDocument(uri as vscode.Uri);
+          },
+          async validateDocument(document) {
+            await validateDocument(document as vscode.TextDocument);
+          },
+          async askRevalidate(message) {
+            const pick = await vscode.window.showInformationMessage(message, "Revalidate");
+            return pick === "Revalidate";
           }
-
-          if (primitiveKey.length > 0 && !message.includes(primitiveKey)) {
-            return false;
-          }
-
-          return true;
         });
 
-        if (!matchingDiagnostic) {
-          vscode.window.showInformationMessage(
-            `SFP XML Linter: No matching diagnostic found for ${expectedRule} (${fixName}).`
-          );
-          return;
+        if (result === "missing-diagnostic") {
+          vscode.window.showInformationMessage("SFP XML Linter: Matching diagnostic was not found.");
+        } else if (result === "missing-action") {
+          vscode.window.showInformationMessage("SFP XML Linter: Matching quick fix action was not found.");
         }
-
-        const codeActions =
-          (await vscode.commands.executeCommand<(vscode.CodeAction | vscode.Command)[]>(
-            "vscode.executeCodeActionProvider",
-            targetUri,
-            matchingDiagnostic.range,
-            vscode.CodeActionKind.QuickFix
-          )) ?? [];
-        const matchingAction = codeActions.find((action) => action.title === expectedTitle);
-        if (!matchingAction) {
-          vscode.window.showInformationMessage(
-            `SFP XML Linter: Quick fix '${expectedTitle}' is not available at this location.`
-          );
-          return;
-        }
-
-        if (matchingAction instanceof vscode.CodeAction) {
-          if (matchingAction.edit) {
-            await vscode.workspace.applyEdit(matchingAction.edit);
-          }
-          if (matchingAction.command) {
-            await vscode.commands.executeCommand(
-              matchingAction.command.command,
-              ...(matchingAction.command.arguments ?? [])
-            );
-          }
-        } else {
-          await vscode.commands.executeCommand(matchingAction.command, ...(matchingAction.arguments ?? []));
-        }
-
-        await validateDocument(await vscode.workspace.openTextDocument(targetUri));
       }
     )
   );

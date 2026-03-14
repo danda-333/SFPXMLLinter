@@ -32,4 +32,6 @@ Minimal scenarios for each validation rule.
 - `chyba-30-dataview-redundant-feature-using.xml` -> `dataview-redundant-feature-using`
 - `chyba-31-feature-inheritance-override.xml` -> `feature-inheritance-override`
 - `chyba-32-suppression-conflict.xml` -> `suppression-conflict`
+- `chyba-33-suppression-noop.xml` -> `suppression-noop`
+- `chyba-34-suppression-noop-contribution.xml` -> `suppression-noop`
 

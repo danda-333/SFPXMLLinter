@@ -10,6 +10,7 @@ import {
   DocumentUsingContributionModel
 } from "./documentModel";
 import {
+  contributionMatchesDocumentRoot,
 } from "./usingImpact";
 import { FeatureCapabilityReport } from "./model";
 import { normalizeComponentKey } from "../utils/paths";
@@ -451,64 +452,166 @@ function buildUsingTree(
 ): CompositionTreeNode[] {
   const composition = compositionModel ?? buildDocumentCompositionModel(facts, index);
   const effectiveUsings = composition.usings;
-  if (effectiveUsings.length === 0) {
+  const suppressedUsings = facts.usingReferences.filter((ref) => ref.suppressInheritance);
+  if (effectiveUsings.length === 0 && suppressedUsings.length === 0) {
     return [];
   }
+
+  const effectiveNodes = effectiveUsings.map((usingModel) => {
+    const component = resolveComponentByKey(index, usingModel.componentKey);
+    if (!component || !usingModel.hasResolvedFeature) {
+      return {
+        type: "using",
+        label: usingModel.rawComponentValue,
+        description: "missing feature",
+        tooltip: usingModel.rawComponentValue,
+        icon: new vscode.ThemeIcon("error")
+      } satisfies UsingNode;
+    }
+
+    const contributionRows = usingModel.contributions.map((contribution) =>
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+    );
+    const filteredRows = usingModel.filteredContributions.map((contribution) =>
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+    );
+    const children: CompositionTreeNode[] =
+      contributionRows.length > 0 ? [...contributionRows] : [detailNode("No root-relevant contributions found.")];
+    if (filteredRows.length > 0) {
+      children.push({
+        type: "group",
+        id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}:filtered`,
+        label: "Filtered",
+        description: `${filteredRows.length}`,
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("filter"),
+        children: filteredRows
+      });
+    }
+
+    return {
+      id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}`,
+      type: "using",
+      label: usingModel.rawComponentValue,
+      description: usingModel.source === "inherited" ? `${usingModel.impact.kind}, inherited` : usingModel.impact.kind,
+      tooltip: usingModel.impact.message ?? usingModel.rawComponentValue,
+      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+      icon: iconForUsage(usingModel.impact.kind),
+      contextValue: "compositionUsing",
+      resourceUri: component.uri,
+      sourceLocation: usingModel.sectionValue ? component.contributionDefinitions.get(usingModel.sectionValue) : component.componentLocation,
+      usageLocations: getUsingUsageLocations(facts, index, usingModel.componentKey, usingModel.sectionValue),
+      command: getUsingOpenCommand(component, usingModel.sectionValue),
+      children
+    } satisfies UsingNode;
+  });
+
+  const suppressionNodes = suppressedUsings.map((ref, idx) => {
+    const component = resolveComponentByKey(index, ref.componentKey);
+    const matchedContributions = countSuppressedInheritedContributions(facts, index, ref.componentKey, ref.sectionValue);
+    const label = ref.sectionValue ? `${ref.rawComponentValue}#${ref.sectionValue}` : ref.rawComponentValue;
+    const metaChildren: CompositionTreeNode[] = [
+      detailNode(`Mode: suppression`),
+      detailNode(`BlockedInheritedContributions: ${matchedContributions}`)
+    ];
+    if (!component) {
+      return {
+        id: `using:suppression:${idx}`,
+        type: "using",
+        label,
+        description: "suppression, missing feature",
+        tooltip: `Suppression for missing feature '${ref.rawComponentValue}'.`,
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("error"),
+        children: metaChildren
+      } satisfies UsingNode;
+    }
+
+    return {
+      id: `using:suppression:${ref.componentKey}:${ref.sectionValue ?? "*"}:${idx}`,
+      type: "using",
+      label,
+      description: `suppression, blocked=${matchedContributions}`,
+      tooltip: `Suppress inherited using for '${label}'.`,
+      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+      icon: new vscode.ThemeIcon("shield"),
+      contextValue: "compositionUsing",
+      resourceUri: component.uri,
+      sourceLocation: ref.sectionValue ? component.contributionDefinitions.get(ref.sectionValue) : component.componentLocation,
+      usageLocations: getUsingUsageLocations(facts, index, ref.componentKey, ref.sectionValue),
+      command: getUsingOpenCommand(component, ref.sectionValue),
+      children: metaChildren
+    } satisfies UsingNode;
+  });
+
+  const usingNodes: CompositionTreeNode[] = [...effectiveNodes, ...suppressionNodes];
 
   return [
     infoGroupNode(
       "Usings",
-      effectiveUsings.map((usingModel) => {
-        const component = resolveComponentByKey(index, usingModel.componentKey);
-        if (!component || !usingModel.hasResolvedFeature) {
-          return {
-            type: "using",
-            label: usingModel.rawComponentValue,
-            description: "missing feature",
-            tooltip: usingModel.rawComponentValue,
-            icon: new vscode.ThemeIcon("error")
-          } satisfies UsingNode;
-        }
-
-        const contributionRows = usingModel.contributions.map((contribution) =>
-          buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
-        );
-        const filteredRows = usingModel.filteredContributions.map((contribution) =>
-          buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
-        );
-        const children: CompositionTreeNode[] =
-          contributionRows.length > 0 ? [...contributionRows] : [detailNode("No root-relevant contributions found.")];
-        if (filteredRows.length > 0) {
-          children.push({
-            type: "group",
-            id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}:filtered`,
-            label: "Filtered",
-            description: `${filteredRows.length}`,
-            collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-            icon: new vscode.ThemeIcon("filter"),
-            children: filteredRows
-          });
-        }
-
-        return {
-          id: `using:${usingModel.componentKey}:${usingModel.sectionValue ?? "*"}`,
-          type: "using",
-          label: usingModel.rawComponentValue,
-          description: usingModel.source === "inherited" ? `${usingModel.impact.kind}, inherited` : usingModel.impact.kind,
-          tooltip: usingModel.impact.message ?? usingModel.rawComponentValue,
-          collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-          icon: iconForUsage(usingModel.impact.kind),
-          contextValue: "compositionUsing",
-          resourceUri: component.uri,
-          sourceLocation: usingModel.sectionValue ? component.contributionDefinitions.get(usingModel.sectionValue) : component.componentLocation,
-          usageLocations: getUsingUsageLocations(facts, index, usingModel.componentKey, usingModel.sectionValue),
-          command: getUsingOpenCommand(component, usingModel.sectionValue),
-          children
-        } satisfies UsingNode;
-      }),
+      usingNodes,
       `using-group:${facts.rootTag ?? "xml"}:${facts.formIdent ?? facts.workflowFormIdent ?? "unknown"}`
     )
   ];
+}
+
+function countSuppressedInheritedContributions(
+  facts: ReturnType<typeof parseDocumentFacts>,
+  index: WorkspaceIndex,
+  componentKey: string,
+  sectionValue: string | undefined
+): number {
+  const root = (facts.rootTag ?? "").toLowerCase();
+  if (root !== "workflow" && root !== "dataview") {
+    return 0;
+  }
+
+  const owningFormIdent = root === "workflow" ? facts.workflowFormIdent ?? facts.rootFormIdent : facts.rootFormIdent;
+  if (!owningFormIdent) {
+    return 0;
+  }
+
+  const form = index.formsByIdent.get(owningFormIdent);
+  const formFacts = form ? index.parsedFactsByUri.get(form.uri.toString()) : undefined;
+  const component = resolveComponentByKey(index, componentKey);
+  if (!formFacts || !component) {
+    return 0;
+  }
+
+  const inheritedRefs = formFacts.usingReferences.filter((ref) => ref.componentKey === componentKey);
+  if (inheritedRefs.length === 0) {
+    return 0;
+  }
+
+  let total = 0;
+  for (const ref of inheritedRefs) {
+    if (sectionValue) {
+      if (!ref.sectionValue || ref.sectionValue !== sectionValue) {
+        continue;
+      }
+      const contribution = component.contributionSummaries.get(sectionValue);
+      if (contribution && contributionMatchesDocumentRoot(facts.rootTag, contribution)) {
+        total++;
+      }
+      continue;
+    }
+
+    if (ref.sectionValue) {
+      const contribution = component.contributionSummaries.get(ref.sectionValue);
+      if (contribution && contributionMatchesDocumentRoot(facts.rootTag, contribution)) {
+        total++;
+      }
+      continue;
+    }
+
+    for (const contribution of component.contributionSummaries.values()) {
+      if (contributionMatchesDocumentRoot(facts.rootTag, contribution)) {
+        total++;
+      }
+    }
+  }
+
+  return total;
 }
 
 function buildUsingContributionNode(

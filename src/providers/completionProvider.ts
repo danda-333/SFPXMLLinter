@@ -544,6 +544,10 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         return [];
       }
 
+      if (facts.rootTag?.toLowerCase() === "workflow") {
+        return asValueItems(collectWorkflowFormControlIdents(owningForm, index, documentComposition), vscode.CompletionItemKind.Reference);
+      }
+
       return asValueItems([...owningForm.controls].sort((a, b) => a.localeCompare(b)), vscode.CompletionItemKind.Reference);
     }
 
@@ -558,6 +562,10 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
       if (!owningForm) {
         return [];
+      }
+
+      if (facts.rootTag?.toLowerCase() === "workflow") {
+        return asValueItems(collectWorkflowFormControlIdents(owningForm, index, documentComposition), vscode.CompletionItemKind.Reference);
       }
 
       return asValueItems([...owningForm.controls].sort((a, b) => a.localeCompare(b)), vscode.CompletionItemKind.Reference);

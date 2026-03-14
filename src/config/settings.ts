@@ -38,6 +38,7 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "dataview-redundant-feature-using": "warning",
   "feature-inheritance-override": "information",
   "suppression-conflict": "warning",
+  "suppression-noop": "information",
   "typo-maxlenght-attribute": "warning",
   "sql-convention-equals-spacing": "warning",
   "ident-convention-button-postfix": "warning",

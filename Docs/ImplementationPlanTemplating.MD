@@ -304,11 +304,17 @@ Aktualni stav:
   - `ReferencesProvider` workflow target resolution
   - `CompletionProvider` workflow ident/share code completion + `SuppressInheritance`/`Inherit` value completion
   - `RenameProvider` workflow target resolution
+  - `DefinitionProvider` + `CompletionProvider` mapping edge-cases ve workflow (`FromIdent`/`ToIdent`) ctou modelovou injected vrstvu
 - index usage mapy pouzivaji effective using vrstvu:
   - `componentUsageFormIdentsByKey`
   - `componentContributionUsageFormIdentsByKey`
 - pridana diagnostika konfliktu:
   - `suppression-conflict`
+- pridana diagnostika neucinneho potlaceni dedeni:
+  - `suppression-noop`
+- Tree View ma suppression debug vrstvu:
+  - suppression `Using` uzly se zobrazuji v sekci `Usings`
+  - zobrazuje se pocet potlacenych inherited contribution
 - fixture composition testy overuji stabilitu modelu
 - dalsi krok:
   - napojit builder output/debug na stejnou mezivrstvu
@@ -711,6 +717,9 @@ Aktualne hotovo:
 - `RenameProvider` workflow vetve ctou jednotny model
 - index usage mapy jsou plnene z effective using vrstvy (ne raw `Using` listu)
 - pridano pravidlo `suppression-conflict` + fixture coverage
+- pridano pravidlo `suppression-noop` + fixture coverage
+- workflow mapping edge-cases (`FromIdent`/`ToIdent`) v provider vrstvach cte modelovou injected vrstvu
+- Tree View `Usings` obsahuje i suppression debug uzly
 - pridany snapshot test `runDocumentCompositionModelTests`
 
 Aktualne chybi do gate:

@@ -513,12 +513,13 @@ export class DiagnosticsEngine {
       }
     }
 
-    this.validateUsingSuppressionConflicts(facts, issues);
+    this.validateUsingSuppressionConflicts(facts, index, issues);
     this.validateFormOwnedUsingInheritance(facts, index, issues);
   }
 
   private validateUsingSuppressionConflicts(
     facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
     issues: RuleDiagnostic[]
   ): void {
     const root = (facts.rootTag ?? "").toLowerCase();
@@ -546,6 +547,50 @@ export class DiagnosticsEngine {
         addNestedRangeMapValue(localSectionsByFeature, ref.componentKey, ref.sectionValue, targetRange);
       } else {
         addRangeMapValue(localFullByFeature, ref.componentKey, targetRange);
+      }
+    }
+
+    const owningFormIdent = getOwningFormIdentForInheritance(root, facts);
+    const form = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
+    const formFacts = form ? index.parsedFactsByUri.get(form.uri.toString()) : undefined;
+    const formFeatureRefs = formFacts ? collectUsingRefsByFeature(formFacts) : new Map<string, { hasFull: boolean; sections: Set<string> }>();
+
+    for (const [featureKey, ranges] of suppressFullByFeature.entries()) {
+      if (formFeatureRefs.has(featureKey)) {
+        continue;
+      }
+      for (const range of ranges) {
+        issues.push({
+          ruleId: "suppression-noop",
+          range,
+          message: `Suppression for feature '${featureKey}' has no effect because the feature is not inherited from Form.`
+        });
+      }
+    }
+
+    for (const [featureKey, sections] of suppressSectionsByFeature.entries()) {
+      const formFeature = formFeatureRefs.get(featureKey);
+      for (const [sectionName, ranges] of sections.entries()) {
+        const effective =
+          !!formFeature &&
+          !formFeature.hasFull &&
+          formFeature.sections.has(sectionName);
+        if (effective) {
+          continue;
+        }
+
+        const reason = !formFeature
+          ? `feature '${featureKey}' is not inherited from Form`
+          : formFeature.hasFull
+            ? `Form inherits feature '${featureKey}' as full feature (section-level suppression cannot target full inheritance)`
+            : `contribution '${sectionName}' is not inherited from Form feature '${featureKey}'`;
+        for (const range of ranges) {
+          issues.push({
+            ruleId: "suppression-noop",
+            range,
+            message: `Suppression for '${featureKey}#${sectionName}' has no effect because ${reason}.`
+          });
+        }
       }
     }
 

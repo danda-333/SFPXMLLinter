@@ -115,6 +115,14 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
 
     const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow" ? facts.workflowFormIdent : facts.formIdent;
     const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
+    const workflowControlDefinitionsForMappings =
+      facts.rootTag?.toLowerCase() === "workflow"
+        ? collectWorkflowControlDefinitions(
+            facts.workflowFormIdent ? index.formsByIdent.get(facts.workflowFormIdent) : undefined,
+            index,
+            documentComposition
+          )
+        : undefined;
     for (const mappingRef of facts.mappingIdentReferences) {
       if (!mappingRef.range.contains(position) || !owningForm) {
         continue;
@@ -122,6 +130,9 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
 
       const key = mappingRef.ident;
       if (mappingRef.kind === "fromIdent") {
+        if (workflowControlDefinitionsForMappings?.has(key)) {
+          return workflowControlDefinitionsForMappings.get(key);
+        }
         return owningForm.controlDefinitions.get(key) ?? owningForm.formIdentLocation;
       }
 
@@ -129,6 +140,10 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
       const targetForm = targetFormIdent ? index.formsByIdent.get(targetFormIdent) : undefined;
       if (targetForm) {
         return targetForm.controlDefinitions.get(key) ?? targetForm.formIdentLocation;
+      }
+
+      if (workflowControlDefinitionsForMappings?.has(key)) {
+        return workflowControlDefinitionsForMappings.get(key);
       }
 
       return owningForm.controlDefinitions.get(key) ?? owningForm.formIdentLocation;

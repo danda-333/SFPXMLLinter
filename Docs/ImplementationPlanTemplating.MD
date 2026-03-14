@@ -47,6 +47,15 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - strict index-only cteni bez fallback parseru v Tree View a beznych diagnostics
   - insert-based vyhodnoceni `unused/partial/effective` pro `Using`
   - insert count je indexovana metrika (`placeholder`, `TargetXPath` + clamp, fallback symbol count)
+- jednotny `DocumentCompositionModel` pro bezne XML:
+  - sdilena mezivrstva pro `Using` impact + contribution detail
+  - sdilene cteni pro validator i Tree View
+  - sjednocene agregace injected symbolu (`Controls/Buttons/Sections/ShareCodes`)
+- sjednoceny vypocet insert trace:
+  - indexer, runtime diagnostics, Tree View i fixture runner pouzivaji stejnou implementaci
+- snapshot testy nad document composition modelem:
+  - `runDocumentCompositionModelTests`
+  - kontrola `usings`, impactu, filtered contribution a injected symbolu
 - Tree View navigace a debug ergonomie:
   - source navigation pres inline tlacitka
   - `Open` s konfigurovatelnym modem (`newTab`, `current`, `side`, `sidePreview`, `peek`)
@@ -55,8 +64,8 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - detailni `Meta` + placeholder usage lokace
 
 ### Prave probiha
-- dokonceni `effective composition model` jako jednotneho zdroje i pro detailni Tree View data
-  - odstranit zbytkove duplikace mezi model/index/tree rendering
+- dokonceni `effective composition model` jako jednotneho zdroje i pro builder/debug vrstvu
+  - odstranit zbytkove duplikace mezi build debug a composition modelem
 - doplnovani dalsich inference pravidel nad `Assign`
 - priprava form-owned inheritance vrstvy nad stabilizovanym modelem
 
@@ -220,7 +229,7 @@ Aktualni stav:
 Doporuceny pilot:
 - `Assign`
 
-### Faze T3: Form-owned feature inheritance `[PLAN]`
+### Faze T3: Form-owned feature inheritance `[PROBIHA]`
 Cil:
 - odstranit nutnost duplikovat `Using` napric `Form`, `WorkFlow`, `DataView`.
 
@@ -237,6 +246,17 @@ Implementace:
 Definition of Done:
 - feature aktivni na formulari se promita i do odpovidajiciho `WorkFlow` a `DataView`,
 - redundantni a chybejici deklarace jsou viditelne v diagnostice.
+
+Aktualni stav:
+- zakladni inheritance je aktivni:
+  - `WorkFlow`/`DataView` sdili feature z `Form` pres effective using vrstvu
+- redundantni using diagnostiky jsou hotove:
+  - `workflow-redundant-feature-using`
+  - `dataview-redundant-feature-using`
+- inheritance je zohlednen i v Tree View (`Using` source local/inherited)
+- chybi jeste:
+  - formalni override model a diagnostika `feature-inheritance-override`
+  - finalni doladeni inheritance branchi v effective modelu pro dalsi feature kontrakty
 
 ### Faze T4: Effective composition model `[PROBIHA]`
 Cil:
@@ -270,7 +290,13 @@ Aktualni stav:
 - model uz napaji contribution-level a `Using` impact diagnostiky
 - `Using` status je sjednoceny na insert-based metrice (`unused/partial/effective`)
 - Tree View i diagnostics jedou v beznem rezimu strict index-only (bez fallback parseru)
-- dalsi krok je udelat effective model jedinym zdrojem i pro detailni `Using/Contribution` trace (`targetXPathMatches`, clamp, placeholder count, final insert count)
+- novy `DocumentCompositionModel` je zaveden jako sdilena mezivrstva pro bezne XML:
+  - validator `Using` impact cte tento model
+  - Tree View `Using` + injected symbol agregace ctou tento model
+  - fixture composition testy overuji stabilitu modelu
+- dalsi krok:
+  - napojit builder output/debug na stejnou mezivrstvu
+  - dopsat inheritance-aware vetve finalniho modelu
 
 ### Faze T5: Builder observability `[CAST HOTOVO]`
 Cil:
@@ -334,6 +360,7 @@ Aktualni stav:
   - `Using` impact
 - umi source navigation a usage navigation pres inline tlacitka
 - umi open mody pro debug (`newTab/current/side/sidePreview/peek`)
+- cte `Using` i injected symboly ze sdileneho `DocumentCompositionModel`
 - chybi jeste:
   - dedicated quick actions vrstva pro composition operace
   - statistiky v samostatne UX vrstve
@@ -368,8 +395,13 @@ Aktualni stav:
   - `partial-using`
 - status je nove insert-based nad indexovanymi insert county contribution
 - `Using` impact je videt i v `Tree View`
+- stejny evaluator impactu pouzivaji:
+  - indexer
+  - runtime diagnostics
+  - Tree View
+  - linter fixture runner
 - chybi jeste:
-  - detailni insert trace expose primo z effective modelu
+  - detailni insert trace expose primo z effective modelu pro builder/debug vrstvu
   - jemnejsi usage heuristiky pro dalsi workflow scenare (nad stejnym modelem)
   - navazani na inheritance
 
@@ -579,7 +611,7 @@ Aktualne chybi do gate:
 
 ### Milestone M3: Form-owned inheritance
 Stav:
-- `[PLAN]`
+- `[PROBIHA]`
 
 Obsah:
 - `T3` Form-owned feature inheritance
@@ -601,6 +633,16 @@ Smysl testu:
 
 Gate pro dalsi milestone:
 - feature set je dohledatelny z formulare a nevyzaduje duplicitni zapis napric XML.
+
+Aktualne hotovo:
+- dedeni feature z `Form` do `WorkFlow`/`DataView` je aktivni pres effective using vrstvu
+- redundantni using diagnostiky:
+  - `workflow-redundant-feature-using`
+  - `dataview-redundant-feature-using`
+
+Aktualne chybi do gate:
+- formalni override model (`feature-inheritance-override`)
+- dodelani inheritance branchi napric dalsimi kontraktovymi validacemi
 
 ### Milestone M4: Effective composition model
 Stav:
@@ -634,10 +676,14 @@ Aktualne hotovo:
 - usage vrstva je rozbehnuta na pilot feature
 - `Using` status (`unused/partial/effective`) je sjednoceny nad indexovanou insert metrikou
 - Tree View i bezne diagnostics jedou strict index-only (bez fallback parseru)
+- zaveden `DocumentCompositionModel` pro bezne XML
+- validator i Tree View cteji `Using` impact z jednotneho modelu
+- injected symbol agregace v Tree View cte jednotny model
+- pridany snapshot test `runDocumentCompositionModelTests`
 
 Aktualne chybi do gate:
 - inheritance v modelu
-- dodelat detailni insert trace primo v effective modelu a pouzit ho jako jediny zdroj pro `Using/Contribution` detail
+- napojit builder output/debug na stejny model
 - plne napojeni dalsich provideru na stejny model
 
 ### Milestone M5: Builder observability
@@ -696,6 +742,7 @@ Aktualne hotovo:
 - open mody (`newTab/current/side/sidePreview/peek`) pro debug ergonomii
 - root-relevant `Using` contribution + `Filtered` podstrom
 - placeholder usage list a metadata (`Meta`) u contribution
+- `Using` i injected symboly jdou ze sdileneho `DocumentCompositionModel`
 
 Aktualne chybi do gate:
 - quick actions vrstva (actions/statistiky)
@@ -730,9 +777,10 @@ Aktualne hotovo:
 - `partial-using`
 - insert-based status nad indexovanou insert metrikou contribution
 - zobrazeni dopadu v `Tree View`
+- sjednoceny evaluator impactu pro indexer/diagnostics/Tree View/fixture runner
 
 Aktualne chybi do gate:
-- detailni insert trace expose primo z effective modelu
+- expose detailniho trace v builder/debug vrstve nad stejnym modelem
 - navazani na inheritance a finalni composed model napric XML
 
 ### Milestone M8: Ordering model

@@ -1,5 +1,7 @@
 # Implementation Plan: SFP Feature Templating v2
 
+Posledni aktualizace: `2026-03-14`
+
 ## Cil
 Posunout soucasny XML template builder od prostych `Using` insertu k feature-oriented systemu, ktery:
 
@@ -41,22 +43,26 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
 - prvni `Using impact analysis` nad beznymi XML soubory:
   - `unused-using`
   - `partial-using`
+- Tree View + diagnostics jsou sjednocene nad stejnym indexem:
+  - strict index-only cteni bez fallback parseru v Tree View a beznych diagnostics
+  - insert-based vyhodnoceni `unused/partial/effective` pro `Using`
+  - insert count je indexovana metrika (`placeholder`, `TargetXPath` + clamp, fallback symbol count)
+- Tree View navigace a debug ergonomie:
+  - source navigation pres inline tlacitka
+  - `Open` s konfigurovatelnym modem (`newTab`, `current`, `side`, `sidePreview`, `peek`)
+  - `Side Preview` bez ztraty focusu (`preserveFocus`)
+  - `Using` strom: root-relevant contribution + `Filtered`
+  - detailni `Meta` + placeholder usage lokace
 
 ### Prave probiha
-- prvni verze `effective composition model`
-- napojeni feature validace na skutecny slozeny model misto pouheho capability reportu
-- prvni vrstva usage stavu:
-  - `provided`
-  - `applied`
-  - `consumed`
-  - `unused`
+- dokonceni `effective composition model` jako jednotneho zdroje i pro detailni Tree View data
+  - odstranit zbytkove duplikace mezi model/index/tree rendering
 - doplnovani dalsich inference pravidel nad `Assign`
-- rozsireni `Tree View` z debug panelu na skutecny post-build prehled pro aktivni XML
+- priprava form-owned inheritance vrstvy nad stabilizovanym modelem
 
 ### Zatim pred nami
 - form-owned inheritance
 - hlubsi Tree View navigace:
-  - klikani na zdroje
   - quick actions
   - statistiky
 - hlubsi Using impact analysis
@@ -261,8 +267,10 @@ Aktualni stav:
 - registry uz drzi `effectiveModelsByFeature`
 - feature validace uz pouziva effective model pro `expects` a `expectsXPath`
 - model uz nese i prvni usage stavy `provided / applied / consumed / unused`
-- model uz napaji i prvni contribution-level a `Using` impact diagnostiky
-- model zatim jeste nepokryva inheritance a Tree View potreby v plnem rozsahu
+- model uz napaji contribution-level a `Using` impact diagnostiky
+- `Using` status je sjednoceny na insert-based metrice (`unused/partial/effective`)
+- Tree View i diagnostics jedou v beznem rezimu strict index-only (bez fallback parseru)
+- dalsi krok je udelat effective model jedinym zdrojem i pro detailni `Using/Contribution` trace (`targetXPathMatches`, clamp, placeholder count, final insert count)
 
 ### Faze T5: Builder observability `[CAST HOTOVO]`
 Cil:
@@ -324,9 +332,10 @@ Aktualni stav:
   - local vs injected `Sections`
   - local vs injected workflow sharecody
   - `Using` impact
+- umi source navigation a usage navigation pres inline tlacitka
+- umi open mody pro debug (`newTab/current/side/sidePreview/peek`)
 - chybi jeste:
-  - quick actions
-  - klikani na puvodni zdrojove contribution/feature soubory pro bezna XML
+  - dedicated quick actions vrstva pro composition operace
   - statistiky v samostatne UX vrstve
   - pozdeji inheritance-aware finalni strom
 
@@ -357,10 +366,11 @@ Aktualni stav:
 - hotove diagnostiky:
   - `unused-using`
   - `partial-using`
-- hotova prvni workflow usage vrstva vcetne chainingu `ButtonShareCode -> ActionShareCode`
+- status je nove insert-based nad indexovanymi insert county contribution
 - `Using` impact je videt i v `Tree View`
 - chybi jeste:
-  - jemnejsi usage heuristiky pro dalsi workflow scenare
+  - detailni insert trace expose primo z effective modelu
+  - jemnejsi usage heuristiky pro dalsi workflow scenare (nad stejnym modelem)
   - navazani na inheritance
 
 ### Faze T8: Ordering model
@@ -622,11 +632,13 @@ Aktualne hotovo:
 - registry ho sestavuje
 - validator ho uz pouziva pro prvni feature kontrakty
 - usage vrstva je rozbehnuta na pilot feature
+- `Using` status (`unused/partial/effective`) je sjednoceny nad indexovanou insert metrikou
+- Tree View i bezne diagnostics jedou strict index-only (bez fallback parseru)
 
 Aktualne chybi do gate:
-- consumed/applied/unused vrstva
 - inheritance v modelu
-- pouziti pro Tree View a dalsi providery
+- dodelat detailni insert trace primo v effective modelu a pouzit ho jako jediny zdroj pro `Using/Contribution` detail
+- plne napojeni dalsich provideru na stejny model
 
 ### Milestone M5: Builder observability
 Stav:
@@ -680,10 +692,13 @@ Aktualne hotovo:
 - feature panel a contribution usage
 - bezny XML panel se skupinami local/injected symbolu
 - `Using` impact v panelu
+- source/usage navigation pres inline tlacitka
+- open mody (`newTab/current/side/sidePreview/peek`) pro debug ergonomii
+- root-relevant `Using` contribution + `Filtered` podstrom
+- placeholder usage list a metadata (`Meta`) u contribution
 
 Aktualne chybi do gate:
-- quick actions
-- lepsi navigace na zdroj
+- quick actions vrstva (actions/statistiky)
 - dalsi statistiky a inheritance-aware finalni model
 
 ### Milestone M7: Using impact analysis
@@ -713,11 +728,11 @@ Gate pro dalsi milestone:
 Aktualne hotovo:
 - `unused-using`
 - `partial-using`
-- workflow chaining pres `ButtonShareCode`
+- insert-based status nad indexovanou insert metrikou contribution
 - zobrazeni dopadu v `Tree View`
 
 Aktualne chybi do gate:
-- dovedeni signal/sum v sirsim realnem projektu
+- detailni insert trace expose primo z effective modelu
 - navazani na inheritance a finalni composed model napric XML
 
 ### Milestone M8: Ordering model

@@ -251,6 +251,12 @@ function run(): void {
     <Using Feature="Shared/Sample" Contribution="Controls" />
   </Usings>
 </WorkFlow>`;
+  const workflowSuppressedText = `<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow FormIdent="InheritanceForm" Ident="InheritanceFormSuppressedWorkFlow">
+  <Usings>
+    <Using Feature="Shared/Sample" SuppressInheritance="true" />
+  </Usings>
+</WorkFlow>`;
   const dataviewRedundantText = `<?xml version="1.0" encoding="utf-8"?>
 <DataView FormIdent="InheritanceForm" Ident="InheritanceFormView">
   <Usings>
@@ -261,8 +267,9 @@ function run(): void {
   const formDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceForm.xml"), formInheritanceText);
   const workflowRedundantDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormWorkFlow.redundant.xml"), workflowRedundantText);
   const workflowOverrideDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormWorkFlow.override.xml"), workflowOverrideText);
+  const workflowSuppressedDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormWorkFlow.suppressed.xml"), workflowSuppressedText);
   const dataviewRedundantDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormView.redundant.xml"), dataviewRedundantText);
-  const inheritanceIndex = createInheritanceIndex(formDoc, workflowRedundantDoc, workflowOverrideDoc, dataviewRedundantDoc);
+  const inheritanceIndex = createInheritanceIndex(formDoc, workflowRedundantDoc, workflowOverrideDoc, workflowSuppressedDoc, dataviewRedundantDoc);
 
   const workflowRedundantDiagnostics = engine.buildDiagnostics(
     workflowRedundantDoc as unknown as import("vscode").TextDocument,
@@ -284,6 +291,17 @@ function run(): void {
   );
   assertHasRule(workflowOverrideDiagnostics, "feature-inheritance-override");
 
+  const workflowSuppressedDiagnostics = engine.buildDiagnostics(
+    workflowSuppressedDoc as unknown as import("vscode").TextDocument,
+    inheritanceIndex,
+    {
+      parsedFacts: parseDocumentFacts(workflowSuppressedDoc as unknown as import("vscode").TextDocument),
+      settingsOverride: inheritanceSettings
+    }
+  );
+  assertLacksRule(workflowSuppressedDiagnostics, "workflow-redundant-feature-using");
+  assertLacksRule(workflowSuppressedDiagnostics, "feature-inheritance-override");
+
   const dataviewRedundantDiagnostics = engine.buildDiagnostics(
     dataviewRedundantDoc as unknown as import("vscode").TextDocument,
     inheritanceIndex,
@@ -304,6 +322,15 @@ function assertHasRule(diagnostics: readonly import("vscode").Diagnostic[], rule
 
   const compact = diagnostics.map((d) => `[${String(d.code)}] ${d.message}`).join("\n");
   throw new Error(`Expected diagnostic '${ruleId}', got:\n${compact}`);
+}
+
+function assertLacksRule(diagnostics: readonly import("vscode").Diagnostic[], ruleId: string): void {
+  if (!diagnostics.some((d) => String(d.code) === ruleId)) {
+    return;
+  }
+
+  const compact = diagnostics.map((d) => `[${String(d.code)}] ${d.message}`).join("\n");
+  throw new Error(`Expected no diagnostic '${ruleId}', got:\n${compact}`);
 }
 
 function createEmptyIndex(): import("../../indexer/types").WorkspaceIndex {
@@ -352,11 +379,13 @@ function createInheritanceIndex(
   formDoc: MockTextDocument,
   workflowRedundantDoc: MockTextDocument,
   workflowOverrideDoc: MockTextDocument,
+  workflowSuppressedDoc: MockTextDocument,
   dataviewRedundantDoc: MockTextDocument
 ): import("../../indexer/types").WorkspaceIndex {
   const formFacts = parseDocumentFacts(formDoc as unknown as import("vscode").TextDocument);
   const workflowRedundantFacts = parseDocumentFacts(workflowRedundantDoc as unknown as import("vscode").TextDocument);
   const workflowOverrideFacts = parseDocumentFacts(workflowOverrideDoc as unknown as import("vscode").TextDocument);
+  const workflowSuppressedFacts = parseDocumentFacts(workflowSuppressedDoc as unknown as import("vscode").TextDocument);
   const dataviewRedundantFacts = parseDocumentFacts(dataviewRedundantDoc as unknown as import("vscode").TextDocument);
 
   const componentKey = "Shared/Sample";
@@ -394,6 +423,7 @@ function createInheritanceIndex(
   parsedFactsByUri.set(formDoc.uri.toString(), formFacts);
   parsedFactsByUri.set(workflowRedundantDoc.uri.toString(), workflowRedundantFacts);
   parsedFactsByUri.set(workflowOverrideDoc.uri.toString(), workflowOverrideFacts);
+  parsedFactsByUri.set(workflowSuppressedDoc.uri.toString(), workflowSuppressedFacts);
   parsedFactsByUri.set(dataviewRedundantDoc.uri.toString(), dataviewRedundantFacts);
 
   const componentsByKey = new Map<string, import("../../indexer/types").IndexedComponent>();

@@ -17,6 +17,8 @@ export function collectEffectiveUsingRefs(
   const seen = new Set<string>();
   const localFeatureSections = new Map<string, Set<string>>();
   const localFeatureHasFull = new Set<string>();
+  const suppressedFeatureHasFull = new Set<string>();
+  const suppressedFeatureSections = new Map<string, Set<string>>();
   const push = (item: EffectiveUsingRef): void => {
     const key = `${item.componentKey}::${item.sectionValue ?? ""}`;
     if (seen.has(key)) {
@@ -27,6 +29,17 @@ export function collectEffectiveUsingRefs(
   };
 
   for (const usingRef of facts.usingReferences) {
+    if (usingRef.suppressInheritance) {
+      if (usingRef.sectionValue) {
+        const sections = suppressedFeatureSections.get(usingRef.componentKey) ?? new Set<string>();
+        sections.add(usingRef.sectionValue);
+        suppressedFeatureSections.set(usingRef.componentKey, sections);
+      } else {
+        suppressedFeatureHasFull.add(usingRef.componentKey);
+      }
+      continue;
+    }
+
     if (usingRef.sectionValue) {
       const sections = localFeatureSections.get(usingRef.componentKey) ?? new Set<string>();
       sections.add(usingRef.sectionValue);
@@ -63,6 +76,15 @@ export function collectEffectiveUsingRefs(
   }
 
   for (const usingRef of formFacts.usingReferences) {
+    if (suppressedFeatureHasFull.has(usingRef.componentKey)) {
+      continue;
+    }
+
+    const suppressedSections = suppressedFeatureSections.get(usingRef.componentKey);
+    if (usingRef.sectionValue && suppressedSections?.has(usingRef.sectionValue)) {
+      continue;
+    }
+
     if (localFeatureHasFull.has(usingRef.componentKey)) {
       continue;
     }

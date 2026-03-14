@@ -7,6 +7,7 @@ import { collectTemplateAvailableControlIdents } from "../utils/templateControls
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 import { getSystemMetadata } from "../config/systemMetadata";
 import { getAllFormIdentCandidates } from "../utils/formIdents";
+import { buildDocumentCompositionModel, collectSelectedDocumentContributions, DocumentCompositionModel } from "../composition/documentModel";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 
@@ -74,7 +75,7 @@ const ATTRIBUTES_BY_TAG: Record<string, string[]> = {
     "MappingFormIdent"
   ],
   section: ["xsi:type", "Ident", "Name", "Title", "TitleResourceKey", "TargetXPath", "Insert", "Root"],
-  using: ["Component", "Name", "Section", "Insert"],
+  using: ["Component", "Name", "Section", "Insert", "SuppressInheritance", "Inherit"],
   sectionoverride: ["Name", "TargetXPath", "Insert", "Root"],
   state: ["Value", "Title", "TitleResourceKey", "ColorCssClass"],
   action: [
@@ -284,7 +285,8 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
     const facts = parseDocumentFacts(document);
     const index = this.getIndex(document.uri);
-    const values = [...collectResolvableControlIdents(document, facts, index)].sort((a, b) => a.localeCompare(b));
+    const documentComposition = buildDocumentCompositionModel(facts, index);
+    const values = [...collectResolvableControlIdents(document, facts, index, { compositionModel: documentComposition })].sort((a, b) => a.localeCompare(b));
     const items = asValueItems(values, vscode.CompletionItemKind.Reference);
     for (const item of items) {
       item.range = requiredContext.replaceRange;
@@ -371,6 +373,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
   private async completeAttributeValues(document: vscode.TextDocument, position: vscode.Position, ctx: TagContext): Promise<vscode.CompletionItem[]> {
     const facts = parseDocumentFacts(document);
     const index = this.getIndex(document.uri);
+    const documentComposition = buildDocumentCompositionModel(facts, index);
     const tag = (ctx.currentTag ?? "").toLowerCase();
     const attr = ctx.valueAttribute;
 
@@ -405,6 +408,10 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
     if (attr === "insert") {
       return asValueItems(INSERT_MODES, vscode.CompletionItemKind.EnumMember);
+    }
+
+    if (attr === "suppressinheritance" || attr === "inherit") {
+      return asValueItems(["true", "false"], vscode.CompletionItemKind.EnumMember);
     }
 
     if (attr === "colorcssclass") {
@@ -443,7 +450,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         return [];
       }
 
-      const values = [...collectResolvableControlIdents(document, facts, index)].sort((a, b) => a.localeCompare(b));
+      const values = [...collectResolvableControlIdents(document, facts, index, { compositionModel: documentComposition })].sort((a, b) => a.localeCompare(b));
       return asValueItems(values, vscode.CompletionItemKind.Reference);
     }
 
@@ -486,14 +493,14 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         if (tag === "button") {
           const buttonType = extractAttributeValue(ctx.currentTagFragment, "xsi:type") ?? extractAttributeValue(ctx.currentTagFragment, "type");
           if ((buttonType ?? "").toLowerCase() === "sharecodebutton") {
-            const values = collectWorkflowButtonShareCodeIdents(facts, index);
+            const values = collectWorkflowButtonShareCodeIdents(facts, index, documentComposition);
             return asValueItems(values, vscode.CompletionItemKind.Reference);
           }
         }
 
         if (tag === "formcontrol") {
           if ((ctx.formControlTypeInTag ?? "").toLowerCase() === "sharecodecontrol") {
-            const values = collectWorkflowControlShareCodeIdents(facts, index);
+            const values = collectWorkflowControlShareCodeIdents(facts, index, documentComposition);
             return asValueItems(values, vscode.CompletionItemKind.Reference);
           }
 
@@ -507,7 +514,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
             return [];
           }
 
-          return asValueItems([...form.controls].sort((a, b) => a.localeCompare(b)), vscode.CompletionItemKind.Reference);
+          return asValueItems(collectWorkflowFormControlIdents(form, index, documentComposition), vscode.CompletionItemKind.Reference);
         }
 
         const formIdent = facts.workflowFormIdent;
@@ -521,11 +528,11 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         }
 
         if (tag === "button") {
-          return asValueItems([...form.buttons].sort((a, b) => a.localeCompare(b)), vscode.CompletionItemKind.Reference);
+          return asValueItems(collectWorkflowFormButtonIdents(form, index, documentComposition), vscode.CompletionItemKind.Reference);
         }
 
         if (tag === "section") {
-          return asValueItems([...form.sections].sort((a, b) => a.localeCompare(b)), vscode.CompletionItemKind.Reference);
+          return asValueItems(collectWorkflowFormSectionIdents(form, index, documentComposition), vscode.CompletionItemKind.Reference);
         }
       }
     }
@@ -1353,17 +1360,20 @@ function getActiveAttributeValuePrefixAtPosition(
 
 function collectWorkflowControlShareCodeIdents(
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
 ): string[] {
   const values = new Set<string>(facts.declaredControlShareCodes);
-  for (const usingRef of facts.usingReferences) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
     if (!component) {
       continue;
     }
 
-    for (const key of component.workflowControlShareCodeDefinitions.keys()) {
-      values.add(key);
+    for (const key of contributionRef.contribution.workflowControlShareCodeIdents) {
+      if (component.workflowControlShareCodeDefinitions.has(key)) {
+        values.add(key);
+      }
     }
   }
 
@@ -1372,17 +1382,86 @@ function collectWorkflowControlShareCodeIdents(
 
 function collectWorkflowButtonShareCodeIdents(
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
 ): string[] {
   const values = new Set<string>(facts.declaredButtonShareCodes);
-  for (const usingRef of facts.usingReferences) {
-    const component = resolveComponentByKey(index, usingRef.componentKey);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
     if (!component) {
       continue;
     }
 
-    for (const key of component.workflowButtonShareCodeDefinitions.keys()) {
-      values.add(key);
+    for (const key of contributionRef.contribution.workflowButtonShareCodeIdents) {
+      if (component.workflowButtonShareCodeDefinitions.has(key)) {
+        values.add(key);
+      }
+    }
+  }
+
+  return [...values].sort((a, b) => a.localeCompare(b));
+}
+
+function collectWorkflowFormControlIdents(
+  form: import("../indexer/types").IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): string[] {
+  const values = new Set<string>(form.controls);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formControlIdents) {
+      if (component.formControlDefinitions.has(ident)) {
+        values.add(ident);
+      }
+    }
+  }
+
+  return [...values].sort((a, b) => a.localeCompare(b));
+}
+
+function collectWorkflowFormButtonIdents(
+  form: import("../indexer/types").IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): string[] {
+  const values = new Set<string>(form.buttons);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formButtonIdents) {
+      if (component.formButtonDefinitions.has(ident)) {
+        values.add(ident);
+      }
+    }
+  }
+
+  return [...values].sort((a, b) => a.localeCompare(b));
+}
+
+function collectWorkflowFormSectionIdents(
+  form: import("../indexer/types").IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): string[] {
+  const values = new Set<string>(form.sections);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formSectionIdents) {
+      if (component.formSectionDefinitions.has(ident)) {
+        values.add(ident);
+      }
     }
   }
 

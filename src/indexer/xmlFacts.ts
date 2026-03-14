@@ -21,6 +21,7 @@ export interface UsingReference {
   componentValueRange: vscode.Range;
   sectionValue?: string;
   sectionValueRange?: vscode.Range;
+  suppressInheritance?: boolean;
 }
 
 export interface PlaceholderReference {
@@ -398,12 +399,16 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
       }
 
       const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
+      const suppressInheritance =
+        parseBooleanAttribute(attrs.get("SuppressInheritance")?.value) === true ||
+        parseBooleanAttribute(attrs.get("Inherit")?.value) === false;
       facts.usingReferences.push({
         componentKey: normalizeComponentKey(componentAttr.value),
         rawComponentValue: componentAttr.value,
         componentValueRange: componentAttr.valueRange,
         sectionValue: sectionAttr?.value,
-        sectionValueRange: sectionAttr?.valueRange
+        sectionValueRange: sectionAttr?.valueRange,
+        ...(suppressInheritance ? { suppressInheritance: true } : {})
       });
     }
   }
@@ -916,6 +921,22 @@ function getAttributeCaseInsensitive(attrs: Map<string, XmlAttributeMatch>, attr
     if (name.toLowerCase() === attributeName.toLowerCase()) {
       return value;
     }
+  }
+
+  return undefined;
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
   }
 
   return undefined;

@@ -523,6 +523,10 @@ export class DiagnosticsEngine {
     }
 
     for (const ref of facts.usingReferences) {
+      if (ref.suppressInheritance) {
+        continue;
+      }
+
       const formFeature = formFeatureRefs.get(ref.componentKey);
       if (!formFeature) {
         continue;

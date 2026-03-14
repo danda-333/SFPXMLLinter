@@ -256,8 +256,10 @@ Aktualni stav:
 - override diagnostika je hotova:
   - `feature-inheritance-override`
 - inheritance je zohlednen i v Tree View (`Using` source local/inherited)
-- poznamka pro dalsi iteraci:
-  - potlaceni dedeni (inheritance suppression) je vedome odlozeno jako samostatny navazujici krok
+- inheritance suppression je hotove:
+  - `Using` umi `SuppressInheritance="true"` (alternativne `Inherit="false"`)
+  - suppression zablokuje dedeni odpovidajici feature/contribution z `Form`
+  - suppression-only `Using` negeneruje redundant/override diagnostiky
 
 ### Faze T4: Effective composition model `[PROBIHA]`
 Cil:
@@ -297,6 +299,10 @@ Aktualni stav:
 - workflow diagnostiky a resolvovani control identu ctou stejny model:
   - reference validace (`FormControl`, `ButtonShareCode`, `ControlShareCode`) uz jede pres contribution-level vyber + inheritance
   - odpadla ad-hoc agregace symbolu pouze z raw `Using` seznamu
+- provider vrstva je dal sjednocena na stejnem modelu:
+  - `DefinitionProvider` workflow resolution (controls/buttons/sections/share codes)
+  - `ReferencesProvider` workflow target resolution
+  - `CompletionProvider` workflow ident/share code completion + `SuppressInheritance`/`Inherit` value completion
 - fixture composition testy overuji stabilitu modelu
 - dalsi krok:
   - napojit builder output/debug na stejnou mezivrstvu
@@ -655,9 +661,9 @@ Aktualne hotovo:
 
 Aktualne hotovo navic:
 - formalni override diagnostika (`feature-inheritance-override`) je aktivni
-
-Navazujici tema mimo gate:
-- inheritance suppression (zamerne potlaceni dedeni) je odlozeno do dalsi etapy
+- inheritance suppression (zamerne potlaceni dedeni) je aktivni:
+  - `SuppressInheritance="true"` / `Inherit="false"`
+  - coverage v composition + linter fixture testech
 
 ### Milestone M4: Effective composition model
 Stav:
@@ -695,12 +701,13 @@ Aktualne hotovo:
 - validator i Tree View cteji `Using` impact z jednotneho modelu
 - injected symbol agregace v Tree View cte jednotny model
 - workflow reference validace i workflow control-id resolution ctou jednotny model (vcetne inheritance)
+- `DefinitionProvider`, `ReferencesProvider` a `CompletionProvider` workflow vetve ctou jednotny model
 - pridany snapshot test `runDocumentCompositionModelTests`
 
 Aktualne chybi do gate:
 - inheritance v modelu
-- dodelat builder modes a ordering/debug detail na stejne vrstve
-- plne napojeni dalsich provideru na stejny model
+- ordering/debug detail na stejne vrstve
+- plne napojeni zbyvajicich editorovych cest (napr. rename) na stejny model
 
 ### Milestone M5: Builder observability
 Stav:

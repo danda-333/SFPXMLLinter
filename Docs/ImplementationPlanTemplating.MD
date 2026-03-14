@@ -305,6 +305,7 @@ Aktualni stav:
   - `CompletionProvider` workflow ident/share code completion + `SuppressInheritance`/`Inherit` value completion
   - `RenameProvider` workflow target resolution
   - `DefinitionProvider` + `CompletionProvider` mapping edge-cases ve workflow (`FromIdent`/`ToIdent`) ctou modelovou injected vrstvu
+  - `DefinitionProvider` + `CompletionProvider` mapovani cte `rootFormIdent` fallback i mimo workflow-only vetve
 - index usage mapy pouzivaji effective using vrstvu:
   - `componentUsageFormIdentsByKey`
   - `componentContributionUsageFormIdentsByKey`
@@ -315,6 +316,11 @@ Aktualni stav:
 - Tree View ma suppression debug vrstvu:
   - suppression `Using` uzly se zobrazuji v sekci `Usings`
   - zobrazuje se pocet potlacenych inherited contribution
+- quick-fix vrstva podporuje suppression diagnostiky:
+  - `suppression-conflict`: remove conflicting using / remove suppression attribute
+  - `suppression-noop`: remove suppression attribute / remove no-op using
+- pridany samostatny index usage test:
+  - `runWorkspaceIndexerUsageTests` overuje `componentUsageFormIdentsByKey` a `componentContributionUsageFormIdentsByKey` nad effective using scenari
 - fixture composition testy overuji stabilitu modelu
 - dalsi krok:
   - napojit builder output/debug na stejnou mezivrstvu
@@ -720,6 +726,8 @@ Aktualne hotovo:
 - pridano pravidlo `suppression-noop` + fixture coverage
 - workflow mapping edge-cases (`FromIdent`/`ToIdent`) v provider vrstvach cte modelovou injected vrstvu
 - Tree View `Usings` obsahuje i suppression debug uzly
+- quick-fix kodove akce pokryvaji `suppression-conflict` a `suppression-noop`
+- pridany test runner `runWorkspaceIndexerUsageTests` + fixture `tests/fixtures/indexer-usage`
 - pridany snapshot test `runDocumentCompositionModelTests`
 
 Aktualne chybi do gate:

@@ -538,7 +538,9 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     if (tag === "mapping" && attr === "fromident") {
-      const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow" ? facts.workflowFormIdent : facts.formIdent;
+      const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow"
+        ? facts.workflowFormIdent
+        : facts.formIdent ?? facts.rootFormIdent;
       const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
       if (!owningForm) {
         return [];
@@ -558,7 +560,9 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         return asValueItems([...targetForm.controls].sort((a, b) => a.localeCompare(b)), vscode.CompletionItemKind.Reference);
       }
 
-      const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow" ? facts.workflowFormIdent : facts.formIdent;
+      const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow"
+        ? facts.workflowFormIdent
+        : facts.formIdent ?? facts.rootFormIdent;
       const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
       if (!owningForm) {
         return [];

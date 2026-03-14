@@ -113,7 +113,9 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
       }
     }
 
-    const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow" ? facts.workflowFormIdent : facts.formIdent;
+    const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow"
+      ? facts.workflowFormIdent
+      : facts.formIdent ?? facts.rootFormIdent;
     const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
     const workflowControlDefinitionsForMappings =
       facts.rootTag?.toLowerCase() === "workflow"

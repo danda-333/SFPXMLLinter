@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow FormIdent="FormA" Ident="FormASuppressSectionWorkFlow">
+  <Usings>
+    <Using Feature="Shared/Sample" Contribution="ControlShareCodes" SuppressInheritance="true" />
+  </Usings>
+</WorkFlow>

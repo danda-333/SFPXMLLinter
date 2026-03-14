@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature Name="Sample">
+  <Contribution Name="Controls" Root="form">
+    <Control Ident="InjectedControlA" />
+  </Contribution>
+  <Contribution Name="ControlShareCodes" Root="workflow">
+    <ControlShareCode Ident="InjectedControlShareCodeA" />
+  </Contribution>
+</Feature>

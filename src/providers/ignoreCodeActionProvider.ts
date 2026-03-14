@@ -43,6 +43,24 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
             }
 
             actions.push(this.createSqlInlineIgnoreAction(document, diagnostic, code));
+          } else if (code === "suppression-conflict") {
+            const removeUsing = this.createRemoveUsingLineAction(document, diagnostic, "Remove conflicting Using");
+            if (removeUsing) {
+              actions.push(removeUsing);
+            }
+            const removeSuppression = this.createRemoveSuppressionAttributeAction(document, diagnostic);
+            if (removeSuppression) {
+              actions.push(removeSuppression);
+            }
+          } else if (code === "suppression-noop") {
+            const removeSuppression = this.createRemoveSuppressionAttributeAction(document, diagnostic);
+            if (removeSuppression) {
+              actions.push(removeSuppression);
+            }
+            const removeUsing = this.createRemoveUsingLineAction(document, diagnostic, "Remove no-op Using");
+            if (removeUsing) {
+              actions.push(removeUsing);
+            }
           } else {
             actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
           }
@@ -180,6 +198,106 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     action.edit = edit;
     return action;
   }
+
+  private createRemoveUsingLineAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic,
+    title: string
+  ): vscode.CodeAction | undefined {
+    const line = diagnostic.range.start.line;
+    if (line < 0 || line >= document.lineCount) {
+      return undefined;
+    }
+
+    const lineText = document.lineAt(line).text;
+    if (!/<\s*Using\b/i.test(lineText)) {
+      return undefined;
+    }
+
+    const start = new vscode.Position(line, 0);
+    const end = line + 1 < document.lineCount
+      ? new vscode.Position(line + 1, 0)
+      : new vscode.Position(line, lineText.length);
+    const replaceRange = new vscode.Range(start, end);
+
+    const action = new vscode.CodeAction(title, vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, replaceRange, "");
+    action.edit = edit;
+    return action;
+  }
+
+  private createRemoveSuppressionAttributeAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const directLine = this.tryBuildSuppressionAttributeEdit(document, diagnostic.range.start.line);
+    if (directLine) {
+      const action = new vscode.CodeAction("Remove suppression attribute", vscode.CodeActionKind.QuickFix);
+      action.diagnostics = [diagnostic];
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, directLine.range, directLine.replacement);
+      action.edit = edit;
+      return action;
+    }
+
+    const featureFromMessage = extractSuppressionFeature(diagnostic.message);
+    if (!featureFromMessage) {
+      return undefined;
+    }
+
+    for (let line = 0; line < document.lineCount; line++) {
+      const candidate = this.tryBuildSuppressionAttributeEdit(document, line, featureFromMessage);
+      if (!candidate) {
+        continue;
+      }
+
+      const action = new vscode.CodeAction("Remove suppression attribute", vscode.CodeActionKind.QuickFix);
+      action.diagnostics = [diagnostic];
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, candidate.range, candidate.replacement);
+      action.edit = edit;
+      return action;
+    }
+
+    return undefined;
+  }
+
+  private tryBuildSuppressionAttributeEdit(
+    document: vscode.TextDocument,
+    line: number,
+    requiredFeature?: string
+  ): { range: vscode.Range; replacement: string } | undefined {
+    if (line < 0 || line >= document.lineCount) {
+      return undefined;
+    }
+
+    const lineText = document.lineAt(line).text;
+    if (!/<\s*Using\b/i.test(lineText)) {
+      return undefined;
+    }
+
+    if (requiredFeature) {
+      const featureAttr = /\b(?:Feature|Component|Name)\s*=\s*("([^"]*)"|'([^']*)')/i.exec(lineText);
+      const featureValue = (featureAttr?.[2] ?? featureAttr?.[3] ?? "").trim();
+      if (featureValue !== requiredFeature) {
+        return undefined;
+      }
+    }
+
+    const updated = lineText
+      .replace(/\s+\bSuppressInheritance\s*=\s*("([^"]*)"|'([^']*)')/gi, "")
+      .replace(/\s+\bInherit\s*=\s*("([^"]*)"|'([^']*)')/gi, "");
+    if (updated === lineText) {
+      return undefined;
+    }
+
+    return {
+      range: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, lineText.length)),
+      replacement: updated
+    };
+  }
 }
 
 function whitespacePrefix(text: string): string {
@@ -196,6 +314,25 @@ function extractDidYouMeanSuggestion(message: string): string | undefined {
   const doubleQuoteMatch = /Did you mean "([^"]+)"/i.exec(message);
   if (doubleQuoteMatch?.[1]) {
     return doubleQuoteMatch[1];
+  }
+
+  return undefined;
+}
+
+function extractSuppressionFeature(message: string): string | undefined {
+  const featureConflict = /Using feature '([^']+)' conflicts/i.exec(message);
+  if (featureConflict?.[1]) {
+    return featureConflict[1];
+  }
+
+  const suppressionMessage = /Suppression for feature '([^']+)'/i.exec(message);
+  if (suppressionMessage?.[1]) {
+    return suppressionMessage[1];
+  }
+
+  const sectionMessage = /Suppression for '([^'#]+)#([^']+)'/i.exec(message);
+  if (sectionMessage?.[1]) {
+    return sectionMessage[1];
   }
 
   return undefined;

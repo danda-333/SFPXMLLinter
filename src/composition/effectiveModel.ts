@@ -371,6 +371,7 @@ function validatePartOrdering(
   conflicts: EffectiveCompositionConflict[]
 ): void {
   const partIds = new Set(manifest.parts.map((part) => part.id));
+  const partById = new Map(manifest.parts.map((part) => [part.id, part] as const));
   const edges = new Map<string, Set<string>>();
   const addEdge = (from: string, to: string): void => {
     const bucket = edges.get(from) ?? new Set<string>();
@@ -401,6 +402,17 @@ function validatePartOrdering(
         });
         continue;
       }
+      const targetPart = partById.get(target);
+      const sourceGroup = ordering.group?.trim();
+      const targetGroup = targetPart?.ordering?.group?.trim();
+      if (sourceGroup && targetGroup && sourceGroup !== targetGroup) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Unresolved ordering: part '${part.id}' (group '${sourceGroup}') cannot order before '${target}' (group '${targetGroup}').`,
+          itemKeys: [`part:${part.id}`, `part:${target}`]
+        });
+        continue;
+      }
       addEdge(part.id, target);
     }
 
@@ -418,6 +430,17 @@ function validatePartOrdering(
           code: "ordering-conflict",
           message: `Part '${part.id}' cannot reference itself in 'after'.`,
           itemKeys: [`part:${part.id}`]
+        });
+        continue;
+      }
+      const targetPart = partById.get(target);
+      const sourceGroup = ordering.group?.trim();
+      const targetGroup = targetPart?.ordering?.group?.trim();
+      if (sourceGroup && targetGroup && sourceGroup !== targetGroup) {
+        conflicts.push({
+          code: "ordering-conflict",
+          message: `Unresolved ordering: part '${part.id}' (group '${sourceGroup}') cannot order after '${target}' (group '${targetGroup}').`,
+          itemKeys: [`part:${part.id}`, `part:${target}`]
         });
         continue;
       }

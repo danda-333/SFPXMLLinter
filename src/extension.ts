@@ -485,6 +485,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     if (withUsings === 0) {
       logComposition(`[build:${sourceLabel}] evaluated templates=${evaluations.size}, withUsings=0`);
+      if (mode === "debug") {
+        logFeatureOrderingSnapshot(sourceLabel);
+      }
       return;
     }
 
@@ -492,6 +495,92 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logComposition(
       `[build:${sourceLabel}] summary templates=${evaluations.size}, withUsings=${withUsings}, effective=${totalEffective}, partial=${totalPartial}, unused=${totalUnused}, xpathDebug=${totalXPathDebug}${suppressed > 0 ? `, suppressed=${suppressed}` : ""}`
     );
+    if (mode === "debug") {
+      logFeatureOrderingSnapshot(sourceLabel);
+    }
+  }
+
+  function logFeatureOrderingSnapshot(sourceLabel: string): void {
+    const registry = featureRegistryStore.getRegistry();
+    for (const [featureName, manifest] of registry.manifestsByFeature.entries()) {
+      const orderingParts = manifest.parts.filter((part) => part.ordering && ((part.ordering.before.length > 0) || (part.ordering.after.length > 0) || !!part.ordering.group));
+      if (orderingParts.length === 0) {
+        continue;
+      }
+
+      const edges = new Map<string, Set<string>>();
+      const indegree = new Map<string, number>();
+      const partIds = new Set(manifest.parts.map((part) => part.id));
+      const addEdge = (from: string, to: string): void => {
+        const bucket = edges.get(from) ?? new Set<string>();
+        if (!bucket.has(to)) {
+          bucket.add(to);
+          edges.set(from, bucket);
+          indegree.set(to, (indegree.get(to) ?? 0) + 1);
+          indegree.set(from, indegree.get(from) ?? 0);
+        }
+      };
+
+      for (const part of manifest.parts) {
+        indegree.set(part.id, indegree.get(part.id) ?? 0);
+        const ordering = part.ordering;
+        if (!ordering) {
+          continue;
+        }
+        for (const target of ordering.before) {
+          if (!partIds.has(target)) {
+            continue;
+          }
+          addEdge(part.id, target);
+        }
+        for (const target of ordering.after) {
+          if (!partIds.has(target)) {
+            continue;
+          }
+          addEdge(target, part.id);
+        }
+      }
+
+      const queue = [...manifest.parts.map((part) => part.id).filter((id) => (indegree.get(id) ?? 0) === 0)];
+      const ordered: string[] = [];
+      while (queue.length > 0) {
+        queue.sort((a, b) => a.localeCompare(b));
+        const current = queue.shift();
+        if (!current) {
+          break;
+        }
+        ordered.push(current);
+        for (const target of edges.get(current) ?? []) {
+          const next = (indegree.get(target) ?? 0) - 1;
+          indegree.set(target, next);
+          if (next === 0) {
+            queue.push(target);
+          }
+        }
+      }
+
+      const orderingConflicts = (registry.effectiveModelsByFeature.get(featureName)?.conflicts ?? [])
+        .filter((conflict) => conflict.code === "ordering-conflict");
+      const unresolved = manifest.parts
+        .map((part) => part.id)
+        .filter((id) => !ordered.includes(id));
+
+      logComposition(
+        `[build:${sourceLabel}] [ordering] ${featureName}: parts=${manifest.parts.length}, constraints=${[...edges.values()].reduce((acc, value) => acc + value.size, 0)}, resolved=${ordered.length}, conflicts=${orderingConflicts.length}`
+      );
+      if (ordered.length > 0) {
+        logComposition(`  [ordering] resolved order: ${ordered.join(" -> ")}`);
+      }
+      if (unresolved.length > 0) {
+        logComposition(`  [ordering] unresolved parts: ${unresolved.join(", ")}`);
+      }
+      for (const part of orderingParts) {
+        const ordering = part.ordering!;
+        logComposition(
+          `  [ordering] part=${part.id}, group=${ordering.group ?? "(none)"}, before=${ordering.before.join(", ") || "(none)"}, after=${ordering.after.join(", ") || "(none)"}`
+        );
+      }
+    }
   }
 
   function createBuildRunOptions(

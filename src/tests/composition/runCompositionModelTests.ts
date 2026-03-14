@@ -307,6 +307,42 @@ function run(): void {
   const orderingCycleModel = buildEffectiveCompositionModel(orderingCycleManifest, orderingCycleRegistry);
   assert.ok(orderingCycleModel.conflicts.some((conflict) => conflict.code === "ordering-conflict" && conflict.message.includes("cycle")));
 
+  const orderingUnresolvedManifest = normalizeFeatureManifest(
+    {
+      feature: "OrderingUnresolved",
+      parts: [
+        {
+          id: "FormButtons",
+          file: "FormButtons.Form.feature.json",
+          ordering: {
+            group: "form-buttons",
+            before: ["WorkflowActions"]
+          }
+        },
+        {
+          id: "WorkflowActions",
+          file: "WorkflowActions.WorkFlow.feature.json",
+          ordering: {
+            group: "workflow-actions"
+          }
+        }
+      ]
+    },
+    "OrderingUnresolved.feature.json"
+  );
+  const orderingUnresolvedRegistry = emptyFeatureManifestRegistry();
+  orderingUnresolvedRegistry.manifestsByFeature.set(orderingUnresolvedManifest.feature, orderingUnresolvedManifest);
+  orderingUnresolvedRegistry.capabilityReportsByFeature.set(
+    orderingUnresolvedManifest.feature,
+    buildFeatureCapabilityReport(orderingUnresolvedManifest)
+  );
+  const orderingUnresolvedModel = buildEffectiveCompositionModel(orderingUnresolvedManifest, orderingUnresolvedRegistry);
+  assert.ok(
+    orderingUnresolvedModel.conflicts.some(
+      (conflict) => conflict.code === "ordering-conflict" && conflict.message.includes("Unresolved ordering")
+    )
+  );
+
   assert.throws(
     () =>
       normalizeFeatureManifest(

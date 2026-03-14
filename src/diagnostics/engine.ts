@@ -1,5 +1,7 @@
 ﻿import * as vscode from "vscode";
 import { getSettings, mapSeverityToDiagnostic, resolveRuleSeverity, SfpXmlLinterSettings } from "../config/settings";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { parseIgnoreState, isRuleIgnored } from "./ignore";
 import { WorkspaceIndex } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
@@ -1103,13 +1105,13 @@ export class DiagnosticsEngine {
         issues.push({
           ruleId: "ordering-conflict",
           range: diagnosticAnchor,
-          message: conflict.message
+          message: `${conflict.message} Tip: keep ordering targets in the same OrderGroup and avoid reciprocal/cyclic Before/After links.`
         });
       }
 
       const orphanParts = feature.parts
         .map((part) => part.file)
-        .filter((partFile) => !featureRegistry.manifestsBySource.has(partFile));
+        .filter((partFile) => !isFeaturePartFilePresent(partFile, document.uri));
       if (orphanParts.length > 0) {
         issues.push({
           ruleId: "orphan-feature-part",
@@ -1368,6 +1370,39 @@ function findFeatureManifestRange(
   }
 
   return new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1));
+}
+
+function isFeaturePartFilePresent(partFile: string, documentUri: vscode.Uri): boolean {
+  const normalized = partFile.replace(/\\/g, "/").trim();
+  if (!normalized) {
+    return true;
+  }
+
+  const candidatePaths = new Set<string>();
+  if (path.isAbsolute(normalized)) {
+    candidatePaths.add(path.normalize(normalized));
+  }
+
+  const activeFolder = vscode.workspace.getWorkspaceFolder(documentUri);
+  if (activeFolder) {
+    candidatePaths.add(path.normalize(path.join(activeFolder.uri.fsPath, normalized)));
+  }
+
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    candidatePaths.add(path.normalize(path.join(folder.uri.fsPath, normalized)));
+  }
+
+  if (candidatePaths.size === 0) {
+    return true;
+  }
+
+  for (const filePath of candidatePaths) {
+    if (fs.existsSync(filePath)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function parseFeatureXmlAttributes(

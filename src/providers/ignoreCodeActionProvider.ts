@@ -61,6 +61,9 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
             if (removeUsing) {
               actions.push(removeUsing);
             }
+          } else if (code === "ordering-conflict") {
+            actions.push(this.createOpenCompositionLogAction(diagnostic));
+            actions.push(this.createRevalidateWorkspaceAction(diagnostic));
           } else {
             actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
           }
@@ -196,6 +199,26 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     }
 
     action.edit = edit;
+    return action;
+  }
+
+  private createOpenCompositionLogAction(diagnostic: vscode.Diagnostic): vscode.CodeAction {
+    const action = new vscode.CodeAction("Show composition log (ordering details)", vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.command = {
+      command: "sfpXmlLinter.showCompositionLog",
+      title: "Show composition log"
+    };
+    return action;
+  }
+
+  private createRevalidateWorkspaceAction(diagnostic: vscode.Diagnostic): vscode.CodeAction {
+    const action = new vscode.CodeAction("Revalidate workspace", vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.command = {
+      command: "sfpXmlLinter.revalidateWorkspace",
+      title: "Revalidate workspace"
+    };
     return action;
   }
 

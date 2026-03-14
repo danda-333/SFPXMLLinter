@@ -30,4 +30,5 @@ Minimal scenarios for each validation rule.
 - `chyba-26-partial-using.xml` -> `partial-using`
 - `chyba-28-workflow-redundant-feature-using.xml` -> `workflow-redundant-feature-using`
 - `chyba-30-dataview-redundant-feature-using.xml` -> `dataview-redundant-feature-using`
+- `chyba-31-feature-inheritance-override.xml` -> `feature-inheritance-override`
 

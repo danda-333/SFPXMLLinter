@@ -11,6 +11,7 @@ export interface SfpXmlLinterSettings {
   formatterMaxConsecutiveBlankLines: number;
   autoBuildOnSave: boolean;
   componentSaveBuildScope: "dependents" | "full";
+  templateBuilderMode: "fast" | "debug" | "release";
 }
 
 const DEFAULT_RULES: Record<string, RuleSeverity> = {
@@ -35,6 +36,7 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "partial-using": "information",
   "workflow-redundant-feature-using": "warning",
   "dataview-redundant-feature-using": "warning",
+  "feature-inheritance-override": "information",
   "typo-maxlenght-attribute": "warning",
   "sql-convention-equals-spacing": "warning",
   "ident-convention-button-postfix": "warning",
@@ -76,6 +78,7 @@ export function getSettings(): SfpXmlLinterSettings {
 
   const autoBuildOnSave = cfg.get<boolean>("templateBuilder.autoBuildOnSave", true);
   const componentSaveBuildScope = cfg.get<"dependents" | "full">("templateBuilder.componentSaveBuildScope", "dependents");
+  const templateBuilderMode = cfg.get<"fast" | "debug" | "release">("templateBuilder.mode", "debug");
 
   return {
     workspaceRoots,
@@ -85,7 +88,8 @@ export function getSettings(): SfpXmlLinterSettings {
     incompleteMode,
     formatterMaxConsecutiveBlankLines,
     autoBuildOnSave,
-    componentSaveBuildScope
+    componentSaveBuildScope,
+    templateBuilderMode
   };
 }
 

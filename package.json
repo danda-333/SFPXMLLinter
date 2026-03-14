@@ -256,6 +256,7 @@
             "partial-using": "information",
             "workflow-redundant-feature-using": "warning",
             "dataview-redundant-feature-using": "warning",
+            "feature-inheritance-override": "information",
             "typo-maxlenght-attribute": "warning",
             "sql-convention-equals-spacing": "warning",
             "ident-convention-button-postfix": "warning",
@@ -295,6 +296,16 @@
           ],
           "default": "dependents",
           "description": "On XML_Components save, build only dependent templates when possible (dependents) or rebuild all templates (full)."
+        },
+        "sfpXmlLinter.templateBuilder.mode": {
+          "type": "string",
+          "enum": [
+            "fast",
+            "debug",
+            "release"
+          ],
+          "default": "debug",
+          "description": "Template builder logging/detail mode. fast minimizes overhead, debug prints detailed composition diagnostics, release keeps only high-level output."
         },
         "sfpXmlLinter.composition.openMode": {
           "type": "string",

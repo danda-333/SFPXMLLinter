@@ -411,17 +411,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     };
   }
 
+  function getTemplateBuilderMode(): "fast" | "debug" | "release" {
+    return getSettings().templateBuilderMode;
+  }
+
   function logBuildCompositionSnapshot(
     sourceLabel: string,
-    evaluations: ReadonlyMap<string, BuildTemplateEvaluation>
+    evaluations: ReadonlyMap<string, BuildTemplateEvaluation>,
+    mode: "fast" | "debug" | "release"
   ): void {
+    if (mode === "release") {
+      return;
+    }
+
     if (evaluations.size === 0) {
       return;
     }
 
     const index = templateIndexer.getIndex();
     const sorted = [...evaluations.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    const maxLogged = 30;
+    const maxLogged = mode === "debug" ? 30 : 0;
     let withUsings = 0;
     let totalEffective = 0;
     let totalPartial = 0;
@@ -476,6 +485,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function createBuildRunOptions(
     silent: boolean,
+    mode: "fast" | "debug" | "release",
     onTemplateEvaluated?: (
       relativeTemplatePath: string,
       status: "update" | "nochange" | "error",
@@ -484,6 +494,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ) => void
   ): {
     silent: boolean;
+    mode: "fast" | "debug" | "release";
     onLogLine: (line: string) => void;
     onFileStatus: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
     onTemplateEvaluated: (
@@ -500,6 +511,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       });
     return {
       silent,
+      mode,
       onLogLine: (line: string) => {
         const trimmed = line.trim();
         if (trimmed.length === 0) {
@@ -508,12 +520,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         const processingMatch = /^\[(\d+)\/(\d+)\]\s+(.+)$/.exec(trimmed);
         if (processingMatch) {
+          if (mode === "release") {
+            return;
+          }
           const [, current, total, relPath] = processingMatch;
           logBuild(`FILE ${current}/${total}: ${relPath}`);
           return;
         }
 
         if (/^(UPDATED|SKIPPED|ERROR\b)/i.test(trimmed)) {
+          if (mode !== "debug") {
+            return;
+          }
           return;
         }
 
@@ -522,6 +540,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
       },
       onFileStatus: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => {
+        if (mode === "release") {
+          return;
+        }
         logBuild(`RESULT ${relativeTemplatePath}: ${status}`);
       },
       onTemplateEvaluated: onTemplateEvaluatedSafe
@@ -1333,6 +1354,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     isTemplateBuildRunning = true;
     logBuild("Worker START");
+    const mode = getTemplateBuilderMode();
     let executedBuild = false;
     let executedFullBuild = false;
     const builtTargetPaths = new Set<string>();
@@ -1342,7 +1364,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (queuedFullTemplateBuild) {
           queuedFullTemplateBuild = false;
           logBuild("BUILD START full templates");
-          await buildService.run(workspaceFolder, createBuildRunOptions(true, telemetry.onTemplateEvaluated));
+          await buildService.run(workspaceFolder, createBuildRunOptions(true, mode, telemetry.onTemplateEvaluated));
           executedBuild = true;
           executedFullBuild = true;
           logBuild("BUILD DONE full templates");
@@ -1356,7 +1378,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         queuedTemplatePaths.delete(nextPath);
         logBuild(`BUILD START target: ${vscode.workspace.asRelativePath(nextPath, false)} (remaining=${queuedTemplatePaths.size})`);
-        await buildService.runForPath(workspaceFolder, nextPath, createBuildRunOptions(true, telemetry.onTemplateEvaluated));
+        await buildService.runForPath(workspaceFolder, nextPath, createBuildRunOptions(true, mode, telemetry.onTemplateEvaluated));
         executedBuild = true;
         builtTargetPaths.add(nextPath);
         logBuild(`BUILD DONE target: ${vscode.workspace.asRelativePath(nextPath, false)}`);
@@ -1372,7 +1394,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           logIndex(`POST-BUILD incremental form refresh count=${refreshedCount} in ${Date.now() - refreshStartedAt} ms`);
         }
 
-        logBuildCompositionSnapshot("auto", telemetry.entries);
+        logBuildCompositionSnapshot("auto", telemetry.entries, mode);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1849,15 +1871,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       try {
         logBuild("MANUAL build current/selection START");
+        const mode = getTemplateBuilderMode();
         const telemetry = createBuildTelemetryCollector();
         const selection = collectBuildSelectionUris(uri, uris);
         const targetUris = selection.length > 0 ? selection : getActiveDocumentUriFallback();
 
         if (targetUris.length === 0) {
           logBuild("No current/selected resource -> FULL fallback");
-          await buildService.run(folder, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
+          await buildService.run(folder, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
           await queueReindex("all");
-          logBuildCompositionSnapshot("manual-current", telemetry.entries);
+          logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
           logBuild("MANUAL build current/selection DONE (full fallback)");
           return;
         }
@@ -1893,19 +1916,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
 
         if (usedFullFallback || templateTargets.size === 0) {
-          await buildService.run(folder, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
+          await buildService.run(folder, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
           await queueReindex("all");
-          logBuildCompositionSnapshot("manual-current", telemetry.entries);
+          logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
           logBuild("MANUAL build current/selection DONE (full fallback)");
           return;
         }
 
         for (const targetPath of templateTargets) {
           logBuild(`MANUAL target build: ${vscode.workspace.asRelativePath(targetPath, false)}`);
-          await buildService.runForPath(folder, targetPath, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
+          await buildService.runForPath(folder, targetPath, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
         }
         await queueReindex("all");
-        logBuildCompositionSnapshot("manual-current", telemetry.entries);
+        logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
 
         logBuild("MANUAL build current/selection DONE");
       } catch (error) {
@@ -1926,10 +1949,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       try {
         logBuild("MANUAL build all START");
+        const mode = getTemplateBuilderMode();
         const telemetry = createBuildTelemetryCollector();
-        await buildService.run(folder, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
+        await buildService.run(folder, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
         await queueReindex("all");
-        logBuildCompositionSnapshot("manual-all", telemetry.entries);
+        logBuildCompositionSnapshot("manual-all", telemetry.entries, mode);
         logBuild("MANUAL build all DONE");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

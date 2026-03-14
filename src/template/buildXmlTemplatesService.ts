@@ -11,6 +11,7 @@ import { normalizeLineEndingsForTemplate } from "./lineEndings";
 
 interface BuildRunOptions {
   silent?: boolean;
+  mode?: "fast" | "debug" | "release";
   onLogLine?: (line: string) => void;
   onFileStatus?: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
   onTemplateEvaluated?: (
@@ -107,11 +108,19 @@ export class BuildXmlTemplatesService {
       try {
         const templateText = await readWorkspaceTextFile(templateUri);
         const debugLines: string[] = [];
+        const debugMode = options.mode === "debug";
         const rendered = normalizeLineEndingsForTemplate(
-          renderTemplateText(templateText, componentLibrary, 12, (line) => {
-            debugLines.push(line);
-            options.onLogLine?.(`DEBUG: ${line}`);
-          }),
+          renderTemplateText(
+            templateText,
+            componentLibrary,
+            12,
+            debugMode
+              ? (line) => {
+                  debugLines.push(line);
+                  options.onLogLine?.(`DEBUG: ${line}`);
+                }
+              : undefined
+          ),
           templateText
         );
         const outputUri = templateToRuntimeUri(templateUri);

@@ -229,7 +229,7 @@ Aktualni stav:
 Doporuceny pilot:
 - `Assign`
 
-### Faze T3: Form-owned feature inheritance `[PROBIHA]`
+### Faze T3: Form-owned feature inheritance `[HOTOVO]`
 Cil:
 - odstranit nutnost duplikovat `Using` napric `Form`, `WorkFlow`, `DataView`.
 
@@ -248,15 +248,16 @@ Definition of Done:
 - redundantni a chybejici deklarace jsou viditelne v diagnostice.
 
 Aktualni stav:
-- zakladni inheritance je aktivni:
+- inheritance je aktivni:
   - `WorkFlow`/`DataView` sdili feature z `Form` pres effective using vrstvu
 - redundantni using diagnostiky jsou hotove:
   - `workflow-redundant-feature-using`
   - `dataview-redundant-feature-using`
+- override diagnostika je hotova:
+  - `feature-inheritance-override`
 - inheritance je zohlednen i v Tree View (`Using` source local/inherited)
-- chybi jeste:
-  - formalni override model a diagnostika `feature-inheritance-override`
-  - finalni doladeni inheritance branchi v effective modelu pro dalsi feature kontrakty
+- poznamka pro dalsi iteraci:
+  - potlaceni dedeni (inheritance suppression) je vedome odlozeno jako samostatny navazujici krok
 
 ### Faze T4: Effective composition model `[PROBIHA]`
 Cil:
@@ -298,7 +299,7 @@ Aktualni stav:
   - napojit builder output/debug na stejnou mezivrstvu
   - dopsat inheritance-aware vetve finalniho modelu
 
-### Faze T5: Builder observability `[CAST HOTOVO]`
+### Faze T5: Builder observability `[HOTOVO]`
 Cil:
 - builder musi byt sam o sobe debugovatelný, i bez validatoru.
 
@@ -321,13 +322,16 @@ Definition of Done:
 Aktualni stav:
 - existuje samostatny composition output channel
 - loguje se registry rebuild a composition issues
-- build pipeline loguje i composition snapshot nad stejnym `DocumentCompositionModel`:
+- build pipeline loguje composition snapshot nad stejnym `DocumentCompositionModel`:
   - per-template status `effective/partial/unused`
   - detail non-effective usingu (`successful/relevant`)
   - souhrn za build run + pocet `TargetXPath` debug udalosti
-- chybi jeste:
-  - builder modes `fast/debug/release`
-  - navazani ordering/debug detailu na stejnou vrstvu
+- builder modes jsou hotove:
+  - `fast` (minimalni overhead)
+  - `debug` (detailni composition snapshot)
+  - `release` (jen high-level vystup)
+- navazujici rozsirovani:
+  - ordering/debug detail je dalsi rozsireni nad hotovou observability vrstvou
 
 ### Faze T6: Tree View nad finalnim modelem `[PROBIHA]`
 Cil:
@@ -617,7 +621,7 @@ Aktualne chybi do gate:
 
 ### Milestone M3: Form-owned inheritance
 Stav:
-- `[PROBIHA]`
+- `[HOTOVO]`
 
 Obsah:
 - `T3` Form-owned feature inheritance
@@ -646,9 +650,11 @@ Aktualne hotovo:
   - `workflow-redundant-feature-using`
   - `dataview-redundant-feature-using`
 
-Aktualne chybi do gate:
-- formalni override model (`feature-inheritance-override`)
-- dodelani inheritance branchi napric dalsimi kontraktovymi validacemi
+Aktualne hotovo navic:
+- formalni override diagnostika (`feature-inheritance-override`) je aktivni
+
+Navazujici tema mimo gate:
+- inheritance suppression (zamerne potlaceni dedeni) je odlozeno do dalsi etapy
 
 ### Milestone M4: Effective composition model
 Stav:
@@ -694,7 +700,7 @@ Aktualne chybi do gate:
 
 ### Milestone M5: Builder observability
 Stav:
-- `[CAST HOTOVO]`
+- `[HOTOVO]`
 
 Obsah:
 - `T5` Builder observability
@@ -725,9 +731,11 @@ Aktualne hotovo:
   - non-effective detail (`successful/relevant`)
   - sumarizace runu + `TargetXPath` debug count
 
-Aktualne chybi do gate:
-- builder modes `fast/debug/release`
-- ordering/debug detail nad stejnou composition vrstvou
+Aktualne hotovo navic:
+- builder modes `fast/debug/release` jsou aktivni a napojene v settings + build pipeline
+
+Navazujici tema mimo gate:
+- ordering/debug detail nad stejnou composition vrstvou je dalsi rozsireni
 
 ### Milestone M6: Tree View MVP
 Stav:

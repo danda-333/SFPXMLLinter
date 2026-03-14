@@ -506,14 +506,32 @@ export class DiagnosticsEngine {
       return;
     }
 
-    const formFeatures = collectUsingFeatureKeys(formFacts);
-    if (formFeatures.size === 0) {
+    const formFeatureRefs = collectUsingRefsByFeature(formFacts);
+    if (formFeatureRefs.size === 0) {
       return;
     }
 
-    const currentFeatures = collectUsingFeatureKeys(facts);
     for (const ref of facts.usingReferences) {
-      if (!formFeatures.has(ref.componentKey)) {
+      const formFeature = formFeatureRefs.get(ref.componentKey);
+      if (!formFeature) {
+        continue;
+      }
+
+      if (ref.sectionValue) {
+        if (!formFeature.hasFull && formFeature.sections.has(ref.sectionValue)) {
+          issues.push({
+            ruleId: `${inheritanceRulePrefix}-redundant-feature-using`,
+            range: ref.sectionValueRange ?? ref.componentValueRange,
+            message: `Using '${ref.rawComponentValue}#${ref.sectionValue}' is redundant because Form '${owningFormIdent}' already activates this contribution.`
+          });
+          continue;
+        }
+
+        issues.push({
+          ruleId: "feature-inheritance-override",
+          range: ref.sectionValueRange ?? ref.componentValueRange,
+          message: `Using '${ref.rawComponentValue}#${ref.sectionValue}' overrides inherited feature activation from Form '${owningFormIdent}'.`
+        });
         continue;
       }
 
@@ -1511,10 +1529,18 @@ function getOwningFormIdentForInheritance(root: string, facts: ReturnType<typeof
   return undefined;
 }
 
-function collectUsingFeatureKeys(facts: ReturnType<typeof parseDocumentFacts>): Set<string> {
-  const out = new Set<string>();
+function collectUsingRefsByFeature(
+  facts: ReturnType<typeof parseDocumentFacts>
+): Map<string, { hasFull: boolean; sections: Set<string> }> {
+  const out = new Map<string, { hasFull: boolean; sections: Set<string> }>();
   for (const ref of facts.usingReferences) {
-    out.add(ref.componentKey);
+    const current = out.get(ref.componentKey) ?? { hasFull: false, sections: new Set<string>() };
+    if (ref.sectionValue) {
+      current.sections.add(ref.sectionValue);
+    } else {
+      current.hasFull = true;
+    }
+    out.set(ref.componentKey, current);
   }
   return out;
 }

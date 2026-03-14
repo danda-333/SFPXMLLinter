@@ -245,6 +245,12 @@ function run(): void {
     <Using Feature="Shared/Sample" />
   </Usings>
 </WorkFlow>`;
+  const workflowOverrideText = `<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow FormIdent="InheritanceForm" Ident="InheritanceFormOverrideWorkFlow">
+  <Usings>
+    <Using Feature="Shared/Sample" Contribution="Controls" />
+  </Usings>
+</WorkFlow>`;
   const dataviewRedundantText = `<?xml version="1.0" encoding="utf-8"?>
 <DataView FormIdent="InheritanceForm" Ident="InheritanceFormView">
   <Usings>
@@ -254,8 +260,9 @@ function run(): void {
 
   const formDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceForm.xml"), formInheritanceText);
   const workflowRedundantDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormWorkFlow.redundant.xml"), workflowRedundantText);
+  const workflowOverrideDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormWorkFlow.override.xml"), workflowOverrideText);
   const dataviewRedundantDoc = new MockTextDocument(path.join(workspaceRoot, "Common/Inheritance/InheritanceFormView.redundant.xml"), dataviewRedundantText);
-  const inheritanceIndex = createInheritanceIndex(formDoc, workflowRedundantDoc, dataviewRedundantDoc);
+  const inheritanceIndex = createInheritanceIndex(formDoc, workflowRedundantDoc, workflowOverrideDoc, dataviewRedundantDoc);
 
   const workflowRedundantDiagnostics = engine.buildDiagnostics(
     workflowRedundantDoc as unknown as import("vscode").TextDocument,
@@ -266,6 +273,16 @@ function run(): void {
     }
   );
   assertHasRule(workflowRedundantDiagnostics, "workflow-redundant-feature-using");
+
+  const workflowOverrideDiagnostics = engine.buildDiagnostics(
+    workflowOverrideDoc as unknown as import("vscode").TextDocument,
+    inheritanceIndex,
+    {
+      parsedFacts: parseDocumentFacts(workflowOverrideDoc as unknown as import("vscode").TextDocument),
+      settingsOverride: inheritanceSettings
+    }
+  );
+  assertHasRule(workflowOverrideDiagnostics, "feature-inheritance-override");
 
   const dataviewRedundantDiagnostics = engine.buildDiagnostics(
     dataviewRedundantDoc as unknown as import("vscode").TextDocument,
@@ -320,9 +337,11 @@ function createInheritanceSettings(): import("../../config/settings").SfpXmlLint
     formatterMaxConsecutiveBlankLines: 2,
     autoBuildOnSave: true,
     componentSaveBuildScope: "dependents",
+    templateBuilderMode: "debug",
     ruleSeverities: {
       "workflow-redundant-feature-using": "warning",
       "dataview-redundant-feature-using": "warning",
+      "feature-inheritance-override": "information",
       "unknown-using-feature": "error",
       "unknown-using-contribution": "warning"
     }
@@ -332,10 +351,12 @@ function createInheritanceSettings(): import("../../config/settings").SfpXmlLint
 function createInheritanceIndex(
   formDoc: MockTextDocument,
   workflowRedundantDoc: MockTextDocument,
+  workflowOverrideDoc: MockTextDocument,
   dataviewRedundantDoc: MockTextDocument
 ): import("../../indexer/types").WorkspaceIndex {
   const formFacts = parseDocumentFacts(formDoc as unknown as import("vscode").TextDocument);
   const workflowRedundantFacts = parseDocumentFacts(workflowRedundantDoc as unknown as import("vscode").TextDocument);
+  const workflowOverrideFacts = parseDocumentFacts(workflowOverrideDoc as unknown as import("vscode").TextDocument);
   const dataviewRedundantFacts = parseDocumentFacts(dataviewRedundantDoc as unknown as import("vscode").TextDocument);
 
   const componentKey = "Shared/Sample";
@@ -372,6 +393,7 @@ function createInheritanceIndex(
   const parsedFactsByUri = new Map<string, import("../../indexer/xmlFacts").ParsedDocumentFacts>();
   parsedFactsByUri.set(formDoc.uri.toString(), formFacts);
   parsedFactsByUri.set(workflowRedundantDoc.uri.toString(), workflowRedundantFacts);
+  parsedFactsByUri.set(workflowOverrideDoc.uri.toString(), workflowOverrideFacts);
   parsedFactsByUri.set(dataviewRedundantDoc.uri.toString(), dataviewRedundantFacts);
 
   const componentsByKey = new Map<string, import("../../indexer/types").IndexedComponent>();

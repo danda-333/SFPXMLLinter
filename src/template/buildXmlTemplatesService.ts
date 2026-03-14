@@ -13,6 +13,12 @@ interface BuildRunOptions {
   silent?: boolean;
   onLogLine?: (line: string) => void;
   onFileStatus?: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
+  onTemplateEvaluated?: (
+    relativeTemplatePath: string,
+    status: "update" | "nochange" | "error",
+    templateText: string,
+    debugLines: readonly string[]
+  ) => void;
 }
 
 export interface BuildRunSummary {
@@ -100,8 +106,12 @@ export class BuildXmlTemplatesService {
 
       try {
         const templateText = await readWorkspaceTextFile(templateUri);
+        const debugLines: string[] = [];
         const rendered = normalizeLineEndingsForTemplate(
-          renderTemplateText(templateText, componentLibrary, 12, (line) => options.onLogLine?.(`DEBUG: ${line}`)),
+          renderTemplateText(templateText, componentLibrary, 12, (line) => {
+            debugLines.push(line);
+            options.onLogLine?.(`DEBUG: ${line}`);
+          }),
           templateText
         );
         const outputUri = templateToRuntimeUri(templateUri);
@@ -111,6 +121,7 @@ export class BuildXmlTemplatesService {
           summary.skipped++;
           options.onLogLine?.("SKIPPED");
           options.onFileStatus?.(relPath, "nochange");
+          options.onTemplateEvaluated?.(relPath, "nochange", templateText, debugLines);
           continue;
         }
 
@@ -119,6 +130,7 @@ export class BuildXmlTemplatesService {
         summary.updated++;
         options.onLogLine?.("UPDATED");
         options.onFileStatus?.(relPath, "update");
+        options.onTemplateEvaluated?.(relPath, "update", templateText, debugLines);
       } catch (error) {
         summary.errors++;
         const message = error instanceof Error ? error.message : String(error);

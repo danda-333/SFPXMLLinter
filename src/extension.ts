@@ -17,7 +17,7 @@ import { SfpSqlPlaceholderSemanticProvider } from "./providers/sqlPlaceholderSem
 import { SfpXmlColorProvider } from "./providers/colorProvider";
 import { globConfiguredXmlFiles } from "./utils/paths";
 import { getSettings, SfpXmlLinterSettings } from "./config/settings";
-import { parseDocumentFacts } from "./indexer/xmlFacts";
+import { parseDocumentFacts, parseDocumentFactsFromText } from "./indexer/xmlFacts";
 import { formatXmlTolerant } from "./formatter";
 import { formatXmlSelectionWithContext } from "./formatter/selection";
 import { FormatterOptions } from "./formatter/types";
@@ -26,6 +26,8 @@ import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
 import { FeatureRegistryStore } from "./composition/registry";
 import { CompositionTreeProvider } from "./composition/treeView";
 import { buildBootstrapManifestDraft } from "./composition/bootstrapManifest";
+import { populateUsingInsertTraceFromText } from "./composition/usingImpact";
+import { buildDocumentCompositionModel } from "./composition/documentModel";
 
 const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-form-ident",
@@ -376,11 +378,126 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     compositionTreeProvider.refresh();
   }
 
-  function createBuildRunOptions(silent: boolean): {
+  type BuildTemplateEvaluation = {
+    status: "update" | "nochange" | "error";
+    templateText: string;
+    debugLines: readonly string[];
+  };
+
+  function createBuildTelemetryCollector(): {
+    entries: Map<string, BuildTemplateEvaluation>;
+    onTemplateEvaluated: (
+      relativeTemplatePath: string,
+      status: "update" | "nochange" | "error",
+      templateText: string,
+      debugLines: readonly string[]
+    ) => void;
+  } {
+    const entries = new Map<string, BuildTemplateEvaluation>();
+    return {
+      entries,
+      onTemplateEvaluated: (
+        relativeTemplatePath: string,
+        status: "update" | "nochange" | "error",
+        templateText: string,
+        debugLines: readonly string[]
+      ) => {
+        entries.set(relativeTemplatePath, {
+          status,
+          templateText,
+          debugLines
+        });
+      }
+    };
+  }
+
+  function logBuildCompositionSnapshot(
+    sourceLabel: string,
+    evaluations: ReadonlyMap<string, BuildTemplateEvaluation>
+  ): void {
+    if (evaluations.size === 0) {
+      return;
+    }
+
+    const index = templateIndexer.getIndex();
+    const sorted = [...evaluations.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const maxLogged = 30;
+    let withUsings = 0;
+    let totalEffective = 0;
+    let totalPartial = 0;
+    let totalUnused = 0;
+    let totalXPathDebug = 0;
+    let logged = 0;
+
+    for (const [relativeTemplatePath, evaluation] of sorted) {
+      const facts = parseDocumentFactsFromText(evaluation.templateText);
+      populateUsingInsertTraceFromText(facts, evaluation.templateText, index);
+      const model = buildDocumentCompositionModel(facts, index);
+      if (model.usings.length === 0) {
+        continue;
+      }
+
+      withUsings++;
+      const effective = model.usings.filter((item) => item.impact.kind === "effective").length;
+      const partial = model.usings.filter((item) => item.impact.kind === "partial").length;
+      const unused = model.usings.filter((item) => item.impact.kind === "unused").length;
+      totalEffective += effective;
+      totalPartial += partial;
+      totalUnused += unused;
+      const xpathDebugCount = evaluation.debugLines.filter((line) => line.includes("[TargetXPath]")).length;
+      totalXPathDebug += xpathDebugCount;
+
+      if (logged < maxLogged) {
+        logComposition(
+          `[build:${sourceLabel}] ${relativeTemplatePath} status=${evaluation.status} usings=${model.usings.length} effective=${effective} partial=${partial} unused=${unused} xpathDebug=${xpathDebugCount}`
+        );
+        for (const usingItem of model.usings.filter((item) => item.impact.kind !== "effective")) {
+          const usingLabel = usingItem.sectionValue
+            ? `${usingItem.rawComponentValue}#${usingItem.sectionValue}`
+            : usingItem.rawComponentValue;
+          logComposition(
+            `  using ${usingLabel}: ${usingItem.impact.kind} (${usingItem.impact.successfulCount}/${usingItem.impact.relevantCount})`
+          );
+        }
+        logged++;
+      }
+    }
+
+    if (withUsings === 0) {
+      logComposition(`[build:${sourceLabel}] evaluated templates=${evaluations.size}, withUsings=0`);
+      return;
+    }
+
+    const suppressed = Math.max(0, withUsings - logged);
+    logComposition(
+      `[build:${sourceLabel}] summary templates=${evaluations.size}, withUsings=${withUsings}, effective=${totalEffective}, partial=${totalPartial}, unused=${totalUnused}, xpathDebug=${totalXPathDebug}${suppressed > 0 ? `, suppressed=${suppressed}` : ""}`
+    );
+  }
+
+  function createBuildRunOptions(
+    silent: boolean,
+    onTemplateEvaluated?: (
+      relativeTemplatePath: string,
+      status: "update" | "nochange" | "error",
+      templateText: string,
+      debugLines: readonly string[]
+    ) => void
+  ): {
     silent: boolean;
     onLogLine: (line: string) => void;
     onFileStatus: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
+    onTemplateEvaluated: (
+      relativeTemplatePath: string,
+      status: "update" | "nochange" | "error",
+      templateText: string,
+      debugLines: readonly string[]
+    ) => void;
   } {
+    const onTemplateEvaluatedSafe =
+      onTemplateEvaluated ??
+      (() => {
+        // no-op
+      });
     return {
       silent,
       onLogLine: (line: string) => {
@@ -406,7 +523,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       },
       onFileStatus: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => {
         logBuild(`RESULT ${relativeTemplatePath}: ${status}`);
-      }
+      },
+      onTemplateEvaluated: onTemplateEvaluatedSafe
     };
   }
 
@@ -1218,12 +1336,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     let executedBuild = false;
     let executedFullBuild = false;
     const builtTargetPaths = new Set<string>();
+    const telemetry = createBuildTelemetryCollector();
     try {
       do {
         if (queuedFullTemplateBuild) {
           queuedFullTemplateBuild = false;
           logBuild("BUILD START full templates");
-          await buildService.run(workspaceFolder, createBuildRunOptions(true));
+          await buildService.run(workspaceFolder, createBuildRunOptions(true, telemetry.onTemplateEvaluated));
           executedBuild = true;
           executedFullBuild = true;
           logBuild("BUILD DONE full templates");
@@ -1237,7 +1356,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         queuedTemplatePaths.delete(nextPath);
         logBuild(`BUILD START target: ${vscode.workspace.asRelativePath(nextPath, false)} (remaining=${queuedTemplatePaths.size})`);
-        await buildService.runForPath(workspaceFolder, nextPath, createBuildRunOptions(true));
+        await buildService.runForPath(workspaceFolder, nextPath, createBuildRunOptions(true, telemetry.onTemplateEvaluated));
         executedBuild = true;
         builtTargetPaths.add(nextPath);
         logBuild(`BUILD DONE target: ${vscode.workspace.asRelativePath(nextPath, false)}`);
@@ -1252,6 +1371,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           const refreshedCount = await refreshFormsFromTemplateTargets([...builtTargetPaths]);
           logIndex(`POST-BUILD incremental form refresh count=${refreshedCount} in ${Date.now() - refreshStartedAt} ms`);
         }
+
+        logBuildCompositionSnapshot("auto", telemetry.entries);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1728,13 +1849,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       try {
         logBuild("MANUAL build current/selection START");
+        const telemetry = createBuildTelemetryCollector();
         const selection = collectBuildSelectionUris(uri, uris);
         const targetUris = selection.length > 0 ? selection : getActiveDocumentUriFallback();
 
         if (targetUris.length === 0) {
           logBuild("No current/selected resource -> FULL fallback");
-          await buildService.run(folder, createBuildRunOptions(false));
+          await buildService.run(folder, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
           await queueReindex("all");
+          logBuildCompositionSnapshot("manual-current", telemetry.entries);
           logBuild("MANUAL build current/selection DONE (full fallback)");
           return;
         }
@@ -1770,17 +1893,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
 
         if (usedFullFallback || templateTargets.size === 0) {
-          await buildService.run(folder, createBuildRunOptions(false));
+          await buildService.run(folder, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
           await queueReindex("all");
+          logBuildCompositionSnapshot("manual-current", telemetry.entries);
           logBuild("MANUAL build current/selection DONE (full fallback)");
           return;
         }
 
         for (const targetPath of templateTargets) {
           logBuild(`MANUAL target build: ${vscode.workspace.asRelativePath(targetPath, false)}`);
-          await buildService.runForPath(folder, targetPath, createBuildRunOptions(false));
+          await buildService.runForPath(folder, targetPath, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
         }
         await queueReindex("all");
+        logBuildCompositionSnapshot("manual-current", telemetry.entries);
 
         logBuild("MANUAL build current/selection DONE");
       } catch (error) {
@@ -1801,8 +1926,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       try {
         logBuild("MANUAL build all START");
-        await buildService.run(folder, createBuildRunOptions(false));
+        const telemetry = createBuildTelemetryCollector();
+        await buildService.run(folder, createBuildRunOptions(false, telemetry.onTemplateEvaluated));
         await queueReindex("all");
+        logBuildCompositionSnapshot("manual-all", telemetry.entries);
         logBuild("MANUAL build all DONE");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -34,4 +34,5 @@ Minimal scenarios for each validation rule.
 - `chyba-32-suppression-conflict.xml` -> `suppression-conflict`
 - `chyba-33-suppression-noop.xml` -> `suppression-noop`
 - `chyba-34-suppression-noop-contribution.xml` -> `suppression-noop`
+- `chyba-35-ordering-conflict.feature.xml` -> `ordering-conflict`
 

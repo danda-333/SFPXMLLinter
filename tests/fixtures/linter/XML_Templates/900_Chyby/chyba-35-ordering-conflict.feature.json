@@ -1,0 +1,19 @@
+{
+  "feature": "OrderingConflictFixture",
+  "entrypoint": "XML_Templates/900_Chyby/chyba-35-ordering-conflict.feature.xml",
+  "tags": ["ordering", "fixture"],
+  "parts": [
+    {
+      "id": "OrderingConflictPart",
+      "file": "XML_Templates/900_Chyby/chyba-35-ordering-conflict.feature.xml",
+      "appliesTo": ["form"],
+      "ordering": {
+        "group": "form-buttons",
+        "before": ["MissingPart"],
+        "after": []
+      }
+    }
+  ],
+  "requires": [],
+  "expects": []
+}

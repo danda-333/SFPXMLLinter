@@ -137,6 +137,7 @@ type ParsedDocumentFacts = import("../../indexer/xmlFacts").ParsedDocumentFacts;
 const { DiagnosticsEngine } = require("../../diagnostics/engine") as typeof import("../../diagnostics/engine");
 const { parseDocumentFactsFromText } = require("../../indexer/xmlFacts") as typeof import("../../indexer/xmlFacts");
 const { populateUsingInsertTraceFromText } = require("../../composition/usingImpact") as typeof import("../../composition/usingImpact");
+const { loadFeatureManifestRegistry } = require("../../composition/workspace") as typeof import("../../composition/workspace");
 
 class MockTextDocument {
   public readonly uri: Uri;
@@ -197,6 +198,7 @@ class MockTextDocument {
 function run(): void {
   const docs = loadFixtureDocuments();
   const index = buildIndex(docs);
+  const featureRegistry = loadFeatureManifestRegistry(workspaceRoot);
   const engine = new DiagnosticsEngine();
   const invalidExpectations = loadInvalidExpectations();
   let checkedValid = 0;
@@ -209,7 +211,9 @@ function run(): void {
       continue;
     }
 
-    const diagnostics = engine.buildDiagnostics(doc as unknown as import("vscode").TextDocument, index);
+    const diagnostics = engine.buildDiagnostics(doc as unknown as import("vscode").TextDocument, index, {
+      featureRegistry
+    });
     const isInvalidFixture = normalizedRelPath.toLowerCase().includes("/900_chyby/");
 
     if (!isInvalidFixture) {

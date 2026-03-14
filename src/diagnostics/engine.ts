@@ -1128,9 +1128,6 @@ export class DiagnosticsEngine {
       if (missingDependencyConflicts.length > 0) {
         incompleteReasons.push(`missing dependencies=${missingDependencyConflicts.length}`);
       }
-      if (orderingConflicts.length > 0) {
-        incompleteReasons.push(`ordering conflicts=${orderingConflicts.length}`);
-      }
       if (duplicateProviderConflicts.length > 0) {
         incompleteReasons.push(`duplicate providers=${duplicateProviderConflicts.length}`);
       }

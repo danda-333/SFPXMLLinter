@@ -4,6 +4,7 @@ import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
 import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
 import { maskXmlComments } from "../utils/xmlComments";
+import { countXPathInsertTargets } from "../template/buildXmlTemplatesCore";
 
 interface ParsedEntry {
   uri: vscode.Uri;
@@ -126,6 +127,7 @@ export class WorkspaceIndexer {
       sectionDefinitions
     };
 
+    populateUsingContributionInsertCounts(facts, maskedText, this.index);
     this.index.formsByIdent.set(facts.formIdent, form);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
@@ -173,6 +175,7 @@ export class WorkspaceIndexer {
       workflowButtonShareCodeButtonIdents: workflowInjected.buttonShareCodeButtonIdents
     };
 
+    populateUsingContributionInsertCounts(facts, maskedText, this.index);
     this.index.componentsByKey.set(key, component);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
@@ -357,6 +360,10 @@ export class WorkspaceIndexer {
       componentsReady: true,
       fullReady: scope === "all"
     };
+
+    for (const entry of parsedEntries) {
+      populateUsingContributionInsertCounts(entry.facts, entry.maskedText, provisionalIndex);
+    }
 
     const formEntries = parsedEntries.filter((entry) => entry.root === "form" && !!entry.facts.formIdent);
     const formsStart = Date.now();
@@ -712,6 +719,17 @@ export class WorkspaceIndexer {
       out.set(name, {
         contributionName: name,
         root,
+        rootExpression: rootRaw.length > 0 ? rootRaw : undefined,
+        insert: extractAttributeValue(attrsText, "Insert"),
+        targetXPath: extractAttributeValue(attrsText, "TargetXPath"),
+        allowMultipleInserts: parseBooleanAttribute(extractAttributeValue(attrsText, "AllowMultipleInserts")),
+        hasContent: /\S/.test(body),
+        formControlCount: countTagOccurrences(body, /<Control\b[^>]*>/gi),
+        formButtonCount: countTagOccurrences(body, /<Button\b[^>]*>/gi),
+        formSectionCount: countTagOccurrences(body, /<Section\b[^>]*>/gi),
+        workflowActionShareCodeCount: countTagOccurrences(body, /<ActionShareCode\b[^>]*>/gi),
+        workflowControlShareCodeCount: countTagOccurrences(body, /<ControlShareCode\b[^>]*>/gi),
+        workflowButtonShareCodeCount: countTagOccurrences(body, /<ButtonShareCode\b[^>]*>/gi),
         formControlIdents: collectAttributeIdents(body, /<Control\b([^>]*)>/gi, "Ident"),
         formButtonIdents: collectAttributeIdents(body, /<Button\b([^>]*)>/gi, "Ident"),
         formSectionIdents: collectAttributeIdents(body, /<Section\b([^>]*)>/gi, "Ident"),
@@ -996,6 +1014,30 @@ function collectActionShareCodeReferenceIdents(text: string): Set<string> {
   return out;
 }
 
+function countTagOccurrences(text: string, regex: RegExp): number {
+  let count = 0;
+  for (const _ of text.matchAll(regex)) {
+    count++;
+  }
+  return count;
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return undefined;
+}
+
 function appliesToFormRoot(root: string | undefined): boolean {
   if (!root || root.length === 0) {
     return true;
@@ -1020,6 +1062,90 @@ function appliesToWorkflowRoot(root: string | undefined): boolean {
     .filter(Boolean);
 
   return parts.includes("workflow");
+}
+
+function populateUsingContributionInsertCounts(
+  facts: ReturnType<typeof parseDocumentFactsFromMaskedText>,
+  maskedText: string,
+  index: WorkspaceIndex
+): void {
+  const out = new Map<string, number>();
+  const placeholderCounts = new Map<string, number>();
+  for (const ref of facts.placeholderReferences) {
+    const componentKey = ref.componentKey;
+    const contributionName = (ref.contributionValue ?? "").trim();
+    if (!componentKey || !contributionName) {
+      continue;
+    }
+
+    const key = makeUsingContributionInsertKey(componentKey, contributionName);
+    placeholderCounts.set(key, (placeholderCounts.get(key) ?? 0) + 1);
+  }
+
+  const processedComponents = new Set<string>();
+  for (const usingRef of facts.usingReferences) {
+    if (processedComponents.has(usingRef.componentKey)) {
+      continue;
+    }
+    processedComponents.add(usingRef.componentKey);
+
+    const component = resolveComponentByKey(index, usingRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const contribution of component.contributionSummaries.values()) {
+      const key = makeUsingContributionInsertKey(usingRef.componentKey, contribution.contributionName);
+      const insertMode = (contribution.insert ?? "").trim().toLowerCase();
+      if (insertMode === "placeholder") {
+        out.set(key, placeholderCounts.get(key) ?? 0);
+        continue;
+      }
+
+      if ((contribution.targetXPath ?? "").trim().length > 0) {
+        out.set(
+          key,
+          countXPathInsertTargets(maskedText, contribution.targetXPath, contribution.allowMultipleInserts)
+        );
+        continue;
+      }
+
+      out.set(key, countIndexedContributionSymbolsForRoot(facts.rootTag, contribution));
+    }
+  }
+
+  facts.usingContributionInsertCounts = out;
+}
+
+function makeUsingContributionInsertKey(componentKey: string, contributionName: string): string {
+  return `${componentKey}::${contributionName}`;
+}
+
+function countIndexedContributionSymbolsForRoot(
+  rootTag: string | undefined,
+  contribution: IndexedComponentContributionSummary
+): number {
+  const root = (rootTag ?? "").trim().toLowerCase();
+  if (root === "workflow") {
+    return (
+      contribution.workflowActionShareCodeCount +
+      contribution.workflowControlShareCodeCount +
+      contribution.workflowButtonShareCodeCount
+    );
+  }
+
+  if (root === "form") {
+    return contribution.formControlCount + contribution.formButtonCount + contribution.formSectionCount;
+  }
+
+  return (
+    contribution.formControlCount +
+    contribution.formButtonCount +
+    contribution.formSectionCount +
+    contribution.workflowActionShareCodeCount +
+    contribution.workflowControlShareCodeCount +
+    contribution.workflowButtonShareCodeCount
+  );
 }
 
 function isLikelyBootstrapPath(uri: vscode.Uri): boolean {

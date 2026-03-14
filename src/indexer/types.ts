@@ -32,6 +32,17 @@ export interface IndexedComponent {
 export interface IndexedComponentContributionSummary {
   contributionName: string;
   root?: "form" | "workflow" | "other";
+  rootExpression?: string;
+  insert?: string;
+  targetXPath?: string;
+  allowMultipleInserts?: boolean;
+  hasContent: boolean;
+  formControlCount: number;
+  formButtonCount: number;
+  formSectionCount: number;
+  workflowActionShareCodeCount: number;
+  workflowControlShareCodeCount: number;
+  workflowButtonShareCodeCount: number;
   formControlIdents: Set<string>;
   formButtonIdents: Set<string>;
   formSectionIdents: Set<string>;

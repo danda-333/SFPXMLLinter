@@ -10,88 +10,45 @@ export function analyzeUsingImpact(
   facts: ParsedDocumentFacts,
   rawComponentValue: string,
   contributionValue: string | undefined,
-  component: IndexedComponent
+  component: IndexedComponent,
+  usingComponentKey?: string
 ): UsingImpactResult {
-  const root = (facts.rootTag ?? "").toLowerCase();
-  if (root !== "form" && root !== "workflow") {
-    return { kind: "effective" };
-  }
-
-  const selectedContributions = selectUsingContributions(component, contributionValue);
+  const selectedContributions = selectRelevantUsingContributions(facts, component, contributionValue);
   if (selectedContributions.length === 0) {
-    return { kind: "effective" };
-  }
-
-  if (root === "form") {
-    const providedCount = countFormProvidedSymbols(selectedContributions);
-    if (providedCount === 0) {
-      return {
-        kind: "unused",
-        message: `Using feature '${rawComponentValue}' does not inject any Form controls, buttons, or contributions into this document.`
-      };
-    }
-
-    return { kind: "effective" };
-  }
-
-  const providedActionShareCodes = unionContributionIdents(selectedContributions, (contribution) => contribution.workflowActionShareCodeIdents);
-  const providedControlShareCodes = unionContributionIdents(selectedContributions, (contribution) => contribution.workflowControlShareCodeIdents);
-  const providedButtonShareCodes = unionContributionIdents(selectedContributions, (contribution) => contribution.workflowButtonShareCodeIdents);
-  const totalProvided =
-    providedActionShareCodes.size + providedControlShareCodes.size + providedButtonShareCodes.size;
-  if (totalProvided === 0) {
-      return {
-      kind: "unused",
-      message: `Using feature '${rawComponentValue}' does not inject any WorkFlow share codes through the selected contribution scope.`
-    };
-  }
-
-  const referencedControlShareCodes = new Set(
-    facts.workflowReferences.filter((item) => item.kind === "controlShareCode").map((item) => item.ident)
-  );
-  const referencedButtonShareCodes = new Set(
-    facts.workflowReferences.filter((item) => item.kind === "buttonShareCode").map((item) => item.ident)
-  );
-  const referencedActionShareCodes = new Set(facts.actionShareCodeReferences.map((item) => item.ident));
-
-  const consumedControlShareCodes = intersectIdents(providedControlShareCodes, referencedControlShareCodes);
-  const consumedButtonShareCodes = intersectIdents(providedButtonShareCodes, referencedButtonShareCodes);
-  const indirectActionShareCodeRefs =
-    consumedButtonShareCodes.size > 0
-      ? intersectIdents(
-          providedActionShareCodes,
-          unionContributionIdents(selectedContributions, (contribution) => contribution.workflowReferencedActionShareCodeIdents)
-        )
-      : new Set<string>();
-  const effectiveReferencedActionShareCodes = new Set<string>([
-    ...referencedActionShareCodes,
-    ...indirectActionShareCodeRefs
-  ]);
-  const consumedActionShareCodes = intersectIdents(providedActionShareCodes, effectiveReferencedActionShareCodes);
-  const consumedCount =
-    consumedActionShareCodes.size + consumedControlShareCodes.size + consumedButtonShareCodes.size;
-
-  if (consumedCount === 0) {
     return {
       kind: "unused",
-      message: `Using feature '${rawComponentValue}' injects WorkFlow share codes, but none of them are used in the current WorkFlow.`
+      message: `Using feature '${rawComponentValue}' has no contributions relevant for root '${facts.rootTag ?? "unknown"}'.`
     };
   }
 
-  if (consumedCount < totalProvided) {
-    const missing = [
-      ...differenceIdents(providedActionShareCodes, effectiveReferencedActionShareCodes),
-      ...differenceIdents(providedControlShareCodes, referencedControlShareCodes),
-      ...differenceIdents(providedButtonShareCodes, referencedButtonShareCodes)
-    ];
-    const suffix = missing.length > 0 ? ` Unused: ${missing.map((item) => `'${item}'`).join(", ")}.` : "";
+  let successful = 0;
+  const componentKey = usingComponentKey ?? component.key;
+  for (const contribution of selectedContributions) {
+    const key = `${componentKey}::${contribution.contributionName}`;
+    const inserts = facts.usingContributionInsertCounts.get(key) ?? 0;
+    if (inserts > 0) {
+      successful++;
+    }
+  }
+
+  if (successful === 0) {
+    return {
+      kind: "unused",
+      message: `Using feature '${rawComponentValue}' failed to insert all ${selectedContributions.length} root-relevant contribution(s).`
+    };
+  }
+
+  if (successful < selectedContributions.length) {
     return {
       kind: "partial",
-      message: `Using feature '${rawComponentValue}' is only partially used by the current WorkFlow.${suffix}`
+      message: `Using feature '${rawComponentValue}' inserted ${successful}/${selectedContributions.length} root-relevant contribution(s).`
     };
   }
 
-  return { kind: "effective" };
+  return {
+    kind: "effective",
+    message: `Using feature '${rawComponentValue}' inserted all ${selectedContributions.length} root-relevant contribution(s).`
+  };
 }
 
 export function selectUsingContributions(component: IndexedComponent, contributionName?: string): IndexedComponentContributionSummary[] {
@@ -101,6 +58,35 @@ export function selectUsingContributions(component: IndexedComponent, contributi
   }
 
   return [...component.contributionSummaries.values()];
+}
+
+export function selectRelevantUsingContributions(
+  facts: ParsedDocumentFacts,
+  component: IndexedComponent,
+  contributionName?: string
+): IndexedComponentContributionSummary[] {
+  const selected = selectUsingContributions(component, contributionName);
+  return selected.filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution));
+}
+
+export function countContributionInsertions(
+  rootTag: string | undefined,
+  contribution: IndexedComponentContributionSummary
+): number {
+  const root = (rootTag ?? "").toLowerCase();
+  if (root === "workflow") {
+    return (
+      contribution.workflowActionShareCodeCount +
+      contribution.workflowControlShareCodeCount +
+      contribution.workflowButtonShareCodeCount
+    );
+  }
+
+  return (
+    contribution.formControlCount +
+    contribution.formButtonCount +
+    contribution.formSectionCount
+  );
 }
 
 export function countFormProvidedSymbols(contributions: readonly IndexedComponentContributionSummary[]): number {
@@ -124,25 +110,27 @@ export function unionContributionIdents(
   return out;
 }
 
-function intersectIdents(left: ReadonlySet<string>, right: ReadonlySet<string>): Set<string> {
-  const out = new Set<string>();
-  for (const ident of left) {
-    if (right.has(ident)) {
-      out.add(ident);
-    }
+export function contributionMatchesDocumentRoot(
+  rootTag: string | undefined,
+  contribution: Pick<IndexedComponentContributionSummary, "rootExpression">
+): boolean {
+  const root = (rootTag ?? "").trim().toLowerCase();
+  if (!root) {
+    return true;
   }
 
-  return out;
-}
-
-function differenceIdents(left: ReadonlySet<string>, right: ReadonlySet<string>): string[] {
-  const out: string[] = [];
-  for (const ident of left) {
-    if (!right.has(ident)) {
-      out.push(ident);
-    }
+  const expression = (contribution.rootExpression ?? "").trim().toLowerCase();
+  if (!expression) {
+    return root === "form";
   }
 
-  out.sort((a, b) => a.localeCompare(b));
-  return out;
+  const tokens = expression
+    .split(/[\s,;|]+/)
+    .map((token) => token.trim().toLowerCase())
+    .filter(Boolean);
+  if (tokens.length === 0) {
+    return root === "form";
+  }
+
+  return tokens.includes(root);
 }

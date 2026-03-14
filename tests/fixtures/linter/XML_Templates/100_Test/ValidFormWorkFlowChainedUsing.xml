@@ -4,6 +4,12 @@
     <Using Feature="Shared/ChainedSample" />
   </Usings>
 
+  <ActionShareCodes>
+  </ActionShareCodes>
+
+  <ButtonShareCodes>
+  </ButtonShareCodes>
+
   <States>
     <State Value="1">
       <Group>

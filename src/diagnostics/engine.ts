@@ -2,7 +2,7 @@
 import { getSettings, mapSeverityToDiagnostic, resolveRuleSeverity, SfpXmlLinterSettings } from "../config/settings";
 import { parseIgnoreState, isRuleIgnored } from "./ignore";
 import { WorkspaceIndex } from "../indexer/types";
-import { parseDocumentFacts, parseDocumentFactsFromMaskedText } from "../indexer/xmlFacts";
+import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { getSystemMetadata, isKnownSystemTableForeignKey, SystemMetadata } from "../config/systemMetadata";
@@ -41,7 +41,14 @@ export class DiagnosticsEngine {
     }
 
     const maskedText = options?.maskedText ?? maskXmlComments(document.getText());
-    const facts = options?.parsedFacts ?? parseDocumentFactsFromMaskedText(maskedText);
+    const facts =
+      options?.parsedFacts ??
+      (standaloneMode
+        ? parseDocumentFacts(document)
+        : index.parsedFactsByUri.get(document.uri.toString()));
+    if (!facts) {
+      return [];
+    }
     const metadata = options?.metadataOverride ?? getSystemMetadata();
     const settings = options?.settingsOverride ?? getSettings();
     const featureRegistry = options?.featureRegistry;
@@ -419,7 +426,7 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      const impact = analyzeUsingImpact(facts, ref.rawComponentValue, ref.sectionValue, component);
+      const impact = analyzeUsingImpact(facts, ref.rawComponentValue, ref.sectionValue, component, ref.componentKey);
       if (impact.kind === "unused") {
         issues.push({
           ruleId: "unused-using",

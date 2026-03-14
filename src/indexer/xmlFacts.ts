@@ -23,6 +23,14 @@ export interface UsingReference {
   sectionValueRange?: vscode.Range;
 }
 
+export interface PlaceholderReference {
+  rawToken: string;
+  range: vscode.Range;
+  componentKey?: string;
+  rawComponentValue?: string;
+  contributionValue?: string;
+}
+
 export interface FormIdentReference {
   formIdent: string;
   range: vscode.Range;
@@ -84,6 +92,8 @@ export interface ParsedDocumentFacts {
   declaredSections: Set<string>;
   workflowReferences: WorkflowReference[];
   usingReferences: UsingReference[];
+  usingContributionInsertCounts: Map<string, number>;
+  placeholderReferences: PlaceholderReference[];
   formIdentReferences: FormIdentReference[];
   mappingIdentReferences: MappingIdentReference[];
   mappingFormIdentReferences: MappingFormIdentReference[];
@@ -128,6 +138,8 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     declaredSections: new Set<string>(),
     workflowReferences: [],
     usingReferences: [],
+    usingContributionInsertCounts: new Map<string, number>(),
+    placeholderReferences: [],
     formIdentReferences: [],
     mappingIdentReferences: [],
     mappingFormIdentReferences: [],
@@ -363,6 +375,28 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
         componentValueRange: componentAttr.valueRange,
         sectionValue: sectionAttr?.value,
         sectionValueRange: sectionAttr?.valueRange
+      });
+    }
+  }
+
+  if (text.includes("{{")) {
+    for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+      const full = match[0] ?? "";
+      const body = (match[1] ?? "").trim();
+      const start = typeof match.index === "number" ? match.index : -1;
+      if (!full || start < 0 || !body) {
+        continue;
+      }
+
+      const fields = parsePlaceholderFields(body);
+      const rawComponentValue = fields.get("Feature") ?? fields.get("Component") ?? fields.get("Name");
+      const contributionValue = fields.get("Contribution") ?? fields.get("Section");
+      facts.placeholderReferences.push({
+        rawToken: full,
+        range: new vscode.Range(indexToPosition(text, start), indexToPosition(text, start + full.length)),
+        rawComponentValue,
+        componentKey: rawComponentValue ? normalizeComponentKey(rawComponentValue) : undefined,
+        contributionValue
       });
     }
   }
@@ -852,6 +886,25 @@ function getAttributeCaseInsensitive(attrs: Map<string, XmlAttributeMatch>, attr
   }
 
   return undefined;
+}
+
+function parsePlaceholderFields(rawBody: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const part of rawBody.split(",")) {
+    const idx = part.indexOf(":");
+    if (idx <= 0) {
+      continue;
+    }
+
+    const key = part.slice(0, idx).trim();
+    const value = part.slice(idx + 1).trim();
+    if (!key || !value) {
+      continue;
+    }
+    out.set(key, value);
+  }
+
+  return out;
 }
 
 function normalizeHtmlControlTagName(value: string): "Control" | "ControlLabel" | "ControlPlaceHolder" | undefined {

@@ -4,6 +4,9 @@
     <Using Feature="Shared/Sample" />
   </Usings>
 
+  <ControlShareCodes>
+  </ControlShareCodes>
+
   <States>
     <State Value="1">
       <Group>

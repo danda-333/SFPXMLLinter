@@ -47,6 +47,24 @@ interface PlaceholderToken {
   end: number;
 }
 
+export function countXPathInsertTargets(
+  text: string,
+  targetXPath: string | undefined,
+  allowMultipleInserts?: boolean
+): number {
+  const xpathExpr = (targetXPath ?? "").trim();
+  if (!xpathExpr) {
+    return 0;
+  }
+
+  const ranges = findTargetRanges(text, xpathExpr);
+  if (ranges.length === 0) {
+    return 0;
+  }
+
+  return allowMultipleInserts ? ranges.length : 1;
+}
+
 export function buildComponentLibrary(sources: readonly ComponentSource[]): BuildComponentLibrary {
   const byKey = new Map<string, ComponentSource>();
   const byBaseName = new Map<string, ComponentSource[]>();

@@ -3,7 +3,12 @@ import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { WorkspaceIndex, IndexedComponentContributionSummary } from "../indexer/types";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { FeatureManifestRegistry } from "./workspace";
-import { analyzeUsingImpact, countFormProvidedSymbols, selectUsingContributions, unionContributionIdents } from "./usingImpact";
+import {
+  contributionMatchesDocumentRoot,
+  selectRelevantUsingContributions,
+  selectUsingContributions,
+  unionContributionIdents
+} from "./usingImpact";
 import { FeatureCapabilityReport } from "./model";
 import { normalizeComponentKey } from "../utils/paths";
 
@@ -76,6 +81,8 @@ interface AggregatedSymbol {
   source?: string;
   resourceUri?: vscode.Uri;
   sourceLocation?: vscode.Location;
+  usageCount?: number;
+  usageLocations?: vscode.Location[];
 }
 
 export class CompositionTreeProvider implements vscode.TreeDataProvider<CompositionTreeNode> {
@@ -130,8 +137,10 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       return vscode.TreeItemCollapsibleState.None;
     }
 
-    if (element.id && this.expandedNodeIds.has(element.id)) {
-      return vscode.TreeItemCollapsibleState.Expanded;
+    if (element.id) {
+      return this.expandedNodeIds.has(element.id)
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.Collapsed;
     }
 
     return element.collapsibleState ?? vscode.TreeItemCollapsibleState.None;
@@ -153,9 +162,14 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       ];
     }
 
-    const facts = parseDocumentFacts(document);
     const registry = this.getFeatureRegistry();
     const index = this.getIndexForUri(document.uri);
+    const facts = index.parsedFactsByUri.get(document.uri.toString());
+    if (!facts) {
+      return [
+        infoNode("Index facts are not available for this document yet. Run Revalidate Workspace/Project.")
+      ];
+    }
     const relPath = vscode.workspace.asRelativePath(document.uri, false).replace(/\\/g, "/");
     const featureReport = findFeatureForRelativePath(registry, relPath);
     if (featureReport) {
@@ -167,7 +181,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       return regularXmlTree;
     }
 
-    const usingTree = buildUsingTree(facts, index);
+    const usingTree = buildUsingTree(document, facts, index);
     if (usingTree.length > 0) {
       return usingTree;
     }
@@ -190,7 +204,7 @@ function buildFeatureTree(
   const entrypointUri = featureManifest?.entrypoint
     ? vscode.Uri.file(toWorkspacePath(featureManifest.entrypoint, activeUri))
     : undefined;
-  const entrypointComponentKey = featureManifest?.entrypoint ? normalizeComponentKey(featureManifest.entrypoint) : undefined;
+  const entrypointComponentKey = featureManifest?.entrypoint ? toIndexedComponentKey(featureManifest.entrypoint) : undefined;
   const summaryChildren: CompositionTreeNode[] = [
     detailNode(`Parts: ${report.parts.length}`),
     detailNode(`Provides: ${report.provides.length}`),
@@ -210,7 +224,7 @@ function buildFeatureTree(
   const partsNode = partGroupNode(
     "Parts",
     report.parts.map((part) => {
-      const partComponentKey = normalizeComponentKey(part.file);
+      const partComponentKey = toIndexedComponentKey(part.file);
       const contributionReports = model?.contributions.filter((item) => item.partId === part.id) ?? [];
       return {
         id: `${featureNodeId}:part:${part.id}`,
@@ -264,7 +278,7 @@ function buildFeatureTree(
           : [detailNode("No contribution reports.")]
       } satisfies PartNode;
     }),
-    `${featureNodeId}:parts`
+    sharedSectionNodeId("Parts")
   );
 
   const conflictsNode = infoGroupNode(
@@ -279,7 +293,7 @@ function buildFeatureTree(
         }))
       : [detailNode("No conflicts.")]
     ,
-    `${featureNodeId}:conflicts`
+    sharedSectionNodeId("Conflicts")
   );
 
   return [
@@ -295,7 +309,7 @@ function buildFeatureTree(
       resourceUri: entrypointUri,
       usageLocations: collectFeatureUsageLocations(report, index, entrypointComponentKey),
       children: [
-        infoGroupNode("Summary", summaryChildren, `${featureNodeId}:summary`),
+        infoGroupNode("Summary", summaryChildren, sharedSectionNodeId("Summary")),
         partsNode,
         conflictsNode
       ]
@@ -312,19 +326,17 @@ function buildRegularXmlTree(
   if (root !== "form" && root !== "workflow") {
     return [];
   }
-
-  const rootNodeId = `document:${document.uri.toString()}`;
   const children: CompositionTreeNode[] = [];
-  children.push(buildDocumentSummaryNode(document, facts, index, `${rootNodeId}:summary`));
-  children.push(buildActionsNode(root, `${rootNodeId}:actions`));
+  children.push(buildDocumentSummaryNode(document, facts, index, sharedSectionNodeId("Summary")));
+  children.push(buildActionsNode(root, sharedSectionNodeId("Actions")));
 
   if (root === "form") {
     const controls = aggregateFormControls(document.uri, facts, index);
     const buttons = aggregateFormButtons(document.uri, facts, index);
     const sections = aggregateFormSections(document.uri, facts, index);
-    children.push(buildSymbolGroup("Controls", controls, "symbol-field", `${rootNodeId}:controls`));
-    children.push(buildSymbolGroup("Buttons", buttons, "symbol-event", `${rootNodeId}:buttons`));
-    children.push(buildSymbolGroup("Sections", sections, "symbol-structure", `${rootNodeId}:sections`));
+    children.push(buildSymbolGroup("Controls", controls, "symbol-field", sharedSectionNodeId("Controls")));
+    children.push(buildSymbolGroup("Buttons", buttons, "symbol-event", sharedSectionNodeId("Buttons")));
+    children.push(buildSymbolGroup("Sections", sections, "symbol-structure", sharedSectionNodeId("Sections")));
   } else {
     const controlShareCodes = aggregateWorkflowShareCodes(
       document.uri,
@@ -332,7 +344,8 @@ function buildRegularXmlTree(
       index,
       (summary) => summary.workflowControlShareCodeIdents,
       [...facts.declaredControlShareCodes],
-      facts.controlShareCodeDefinitions
+      facts.controlShareCodeDefinitions,
+      collectWorkflowReferenceLocations(document.uri, facts, "controlShareCode")
     );
     const buttonShareCodes = aggregateWorkflowShareCodes(
       document.uri,
@@ -340,7 +353,8 @@ function buildRegularXmlTree(
       index,
       (summary) => summary.workflowButtonShareCodeIdents,
       [...facts.declaredButtonShareCodes],
-      facts.buttonShareCodeDefinitions
+      facts.buttonShareCodeDefinitions,
+      collectWorkflowReferenceLocations(document.uri, facts, "buttonShareCode")
     );
     const actionShareCodes = aggregateWorkflowShareCodes(
       document.uri,
@@ -348,22 +362,23 @@ function buildRegularXmlTree(
       index,
       (summary) => summary.workflowActionShareCodeIdents,
       [...facts.declaredActionShareCodes],
-      facts.actionShareCodeDefinitions
+      facts.actionShareCodeDefinitions,
+      collectActionShareCodeReferenceLocations(document.uri, facts)
     );
 
-    children.push(buildSymbolGroup("ControlShareCodes", controlShareCodes, "symbol-key", `${rootNodeId}:controlShareCodes`));
-    children.push(buildSymbolGroup("ButtonShareCodes", buttonShareCodes, "symbol-key", `${rootNodeId}:buttonShareCodes`));
-    children.push(buildSymbolGroup("ActionShareCodes", actionShareCodes, "symbol-key", `${rootNodeId}:actionShareCodes`));
+    children.push(buildSymbolGroup("ControlShareCodes", controlShareCodes, "symbol-key", sharedSectionNodeId("ControlShareCodes")));
+    children.push(buildSymbolGroup("ButtonShareCodes", buttonShareCodes, "symbol-key", sharedSectionNodeId("ButtonShareCodes")));
+    children.push(buildSymbolGroup("ActionShareCodes", actionShareCodes, "symbol-key", sharedSectionNodeId("ActionShareCodes")));
   }
 
-  const usingTree = buildUsingTree(facts, index);
+  const usingTree = buildUsingTree(document, facts, index);
   if (usingTree.length > 0) {
     children.push(...usingTree);
   }
 
   return [
     {
-      id: `${rootNodeId}:root`,
+      id: sharedSectionNodeId("ModelRoot"),
       type: "group",
       label: root === "form" ? "Final Form Model" : "Final WorkFlow Model",
       description: vscode.workspace.asRelativePath(document.uri, false),
@@ -422,6 +437,7 @@ function buildDocumentSummaryNode(
 }
 
 function buildUsingTree(
+  document: vscode.TextDocument,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex
 ): CompositionTreeNode[] {
@@ -444,18 +460,31 @@ function buildUsingTree(
           } satisfies UsingNode;
         }
 
-        const impact = analyzeUsingImpact(facts, usingRef.rawComponentValue, usingRef.sectionValue, component);
-        const contributions = selectUsingContributions(component, usingRef.sectionValue);
-        const isWorkflow = (facts.rootTag ?? "").toLowerCase() === "workflow";
-        const detailLines = isWorkflow
-          ? [
-              `ActionShareCodes: ${unionContributionIdents(contributions, (contribution) => contribution.workflowActionShareCodeIdents).size}`,
-              `ControlShareCodes: ${unionContributionIdents(contributions, (contribution) => contribution.workflowControlShareCodeIdents).size}`,
-              `ButtonShareCodes: ${unionContributionIdents(contributions, (contribution) => contribution.workflowButtonShareCodeIdents).size}`
-            ]
-          : [
-              `Form symbols: ${countFormProvidedSymbols(contributions)}`
-            ];
+        const contributions = selectUsingContributions(component);
+        const impact = evaluateUsingInsertImpact(facts, usingRef.componentKey, contributions);
+        const contributionRows = contributions
+          .filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution))
+          .map((contribution) =>
+            buildUsingContributionNode(document, facts, index, usingRef.componentKey, component, contribution)
+          );
+        const filteredRows = contributions
+          .filter((contribution) => !contributionMatchesDocumentRoot(facts.rootTag, contribution))
+          .map((contribution) =>
+            buildUsingContributionNode(document, facts, index, usingRef.componentKey, component, contribution)
+          );
+        const children: CompositionTreeNode[] =
+          contributionRows.length > 0 ? [...contributionRows] : [detailNode("No root-relevant contributions found.")];
+        if (filteredRows.length > 0) {
+          children.push({
+            type: "group",
+            id: `using:${usingRef.componentKey}:${usingRef.sectionValue ?? "*"}:filtered`,
+            label: "Filtered",
+            description: `${filteredRows.length}`,
+            collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+            icon: new vscode.ThemeIcon("filter"),
+            children: filteredRows
+          });
+        }
 
         return {
           id: `using:${usingRef.componentKey}:${usingRef.sectionValue ?? "*"}`,
@@ -470,16 +499,227 @@ function buildUsingTree(
           sourceLocation: usingRef.sectionValue ? component.contributionDefinitions.get(usingRef.sectionValue) : component.componentLocation,
           usageLocations: getUsingUsageLocations(facts, index, usingRef.componentKey, usingRef.sectionValue),
           command: getUsingOpenCommand(component, usingRef.sectionValue),
-          children: [
-            detailNode(`Contribution: ${usingRef.sectionValue ?? "(all)"}`),
-            ...detailLines.map((line) => detailNode(line)),
-            ...(impact.message ? [detailNode(impact.message)] : [])
-          ]
+          children
         } satisfies UsingNode;
       }),
       `using-group:${facts.rootTag ?? "xml"}:${facts.formIdent ?? facts.workflowFormIdent ?? "unknown"}`
     )
   ];
+}
+
+function buildUsingContributionNode(
+  document: vscode.TextDocument,
+  facts: ReturnType<typeof parseDocumentFacts>,
+  index: WorkspaceIndex,
+  componentKey: string,
+  component: NonNullable<ReturnType<typeof resolveComponentByKey>>,
+  contribution: IndexedComponentContributionSummary
+): ContributionNode {
+  const nodeId = `using:${componentKey}:contribution:${contribution.contributionName}`;
+  const location = component.contributionDefinitions.get(contribution.contributionName);
+  const rootRelevant = contributionMatchesDocumentRoot(facts.rootTag, contribution);
+  const insertMode = (contribution.insert ?? "").trim().toLowerCase();
+  const insertions = getIndexedContributionInsertCount(facts, componentKey, contribution.contributionName);
+  const hasUntypedContent = contribution.hasContent && insertions === 0 && insertMode !== "placeholder";
+  const hasIndexedInsertCount = insertions !== undefined;
+  const usageState: "effective" | "unused" =
+    rootRelevant && hasIndexedInsertCount && (insertions > 0 || hasUntypedContent) ? "effective" : "unused";
+  const metaGroup = buildUsingContributionMetaGroup(nodeId, contribution);
+  const placeholderLocations = collectPlaceholderUsageLocations(
+    document,
+    facts,
+    componentKey,
+    contribution.contributionName
+  );
+  const placeholderGroup = buildPlaceholderUsageGroup(nodeId, placeholderLocations, contribution.insert);
+
+  const typeGroups = buildUsingContributionTypeGroups(nodeId, contribution);
+  const details: string[] = [];
+  if (!rootRelevant) {
+    details.push(`not relevant for root '${facts.rootTag ?? "unknown"}'`);
+  }
+  details.push(hasIndexedInsertCount ? `inserts=${insertions}` : "inserts=index-missing");
+  if (hasUntypedContent) {
+    details.push("untyped-content");
+  }
+
+  return {
+    type: "contribution",
+    id: nodeId,
+    label: contribution.contributionName,
+    description: details.join(", "),
+    tooltip: [
+      contribution.targetXPath ? `TargetXPath: ${contribution.targetXPath}` : undefined,
+      contribution.insert ? `Insert: ${contribution.insert}` : undefined,
+      rootRelevant ? undefined : `Root mismatch (current root=${facts.rootTag ?? "unknown"})`
+    ].filter(Boolean).join("\n"),
+    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    icon: rootRelevant ? iconForUsage(usageState) : new vscode.ThemeIcon("circle-outline"),
+    contextValue: "compositionContribution",
+    resourceUri: component.uri,
+    sourceLocation: location,
+    usageLocations: getUsingUsageLocations(facts, index, componentKey, contribution.contributionName),
+    children: [metaGroup, ...(placeholderGroup ? [placeholderGroup] : []), ...typeGroups, ...(typeGroups.length === 0 ? [detailNode("No typed symbols.")] : [])]
+  };
+}
+
+function buildUsingContributionMetaGroup(
+  contributionNodeId: string,
+  contribution: IndexedComponentContributionSummary
+): GroupNode {
+  const rootValue = contribution.rootExpression ?? contribution.root ?? "form";
+  const insertValue = contribution.insert ?? "append";
+  const targetXPathValue = contribution.targetXPath ?? "(none)";
+  const summary = `${rootValue}, ${insertValue}, ${targetXPathValue}`;
+  const children: CompositionTreeNode[] = [
+    detailNode(`Root: ${rootValue}`),
+    detailNode(`Insert: ${insertValue}`),
+    detailNode(`TargetXPath: ${targetXPathValue}`)
+  ];
+
+  if (contribution.allowMultipleInserts !== undefined) {
+    children.push(detailNode(`AllowMultipleInserts: ${contribution.allowMultipleInserts ? "true" : "false"}`));
+  }
+  children.push(detailNode(`HasContent: ${contribution.hasContent ? "true" : "false"}`));
+
+  return {
+    type: "group",
+    id: `${contributionNodeId}:meta`,
+    label: "Meta",
+    description: summary,
+    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    icon: new vscode.ThemeIcon("symbol-structure"),
+    children
+  };
+}
+
+function buildUsingContributionTypeGroups(
+  contributionNodeId: string,
+  contribution: IndexedComponentContributionSummary
+): GroupNode[] {
+  const groups: GroupNode[] = [];
+  const add = (label: string, suffix: string, idents: ReadonlySet<string>, iconId: string): void => {
+    if (idents.size === 0) {
+      return;
+    }
+    groups.push({
+      type: "group",
+      id: `${contributionNodeId}:type:${suffix}`,
+      label,
+      description: `${idents.size}`,
+      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+      icon: new vscode.ThemeIcon(iconId),
+      children: [...idents]
+        .sort((a, b) => a.localeCompare(b))
+        .map((ident, idx) => ({
+          type: "detail",
+          id: `${contributionNodeId}:type:${suffix}:ident:${idx}`,
+          label: ident,
+          icon: new vscode.ThemeIcon("symbol-string")
+        }))
+    });
+  };
+
+  add("Controls", "controls", contribution.formControlIdents, "symbol-field");
+  add("Buttons", "buttons", contribution.formButtonIdents, "symbol-event");
+  add("Sections", "sections", contribution.formSectionIdents, "symbol-class");
+  add("ActionShareCodes", "wf-actions", contribution.workflowActionShareCodeIdents, "symbol-method");
+  add("ControlShareCodes", "wf-controls", contribution.workflowControlShareCodeIdents, "symbol-constant");
+  add("ButtonShareCodes", "wf-buttons", contribution.workflowButtonShareCodeIdents, "symbol-key");
+  add("ReferencedActionShareCodes", "wf-referenced-actions", contribution.workflowReferencedActionShareCodeIdents, "references");
+
+  return groups;
+}
+
+function buildPlaceholderUsageGroup(
+  contributionNodeId: string,
+  locations: readonly vscode.Location[],
+  insertMode: string | undefined
+): GroupNode | undefined {
+  if (locations.length === 0 && (insertMode ?? "").trim().toLowerCase() !== "placeholder") {
+    return undefined;
+  }
+
+  return {
+    type: "group",
+    id: `${contributionNodeId}:placeholders`,
+    label: "Placeholders",
+    description: `${locations.length}`,
+    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    icon: new vscode.ThemeIcon("symbol-key"),
+    children:
+      locations.length > 0
+        ? locations.map((location, idx) => ({
+            type: "detail",
+            id: `${contributionNodeId}:placeholders:${idx}`,
+            label: formatLocationLabel(location),
+            icon: new vscode.ThemeIcon("references"),
+            command: openLocationCommand(location, "Open placeholder")
+          }))
+        : [detailNode("No matching placeholder usage found in current document.")]
+  };
+}
+
+function collectPlaceholderUsageLocations(
+  document: vscode.TextDocument,
+  facts: ReturnType<typeof parseDocumentFacts>,
+  componentKey: string,
+  contributionName: string
+): vscode.Location[] {
+  return facts.placeholderReferences
+    .filter((ref) => ref.componentKey === componentKey && (ref.contributionValue ?? "").trim() === contributionName)
+    .map((ref) => new vscode.Location(document.uri, ref.range))
+    .sort(compareLocations);
+}
+
+function getIndexedContributionInsertCount(
+  facts: ReturnType<typeof parseDocumentFacts>,
+  componentKey: string,
+  contributionName: string
+): number | undefined {
+  const key = `${componentKey}::${contributionName}`;
+  return facts.usingContributionInsertCounts.get(key);
+}
+
+function evaluateUsingInsertImpact(
+  facts: ReturnType<typeof parseDocumentFacts>,
+  componentKey: string,
+  contributions: readonly IndexedComponentContributionSummary[]
+): { kind: "effective" | "partial" | "unused"; message: string } {
+  const relevant = contributions.filter((contribution) => contributionMatchesDocumentRoot(facts.rootTag, contribution));
+  if (relevant.length === 0) {
+    return {
+      kind: "unused",
+      message: `No contributions with matching root '${facts.rootTag ?? "unknown"}'.`
+    };
+  }
+
+  let successCount = 0;
+  for (const contribution of relevant) {
+    const inserts = getIndexedContributionInsertCount(facts, componentKey, contribution.contributionName) ?? 0;
+    if (inserts > 0) {
+      successCount++;
+    }
+  }
+
+  if (successCount === 0) {
+    return {
+      kind: "unused",
+      message: `Insert failed for all ${relevant.length} root-relevant contribution(s).`
+    };
+  }
+
+  if (successCount < relevant.length) {
+    return {
+      kind: "partial",
+      message: `Insert succeeded for ${successCount}/${relevant.length} root-relevant contribution(s).`
+    };
+  }
+
+  return {
+    kind: "effective",
+    message: `Insert succeeded for all ${relevant.length} root-relevant contribution(s).`
+  };
 }
 
 function aggregateFormControls(
@@ -529,13 +769,16 @@ function aggregateWorkflowShareCodes(
   index: WorkspaceIndex,
   selector: (summary: IndexedComponentContributionSummary) => ReadonlySet<string>,
   localIdents: readonly string[],
-  localDefinitions: ReadonlyMap<string, vscode.Range>
+  localDefinitions: ReadonlyMap<string, vscode.Range>,
+  usageLocationsByIdent: ReadonlyMap<string, vscode.Location[]>
 ): AggregatedSymbol[] {
   const local = localIdents.map((ident) => ({
     ident,
-    location: localDefinitions.get(ident) ? new vscode.Location(documentUri, localDefinitions.get(ident)!) : undefined
+    location: localDefinitions.get(ident) ? new vscode.Location(documentUri, localDefinitions.get(ident)!) : undefined,
+    usageCount: usageLocationsByIdent.get(ident)?.length ?? 0,
+    usageLocations: usageLocationsByIdent.get(ident) ?? []
   }));
-  const injected = new Map<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location }>();
+  const injected = new Map<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>();
 
   for (const usingRef of facts.usingReferences) {
     const component = resolveComponentByKey(index, usingRef.componentKey);
@@ -543,7 +786,7 @@ function aggregateWorkflowShareCodes(
       continue;
     }
 
-    const selected = selectUsingContributions(component, usingRef.sectionValue);
+    const selected = selectRelevantUsingContributions(facts, component, usingRef.sectionValue);
     const sourceLabel = usingRef.sectionValue
       ? `${usingRef.rawComponentValue}#${usingRef.sectionValue}`
       : usingRef.rawComponentValue;
@@ -552,7 +795,9 @@ function aggregateWorkflowShareCodes(
         injected.set(ident, {
           source: sourceLabel,
           resourceUri: component.uri,
-          sourceLocation: findContributionLocationForIdent(component, selected, ident, selector)
+          sourceLocation: findContributionLocationForIdent(component, selected, ident, selector),
+          usageCount: usageLocationsByIdent.get(ident)?.length ?? 0,
+          usageLocations: usageLocationsByIdent.get(ident) ?? []
         });
       }
     }
@@ -573,7 +818,7 @@ function collectUsingSymbols(
       continue;
     }
 
-    const selected = selectUsingContributions(component, usingRef.sectionValue);
+    const selected = selectRelevantUsingContributions(facts, component, usingRef.sectionValue);
     const sourceLabel = usingRef.sectionValue
       ? `${usingRef.rawComponentValue}#${usingRef.sectionValue}`
       : usingRef.rawComponentValue;
@@ -592,8 +837,8 @@ function collectUsingSymbols(
 }
 
 function mergeAggregatedSymbols(
-  localSymbols: ReadonlyArray<{ ident: string; location?: vscode.Location }>,
-  injectedMap: ReadonlyMap<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location }>
+  localSymbols: ReadonlyArray<{ ident: string; location?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>,
+  injectedMap: ReadonlyMap<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>
 ): AggregatedSymbol[] {
   const out = new Map<string, AggregatedSymbol>();
 
@@ -602,7 +847,9 @@ function mergeAggregatedSymbols(
       ident: localSymbol.ident,
       origin: "local",
       sourceLocation: localSymbol.location,
-      resourceUri: localSymbol.location?.uri
+      resourceUri: localSymbol.location?.uri,
+      usageCount: localSymbol.usageCount,
+      usageLocations: localSymbol.usageLocations
     });
   }
 
@@ -615,7 +862,9 @@ function mergeAggregatedSymbols(
       origin: "injected",
       source: source.source,
       resourceUri: source.resourceUri,
-      sourceLocation: source.sourceLocation
+      sourceLocation: source.sourceLocation,
+      usageCount: source.usageCount,
+      usageLocations: source.usageLocations
     });
   }
 
@@ -636,13 +885,23 @@ function buildSymbolGroup(label: string, symbols: readonly AggregatedSymbol[], i
             type: "symbol",
             id: `${nodeId}:symbol:${symbol.ident}`,
             label: symbol.ident,
-            description: symbol.origin,
+            description: symbol.usageCount !== undefined ? `${symbol.origin}, used ${symbol.usageCount}` : symbol.origin,
             tooltip: symbol.source ? `Injected from ${symbol.source}` : symbol.origin,
             icon: new vscode.ThemeIcon(symbol.origin === "local" ? "circle-large-filled" : "arrow-circle-right"),
             resourceUri: symbol.resourceUri,
             contextValue: symbol.sourceLocation ? "compositionSymbol" : undefined,
             sourceLocation: symbol.sourceLocation,
-            usageLocations: undefined
+            usageLocations: undefined,
+            collapsibleState: (symbol.usageLocations?.length ?? 0) > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+            children: (symbol.usageLocations?.length ?? 0) > 0
+              ? symbol.usageLocations!.map((location, index) => ({
+                  type: "detail",
+                  id: `${nodeId}:symbol:${symbol.ident}:usage:${index}`,
+                  label: formatLocationLabel(location),
+                  icon: new vscode.ThemeIcon("references"),
+                  command: openLocationCommand(location, `Open usage of ${symbol.ident}`)
+                } satisfies DetailNode))
+              : undefined
           }))
         : [detailNode("No items.")]
   };
@@ -722,7 +981,7 @@ function collectFeatureUsageLocations(
     }
   }
   for (const part of report.parts) {
-    const componentKey = normalizeComponentKey(part.file);
+    const componentKey = toIndexedComponentKey(part.file);
     for (const location of index.componentReferenceLocationsByKey.get(componentKey) ?? []) {
       pushUniqueLocationMap(seen, location);
     }
@@ -909,4 +1168,65 @@ function toWorkspacePath(relativePath: string, activeUri: vscode.Uri): string {
   }
 
   return vscode.Uri.joinPath(folder.uri, ...relativePath.split("/")).fsPath;
+}
+
+function toIndexedComponentKey(relativePath: string): string {
+  const normalized = relativePath.replace(/\\/g, "/");
+  const lower = normalized.toLowerCase();
+  const marker = "xml_components/";
+  const markerWithSlash = `/${marker}`;
+
+  let fromRoot = normalized;
+  if (lower.startsWith(marker)) {
+    fromRoot = normalized.slice(marker.length);
+  } else {
+    const markerIndex = lower.indexOf(markerWithSlash);
+    if (markerIndex >= 0) {
+      fromRoot = normalized.slice(markerIndex + markerWithSlash.length);
+    }
+  }
+
+  return normalizeComponentKey(fromRoot);
+}
+
+function collectWorkflowReferenceLocations(
+  documentUri: vscode.Uri,
+  facts: ReturnType<typeof parseDocumentFacts>,
+  kind: "controlShareCode" | "buttonShareCode"
+): Map<string, vscode.Location[]> {
+  const locations = new Map<string, vscode.Location[]>();
+  for (const ref of facts.workflowReferences) {
+    if (ref.kind !== kind) {
+      continue;
+    }
+
+    const list = locations.get(ref.ident) ?? [];
+    list.push(new vscode.Location(documentUri, ref.range));
+    locations.set(ref.ident, list);
+  }
+  return locations;
+}
+
+function collectActionShareCodeReferenceLocations(
+  documentUri: vscode.Uri,
+  facts: ReturnType<typeof parseDocumentFacts>
+): Map<string, vscode.Location[]> {
+  const locations = new Map<string, vscode.Location[]>();
+  for (const ref of facts.actionShareCodeReferences) {
+    const list = locations.get(ref.ident) ?? [];
+    list.push(new vscode.Location(documentUri, ref.range));
+    locations.set(ref.ident, list);
+  }
+  return locations;
+}
+
+function formatLocationLabel(location: vscode.Location): string {
+  const relative = vscode.workspace.asRelativePath(location.uri, false);
+  const line = location.range.start.line + 1;
+  const column = location.range.start.character + 1;
+  return `${relative}:${line}:${column}`;
+}
+
+function sharedSectionNodeId(label: string): string {
+  return `section:${label.toLowerCase()}`;
 }

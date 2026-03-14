@@ -758,19 +758,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const computed = engine.buildDiagnostics(
       diagnosticsDocument,
       index,
-      cachedFacts
-        ? {
-            parsedFacts: cachedFacts,
-            settingsOverride: options?.settingsSnapshot,
-            metadataOverride: options?.metadataSnapshot,
-            skipConfiguredRootsCheck: true,
-            featureRegistry: featureRegistryStore.getRegistry()
-          }
-        : {
-            settingsOverride: options?.settingsSnapshot,
-            metadataOverride: options?.metadataSnapshot,
-            featureRegistry: featureRegistryStore.getRegistry()
-          }
+      {
+        parsedFacts: cachedFacts,
+        settingsOverride: options?.settingsSnapshot,
+        metadataOverride: options?.metadataSnapshot,
+        skipConfiguredRootsCheck: true,
+        featureRegistry: featureRegistryStore.getRegistry()
+      }
     );
     const diagnosticsMs = Date.now() - diagnosticsStartedAt;
     const signature = `${diagnosticsDocument.version}:${computed.length}`;
@@ -1439,6 +1433,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     const result = engine.buildDiagnostics(document, getIndexerForUri(document.uri).getIndex(), {
+      parsedFacts: getIndexerForUri(document.uri).getIndex().parsedFactsByUri.get(document.uri.toString()),
       featureRegistry: featureRegistryStore.getRegistry()
     });
     diagnostics.set(document.uri, result);
@@ -1842,29 +1837,68 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
+  type CompositionSourceNode = {
+    sourceLocation?: vscode.Location;
+    resourceUri?: vscode.Uri;
+    label?: string;
+  };
+
+  type CompositionOpenMode = "peek" | "side" | "sidePreview" | "newTab" | "current";
+
+  function getCompositionOpenMode(): CompositionOpenMode {
+    const raw = vscode.workspace
+      .getConfiguration("sfpXmlLinter")
+      .get<string>("composition.openMode", "newTab");
+    if (raw === "side" || raw === "sidePreview" || raw === "newTab" || raw === "current" || raw === "peek") {
+      return raw;
+    }
+    return "newTab";
+  }
+
+  async function openCompositionSource(node: CompositionSourceNode | undefined, mode: CompositionOpenMode): Promise<void> {
+    const location = node?.sourceLocation;
+    if (location) {
+      if (mode === "peek") {
+        await vscode.commands.executeCommand(
+          "editor.action.peekLocations",
+          location.uri,
+          location.range.start,
+          [location],
+          "peek"
+        );
+        return;
+      }
+
+      await vscode.window.showTextDocument(location.uri, {
+        selection: location.range,
+        viewColumn: mode === "side" || mode === "sidePreview" ? vscode.ViewColumn.Beside : undefined,
+        preview: mode === "sidePreview" || mode === "current",
+        preserveFocus: mode === "sidePreview"
+      });
+      return;
+    }
+
+    if (node?.resourceUri) {
+      await vscode.window.showTextDocument(node.resourceUri, {
+        viewColumn: mode === "side" || mode === "sidePreview" ? vscode.ViewColumn.Beside : undefined,
+        preview: mode === "sidePreview" || mode === "current",
+        preserveFocus: mode === "sidePreview"
+      });
+      return;
+    }
+
+    vscode.window.showInformationMessage("SFP XML Linter: Source location is not available for this item.");
+  }
+
   context.subscriptions.push(
-    vscode.commands.registerCommand("sfpXmlLinter.compositionOpenSource", async (node?: {
-      sourceLocation?: vscode.Location;
-      resourceUri?: vscode.Uri;
-      label?: string;
-    }) => {
-      const location = node?.sourceLocation;
-      if (location) {
-        await vscode.window.showTextDocument(location.uri, {
-          selection: location.range,
-          preview: false
-        });
-        return;
-      }
-
-      if (node?.resourceUri) {
-        await vscode.window.showTextDocument(node.resourceUri, {
-          preview: false
-        });
-        return;
-      }
-
-      vscode.window.showInformationMessage("SFP XML Linter: Source location is not available for this item.");
+    vscode.commands.registerCommand("sfpXmlLinter.compositionOpenSource", async (node?: CompositionSourceNode) => {
+      await openCompositionSource(node, getCompositionOpenMode());
+    }),
+    vscode.commands.registerCommand("sfpXmlLinter.compositionOpenSourceBeside", async (node?: CompositionSourceNode) => {
+      await openCompositionSource(node, "side");
+    }),
+    vscode.commands.registerCommand("sfpXmlLinter.compositionOpenSourceSidePreview", async (node?: CompositionSourceNode) => {
+      await openCompositionSource(node, "sidePreview");
     })
   );
 
@@ -1959,6 +1993,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       for (const uri of uris) {
         const doc = await vscode.workspace.openTextDocument(uri);
         const ds = engine.buildDiagnostics(doc, getIndexerForUri(uri).getIndex(), {
+          parsedFacts: getIndexerForUri(uri).getIndex().parsedFactsByUri.get(uri.toString()),
           featureRegistry: featureRegistryStore.getRegistry()
         });
         if (ds.length === 0) {

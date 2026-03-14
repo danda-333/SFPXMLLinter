@@ -22,6 +22,7 @@ export function buildEffectiveCompositionModel(
   registry: FeatureManifestRegistry
 ): EffectiveCompositionModel {
   const itemsByKey = new Map<string, EffectiveCompositionItem>();
+  const providerContextsByItemKey = new Map<string, Array<Set<FeatureContextKind>>>();
   const conflicts: EffectiveCompositionConflict[] = [];
   const contributionReports: EffectiveContributionReport[] = [];
   const partProvidedKeys = new Set<string>();
@@ -42,6 +43,7 @@ export function buildEffectiveCompositionModel(
       }
 
       partProvidedKeys.add(symbolKey);
+      addProviderContexts(providerContextsByItemKey, symbolKey, part.appliesTo);
       upsertItem(itemsByKey, symbol, part.appliesTo, {
         kind: "feature",
         feature: manifest.feature,
@@ -54,6 +56,7 @@ export function buildEffectiveCompositionModel(
       const providedKeysForContribution = contributionProvidedKeys.get(contribution.id) ?? new Set<string>();
       for (const symbol of contribution.provides) {
         providedKeysForContribution.add(toSymbolKey(symbol));
+        addProviderContexts(providerContextsByItemKey, toSymbolKey(symbol), contribution.appliesTo);
         upsertItem(itemsByKey, symbol, contribution.appliesTo, {
           kind: "feature",
           feature: manifest.feature,
@@ -70,7 +73,12 @@ export function buildEffectiveCompositionModel(
   const providedIdents = new Set(items.map((item) => item.ident));
 
   for (const item of items) {
-    if (item.origins.length <= 1) {
+    const providerContextSets = providerContextsByItemKey.get(item.key) ?? [];
+    if (providerContextSets.length <= 1) {
+      continue;
+    }
+
+    if (!hasOverlappingProviderContexts(providerContextSets)) {
       continue;
     }
 
@@ -182,6 +190,36 @@ export function buildEffectiveCompositionModel(
     contributions: contributionReports,
     conflicts
   };
+}
+
+function addProviderContexts(
+  target: Map<string, Array<Set<FeatureContextKind>>>,
+  itemKey: string,
+  contexts: readonly FeatureContextKind[]
+): void {
+  const current = target.get(itemKey) ?? [];
+  const incoming = new Set(contexts);
+  const incomingKey = [...incoming].sort((a, b) => a.localeCompare(b)).join("|");
+  if (!current.some((set) => [...set].sort((a, b) => a.localeCompare(b)).join("|") === incomingKey)) {
+    current.push(incoming);
+  }
+  target.set(itemKey, current);
+}
+
+function hasOverlappingProviderContexts(contextSets: readonly ReadonlySet<FeatureContextKind>[]): boolean {
+  for (let i = 0; i < contextSets.length; i++) {
+    for (let j = i + 1; j < contextSets.length; j++) {
+      const left = contextSets[i];
+      const right = contextSets[j];
+      for (const context of left) {
+        if (right.has(context)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 export function matchesExpectedXPathInEffectiveModel(

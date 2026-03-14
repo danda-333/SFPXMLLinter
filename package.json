@@ -32,6 +32,8 @@
     "onCommand:sfpXmlLinter.showCompositionLog",
     "onCommand:sfpXmlLinter.refreshCompositionView",
     "onCommand:sfpXmlLinter.compositionOpenSource",
+    "onCommand:sfpXmlLinter.compositionOpenSourceBeside",
+    "onCommand:sfpXmlLinter.compositionOpenSourceSidePreview",
     "onCommand:sfpXmlLinter.compositionShowUsages",
     "onCommand:sfpXmlLinter.rebuildIndex",
     "onCommand:sfpXmlLinter.revalidateWorkspace",
@@ -112,6 +114,16 @@
         "icon": "$(go-to-file)"
       },
       {
+        "command": "sfpXmlLinter.compositionOpenSourceBeside",
+        "title": "SFP XML Linter: Composition Open Source To Side",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "sfpXmlLinter.compositionOpenSourceSidePreview",
+        "title": "SFP XML Linter: Composition Open Source Side Preview",
+        "icon": "$(open-preview)"
+      },
+      {
         "command": "sfpXmlLinter.compositionShowUsages",
         "title": "SFP XML Linter: Composition Show Usages",
         "icon": "$(references)"
@@ -168,9 +180,14 @@
           "group": "inline@1"
         },
         {
+          "command": "sfpXmlLinter.compositionOpenSourceSidePreview",
+          "when": "view == sfpXmlLinter.compositionView && viewItem =~ /^composition(Feature|FeaturePart|Contribution|Using|Symbol)$/",
+          "group": "inline@2"
+        },
+        {
           "command": "sfpXmlLinter.compositionShowUsages",
           "when": "view == sfpXmlLinter.compositionView && viewItem =~ /^composition(Feature|FeaturePart|Contribution|Using)$/",
-          "group": "inline@2"
+          "group": "inline@3"
         }
       ]
     },
@@ -270,6 +287,18 @@
           ],
           "default": "dependents",
           "description": "On XML_Components save, build only dependent templates when possible (dependents) or rebuild all templates (full)."
+        },
+        "sfpXmlLinter.composition.openMode": {
+          "type": "string",
+          "enum": [
+            "peek",
+            "side",
+            "sidePreview",
+            "newTab",
+            "current"
+          ],
+          "default": "newTab",
+          "description": "How Composition Open Source navigates: peek inline preview, open to side editor, open as new tab, or reuse current editor tab."
         }
       }
     },

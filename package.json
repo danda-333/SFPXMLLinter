@@ -319,6 +319,20 @@
           "default": "debug",
           "description": "Template builder logging/detail mode. fast minimizes overhead, debug prints detailed composition diagnostics, release keeps only high-level output."
         },
+        "sfpXmlLinter.templateBuilder.postBuildFormat": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, final built XML is passed through internal tolerant formatter before write."
+        },
+        "sfpXmlLinter.templateBuilder.provenanceMode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "fileComment"
+          ],
+          "default": "off",
+          "description": "Adds optional provenance marker to final built XML output."
+        },
         "sfpXmlLinter.composition.openMode": {
           "type": "string",
           "enum": [

@@ -7,11 +7,15 @@ import {
   renderTemplateText,
   stripXmlComponentExtension
 } from "./buildXmlTemplatesCore";
-import { normalizeLineEndingsForTemplate } from "./lineEndings";
+import { applyTemplateOutputQuality, TemplateBuilderProvenanceMode } from "./outputQuality";
 
 interface BuildRunOptions {
   silent?: boolean;
   mode?: "fast" | "debug" | "release";
+  postBuildFormat?: boolean;
+  provenanceMode?: TemplateBuilderProvenanceMode;
+  provenanceLabel?: string;
+  formatterMaxConsecutiveBlankLines?: number;
   onLogLine?: (line: string) => void;
   onFileStatus?: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
   onTemplateEvaluated?: (
@@ -113,20 +117,24 @@ export class BuildXmlTemplatesService {
         const templateText = await readWorkspaceTextFile(templateUri);
         const debugLines: string[] = [];
         const debugMode = options.mode === "debug";
-        const rendered = normalizeLineEndingsForTemplate(
-          renderTemplateText(
-            templateText,
-            componentLibrary,
-            12,
-            debugMode
-              ? (line) => {
-                  debugLines.push(line);
-                  options.onLogLine?.(`DEBUG: ${line}`);
-                }
-              : undefined
-          ),
-          templateText
+        const renderedRaw = renderTemplateText(
+          templateText,
+          componentLibrary,
+          12,
+          debugMode
+            ? (line) => {
+                debugLines.push(line);
+                options.onLogLine?.(`DEBUG: ${line}`);
+              }
+            : undefined
         );
+        const rendered = applyTemplateOutputQuality(renderedRaw, templateText, {
+          postBuildFormat: options.postBuildFormat === true,
+          provenanceMode: options.provenanceMode ?? "off",
+          provenanceLabel: options.provenanceLabel,
+          relativeTemplatePath: relPath,
+          formatterMaxConsecutiveBlankLines: Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)
+        });
         const outputUri = templateToRuntimeUri(templateUri);
         const existing = await readWorkspaceTextFile(outputUri).catch(() => undefined);
 

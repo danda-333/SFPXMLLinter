@@ -473,6 +473,8 @@ function createInheritanceSettings(): import("../../config/settings").SfpXmlLint
     autoBuildOnSave: true,
     componentSaveBuildScope: "dependents",
     templateBuilderMode: "debug",
+    templateBuilderPostBuildFormat: false,
+    templateBuilderProvenanceMode: "off",
     ruleSeverities: {
       "workflow-redundant-feature-using": "warning",
       "dataview-redundant-feature-using": "warning",

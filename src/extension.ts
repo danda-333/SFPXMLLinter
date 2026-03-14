@@ -596,6 +596,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   ): {
     silent: boolean;
     mode: "fast" | "debug" | "release";
+    postBuildFormat: boolean;
+    provenanceMode: "off" | "fileComment";
+    provenanceLabel: string;
+    formatterMaxConsecutiveBlankLines: number;
     onLogLine: (line: string) => void;
     onFileStatus: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
     onTemplateEvaluated: (
@@ -610,9 +614,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       (() => {
         // no-op
       });
+    const settings = getSettings();
+    const provenanceLabel = `v${context.extension.packageJSON.version ?? "unknown"}`;
     return {
       silent,
       mode,
+      postBuildFormat: settings.templateBuilderPostBuildFormat,
+      provenanceMode: settings.templateBuilderProvenanceMode,
+      provenanceLabel,
+      formatterMaxConsecutiveBlankLines: settings.formatterMaxConsecutiveBlankLines,
       onLogLine: (line: string) => {
         const trimmed = line.trim();
         if (trimmed.length === 0) {

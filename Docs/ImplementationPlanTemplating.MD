@@ -990,6 +990,28 @@ Smysl testu:
 Gate pro dalsi milestone:
 - finalni XML je citelnejsi a debug rezim je pouzitelny bez rozbiti specialnich bloku.
 
+Aktualne hotovo:
+- volitelny post-build output quality pass v template builder pipeline:
+  - `templateBuilder.postBuildFormat` (default `false`)
+  - kdyz je zapnuto, finalni XML je po renderu prohnano internim tolerant formatterem
+- volitelne provenance markery:
+  - `templateBuilder.provenanceMode` (`off` | `fileComment`, default `off`)
+  - `fileComment` vklada file-level marker:
+    - `<!-- Template builder: vX.Y.Z - relative/template/path.xml -->`
+- output quality vrstva je oddelena do samostatneho modulu:
+  - `src/template/outputQuality.ts`
+- builder service je napojen na novou vrstvu bez zmeny core rendering logiky:
+  - `src/template/buildXmlTemplatesService.ts`
+- extension wiring predava formatter/provenance volby z nastaveni:
+  - `src/extension.ts`
+  - `src/config/settings.ts`
+- test coverage:
+  - template service testy overuji:
+    - formatter pass po buildu
+    - zachovani specialnich bloku (`SQL`, `Command`, `HTMLTemplate`, `CDATA`)
+    - provenance rezimy (`off` / `fileComment`)
+  - doplneny composition settings stub pro nove builder volby
+
 ### Milestone M11: Programovatelne generovani
 Obsah:
 - `T11` Programovatelne generovani uvnitr feature

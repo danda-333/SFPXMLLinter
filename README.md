@@ -10,7 +10,8 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - `XML_Components`
 - Workspace indexer for:
   - `Form` symbols (`Controls`, `Buttons`, `Sections`)
-  - `Component` symbols (`Section Name`)
+  - `Feature` symbols (`Contribution` + contracts)
+  - `Primitive` symbols (`UsePrimitive`, params, slots)
 - Diagnostics:
   - `unknown-form-ident`
   - `unknown-form-control-ident`
@@ -21,10 +22,16 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - `duplicate-control-ident`
   - `duplicate-button-ident`
   - `duplicate-section-ident`
-  - `unknown-using-component`
-  - `unknown-using-section`
+  - `unknown-using-feature`
+  - `unknown-using-contribution`
+  - `contribution-mismatch`
   - `typo-maxlenght-attribute` (`MaxLenght` typo in `Control`/`Parameter`; expected `MaxLength`)
   - `sql-convention-equals-spacing` (`=` in `SQL`/`Command` must have spaces on both sides)
+  - primitive diagnostics:
+    - `unknown-primitive`
+    - `primitive-missing-slot`
+    - `primitive-missing-param`
+    - `primitive-cycle`
   - feature-contract diagnostics:
     - `unknown-feature-requirement`
     - `missing-feature-dependency`
@@ -34,11 +41,14 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - `ordering-conflict`
     - `orphan-feature-part`
     - `incomplete-feature`
-  - `FormControl xsi:type="ShareCodeControl"` is validated against `WorkFlow/ControlShareCodes/ControlShareCode` (local + injected via `Using`)
-- Per-rule severity config (`sfpXmlLinter.rules`) with values: `off`, `warning`, `error`
-  - new form-owned inheritance diagnostics (default `warning`):
+  - inheritance/suppression diagnostics:
     - `workflow-redundant-feature-using`
     - `dataview-redundant-feature-using`
+    - `feature-inheritance-override`
+    - `suppression-conflict`
+    - `suppression-noop`
+  - `FormControl xsi:type="ShareCodeControl"` is validated against `WorkFlow/ControlShareCodes/ControlShareCode` (local + injected via `Using`)
+- Per-rule severity config (`sfpXmlLinter.rules`) with values: `off`, `information`, `warning`, `error`
 - Ignore directives:
   - `<!-- @Ignore rule-id -->` (applies to next non-empty line)
   - `<!-- @IgnoreFile rule-id -->` (applies to whole file)
@@ -53,7 +63,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - root/child elements
   - attribute names by tag
   - enum values (`xsi:type`, `DataType`, `Insert`, ...)
-  - semantic values (`FormIdent`, `Using Component/Section`, WorkFlow `Ident` refs)
+  - semantic values (`FormIdent`, `Using Feature/Contribution`, WorkFlow `Ident` refs)
   - production-oriented workflow `Action` snippets (e.g. `ChangeState`, `ChangeState (StateDataSource)`, `ActionTrigger`, `ActionValue`, `GlobalValidation`, `Required`, `Communication`, `Email`, `Alert`, `GenerateForm`, `GenerateSubForm`, `IF`)
   - `ActionValue` snippet defaults to `DataSource` (`SQL` + `Parameters`) and does not suggest inline `Value` for `xsi:type="ActionValue"`
 - Go to Definition:
@@ -61,8 +71,9 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - any `FormIdent="..."` reference -> `<Form Ident="...">`
   - `FormControl/Button/Section Ident` in WorkFlow -> matching declaration in Form
   - `Mapping FromIdent/ToIdent` -> matching control declaration in owning Form
-  - `Using Component/Name` -> component file
-  - `Using Section` -> `<Section Name="...">` in component
+  - `Using Feature/Name` -> feature file
+  - `Using Contribution` -> `<Contribution Name="...">` in feature
+  - legacy `Using Component/Section` is still supported (temporary compatibility)
 - Rename Symbol:
   - rename `Form Ident` and update all `FormIdent`/`MappingFormIdent` references
   - rename `Control/Button/Section Ident` from Form declaration
@@ -77,7 +88,14 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - add SQL inline ignore (`/* @Ignore sql-convention-equals-spacing */`)
 - Build command:
   - `SFP XML Linter: Build XML Templates`
+  - `SFP XML Linter: Build XML Templates (All)`
   - Native TypeScript `BuildXmlTemplates` builder (no PowerShell fallback)
+  - templating naming supports both:
+    - current: `Feature` / `Contribution`
+    - legacy (temporary): `Component` / `Section`
+  - composition helpers:
+    - `UsePrimitive` + `XML_Primitives` library
+    - sugar pipeline: `Repeat`, `If`, `Case`
   - `TargetXPath` is evaluated as real XPath during section insertion
   - if multiple nodes match:
     - first match is used by default
@@ -85,7 +103,16 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - build log prints a debug line for the multi-match case
   - Placeholder sections support custom inline params:
     - `{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}`
+    - `{{Feature:Common/Shared/Assign,Contribution:Html,CustomParam:ParamValue}}`
     - enables replacements inside inserted section content (e.g. `{{CustomParam}}`)
+  - output quality options:
+    - `sfpXmlLinter.templateBuilder.postBuildFormat`
+    - `sfpXmlLinter.templateBuilder.provenanceMode` (`off` | `fileComment`)
+  - builder modes:
+    - `sfpXmlLinter.templateBuilder.mode` (`fast` | `debug` | `release`)
+  - build/composition output channels:
+    - `SFP XML Linter: Show Build Queue Log`
+    - `SFP XML Linter: Show Composition Log`
 - Generator scaffolding commands:
   - `SFP XML Linter: Create Generator Template (Document)`
   - `SFP XML Linter: Create Generator Template (Snippet)`
@@ -94,6 +121,11 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - `hello.snippet.generator.js`
   - If file name already exists, numeric suffix is added automatically.
   - Full generator API and examples: `Docs/TemplateGenerators.MD`
+  - user generator settings:
+    - `sfpXmlLinter.templateBuilder.generators.enabled`
+    - `sfpXmlLinter.templateBuilder.generators.timeoutMs`
+    - `sfpXmlLinter.templateBuilder.generators.enableUserScripts`
+    - `sfpXmlLinter.templateBuilder.generators.userScriptsRoots`
 - Feature manifest bootstrap command:
   - `SFP XML Linter: Generate Feature Manifest Bootstrap`
   - Generates `*.feature.json` next to the active feature from current XML-first feature composition.
@@ -104,6 +136,13 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - Report command:
   - `SFP XML Linter: Workspace Diagnostics Report`
   - Prints diagnostics summary and per-rule counts to output channel
+- Composition view commands:
+  - `SFP XML Linter: Refresh Composition View`
+  - `SFP XML Linter: Composition Open Source`
+  - Tree View shows:
+    - local/injected symbols
+    - `Using` status (`effective` / `partial` / `unused`)
+    - contribution meta and insert trace (`TargetXPath`, matches, inserts, placeholder usage)
 - Index command:
   - `SFP XML Linter: Rebuild Full Index`
   - Forces full workspace reindex on demand

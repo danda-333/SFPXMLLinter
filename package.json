@@ -204,12 +204,13 @@
           "default": [
             "XML",
             "XML_Templates",
-            "XML_Components"
+            "XML_Components",
+            "XML_Primitives"
           ],
           "items": {
             "type": "string"
           },
-          "description": "Folders to scan for XML symbols and validations."
+          "description": "Folders to scan for XML symbols and validations (including template components/primitives)."
         },
         "sfpXmlLinter.resourcesRoots": {
           "type": "array",
@@ -293,7 +294,7 @@
         "sfpXmlLinter.templateBuilder.autoBuildOnSave": {
           "type": "boolean",
           "default": true,
-          "description": "When enabled, saving XML_Templates/XML_Components files automatically triggers BuildXmlTemplates."
+          "description": "When enabled, saving XML_Templates/XML_Components/XML_Primitives files automatically triggers BuildXmlTemplates."
         },
         "sfpXmlLinter.templateBuilder.componentSaveBuildScope": {
           "type": "string",
@@ -302,7 +303,7 @@
             "full"
           ],
           "default": "dependents",
-          "description": "On XML_Components save, build only dependent templates when possible (dependents) or rebuild all templates (full)."
+          "description": "On XML_Components/XML_Primitives save, build only dependent templates when possible (dependents) or rebuild all templates (full)."
         },
         "sfpXmlLinter.templateBuilder.mode": {
           "type": "string",

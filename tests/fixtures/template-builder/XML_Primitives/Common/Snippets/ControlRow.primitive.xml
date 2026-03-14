@@ -1,0 +1,5 @@
+<Primitive>
+  <Template>
+    <div class="row"><ControlLabel ControlID="{{ControlID}}" /><Control ID="{{ControlID}}" /></div>
+  </Template>
+</Primitive>

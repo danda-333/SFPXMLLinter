@@ -55,7 +55,7 @@ const LEGACY_RULE_ALIASES: Record<string, string> = {
 
 export function getSettings(): SfpXmlLinterSettings {
   const cfg = vscode.workspace.getConfiguration("sfpXmlLinter");
-  const workspaceRoots = cfg.get<string[]>("workspaceRoots", ["XML", "XML_Templates", "XML_Components"]);
+  const workspaceRoots = cfg.get<string[]>("workspaceRoots", ["XML", "XML_Templates", "XML_Components", "XML_Primitives"]);
   const resourcesRoots = cfg.get<string[]>("resourcesRoots", ["Resources"]);
   const hoverDocsFiles = cfg.get<string[]>("hoverDocsFiles", ["Docs/hover-docs.json", "Docs/hover-docs.team.json"]);
   const rawRules = cfg.get<Record<string, unknown>>("rules", {});

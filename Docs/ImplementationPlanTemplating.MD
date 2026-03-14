@@ -481,11 +481,16 @@ Implementace:
 - lehke `Primitive` bez tezkeho `Using`,
 - inline sugar pro sdilene struktury:
   - napr. inline `ConfirmFormDialog` pod `Button`,
-- explicitni lift opakovanych action sekvenci do `ActionShareCode`,
+- `Repeat` pro jednoduche opakovani bloku,
+- `If` pro podminene vlozeni bloku,
+- `Case` pro jednoduchy branch vyber jedne vetve,
+- canonical rewrite:
+  - sugar zapis -> standardni finalni SFP XML,
 - zachovani standardniho finalniho XML po buildu.
 
 Definition of Done:
-- autoring je kratsi a citelnejsi,
+- authoring je kratsi a citelnejsi,
+- sugar konstrukce jsou deterministicke a snadno debugovatelne,
 - finalni XML zustava kompatibilni se stavajicim SFP modelem.
 
 ### Faze T10: Final output quality
@@ -514,12 +519,14 @@ Cil:
 
 Implementace:
 - build-time `JS/TS` generatory pro opakujici se patterny,
+- explicitni lift opakovanych action sekvenci do `ActionShareCode`,
 - bez side effectu,
 - s jasnym vstupem a vystupem,
 - cilene hlavne pro feature typu `FolderGroupSegment`.
 
 Definition of Done:
 - slozite opakujici se bloky lze generovat programove,
+- opakovane action sekvence umi byt liftovany do sdilenych `ActionShareCode` bez manualniho copy/paste,
 - XML templating zustava pro bezne skladani.
 
 Poznamka:
@@ -880,6 +887,9 @@ Aktualne hotovo:
 - composition regression testy pro conflict/cycle/missing anchor
 
 ### Milestone M9: Authoring ergonomie
+Stav:
+- `[HOTOVO]`
+
 Obsah:
 - `T9` Authoring ergonomie
 
@@ -887,12 +897,17 @@ Vystup:
 - komponenta v komponente,
 - `Primitive`,
 - inline sugar pro sdilene struktury,
-- explicitni lift opakovanych action sekvenci do `ActionShareCode`.
+- `Repeat` sugar,
+- `If` sugar,
+- `Case` sugar,
+- canonical rewrite do standardniho finalniho XML.
 
 Test checkpoint:
-- male fixture testy pro kazdou ergonomic sugar vrstvu,
+- male fixture testy pro kazdou ergonomickou sugar vrstvu,
+- male fixture testy pro `Repeat`, `If`, `Case`,
 - canonical output testy:
-  - authoring sugar -> standardni finalni XML
+  - authoring sugar -> standardni finalni XML,
+- regression testy, ze sugar neovlivni existujici feature bez sugar syntaxe,
 - realne end-to-end testy nad vybranymi komponentami z `SFPExampleProject`.
 
 Smysl testu:
@@ -900,6 +915,13 @@ Smysl testu:
 
 Gate pro dalsi milestone:
 - authoring zapis je kratsi, ale finalni XML zustava 1:1 predvidatelne a testovatelne.
+
+Aktualne hotovo:
+- builder sugar pipeline pro `Repeat`, `If`, `Case`
+- podpora `Primitive` + `UsePrimitive` vcetne parametru a slotu (`{{Slot:...}}`)
+- nacitani primitive knihovny z `XML_Primitives`
+- auto-build dependents funguje i pro `XML_Primitives`
+- core testy pro primitives/sugar + fixture demo `999_T9PrimitiveDemo`
 
 ### Milestone M10: Final output quality
 Obsah:
@@ -930,6 +952,7 @@ Obsah:
 
 Vystup:
 - prvni `JS/TS` build-time generator,
+- explicitni lift opakovanych action sekvenci do `ActionShareCode`,
 - omezeny side-effect free kontrakt,
 - regression testy pro generovane patterny.
 

@@ -1,0 +1,9 @@
+<Form Ident="T9PrimitiveDemo">
+  <Sections>
+    <UsePrimitive Name="Common/Dialogs/ConfirmFormDialogSection" Template="Dialog" DialogIdent="AssignDialogSection" TitleKey="AssignDialogTitle">
+      <Slot Name="Body">
+        <UsePrimitive Name="Common/Snippets/ControlRow" ControlID="DialogAssignedGroupID" />
+      </Slot>
+    </UsePrimitive>
+  </Sections>
+</Form>

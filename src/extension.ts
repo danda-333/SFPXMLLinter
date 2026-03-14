@@ -54,7 +54,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const indexOutput = vscode.window.createOutputChannel("SFP XML Linter Index");
   const formatterOutput = vscode.window.createOutputChannel("SFP XML Linter Formatter");
   const compositionOutput = vscode.window.createOutputChannel("SFP XML Linter Composition");
-  const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
+  const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components", "XML_Primitives"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
   const featureRegistryStore = new FeatureRegistryStore();
   const compositionTreeProvider = new CompositionTreeProvider(
@@ -1564,11 +1564,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
-    if (!isInFolder(document.uri, "XML_Components")) {
+    const isComponentLikeSave = isInFolder(document.uri, "XML_Components") || isInFolder(document.uri, "XML_Primitives");
+    if (!isComponentLikeSave) {
       return;
     }
 
-    logBuild(`SAVE XML_Components: ${vscode.workspace.asRelativePath(document.uri, false)}`);
+    logBuild(`SAVE component-like source: ${vscode.workspace.asRelativePath(document.uri, false)}`);
     if (settings.componentSaveBuildScope === "full") {
       logBuild("Component save scope=full -> FULL build");
       await queueTemplateBuild(workspaceFolder);
@@ -1994,12 +1995,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             continue;
           }
 
-          if (isInFolder(targetUri, "XML_Components")) {
+          if (isInFolder(targetUri, "XML_Components") || isInFolder(targetUri, "XML_Primitives")) {
             const dependentTemplates = await buildService.findTemplatesUsingComponent(folder, targetUri.fsPath);
             if (dependentTemplates.length === 0) {
               usedFullFallback = true;
               logBuild(
-                `Selection in XML_Components has no dependents: ${vscode.workspace.asRelativePath(targetUri, false)} -> FULL fallback`
+                `Selection in XML_Components/XML_Primitives has no dependents: ${vscode.workspace.asRelativePath(targetUri, false)} -> FULL fallback`
               );
               break;
             }

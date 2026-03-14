@@ -26,6 +26,20 @@ interface ComponentDefinition {
   sections: ComponentSection[];
 }
 
+interface PrimitiveTemplate {
+  name?: string;
+  insert?: string;
+  targetXPath?: string;
+  allowMultipleInserts?: boolean;
+  root?: string;
+  content: string;
+}
+
+interface PrimitiveDefinition {
+  key: string;
+  templates: PrimitiveTemplate[];
+}
+
 const TEMPLATE_DEFINITION_TAGS = ["Feature", "Component"] as const;
 
 interface RenderContext {
@@ -122,12 +136,30 @@ export function renderTemplateText(
 
   out = expandIncludes(out, templateParams, context);
   out = applyUsingSections(out, templateParams, context);
+  out = expandAuthoringSugar(out, templateParams, context);
+  out = expandPrimitiveUsages(out, templateParams, context);
   out = replaceComponentPlaceholders(out, templateParams, context, 0);
+  out = expandAuthoringSugar(out, templateParams, context);
+  out = expandPrimitiveUsages(out, templateParams, context);
   out = sanitizeFinalXml(out, context.templateRoot);
   out = normalizeXmlTagSpacingLikeLegacy(out);
   out = trimWhitespaceLikeLegacy(out);
   out = out.replace(/\uFEFF/g, "");
 
+  return out;
+}
+
+function expandAuthoringSugar(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const before = out;
+    out = expandRepeatBlocks(out, inheritedParams, context);
+    out = expandCaseBlocks(out, inheritedParams, context);
+    out = expandIfBlocks(out, inheritedParams, context);
+    if (out === before) {
+      break;
+    }
+  }
   return out;
 }
 
@@ -144,6 +176,19 @@ export function extractUsingComponentRefs(text: string): string[] {
       continue;
     }
     refs.add(stripXmlComponentExtension(normalizePath(componentValue)));
+  }
+
+  for (const match of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const primitiveValue =
+      extractAttributeValue(attrs, "Primitive") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component");
+    if (!primitiveValue) {
+      continue;
+    }
+    refs.add(stripXmlComponentExtension(normalizePath(primitiveValue)));
   }
 
   for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
@@ -167,6 +212,9 @@ export function normalizePath(value: string): string {
 
 export function stripXmlComponentExtension(value: string): string {
   const lower = value.toLowerCase();
+  if (lower.endsWith(".primitive.xml")) {
+    return value.slice(0, value.length - ".primitive.xml".length);
+  }
   if (lower.endsWith(".feature.xml")) {
     return value.slice(0, value.length - ".feature.xml".length);
   }
@@ -207,6 +255,21 @@ function resolveComponentSourceByKey(library: BuildComponentLibrary, rawKey: str
       return library.byBaseName.get(base)?.[0];
     })();
   return source;
+}
+
+function resolvePrimitiveByKey(library: BuildComponentLibrary, rawKey: string): PrimitiveDefinition | undefined {
+  const source = resolveComponentSourceByKey(library, rawKey);
+  if (!source) {
+    return undefined;
+  }
+  const templates = parsePrimitiveTemplates(source.text);
+  if (templates.length === 0) {
+    return undefined;
+  }
+  return {
+    key: source.key,
+    templates
+  };
 }
 
 function expandIncludes(text: string, baseParams: Map<string, string>, context: RenderContext): string {
@@ -275,6 +338,124 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
   }
 
   return result;
+}
+
+function expandPrimitiveUsages(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "UsePrimitive");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderPrimitiveUsage(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+  return out;
+}
+
+function renderPrimitiveUsage(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const primitiveKey =
+    attrs.get("Primitive") ??
+    attrs.get("Name") ??
+    attrs.get("Feature") ??
+    attrs.get("Component");
+  if (!primitiveKey) {
+    return reconstructUsePrimitiveBlock(block);
+  }
+
+  const primitive = resolvePrimitiveByKey(context.library, primitiveKey);
+  if (!primitive) {
+    if (context.onDebugLog) {
+      context.onDebugLog(`[Primitive] '${primitiveKey}' not found.`);
+    }
+    return reconstructUsePrimitiveBlock(block);
+  }
+
+  const selectedTemplateName = attrs.get("Template") ?? attrs.get("Contribution") ?? attrs.get("Section");
+  const template = pickPrimitiveTemplate(primitive.templates, selectedTemplateName);
+  if (!template) {
+    if (context.onDebugLog) {
+      context.onDebugLog(`[Primitive] '${primitiveKey}' has no usable template.`);
+    }
+    return reconstructUsePrimitiveBlock(block);
+  }
+
+  const localParams = new Map<string, string>();
+  for (const [key, value] of attrs.entries()) {
+    if (key === "Primitive" || key === "Name" || key === "Feature" || key === "Component" || key === "Template" || key === "Contribution" || key === "Section") {
+      continue;
+    }
+    localParams.set(key, value);
+  }
+  const params = mergeParams(inheritedParams, localParams);
+  const slots = parsePrimitiveSlots(block.body);
+
+  let rendered = replaceSlotPlaceholders(template.content, slots);
+  rendered = applyParamSubstitution(rendered, params);
+  return rendered;
+}
+
+function reconstructUsePrimitiveBlock(block: TagBlock): string {
+  const attrs = block.attrs?.trim() ?? "";
+  if (!block.body || block.body.trim().length === 0) {
+    return attrs.length > 0 ? `<UsePrimitive ${attrs} />` : "<UsePrimitive />";
+  }
+  return attrs.length > 0
+    ? `<UsePrimitive ${attrs}>${block.body}</UsePrimitive>`
+    : `<UsePrimitive>${block.body}</UsePrimitive>`;
+}
+
+function parsePrimitiveTemplates(text: string): PrimitiveTemplate[] {
+  const blocks = collectTagBlocks(text, "Template").sort((a, b) => a.start - b.start);
+  const templates: PrimitiveTemplate[] = [];
+  for (const block of blocks) {
+    const attrs = parseXmlAttributes(block.attrs);
+    templates.push({
+      name: attrs.get("Name"),
+      insert: attrs.get("Insert"),
+      targetXPath: attrs.get("TargetXPath"),
+      allowMultipleInserts: parseBooleanAttribute(attrs.get("AllowMultipleInserts")),
+      root: attrs.get("Root"),
+      content: block.body
+    });
+  }
+  return templates;
+}
+
+function pickPrimitiveTemplate(templates: readonly PrimitiveTemplate[], requestedName?: string): PrimitiveTemplate | undefined {
+  if (requestedName && requestedName.trim().length > 0) {
+    return templates.find((template) => (template.name ?? "") === requestedName);
+  }
+  return templates.find((template) => (template.insert ?? "").toLowerCase() === "placeholder") ??
+    templates.find((template) => !(template.targetXPath ?? "").trim()) ??
+    templates[0];
+}
+
+function parsePrimitiveSlots(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const blocks = collectTagBlocks(text, "Slot").sort((a, b) => a.start - b.start);
+  for (const block of blocks) {
+    const attrs = parseXmlAttributes(block.attrs);
+    const name = (attrs.get("Name") ?? "").trim();
+    if (!name) {
+      continue;
+    }
+    out.set(name, block.body);
+  }
+  return out;
+}
+
+function replaceSlotPlaceholders(text: string, slots: ReadonlyMap<string, string>): string {
+  return text.replace(/\{\{Slot:([A-Za-z_][\w.-]*)\}\}/g, (full, slotName: string) => {
+    return slots.get(slotName) ?? "";
+  });
 }
 
 function applyUsingSections(text: string, templateParams: Map<string, string>, context: RenderContext): string {
@@ -363,6 +544,302 @@ function replaceComponentPlaceholders(
 
   out += text.slice(cursor);
   return out;
+}
+
+function expandRepeatBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "Repeat");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    // Replace innermost first and from the end so ranges remain stable.
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderRepeatBlock(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+
+  return out;
+}
+
+interface TagBlock {
+  start: number;
+  end: number;
+  attrs: string;
+  body: string;
+}
+
+function collectTagBlocks(text: string, tagName: string): TagBlock[] {
+  const escapedTagName = escapeRegex(tagName);
+  const tokenRegex = new RegExp(`<\\s*(\\/?)\\s*${escapedTagName}\\b([^>]*)>`, "gi");
+  const stack: Array<{ start: number; openEnd: number; attrs: string }> = [];
+  const blocks: TagBlock[] = [];
+  for (const match of text.matchAll(tokenRegex)) {
+    const slash = match[1] ?? "";
+    const attrs = match[2] ?? "";
+    const token = match[0] ?? "";
+    const start = typeof match.index === "number" ? match.index : -1;
+    if (start < 0) {
+      continue;
+    }
+    const end = start + token.length;
+    const isClosing = slash === "/";
+    const isSelfClosing = !isClosing && /\/\s*>$/.test(token);
+
+    if (!isClosing) {
+      if (isSelfClosing) {
+        blocks.push({
+          start,
+          end,
+          attrs,
+          body: ""
+        });
+        continue;
+      }
+      stack.push({
+        start,
+        openEnd: end,
+        attrs
+      });
+      continue;
+    }
+
+    const top = stack.pop();
+    if (!top) {
+      continue;
+    }
+    blocks.push({
+      start: top.start,
+      end,
+      attrs: top.attrs,
+      body: text.slice(top.openEnd, start)
+    });
+  }
+
+  return blocks;
+}
+
+function renderRepeatBlock(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const paramName = (attrs.get("Param") ?? attrs.get("As") ?? attrs.get("Name") ?? "Item").trim();
+  if (!paramName) {
+    return block.body;
+  }
+
+  const values = collectRepeatValues(attrs);
+  if (values.length === 0) {
+    if (context.onDebugLog) {
+      context.onDebugLog("[Repeat] skipped block with no values.");
+    }
+    return "";
+  }
+
+  const separator = attrs.get("Separator") ?? "";
+  const parts: string[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const item = values[i] ?? "";
+    const localParams = new Map<string, string>([
+      [paramName, item],
+      ["Index", String(i)],
+      ["Index1", String(i + 1)]
+    ]);
+    const params = mergeParams(inheritedParams, localParams);
+    parts.push(applyParamSubstitution(block.body, params));
+  }
+
+  return parts.join(separator);
+}
+
+function collectRepeatValues(attrs: ReadonlyMap<string, string>): string[] {
+  const valuesRaw = attrs.get("Values") ?? attrs.get("Items");
+  if (valuesRaw && valuesRaw.trim().length > 0) {
+    return valuesRaw
+      .split(/[,;|]+/)
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+  }
+
+  const fromRaw = attrs.get("From");
+  const toRaw = attrs.get("To");
+  if (fromRaw === undefined || toRaw === undefined) {
+    return [];
+  }
+
+  const from = Number.parseInt(fromRaw, 10);
+  const to = Number.parseInt(toRaw, 10);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) {
+    return [];
+  }
+
+  let step = Number.parseInt(attrs.get("Step") ?? "1", 10);
+  if (!Number.isFinite(step) || step === 0) {
+    step = 1;
+  }
+  const effectiveStep = from <= to ? Math.abs(step) : -Math.abs(step);
+  const out: string[] = [];
+  for (let current = from; effectiveStep > 0 ? current <= to : current >= to; current += effectiveStep) {
+    out.push(String(current));
+  }
+  return out;
+}
+
+function expandIfBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "If");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderIfBlock(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+  return out;
+}
+
+function renderIfBlock(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const paramName = (attrs.get("Param") ?? attrs.get("Name") ?? attrs.get("Key") ?? "").trim();
+  const leftRaw = attrs.get("Value");
+  const leftValue = leftRaw !== undefined
+    ? resolveParamValue(leftRaw, inheritedParams)
+    : (paramName ? (inheritedParams.get(paramName) ?? "") : "");
+
+  const equalsRaw = attrs.get("Equals");
+  const notEqualsRaw = attrs.get("NotEquals");
+  const inRaw = attrs.get("In");
+  const isEmptyRaw = attrs.get("IsEmpty");
+
+  let isMatch: boolean;
+  if (equalsRaw !== undefined) {
+    isMatch = leftValue === resolveParamValue(equalsRaw, inheritedParams);
+  } else if (notEqualsRaw !== undefined) {
+    isMatch = leftValue !== resolveParamValue(notEqualsRaw, inheritedParams);
+  } else if (inRaw !== undefined) {
+    const inValues = splitListValues(resolveParamValue(inRaw, inheritedParams));
+    isMatch = inValues.includes(leftValue);
+  } else if (isEmptyRaw !== undefined) {
+    const expectEmpty = parseBooleanAttribute(resolveParamValue(isEmptyRaw, inheritedParams)) ?? false;
+    isMatch = expectEmpty ? leftValue.trim().length === 0 : leftValue.trim().length > 0;
+  } else {
+    isMatch = isTruthy(leftValue);
+  }
+
+  if (!isMatch && context.onDebugLog && attrs.size > 0) {
+    context.onDebugLog(`[If] condition did not match${paramName ? ` for '${paramName}'` : ""}.`);
+  }
+  return isMatch ? block.body : "";
+}
+
+function expandCaseBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "Case");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderCaseBlock(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+  return out;
+}
+
+function renderCaseBlock(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const paramName = (attrs.get("Param") ?? attrs.get("Name") ?? attrs.get("Key") ?? "").trim();
+  const selectedRaw = attrs.get("Value");
+  const selectedValue = selectedRaw !== undefined
+    ? resolveParamValue(selectedRaw, inheritedParams)
+    : (paramName ? (inheritedParams.get(paramName) ?? "") : "");
+
+  const whenBlocks = collectTagBlocks(block.body, "When")
+    .sort((a, b) => a.start - b.start);
+  for (const whenBlock of whenBlocks) {
+    const whenAttrs = parseXmlAttributes(whenBlock.attrs);
+    const equalsRaw = whenAttrs.get("Equals") ?? whenAttrs.get("Value");
+    const inRaw = whenAttrs.get("In");
+
+    let isMatch = false;
+    if (equalsRaw !== undefined) {
+      const compareValues = splitListValues(resolveParamValue(equalsRaw, inheritedParams));
+      isMatch = compareValues.includes(selectedValue);
+    } else if (inRaw !== undefined) {
+      const compareValues = splitListValues(resolveParamValue(inRaw, inheritedParams));
+      isMatch = compareValues.includes(selectedValue);
+    } else {
+      // Fallback: <When> without selector means first branch.
+      isMatch = true;
+    }
+
+    if (isMatch) {
+      return whenBlock.body;
+    }
+  }
+
+  const defaultBlock = collectTagBlocks(block.body, "Default").sort((a, b) => a.start - b.start)[0];
+  if (defaultBlock) {
+    return defaultBlock.body;
+  }
+
+  if (context.onDebugLog && attrs.size > 0) {
+    context.onDebugLog(`[Case] no branch matched${paramName ? ` for '${paramName}'` : ""}.`);
+  }
+  return "";
+}
+
+function resolveParamValue(value: string, params: Map<string, string>): string {
+  return applyParamSubstitution(value, params).trim();
+}
+
+function splitListValues(raw: string): string[] {
+  return raw
+    .split(/[,;|]+/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+function isTruthy(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") {
+    return false;
+  }
+  return true;
+}
+
+function pickInnermostBlocks(blocks: readonly TagBlock[]): TagBlock[] {
+  if (blocks.length <= 1) {
+    return [...blocks];
+  }
+  return blocks.filter((candidate) => {
+    for (const other of blocks) {
+      if (other === candidate) {
+        continue;
+      }
+      if (other.start > candidate.start && other.end < candidate.end) {
+        return false;
+      }
+    }
+    return true;
+  });
 }
 
 function parseComponentSections(text: string): ComponentSection[] {

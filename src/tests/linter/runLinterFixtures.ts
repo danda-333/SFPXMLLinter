@@ -11,7 +11,7 @@ const workspaceRoot = path.resolve(__dirname, "../../../tests/fixtures/linter");
 const state: VscodeMockState = {
   workspaceRoot,
   config: {
-    workspaceRoots: ["XML", "XML_Templates", "XML_Components"],
+    workspaceRoots: ["XML", "XML_Templates", "XML_Components", "XML_Primitives"],
     resourcesRoots: ["Resources"],
     hoverDocsFiles: [],
     rules: {},
@@ -276,7 +276,7 @@ function loadInvalidExpectations(): Map<string, string> {
 }
 
 function loadFixtureDocuments(): Map<string, MockTextDocument> {
-  const roots = ["XML_Templates", "XML_Components"];
+  const roots = ["XML_Templates", "XML_Components", "XML_Primitives"];
   const docs = new Map<string, MockTextDocument>();
   for (const root of roots) {
     const base = path.join(workspaceRoot, root);
@@ -517,7 +517,9 @@ function collectFiles(root: string, extension: string): string[] {
 function normalizeComponentKeyFromRel(relPath: string): string {
   let normalized = relPath.replace(/\\/g, "/");
   normalized = normalized.replace(/^xml_components\//i, "");
+  normalized = normalized.replace(/^xml_primitives\//i, "");
   normalized = normalized.replace(/\.feature\.xml$/i, "");
+  normalized = normalized.replace(/\.primitive\.xml$/i, "");
   normalized = normalized.replace(/\.component\.xml$/i, "");
   normalized = normalized.replace(/\.xml$/i, "");
   return normalized;

@@ -48,11 +48,14 @@ export class BuildXmlTemplatesService {
   public async findTemplatesUsingComponent(workspaceFolder: vscode.WorkspaceFolder, componentFilePath: string): Promise<string[]> {
     const normalizedComponentPath = normalizePath(componentFilePath);
     const componentsRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
-    if (!normalizedComponentPath.startsWith(`${componentsRoot}/`)) {
+    const primitivesRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Primitives"));
+    if (!normalizedComponentPath.startsWith(`${componentsRoot}/`) && !normalizedComponentPath.startsWith(`${primitivesRoot}/`)) {
       return [];
     }
 
-    const rel = normalizedComponentPath.slice(componentsRoot.length + 1);
+    const rel = normalizedComponentPath.startsWith(`${componentsRoot}/`)
+      ? normalizedComponentPath.slice(componentsRoot.length + 1)
+      : normalizedComponentPath.slice(primitivesRoot.length + 1);
     const relNoExt = stripXmlComponentExtension(rel);
     const targetBaseName = relNoExt.split("/").pop() ?? relNoExt;
 
@@ -79,10 +82,11 @@ export class BuildXmlTemplatesService {
   ): Promise<BuildRunResult> {
     const templateUris = await collectTemplateTargets(workspaceFolder, targetPath);
     const componentUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Components/**/*.xml"));
+    const primitiveUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Primitives/**/*.xml"));
 
     const componentSources: Array<{ key: string; text: string; origin: string }> = [];
-    for (const uri of componentUris) {
-      const key = componentKeyFromUri(workspaceFolder, uri);
+    for (const uri of [...componentUris, ...primitiveUris]) {
+      const key = componentLikeKeyFromUri(workspaceFolder, uri);
       if (!key) {
         continue;
       }
@@ -180,15 +184,19 @@ async function collectTemplateTargets(workspaceFolder: vscode.WorkspaceFolder, t
   return vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Templates/**/*.xml"));
 }
 
-function componentKeyFromUri(workspaceFolder: vscode.WorkspaceFolder, uri: vscode.Uri): string | undefined {
+function componentLikeKeyFromUri(workspaceFolder: vscode.WorkspaceFolder, uri: vscode.Uri): string | undefined {
   const root = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
+  const primitivesRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Primitives"));
   const current = normalizePath(uri.fsPath);
-  if (!current.startsWith(`${root}/`)) {
-    return undefined;
+  if (current.startsWith(`${root}/`)) {
+    const rel = current.slice(root.length + 1);
+    return stripXmlComponentExtension(rel);
   }
-
-  const rel = current.slice(root.length + 1);
-  return stripXmlComponentExtension(rel);
+  if (current.startsWith(`${primitivesRoot}/`)) {
+    const rel = current.slice(primitivesRoot.length + 1);
+    return stripXmlComponentExtension(rel);
+  }
+  return undefined;
 }
 
 function relativeTemplatePath(workspaceFolder: vscode.WorkspaceFolder, templateUri: vscode.Uri): string {

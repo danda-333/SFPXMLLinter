@@ -388,6 +388,200 @@ function run(): void {
 <Form>
   <Host><Block>OK</Block></Host>
 </Form>`
+    },
+    {
+      name: "primitive-use-with-slot-and-params",
+      components: [
+        {
+          key: "Common/Dialogs/ConfirmFormDialogSection",
+          text: `
+<Primitive>
+  <Template Name="Dialog">
+    <Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="{{DialogIdent}}" TitleResourceKey="{{TitleKey}}">
+      <HTMLTemplate><![CDATA[
+        {{Slot:Body}}
+      ]]></HTMLTemplate>
+    </Section>
+  </Template>
+</Primitive>`
+        },
+        {
+          key: "Common/Snippets/ControlRow",
+          text: `
+<Primitive>
+  <Template>
+    <div class="row"><ControlLabel ControlID="{{ControlID}}" /><Control ID="{{ControlID}}" /></div>
+  </Template>
+</Primitive>`
+        }
+      ],
+      template: `
+<Form>
+  <Sections>
+    <UsePrimitive Name="Common/Dialogs/ConfirmFormDialogSection" Template="Dialog" DialogIdent="AssignDialogSection" TitleKey="AssignDialogTitle">
+      <Slot Name="Body">
+        <UsePrimitive Name="Common/Snippets/ControlRow" ControlID="DialogAssignedGroupID" />
+      </Slot>
+    </UsePrimitive>
+  </Sections>
+</Form>`,
+      expected: `
+<Form>
+  <Sections>
+    <Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignDialogSection" TitleResourceKey="AssignDialogTitle">
+      <HTMLTemplate><![CDATA[
+        <div class="row"><ControlLabel ControlID="DialogAssignedGroupID" /><Control ID="DialogAssignedGroupID" /></div>
+      ]]></HTMLTemplate>
+    </Section>
+  </Sections>
+</Form>`
+    },
+    {
+      name: "primitive-use-template-selection-and-default-slot-empty",
+      components: [
+        {
+          key: "Common/Snippets/Badge",
+          text: `
+<Primitive>
+  <Template Name="Short"><span>{{Text}}</span></Template>
+  <Template Name="Long"><div class="badge">{{Text}} - {{Suffix}}</div>{{Slot:Extra}}</Template>
+</Primitive>`
+        }
+      ],
+      template: `
+<Form>
+  <Body>
+    <UsePrimitive Primitive="Common/Snippets/Badge" Template="Short" Text="OK" />
+    <UsePrimitive Primitive="Common/Snippets/Badge" Template="Long" Text="Warning" Suffix="ITSM" />
+  </Body>
+</Form>`,
+      expected: `
+<Form>
+  <Body>
+    <span>OK</span>
+    <div class="badge">Warning - ITSM</div>
+  </Body>
+</Form>`
+    },
+    {
+      name: "repeat-values-sugar-expands-inline",
+      components: [],
+      template: `
+<Form>
+  <Controls>
+    <Repeat Param="Level" Values="2,3,4">
+      <Control Ident="ITSMCategoryLevel{{Level}}Ident" />
+    </Repeat>
+  </Controls>
+</Form>`,
+      expected: `
+<Form>
+  <Controls>
+    <Control Ident="ITSMCategoryLevel2Ident" />
+    <Control Ident="ITSMCategoryLevel3Ident" />
+    <Control Ident="ITSMCategoryLevel4Ident" />
+  </Controls>
+</Form>`
+    },
+    {
+      name: "repeat-range-sugar-expands-inline",
+      components: [],
+      template: `
+<Form>
+  <Buttons>
+    <Repeat Param="N" From="1" To="3">
+      <Button Ident="Action{{N}}Button" />
+    </Repeat>
+  </Buttons>
+</Form>`,
+      expected: `
+<Form>
+  <Buttons>
+    <Button Ident="Action1Button" />
+    <Button Ident="Action2Button" />
+    <Button Ident="Action3Button" />
+  </Buttons>
+</Form>`
+    },
+    {
+      name: "if-sugar-equals-and-not-equals",
+      components: [],
+      template: `
+<Form Ident="ITSMRequest">
+  <Sections>
+    <If Param="FormIdent" Equals="ITSMRequest">
+      <Section Ident="FormSpecificSection" />
+    </If>
+    <If Param="FormIdent" NotEquals="ITSMRequest">
+      <Section Ident="MustNotRender" />
+    </If>
+  </Sections>
+</Form>`,
+      expected: `
+<Form Ident="ITSMRequest">
+  <Sections>
+    <Section Ident="FormSpecificSection" />
+  </Sections>
+</Form>`
+    },
+    {
+      name: "case-sugar-selects-branch-and-default",
+      components: [],
+      template: `
+<Form Ident="ITSMRequest">
+  <Actions>
+    <Case Param="Mode" Value="AssignToMe">
+      <When Value="Assign">
+        <Action Ident="AssignAction" />
+      </When>
+      <When Value="AssignToMe,AssignToMeMultipleGroup">
+        <Action Ident="AssignToMeAction" />
+      </When>
+      <Default>
+        <Action Ident="FallbackAction" />
+      </Default>
+    </Case>
+    <Case Param="Mode" Value="UnknownMode">
+      <When Value="Assign">
+        <Action Ident="AssignAction2" />
+      </When>
+      <Default>
+        <Action Ident="FallbackAction2" />
+      </Default>
+    </Case>
+  </Actions>
+</Form>`,
+      expected: `
+<Form Ident="ITSMRequest">
+  <Actions>
+    <Action Ident="AssignToMeAction" />
+    <Action Ident="FallbackAction2" />
+  </Actions>
+</Form>`
+    },
+    {
+      name: "repeat-case-combination",
+      components: [],
+      template: `
+<Form>
+  <Controls>
+    <Repeat Param="Level" Values="2,3,4,5">
+      <Case Value="{{Level}}">
+        <When Value="2,3,4">
+          <Control Ident="ITSMCategoryLevel{{Level}}Ident" />
+        </When>
+      </Case>
+    </Repeat>
+  </Controls>
+</Form>`,
+      expected: `
+<Form>
+  <Controls>
+    <Control Ident="ITSMCategoryLevel2Ident" />
+    <Control Ident="ITSMCategoryLevel3Ident" />
+    <Control Ident="ITSMCategoryLevel4Ident" />
+  </Controls>
+</Form>`
     }
   ];
 
@@ -428,11 +622,12 @@ function runRefsTest(): void {
     <Using Feature="Common\\Shared\\Assign.feature.xml" />
     <Using Name="Library/One.xml" />
   </Usings>
+  <UsePrimitive Name="Common/Dialogs/ConfirmFormDialogSection.primitive.xml" />
   <X>{{Feature:Common/Two.xml,Contribution:S}}</X>
   <Y>{{Name:Common/Three.feature.xml,Contribution:S}}</Y>
 </Form>`;
   const refs = extractUsingComponentRefs(input).sort((a, b) => a.localeCompare(b));
-  const expected = ["Common/Shared/Assign", "Common/Three", "Common/Two", "Library/One"].sort((a, b) => a.localeCompare(b));
+  const expected = ["Common/Dialogs/ConfirmFormDialogSection", "Common/Shared/Assign", "Common/Three", "Common/Two", "Library/One"].sort((a, b) => a.localeCompare(b));
   assert.deepEqual(refs, expected);
   console.log("PASS: extract-using-component-refs");
 }

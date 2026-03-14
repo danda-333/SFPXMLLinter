@@ -6,6 +6,7 @@ const workspaceRoot = path.resolve(__dirname, "../../../");
 const fixtureRoot = path.join(workspaceRoot, "tests", "fixtures", "template-builder");
 const templatesRoot = path.join(fixtureRoot, "XML_Templates");
 const componentsRoot = path.join(fixtureRoot, "XML_Components");
+const primitivesRoot = path.join(fixtureRoot, "XML_Primitives");
 const runtimeRoot = path.join(fixtureRoot, "XML");
 const actualRoot = path.join(fixtureRoot, "XML_actual");
 const maxLoggedMismatches = 60;
@@ -17,10 +18,18 @@ function run(): void {
   }
   resetDirectory(actualRoot);
 
-  const componentSources = collectFiles(componentsRoot, ".xml").map((filePath) => {
-    const rel = normalizePath(path.relative(componentsRoot, filePath));
+  const componentAndPrimitiveFiles = [
+    ...collectFiles(componentsRoot, ".xml"),
+    ...(fs.existsSync(primitivesRoot) ? collectFiles(primitivesRoot, ".xml") : [])
+  ];
+
+  const componentSources = componentAndPrimitiveFiles.map((filePath) => {
+    const sourceRoot = filePath.startsWith(primitivesRoot) ? primitivesRoot : componentsRoot;
+    const normalizedRel = sourceRoot === primitivesRoot
+      ? normalizePath(path.relative(primitivesRoot, filePath))
+      : normalizePath(path.relative(componentsRoot, filePath));
     return {
-      key: stripXmlComponentExtension(rel),
+      key: stripXmlComponentExtension(normalizedRel),
       text: fs.readFileSync(filePath, "utf8"),
       origin: filePath
     };

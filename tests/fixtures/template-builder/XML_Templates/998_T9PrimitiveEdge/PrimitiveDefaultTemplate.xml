@@ -1,0 +1,5 @@
+<Form Ident="PrimitiveDefaultTemplate">
+  <HTMLTemplate><![CDATA[
+    <UsePrimitive Name="Common/Snippets/ControlRow" ControlID="DialogAssignedGroupID" />
+  ]]></HTMLTemplate>
+</Form>

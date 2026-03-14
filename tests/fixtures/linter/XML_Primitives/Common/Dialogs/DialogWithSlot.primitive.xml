@@ -1,0 +1,5 @@
+<Primitive>
+  <Template>
+    <Section Ident="DialogWithSlot">{{Slot:Body}}</Section>
+  </Template>
+</Primitive>

@@ -718,6 +718,7 @@ export class WorkspaceIndexer {
       if (!name) {
         continue;
       }
+      const primitiveUsage = collectPrimitiveUsageSummary(body);
 
       const rootRaw = (extractAttributeValue(attrsText, "Root") ?? "").trim().toLowerCase();
       const root: IndexedComponentContributionSummary["root"] =
@@ -743,7 +744,9 @@ export class WorkspaceIndexer {
         workflowReferencedActionShareCodeIdents: collectActionShareCodeReferenceIdents(body),
         workflowActionShareCodeIdents: collectAttributeIdents(body, /<ActionShareCode\b([^>]*)>/gi, "Ident"),
         workflowControlShareCodeIdents: collectAttributeIdents(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
-        workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident")
+        workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
+        primitiveUsageCountByKey: primitiveUsage.usageCountByKey,
+        primitiveTemplateNamesByKey: primitiveUsage.templateNamesByKey
       });
     }
 
@@ -1019,6 +1022,42 @@ function collectActionShareCodeReferenceIdents(text: string): Set<string> {
   }
 
   return out;
+}
+
+function collectPrimitiveUsageSummary(text: string): {
+  usageCountByKey: Map<string, number>;
+  templateNamesByKey: Map<string, Set<string>>;
+} {
+  const usageCountByKey = new Map<string, number>();
+  const templateNamesByKey = new Map<string, Set<string>>();
+  for (const match of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const primitiveKey =
+      extractAttributeValue(attrs, "Primitive") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component");
+    if (!primitiveKey) {
+      continue;
+    }
+
+    const normalized = normalizeComponentKey(primitiveKey);
+    usageCountByKey.set(normalized, (usageCountByKey.get(normalized) ?? 0) + 1);
+
+    const templateName =
+      extractAttributeValue(attrs, "Template") ??
+      extractAttributeValue(attrs, "Contribution") ??
+      extractAttributeValue(attrs, "Section");
+    if (!templateName) {
+      continue;
+    }
+
+    const existingNames = templateNamesByKey.get(normalized) ?? new Set<string>();
+    existingNames.add(templateName);
+    templateNamesByKey.set(normalized, existingNames);
+  }
+
+  return { usageCountByKey, templateNamesByKey };
 }
 
 function countTagOccurrences(text: string, regex: RegExp): number {

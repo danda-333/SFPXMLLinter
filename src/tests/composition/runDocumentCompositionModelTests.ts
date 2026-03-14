@@ -226,7 +226,9 @@ function collectComponentContributionSummaries(text: string): Map<string, import
       workflowActionShareCodeIdents: collectTagIdentSet(body, /<ActionShareCode\b([^>]*)>/gi, "Ident"),
       workflowControlShareCodeIdents: collectTagIdentSet(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
       workflowButtonShareCodeIdents: collectTagIdentSet(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
-      workflowReferencedActionShareCodeIdents: collectActionShareCodeUsageSet(body)
+      workflowReferencedActionShareCodeIdents: collectActionShareCodeUsageSet(body),
+      primitiveUsageCountByKey: new Map(),
+      primitiveTemplateNamesByKey: new Map()
     });
   }
   return out;
@@ -293,4 +295,3 @@ function extractAttributeValue(attrs: string, attrName: string): string | undefi
 }
 
 run();
-

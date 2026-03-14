@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { parseDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
 import { WorkspaceIndex, IndexedComponentContributionSummary } from "../indexer/types";
 import { resolveComponentByKey } from "../indexer/componentResolve";
@@ -721,7 +723,7 @@ function buildUsingContributionNode(
   );
   const placeholderGroup = buildPlaceholderUsageGroup(nodeId, placeholderLocations, contribution.insert);
 
-  const typeGroups = buildUsingContributionTypeGroups(nodeId, contribution);
+  const typeGroups = buildUsingContributionTypeGroups(nodeId, contribution, insertions);
   const details: string[] = [];
   if (!rootRelevant && !contributionModel.explicit) {
     details.push(`not relevant for root '${facts.rootTag ?? "unknown"}'`);
@@ -791,7 +793,8 @@ function buildUsingContributionMetaGroup(
 
 function buildUsingContributionTypeGroups(
   contributionNodeId: string,
-  contribution: IndexedComponentContributionSummary
+  contribution: IndexedComponentContributionSummary,
+  contributionInsertions: number
 ): GroupNode[] {
   const groups: GroupNode[] = [];
   const add = (label: string, suffix: string, idents: ReadonlySet<string>, iconId: string): void => {
@@ -823,6 +826,31 @@ function buildUsingContributionTypeGroups(
   add("ControlShareCodes", "wf-controls", contribution.workflowControlShareCodeIdents, "symbol-constant");
   add("ButtonShareCodes", "wf-buttons", contribution.workflowButtonShareCodeIdents, "symbol-key");
   add("ReferencedActionShareCodes", "wf-referenced-actions", contribution.workflowReferencedActionShareCodeIdents, "references");
+  const primitiveEntries = [...contribution.primitiveUsageCountByKey.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  if (primitiveEntries.length > 0) {
+    groups.push({
+      type: "group",
+      id: `${contributionNodeId}:type:primitives`,
+      label: "Primitives",
+      description: `${primitiveEntries.length}`,
+      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+      icon: new vscode.ThemeIcon("symbol-snippet"),
+      children: primitiveEntries.map(([primitiveKey, usageCount], idx) => {
+        const templateNames = [...(contribution.primitiveTemplateNamesByKey.get(primitiveKey) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
+        const templateSuffix = templateNames.length > 0 ? `, template=${templateNames.join("|")}` : "";
+        const effectiveInserts = usageCount * Math.max(1, contributionInsertions);
+        const uri = resolvePrimitiveSourceUri(primitiveKey);
+        return {
+          type: "detail",
+          id: `${contributionNodeId}:type:primitives:item:${idx}`,
+          label: primitiveKey,
+          description: `uses=${usageCount}, inserts=${effectiveInserts}${templateSuffix}`,
+          icon: new vscode.ThemeIcon("symbol-file"),
+          ...(uri ? { resourceUri: uri, sourceLocation: toUriStartLocation(uri), contextValue: "compositionSymbol" } : {})
+        } satisfies DetailNode;
+      })
+    });
+  }
 
   return groups;
 }
@@ -1306,6 +1334,31 @@ function toWorkspacePath(relativePath: string, activeUri: vscode.Uri): string {
   }
 
   return vscode.Uri.joinPath(folder.uri, ...relativePath.split("/")).fsPath;
+}
+
+function resolvePrimitiveSourceUri(primitiveKey: string): vscode.Uri | undefined {
+  const normalized = normalizeComponentKey(primitiveKey);
+  const keyWithSlashes = normalized.replace(/\\/g, "/");
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    for (const root of ["XML_Primitives", "XML_Components"]) {
+      const base = path.join(folder.uri.fsPath, root);
+      const candidates = [
+        path.join(base, `${keyWithSlashes}.primitive.xml`),
+        path.join(base, `${keyWithSlashes}.xml`)
+      ];
+      for (const filePath of candidates) {
+        if (fs.existsSync(filePath)) {
+          return vscode.Uri.file(filePath);
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function toUriStartLocation(uri: vscode.Uri): vscode.Location {
+  return new vscode.Location(uri, new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)));
 }
 
 function toIndexedComponentKey(relativePath: string): string {

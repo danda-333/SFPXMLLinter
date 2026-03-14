@@ -1,0 +1,5 @@
+<Form Ident="Chyba39PrimitiveCycle">
+  <Controls>
+    <UsePrimitive Name="Common/Cycle/CycleA" />
+  </Controls>
+</Form>

@@ -1,0 +1,6 @@
+<Primitive>
+  <Param Name="DialogIdent" Required="true" />
+  <Template>
+    <Section Ident="{{DialogIdent}}" />
+  </Template>
+</Primitive>

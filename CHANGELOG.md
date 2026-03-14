@@ -29,6 +29,14 @@
   - `unused-using` / `partial-using` now consume indexed insert traces as primary source.
   - added form-owned inheritance diagnostics for `WorkFlow` and `DataView` (`*-redundant-feature-using`), default severity `warning`.
   - added composition diagnostics tests covering redundant inheritance scenarios.
+- Primitive diagnostics + Tree View:
+  - added primitive linter rules: `unknown-primitive`, `primitive-missing-slot`, `primitive-missing-param`, `primitive-cycle`.
+  - Composition Tree `Using/Contribution` now shows primitive usage summary (`uses`, effective `inserts`) and source navigation.
+  - indexed contribution summaries now include primitive usage metadata.
+- Primitive regression coverage:
+  - added linter fixtures for primitive diagnostics (`chyba-36`..`chyba-39` + fixture primitives).
+  - added dedicated primitive template tests (`runBuildTemplatePrimitiveTests`).
+  - added fixture-level primitive edge scenarios (`998_T9PrimitiveEdge`).
 
 ## 0.0.16
 

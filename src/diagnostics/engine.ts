@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { parseIgnoreState, isRuleIgnored } from "./ignore";
 import { WorkspaceIndex } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
-import { documentInConfiguredRoots } from "../utils/paths";
+import { documentInConfiguredRoots, normalizeComponentKey } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { getSystemMetadata, isKnownSystemTableForeignKey, SystemMetadata } from "../config/systemMetadata";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
@@ -92,6 +92,7 @@ export class DiagnosticsEngine {
     this.validateRequiredActionIdentReferences(facts, issues, getResolvableControlIdents);
     this.validateWorkflowControlIdentReferences(facts, issues, getResolvableControlIdents);
     this.validateUsingReferences(facts, index, issues, documentComposition);
+    this.validatePrimitiveReferences(document, issues);
     this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
     this.validateFeatureCompositionReferences(document, facts, issues, featureRegistry);
     if (!fastBackgroundMode) {
@@ -1185,6 +1186,377 @@ export class DiagnosticsEngine {
       }
     }
   }
+
+  private validatePrimitiveReferences(
+    document: vscode.TextDocument,
+    issues: RuleDiagnostic[]
+  ): void {
+    const text = document.getText();
+    if (!/<UsePrimitive\b/i.test(text)) {
+      return;
+    }
+
+    const primitiveUsages = collectUsePrimitiveNodes(text, document);
+    if (primitiveUsages.length === 0) {
+      return;
+    }
+
+    const primitiveRoots = collectPrimitiveRoots();
+    const definitionCache = new Map<string, PrimitiveDefinition | null>();
+    for (const usage of primitiveUsages) {
+      const key = usage.primitiveKey;
+      if (!key) {
+        continue;
+      }
+
+      const definition = loadPrimitiveDefinition(key, primitiveRoots, definitionCache);
+      if (!definition) {
+        issues.push({
+          ruleId: "unknown-primitive",
+          range: usage.keyRange ?? usage.range,
+          message: `Primitive '${key}' was not found in XML_Primitives/XML_Components.`
+        });
+        continue;
+      }
+
+      const template = pickPrimitiveTemplateDefinition(definition, usage.templateName);
+      if (!template) {
+        issues.push({
+          ruleId: "unknown-primitive",
+          range: usage.templateRange ?? usage.keyRange ?? usage.range,
+          message: usage.templateName
+            ? `Primitive '${key}' does not define template '${usage.templateName}'.`
+            : `Primitive '${key}' has no usable template.`
+        });
+        continue;
+      }
+
+      const requiredSlots = collectRequiredSlotNames(template.content);
+      for (const slotName of requiredSlots) {
+        if (usage.slotNames.has(slotName)) {
+          continue;
+        }
+        issues.push({
+          ruleId: "primitive-missing-slot",
+          range: usage.range,
+          message: `UsePrimitive '${key}' is missing required Slot '${slotName}'.`
+        });
+      }
+
+      const requiredParams = collectRequiredPrimitiveParamNames(definition, template);
+      for (const paramName of requiredParams) {
+        if (usage.attrs.has(paramName)) {
+          continue;
+        }
+        issues.push({
+          ruleId: "primitive-missing-param",
+          range: usage.range,
+          message: `UsePrimitive '${key}' is missing required parameter '${paramName}'.`
+        });
+      }
+
+      const cycle = detectPrimitiveCycleFrom(definition.key, primitiveRoots, definitionCache);
+      if (cycle) {
+        issues.push({
+          ruleId: "primitive-cycle",
+          range: usage.keyRange ?? usage.range,
+          message: `Primitive cycle detected: ${cycle.join(" -> ")}`
+        });
+      }
+    }
+  }
+}
+
+interface UsePrimitiveNode {
+  primitiveKey?: string;
+  templateName?: string;
+  attrs: Map<string, string>;
+  slotNames: Set<string>;
+  range: vscode.Range;
+  keyRange?: vscode.Range;
+  templateRange?: vscode.Range;
+}
+
+interface PrimitiveTemplateDefinition {
+  name?: string;
+  content: string;
+  requiredParams: Set<string>;
+}
+
+interface PrimitiveDefinition {
+  key: string;
+  filePath: string;
+  templates: PrimitiveTemplateDefinition[];
+  requiredParams: Set<string>;
+  dependencies: Set<string>;
+}
+
+function collectUsePrimitiveNodes(text: string, document: vscode.TextDocument): UsePrimitiveNode[] {
+  const out: UsePrimitiveNode[] = [];
+  const selfClosingRegex = /<UsePrimitive\b([^>]*)\/>/gi;
+  for (const match of text.matchAll(selfClosingRegex)) {
+    const rawAttrs = match[1] ?? "";
+    const attrsOffset = (match[0] ?? "").indexOf(rawAttrs);
+    const attrsStart = (match.index ?? 0) + (attrsOffset >= 0 ? attrsOffset : 0);
+    out.push(buildUsePrimitiveNode(rawAttrs, "", match.index ?? 0, (match.index ?? 0) + (match[0]?.length ?? 0), attrsStart, document));
+  }
+
+  const blockRegex = /<UsePrimitive\b([^>]*)>([\s\S]*?)<\/UsePrimitive>/gi;
+  for (const match of text.matchAll(blockRegex)) {
+    const rawAttrs = match[1] ?? "";
+    const body = match[2] ?? "";
+    const full = match[0] ?? "";
+    const start = match.index ?? 0;
+    const attrsOffset = full.indexOf(rawAttrs);
+    const attrsStart = start + (attrsOffset >= 0 ? attrsOffset : 0);
+    out.push(buildUsePrimitiveNode(rawAttrs, body, start, start + full.length, attrsStart, document));
+  }
+
+  return out;
+}
+
+function buildUsePrimitiveNode(
+  rawAttrs: string,
+  body: string,
+  start: number,
+  end: number,
+  attrsStart: number,
+  document: vscode.TextDocument
+): UsePrimitiveNode {
+  const attrs = parseFeatureXmlAttributes(rawAttrs, rawAttrs, attrsStart, document);
+  const primitiveAttr =
+    getAttributeCaseInsensitiveXml(attrs, "Primitive") ??
+    getAttributeCaseInsensitiveXml(attrs, "Name") ??
+    getAttributeCaseInsensitiveXml(attrs, "Feature") ??
+    getAttributeCaseInsensitiveXml(attrs, "Component");
+  const templateAttr =
+    getAttributeCaseInsensitiveXml(attrs, "Template") ??
+    getAttributeCaseInsensitiveXml(attrs, "Contribution") ??
+    getAttributeCaseInsensitiveXml(attrs, "Section");
+
+  const attrMap = new Map<string, string>();
+  for (const [attrName, attrValue] of attrs.entries()) {
+    attrMap.set(attrName, attrValue.value);
+  }
+
+  return {
+    primitiveKey: primitiveAttr ? normalizeComponentKey(primitiveAttr.value) : undefined,
+    templateName: templateAttr?.value,
+    attrs: attrMap,
+    slotNames: collectSlotNamesFromUsePrimitiveBody(body),
+    range: new vscode.Range(document.positionAt(start), document.positionAt(end)),
+    ...(primitiveAttr ? { keyRange: primitiveAttr.range } : {}),
+    ...(templateAttr ? { templateRange: templateAttr.range } : {})
+  };
+}
+
+function collectSlotNamesFromUsePrimitiveBody(body: string): Set<string> {
+  const out = new Set<string>();
+  for (const slotMatch of body.matchAll(/<Slot\b([^>]*)>([\s\S]*?)<\/Slot>/gi)) {
+    const attrs = slotMatch[1] ?? "";
+    const name = extractXmlAttribute(attrs, "Name");
+    if (name) {
+      out.add(name);
+    }
+  }
+  return out;
+}
+
+function collectPrimitiveRoots(): string[] {
+  const out: string[] = [];
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    out.push(path.join(folder.uri.fsPath, "XML_Primitives"));
+    out.push(path.join(folder.uri.fsPath, "XML_Components"));
+  }
+  return out;
+}
+
+function loadPrimitiveDefinition(
+  primitiveKey: string,
+  primitiveRoots: readonly string[],
+  cache: Map<string, PrimitiveDefinition | null>
+): PrimitiveDefinition | undefined {
+  const normalizedKey = normalizeComponentKey(primitiveKey);
+  if (cache.has(normalizedKey)) {
+    return cache.get(normalizedKey) ?? undefined;
+  }
+
+  const filePath = findPrimitiveFilePath(normalizedKey, primitiveRoots);
+  if (!filePath) {
+    cache.set(normalizedKey, null);
+    return undefined;
+  }
+
+  const text = fs.readFileSync(filePath, "utf8");
+  const templates = parsePrimitiveTemplates(text);
+  const requiredParams = collectRequiredParamsFromPrimitiveText(text);
+  const dependencies = collectPrimitiveDependencies(text);
+  const definition: PrimitiveDefinition = {
+    key: normalizedKey,
+    filePath,
+    templates,
+    requiredParams,
+    dependencies
+  };
+  cache.set(normalizedKey, definition);
+  return definition;
+}
+
+function findPrimitiveFilePath(primitiveKey: string, primitiveRoots: readonly string[]): string | undefined {
+  const normalized = primitiveKey.replace(/\//g, path.sep);
+  for (const root of primitiveRoots) {
+    const candidates = [
+      path.join(root, `${normalized}.primitive.xml`),
+      path.join(root, `${normalized}.xml`)
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return undefined;
+}
+
+function parsePrimitiveTemplates(text: string): PrimitiveTemplateDefinition[] {
+  const out: PrimitiveTemplateDefinition[] = [];
+  for (const match of text.matchAll(/<Template\b([^>]*)>([\s\S]*?)<\/Template>/gi)) {
+    const attrs = match[1] ?? "";
+    const content = match[2] ?? "";
+    out.push({
+      name: extractXmlAttribute(attrs, "Name"),
+      content,
+      requiredParams: collectRequiredParamsFromPrimitiveText(content)
+    });
+  }
+  return out;
+}
+
+function collectRequiredSlotNames(templateContent: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of templateContent.matchAll(/\{\{Slot:([A-Za-z_][\w.-]*)\}\}/g)) {
+    const name = (match[1] ?? "").trim();
+    if (name) {
+      out.add(name);
+    }
+  }
+  return out;
+}
+
+function collectRequiredPrimitiveParamNames(
+  definition: PrimitiveDefinition,
+  template: PrimitiveTemplateDefinition
+): Set<string> {
+  const required = new Set<string>(definition.requiredParams);
+  for (const name of template.requiredParams) {
+    required.add(name);
+  }
+  return required;
+}
+
+function collectRequiredParamsFromPrimitiveText(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const explicitParam of text.matchAll(/<Param\b([^>]*)\/?>/gi)) {
+    const attrs = explicitParam[1] ?? "";
+    const name = extractXmlAttribute(attrs, "Name");
+    const requiredAttr = (extractXmlAttribute(attrs, "Required") ?? "").trim().toLowerCase();
+    if (name && (requiredAttr === "true" || requiredAttr === "1")) {
+      out.add(name);
+    }
+  }
+
+  for (const token of text.matchAll(/\{\{([A-Za-z_][\w.-]*)\}\}/g)) {
+    const name = (token[1] ?? "").trim();
+    if (!name || name.toLowerCase().startsWith("slot:")) {
+      continue;
+    }
+    out.add(name);
+  }
+
+  return out;
+}
+
+function collectPrimitiveDependencies(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const usage of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
+    const attrs = usage[1] ?? "";
+    const key =
+      extractXmlAttribute(attrs, "Primitive") ??
+      extractXmlAttribute(attrs, "Name") ??
+      extractXmlAttribute(attrs, "Feature") ??
+      extractXmlAttribute(attrs, "Component");
+    if (key) {
+      out.add(normalizeComponentKey(key));
+    }
+  }
+  return out;
+}
+
+function extractXmlAttribute(attrs: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`\\b${escaped}\\s*=\\s*(\"([^\"]*)\"|'([^']*)')`, "i");
+  const match = regex.exec(attrs);
+  const value = (match?.[2] ?? match?.[3] ?? "").trim();
+  return value.length > 0 ? value : undefined;
+}
+
+function pickPrimitiveTemplateDefinition(
+  definition: PrimitiveDefinition,
+  templateName?: string
+): PrimitiveTemplateDefinition | undefined {
+  if (templateName && templateName.trim().length > 0) {
+    return definition.templates.find((template) => (template.name ?? "") === templateName);
+  }
+  return definition.templates[0];
+}
+
+function detectPrimitiveCycleFrom(
+  rootKey: string,
+  primitiveRoots: readonly string[],
+  cache: Map<string, PrimitiveDefinition | null>
+): string[] | undefined {
+  const visited = new Set<string>();
+  const stack: string[] = [];
+  const inStack = new Set<string>();
+
+  const dfs = (key: string): string[] | undefined => {
+    const normalized = normalizeComponentKey(key);
+    const cycleStart = stack.indexOf(normalized);
+    if (cycleStart >= 0) {
+      return [...stack.slice(cycleStart), normalized];
+    }
+    if (visited.has(normalized)) {
+      return undefined;
+    }
+
+    const definition = loadPrimitiveDefinition(normalized, primitiveRoots, cache);
+    if (!definition) {
+      visited.add(normalized);
+      return undefined;
+    }
+
+    visited.add(normalized);
+    stack.push(normalized);
+    inStack.add(normalized);
+    for (const dep of definition.dependencies) {
+      if (inStack.has(dep)) {
+        const depIndex = stack.indexOf(dep);
+        if (depIndex >= 0) {
+          return [...stack.slice(depIndex), dep];
+        }
+      }
+
+      const nested = dfs(dep);
+      if (nested) {
+        return nested;
+      }
+    }
+    stack.pop();
+    inStack.delete(normalized);
+    return undefined;
+  };
+
+  return dfs(rootKey);
 }
 
 function findFeatureForRelativePath(

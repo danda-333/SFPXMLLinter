@@ -35,4 +35,8 @@ Minimal scenarios for each validation rule.
 - `chyba-33-suppression-noop.xml` -> `suppression-noop`
 - `chyba-34-suppression-noop-contribution.xml` -> `suppression-noop`
 - `chyba-35-ordering-conflict.feature.xml` -> `ordering-conflict`
+- `chyba-36-unknown-primitive.xml` -> `unknown-primitive`
+- `chyba-37-primitive-missing-slot.xml` -> `primitive-missing-slot`
+- `chyba-38-primitive-missing-param.xml` -> `primitive-missing-param`
+- `chyba-39-primitive-cycle.xml` -> `primitive-cycle`
 

@@ -922,6 +922,14 @@ Aktualne hotovo:
 - nacitani primitive knihovny z `XML_Primitives`
 - auto-build dependents funguje i pro `XML_Primitives`
 - core testy pro primitives/sugar + fixture demo `999_T9PrimitiveDemo`
+- diagnostics pro primitive authoring:
+  - `unknown-primitive`
+  - `primitive-missing-slot`
+  - `primitive-missing-param`
+  - `primitive-cycle`
+- Tree View `Using/Contribution` zobrazuje primitive usage (`Primitives`) vcetne `uses`/`inserts` a source odkazu
+- linter fixture scenare pro primitive diagnostics (`chyba-36..39`)
+- samostatny template primitive test runner + fixture-level edge scenare (`998_T9PrimitiveEdge`)
 
 ### Milestone M10: Final output quality
 Obsah:

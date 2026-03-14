@@ -1,0 +1,5 @@
+<Form Ident="Chyba38PrimitiveMissingParam">
+  <Controls>
+    <UsePrimitive Name="Common/Dialogs/DialogWithParam" />
+  </Controls>
+</Form>

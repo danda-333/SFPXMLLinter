@@ -10,6 +10,8 @@ async function run(): Promise<void> {
   testReuseExistingActionShareCode(generators);
   testAmbiguousExistingShareCodeWarning(generators);
   testDeterministicIdempotentOutput(generators);
+  testMultiGeneratorOrderDeterminism(generators);
+  testFailSafeGeneratorErrorIsolation(generators);
   await testUserDefinedGeneratorSupport();
   console.log("Template generators tests passed.");
 }
@@ -17,7 +19,8 @@ async function run(): Promise<void> {
 async function loadGeneratorFixtures() {
   const files = [
     path.resolve(process.cwd(), "tests/fixtures/template-generators-user/XML_Generators/actionShareCodeLift.generator.js"),
-    path.resolve(process.cwd(), "tests/fixtures/template-generators-user/XML_Generators/buttonWithDialog.generator.js")
+    path.resolve(process.cwd(), "tests/fixtures/template-generators-user/XML_Generators/buttonWithDialog.generator.js"),
+    path.resolve(process.cwd(), "tests/fixtures/template-generators-user/XML_Generators/addFlag.generator.js")
   ];
   return loadUserGeneratorsFromFiles(files);
 }
@@ -268,6 +271,102 @@ function testDeterministicIdempotentOutput(generators: Awaited<ReturnType<typeof
   assert.equal(second.xml, first.xml);
   assert.equal(second.appliedGeneratorIds.length, 0);
   console.log("PASS: generators-idempotent");
+}
+
+function testMultiGeneratorOrderDeterminism(generators: Awaited<ReturnType<typeof loadGeneratorFixtures>>): void {
+  const input = `
+<Form FormIdent="MultiGeneratorDemo">
+  <Meta />
+  <Buttons>
+    <GeneratorSnippet UseGenerator="Common/Buttons/ButtonWithDialog" Ident="AssignButton" TitleResourceKey="AssignButton_ITSM" IsSave="true" DialogSectionIdent="AssignConfirmFormDialogSection" DialogExtensionIdent="AssignConfirmFormDialog" DialogTitleResourceKey="AssignConfirmFormDialogSectionTitle_ITSM" DialogConfirmButtonTitleResourceKey="AssignConfirmFormDialogSectionConfirmButton_ITSM" DialogCloseButtonTitleResourceKey="AssignConfirmFormDialogSectionCloseButton_ITSM">
+      <Actions>
+        <Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" />
+      </Actions>
+      <DialogHTMLTemplate><![CDATA[
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <ControlLabel ControlID="DialogAssignedGroupID" />
+              <Control ID="DialogAssignedGroupID" />
+            </div>
+          </div>
+        </div>
+      ]]></DialogHTMLTemplate>
+    </GeneratorSnippet>
+  </Buttons>
+  <Sections>
+  </Sections>
+</Form>`;
+
+  const once = runTemplateGenerators(
+    {
+      xml: input,
+      sourceTemplateText: input,
+      relativeTemplatePath: "Demo/MultiGeneratorOrder.xml",
+      mode: "debug"
+    },
+    {
+      enabled: true,
+      timeoutMs: 400,
+      userGenerators: generators
+    }
+  );
+  const twice = runTemplateGenerators(
+    {
+      xml: input,
+      sourceTemplateText: input,
+      relativeTemplatePath: "Demo/MultiGeneratorOrder.xml",
+      mode: "debug"
+    },
+    {
+      enabled: true,
+      timeoutMs: 400,
+      userGenerators: generators
+    }
+  );
+
+  assert.equal(once.xml, twice.xml, "multi-generator output must be deterministic");
+  assert.equal(once.xml.includes("GeneratedByUserScript"), true, "document generator output expected");
+  assert.equal(once.xml.includes("UseGenerator=\"Common/Buttons/ButtonWithDialog\""), false, "snippet should be consumed");
+  assert.equal(once.xml.includes("ConfirmFormDialogExtension"), true, "snippet expansion should be present");
+  assert.equal(once.appliedGeneratorIds.includes("user-add-flag"), true);
+  assert.equal(once.appliedGeneratorIds.includes("button-with-confirm-dialog"), true);
+  console.log("PASS: generators-multi-order-determinism");
+}
+
+function testFailSafeGeneratorErrorIsolation(generators: Awaited<ReturnType<typeof loadGeneratorFixtures>>): void {
+  const throwingGenerator = {
+    kind: "document" as const,
+    id: "test-throwing-generator",
+    description: "Intentionally throws to validate fail-safe behavior.",
+    run(): void {
+      throw new Error("Intentional test failure");
+    }
+  };
+
+  const input = `<Form><Meta /></Form>`;
+  const result = runTemplateGenerators(
+    {
+      xml: input,
+      sourceTemplateText: input,
+      relativeTemplatePath: "Demo/FailSafe.xml",
+      mode: "debug"
+    },
+    {
+      enabled: true,
+      timeoutMs: 400,
+      userGenerators: [throwingGenerator, ...generators]
+    }
+  );
+
+  assert.equal(
+    result.warnings.some((item) => item.code === "generator-run-failed" && item.message.includes("test-throwing-generator failed")),
+    true,
+    "throwing generator must produce warning"
+  );
+  assert.equal(result.appliedGeneratorIds.includes("user-add-flag"), true, "other generators should still run");
+  assert.equal(result.xml.includes("GeneratedByUserScript"), true, "build output should still be produced");
+  console.log("PASS: generators-failsafe-error-isolation");
 }
 
 async function testUserDefinedGeneratorSupport(): Promise<void> {

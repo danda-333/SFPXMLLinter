@@ -430,6 +430,7 @@
     "test:linter:perf": "npm run compile && node out/tests/linter/runLinterPerformance.js",
     "test:composition": "npm run compile && node out/tests/composition/runCompositionModelTests.js && node out/tests/composition/runCompositionWorkspaceTests.js && node out/tests/composition/runCompositionDiagnosticsTests.js && node out/tests/composition/runCompositionBootstrapTests.js && node out/tests/composition/runDocumentCompositionModelTests.js && node out/tests/composition/runCompositionOrderingFixtureTests.js && node out/tests/composition/runPrimitiveQuickFixCommandTests.js && node out/tests/composition/runTreeQuickFixPayloadTests.js && node out/tests/indexer/runWorkspaceIndexerUsageTests.js",
     "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runTemplateGeneratorsTests.js",
+    "test:templates:perf": "npm run compile && node out/tests/template/runTemplateGeneratorsPerformanceCheckpoint.js",
     "test:templates:service": "npm run compile && node out/tests/template/runBuildTemplateServiceTests.js",
     "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runTemplateGeneratorsTests.js && node out/tests/template/runBuildTemplatePrimitiveTests.js && node out/tests/template/runBuildTemplateServiceTests.js && node out/tests/template/runBuildTemplateFixtures.js",
     "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",

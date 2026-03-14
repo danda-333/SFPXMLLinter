@@ -175,6 +175,7 @@ npm run compile
 npm run test:linter
 npm run test:formatter
 npm run test:templates
+npm run test:templates:perf
 ```
 
 Run extension in VS Code with `F5` (Extension Development Host).

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Template generators (T11) completion:
+  - finalized generator v2 contract with explicit kinds:
+    - `document` (`kind + applies(ctx)? + run(ctx)`)
+    - `snippet` (`kind + selector + run(ctx)`)
+  - added generator scaffolding commands:
+    - `SFP XML Linter: Create Generator Template (Document)`
+    - `SFP XML Linter: Create Generator Template (Snippet)`
+  - added generator authoring docs:
+    - `Docs/TemplateGenerators.MD`
+  - added new M11 regression coverage:
+    - multi-generator determinism (`document + snippet`) in one file
+    - fail-safe scenario where one generator throws but build continues
+    - performance checkpoint script (`npm run test:templates:perf`)
 - Templating naming migration:
   - added first-class support for `Feature` / `Contribution` authoring while keeping legacy `Component` / `Section` compatibility.
   - added `Feature="..."` alias support for `Using` / `Include` and `{{Feature:...}}` placeholder references.

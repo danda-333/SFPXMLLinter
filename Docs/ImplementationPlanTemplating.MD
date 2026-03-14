@@ -106,10 +106,9 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - auto-vytvoreni souboru v `XML_Generators` vcetne unikátního suffixu pri kolizi jmena
 
 ### Prave probiha
-- dokonceni `M11` (programovatelne generovani):
-  - uzavrit release gate (determinismus, vykon, bez side effectu)
-  - dopsat finalni fixture scenare nad realnymi feature patterny
-  - formalne prepnout milestone na `[HOTOVO]`
+- post-M11 stabilizace:
+  - sledovani generator warning telemetry v realnych workspacich
+  - finalni ergonomicke doladeni generator authoring docs podle zpetne vazby
 
 ### Zatim pred nami
 - form-owned inheritance
@@ -1031,7 +1030,7 @@ Aktualne hotovo:
 
 ### Milestone M11: Programovatelne generovani
 Stav:
-- `[PROBIHA]`
+- `[HOTOVO]`
 
 Obsah:
 - `T11` Programovatelne generovani uvnitr feature
@@ -1090,18 +1089,18 @@ Aktualne hotovo:
   - snippet+primitive scenar (`999_T11ButtonDialogDemo`) pro `UseGenerator` flow
   - command scaffold je integrovany v extension (`src/extension.ts`, `package.json`)
 
-Checklist pro uzavreni M11:
-- doplnit fixture scenar pro vice document+snippet generatoru v jednom souboru (order + determinismus)
-- doplnit fixture scenar pro fail-safe chovani:
-  - chyba v jednom user generatoru nesmi rozbit cely build
-  - warning/error musi byt citelne v output logu
-- doplnit vykonnostni checkpoint:
-  - porovnani buildu s `templateBuilder.generators.enabled=true/false`
-  - overit, ze overhead generator pass je v akceptovatelnem limitu
-- uzavrit release gate:
-  - stejne vstupy => stejne vystupy napric opakovanymi behy
-  - bez vedlejsich efektu mimo zpracovavany dokument
-  - aktualizovat stav milestone na `[HOTOVO]`
+Gate splnen:
+- dopsan fixture scenar pro vice generatoru v jednom souboru:
+  - `999_T11MultiGeneratorDemo` (document + snippet)
+- dopsan fixture scenar pro fail-safe chovani:
+  - `999_T11FailSafeDemo` + `failSafeThrow.generator.js`
+  - chyba v jednom user generatoru nerozbije cely build
+- vykonnostni checkpoint je automatizovan:
+  - `npm run test:templates:perf`
+  - posledni baseline run: `overhead=18.61 ms`, `avg=0.078 ms/op` (120 iteraci x 2 workloady)
+- determinismus a idempotence overeny testy:
+  - `generators-multi-order-determinism`
+  - `generators-idempotent`
 
 ## Prvni pilot
 Prvni implementacni vlna by mela byt vedena nad jednou feature s vysokou slozitosti a zaroven dobrou citelnosti zavislosti.

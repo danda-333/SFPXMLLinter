@@ -51,10 +51,14 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - `consumed`
   - `unused`
 - doplnovani dalsich inference pravidel nad `Assign`
+- rozsireni `Tree View` z debug panelu na skutecny post-build prehled pro aktivni XML
 
 ### Zatim pred nami
 - form-owned inheritance
-- Tree View
+- hlubsi Tree View navigace:
+  - klikani na zdroje
+  - quick actions
+  - statistiky
 - hlubsi Using impact analysis
 - ordering model
 - authoring sugar vrstvy
@@ -285,7 +289,7 @@ Aktualni stav:
 - loguje se registry rebuild a composition issues
 - plnohodnotny builder debug output a builder modes jeste nejsou hotove
 
-### Faze T6: Tree View nad finalnim modelem
+### Faze T6: Tree View nad finalnim modelem `[PROBIHA]`
 Cil:
 - v editoru videt, co na finalnim formulari a workflow realne existuje.
 
@@ -310,7 +314,23 @@ Definition of Done:
 - u kazde polozky je dohledatelny puvod,
 - panel umi zobrazit i warnings a quick actions.
 
-### Faze T7: Using impact analysis
+Aktualni stav:
+- existuje vlastni `SFP Composition` Tree View
+- umi zobrazit feature soubory a contribution usage
+- umi zobrazit bezna `Form` / `WorkFlow` XML:
+  - summary
+  - local vs injected `Controls`
+  - local vs injected `Buttons`
+  - local vs injected `Sections`
+  - local vs injected workflow sharecody
+  - `Using` impact
+- chybi jeste:
+  - quick actions
+  - klikani na puvodni zdrojove contribution/feature soubory pro bezna XML
+  - statistiky v samostatne UX vrstve
+  - pozdeji inheritance-aware finalni strom
+
+### Faze T7: Using impact analysis `[CAST HOTOVO]`
 Cil:
 - zviditelnit, ktere `Using` maji realny dopad a ktere jsou zbytecne.
 
@@ -332,6 +352,16 @@ Implementace:
 Definition of Done:
 - je videt, kdy `Using` nic realne nepridava,
 - je videt, kdy feature neco pridala, ale vysledek neni nikde spotrebovan.
+
+Aktualni stav:
+- hotove diagnostiky:
+  - `unused-using`
+  - `partial-using`
+- hotova prvni workflow usage vrstva vcetne chainingu `ButtonShareCode -> ActionShareCode`
+- `Using` impact je videt i v `Tree View`
+- chybi jeste:
+  - jemnejsi usage heuristiky pro dalsi workflow scenare
+  - navazani na inheritance
 
 ### Faze T8: Ordering model
 Cil:
@@ -461,8 +491,8 @@ Poznamka:
 3. `T4` Effective composition model
 4. `T3` Form-owned feature inheritance
 5. `T5` Builder observability
-6. `T6` Tree View
-7. `T7` Using impact analysis
+6. `T7` Using impact analysis
+7. `T6` Tree View
 8. `T8` Ordering model
 9. `T9` Authoring ergonomie
 10. `T10` Final output quality
@@ -625,6 +655,8 @@ Gate pro dalsi milestone:
 - builder output realne pomaha debugovat build bez nutnosti zasahovat do kodu.
 
 ### Milestone M6: Tree View MVP
+Stav:
+- `[PROBIHA]`
 Obsah:
 - `T6` Tree View nad finalnim modelem
 
@@ -644,7 +676,19 @@ Smysl testu:
 Gate pro dalsi milestone:
 - z Tree View je mozne bez buildu rucne dohledat hlavni controls/buttons/sharecody a jejich puvod.
 
+Aktualne hotovo:
+- feature panel a contribution usage
+- bezny XML panel se skupinami local/injected symbolu
+- `Using` impact v panelu
+
+Aktualne chybi do gate:
+- quick actions
+- lepsi navigace na zdroj
+- dalsi statistiky a inheritance-aware finalni model
+
 ### Milestone M7: Using impact analysis
+Stav:
+- `[CAST HOTOVO]`
 Obsah:
 - `T7` Using impact analysis
 
@@ -665,6 +709,16 @@ Smysl testu:
 
 Gate pro dalsi milestone:
 - umi spolehlive rozlisit zbytecny `Using` od legitimni partial feature.
+
+Aktualne hotovo:
+- `unused-using`
+- `partial-using`
+- workflow chaining pres `ButtonShareCode`
+- zobrazeni dopadu v `Tree View`
+
+Aktualne chybi do gate:
+- dovedeni signal/sum v sirsim realnem projektu
+- navazani na inheritance a finalni composed model napric XML
 
 ### Milestone M8: Ordering model
 Obsah:

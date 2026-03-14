@@ -74,9 +74,14 @@ export function buildEffectiveCompositionModel(
       continue;
     }
 
+    const providers = item.origins
+      .map((origin) => origin.note ?? [origin.feature, origin.partId, origin.section].filter(Boolean).join("/"))
+      .filter((value): value is string => !!value)
+      .join(", ");
+
     conflicts.push({
       code: "duplicate-provider",
-      message: `Symbol '${item.key}' is provided by multiple feature parts/contributions.`,
+      message: `Symbol '${item.key}' is provided by multiple feature parts/contributions: ${providers}.`,
       itemKeys: [item.key]
     });
   }

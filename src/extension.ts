@@ -57,6 +57,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     (uri) => getIndexForUri(uri),
     () => featureRegistryStore.getRegistry()
   );
+  const compositionTreeView = vscode.window.createTreeView("sfpXmlLinter.compositionView", {
+    treeDataProvider: compositionTreeProvider,
+    showCollapseAll: true
+  });
   const engine = new DiagnosticsEngine();
   const buildService = new BuildXmlTemplatesService();
   const emptyIndex: WorkspaceIndex = {
@@ -102,6 +106,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   let activeProjectScopeKey: string | undefined;
   const standaloneValidationVersionByUri = new Map<string, number>();
   const indexedValidationLogSignatureByUri = new Map<string, string>();
+  let lastCompositionSelection:
+    | {
+        id: string;
+        at: number;
+      }
+    | undefined;
   let reindexProgressState:
     | {
         progress: vscode.Progress<{ message?: string; increment?: number }>;
@@ -114,10 +124,41 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(indexOutput);
   context.subscriptions.push(formatterOutput);
   context.subscriptions.push(compositionOutput);
+  context.subscriptions.push(compositionTreeView);
   context.subscriptions.push(
-    vscode.window.createTreeView("sfpXmlLinter.compositionView", {
-      treeDataProvider: compositionTreeProvider,
-      showCollapseAll: true
+    compositionTreeView.onDidExpandElement((event) => {
+      compositionTreeProvider.setExpanded((event.element as { id?: string }).id, true);
+    })
+  );
+  context.subscriptions.push(
+    compositionTreeView.onDidCollapseElement((event) => {
+      compositionTreeProvider.setExpanded((event.element as { id?: string }).id, false);
+    })
+  );
+  context.subscriptions.push(
+    compositionTreeView.onDidChangeSelection(async (event) => {
+      if (event.selection.length !== 1) {
+        return;
+      }
+
+      const selected = event.selection[0] as { id?: string; type?: string; sourceLocation?: vscode.Location; resourceUri?: vscode.Uri };
+      if (!selected?.id || selected.type === "detail" || (!selected.sourceLocation && !selected.resourceUri)) {
+        lastCompositionSelection = undefined;
+        return;
+      }
+
+      const now = Date.now();
+      const isDoubleClick = lastCompositionSelection?.id === selected.id && now - lastCompositionSelection.at <= 450;
+      lastCompositionSelection = {
+        id: selected.id,
+        at: now
+      };
+
+      if (!isDoubleClick) {
+        return;
+      }
+
+      await vscode.commands.executeCommand("sfpXmlLinter.compositionOpenSource", selected);
     })
   );
 
@@ -1798,6 +1839,78 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("sfpXmlLinter.refreshCompositionView", () => {
       compositionTreeProvider.refresh();
       logComposition("Composition view refreshed");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.compositionOpenSource", async (node?: {
+      sourceLocation?: vscode.Location;
+      resourceUri?: vscode.Uri;
+      label?: string;
+    }) => {
+      const location = node?.sourceLocation;
+      if (location) {
+        await vscode.window.showTextDocument(location.uri, {
+          selection: location.range,
+          preview: false
+        });
+        return;
+      }
+
+      if (node?.resourceUri) {
+        await vscode.window.showTextDocument(node.resourceUri, {
+          preview: false
+        });
+        return;
+      }
+
+      vscode.window.showInformationMessage("SFP XML Linter: Source location is not available for this item.");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.compositionShowUsages", async (node?: {
+      usageLocations?: vscode.Location[];
+      label?: string;
+    }) => {
+      const locations = node?.usageLocations ?? [];
+      if (locations.length === 0) {
+        vscode.window.showInformationMessage(`SFP XML Linter: No usages found for ${node?.label ?? "selected item"}.`);
+        return;
+      }
+
+      if (locations.length === 1) {
+        const [location] = locations;
+        await vscode.window.showTextDocument(location.uri, {
+          selection: location.range,
+          preview: false
+        });
+        return;
+      }
+
+      const picks = locations.map((location) => {
+        const relative = vscode.workspace.asRelativePath(location.uri, false);
+        const line = location.range.start.line + 1;
+        const column = location.range.start.character + 1;
+        return {
+          label: `${relative}:${line}:${column}`,
+          description: node?.label,
+          location
+        };
+      });
+
+      const picked = await vscode.window.showQuickPick(picks, {
+        title: `Usages of ${node?.label ?? "selected item"}`,
+        matchOnDescription: true
+      });
+      if (!picked) {
+        return;
+      }
+
+      await vscode.window.showTextDocument(picked.location.uri, {
+        selection: picked.location.range,
+        preview: false
+      });
     })
   );
 

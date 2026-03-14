@@ -71,6 +71,7 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - Tree View quick-fix integrace:
     - u primitive detailu (`MissingParam` / `MissingSlot`) je akce, ktera aplikuje odpovidajici code action primo z tree view
     - pridana i akce pro `unknown-primitive` (`PrimitiveSource`) primo z tree view
+    - pridana i akce pro `primitive-cycle` (`CycleFix: Remove cyclic UsePrimitive`) primo z tree view
   - command fallback/retry:
     - composition quick-fix command umi nabidnout `Revalidate` a po revalidaci automaticky zkusit fix znovu
   - command helper extrahovan do sdilene vrstvy:
@@ -91,6 +92,10 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
     - retry path po revalidate
     - unknown primitive path
     - missing action path
+  - pridany payload-level golden test:
+    - `runTreeQuickFixPayloadTests` overuje stabilitu payload wiring (`param/slot/unknown/cycle`)
+- composition debug output:
+  - quick-fix command loguje start/retry/result do Composition output channelu
 - linter fixtures:
   - pridany valid primitive-heavy scenar v `tests/fixtures/linter` (Form + WorkFlow + primitive knihovna)
 

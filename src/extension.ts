@@ -2251,6 +2251,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           vscode.window.showInformationMessage("SFP XML Linter: Primitive quick fix payload is incomplete.");
           return;
         }
+        const debugName = (payload.name ?? "").trim();
+        const debugKind = payload.kind;
+        const debugPrimitive = (payload.primitiveKey ?? "").trim();
+        logComposition(
+          `Primitive quick-fix START kind=${debugKind} name='${debugName}' primitive='${debugPrimitive || "(none)"}'`
+        );
 
         const result = await applyCompositionPrimitiveQuickFix(payload, {
           getDiagnostics(uri) {
@@ -2300,15 +2306,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             await validateDocument(document as vscode.TextDocument);
           },
           async askRevalidate(message) {
+            logComposition(`Primitive quick-fix RETRY prompt: ${message}`);
             const pick = await vscode.window.showInformationMessage(message, "Revalidate");
+            logComposition(`Primitive quick-fix RETRY selected=${pick === "Revalidate" ? "yes" : "no"}`);
             return pick === "Revalidate";
           }
         });
 
         if (result === "missing-diagnostic") {
           vscode.window.showInformationMessage("SFP XML Linter: Matching diagnostic was not found.");
+          logComposition("Primitive quick-fix DONE result=missing-diagnostic");
         } else if (result === "missing-action") {
           vscode.window.showInformationMessage("SFP XML Linter: Matching quick fix action was not found.");
+          logComposition("Primitive quick-fix DONE result=missing-action");
+        } else if (result === "invalid") {
+          logComposition("Primitive quick-fix DONE result=invalid");
+        } else {
+          logComposition("Primitive quick-fix DONE result=applied");
         }
       }
     )

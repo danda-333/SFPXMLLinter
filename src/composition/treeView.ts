@@ -16,6 +16,7 @@ import {
 } from "./usingImpact";
 import { FeatureCapabilityReport } from "./model";
 import { normalizeComponentKey } from "../utils/paths";
+import { createPrimitiveQuickFixPayload } from "./primitiveQuickFixPayload";
 
 type CompositionTreeNode =
   | InfoNode
@@ -867,6 +868,14 @@ function buildUsingContributionTypeGroups(
             contributionLocation
           )
         );
+        const cycleNode = primitiveQuickFixDetailNode(
+          "CycleFix: Remove cyclic UsePrimitive",
+          `${contributionNodeId}:type:primitives:item:${idx}:cycle`,
+          "cycle",
+          primitiveKey,
+          primitiveKey,
+          contributionLocation
+        );
         return {
           type: "group",
           id: `${contributionNodeId}:type:primitives:item:${idx}`,
@@ -892,7 +901,8 @@ function buildUsingContributionTypeGroups(
             detailNode(`RequiredSlots: ${requiredSlots.length > 0 ? requiredSlots.join(", ") : "(none)"}`),
             detailNode(`ProvidedSlots: ${providedSlots.length > 0 ? providedSlots.join(", ") : "(none)"}`),
             detailNode(`MissingSlots: ${missingSlots.length > 0 ? missingSlots.join(", ") : "(none)"}`),
-            ...missingSlotNodes
+            ...missingSlotNodes,
+            cycleNode
           ]
         } satisfies GroupNode;
       })
@@ -905,7 +915,7 @@ function buildUsingContributionTypeGroups(
 function primitiveQuickFixDetailNode(
   label: string,
   id: string,
-  kind: "param" | "slot" | "unknown",
+  kind: "param" | "slot" | "unknown" | "cycle",
   name: string,
   primitiveKey: string,
   contributionLocation?: vscode.Location
@@ -923,12 +933,7 @@ function primitiveQuickFixDetailNode(
       command: "sfpXmlLinter.compositionApplyPrimitiveQuickFix",
       title: "Apply primitive quick fix",
       arguments: [
-        {
-          uri: contributionLocation.uri,
-          kind,
-          name,
-          primitiveKey
-        }
+        createPrimitiveQuickFixPayload(contributionLocation.uri, kind, name, primitiveKey)
       ]
     }
   };

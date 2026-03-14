@@ -1,6 +1,6 @@
 export interface CompositionPrimitiveQuickFixPayload {
   uri?: unknown;
-  kind?: "param" | "slot" | "unknown";
+  kind?: "param" | "slot" | "unknown" | "cycle";
   name?: string;
   primitiveKey?: string;
 }
@@ -47,13 +47,17 @@ export async function applyCompositionPrimitiveQuickFix(
     ? "primitive-missing-param"
     : kind === "slot"
       ? "primitive-missing-slot"
-      : "unknown-primitive";
+      : kind === "cycle"
+        ? "primitive-cycle"
+        : "unknown-primitive";
 
   const expectedActionTitle = kind === "param"
     ? `Add missing parameter '${name}'`
     : kind === "slot"
       ? `Add missing Slot '${name}'`
-      : `Create primitive '${name}'`;
+      : kind === "cycle"
+        ? "Remove cyclic UsePrimitive"
+        : `Create primitive '${name}'`;
 
   let diagnostics = deps
     .getDiagnostics(uri)
@@ -151,10 +155,14 @@ function normalizeDiagnosticCode(code: unknown): string {
 
 function findMatchingAction(
   actions: readonly CompositionPrimitiveCodeAction[],
-  kind: "param" | "slot" | "unknown",
+  kind: "param" | "slot" | "unknown" | "cycle",
   name: string,
   expectedActionTitle: string
 ): CompositionPrimitiveCodeAction | undefined {
+  if (kind === "cycle") {
+    return actions.find((action) => action.title === expectedActionTitle);
+  }
+
   if (kind === "unknown") {
     return actions.find((action) =>
       action.title === "Open primitive source" ||

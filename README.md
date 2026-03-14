@@ -86,6 +86,14 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - Placeholder sections support custom inline params:
     - `{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}`
     - enables replacements inside inserted section content (e.g. `{{CustomParam}}`)
+- Generator scaffolding commands:
+  - `SFP XML Linter: Create Generator Template (Document)`
+  - `SFP XML Linter: Create Generator Template (Snippet)`
+  - Creates hello-world templates in `XML_Generators`:
+    - `hello.document.generator.js`
+    - `hello.snippet.generator.js`
+  - If file name already exists, numeric suffix is added automatically.
+  - Full generator API and examples: `Docs/TemplateGenerators.MD`
 - Feature manifest bootstrap command:
   - `SFP XML Linter: Generate Feature Manifest Bootstrap`
   - Generates `*.feature.json` next to the active feature from current XML-first feature composition.

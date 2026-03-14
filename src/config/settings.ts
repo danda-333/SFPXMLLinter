@@ -14,6 +14,10 @@ export interface SfpXmlLinterSettings {
   templateBuilderMode: "fast" | "debug" | "release";
   templateBuilderPostBuildFormat: boolean;
   templateBuilderProvenanceMode: "off" | "fileComment";
+  templateBuilderGeneratorsEnabled: boolean;
+  templateBuilderGeneratorTimeoutMs: number;
+  templateBuilderGeneratorEnableUserScripts: boolean;
+  templateBuilderGeneratorUserScriptsRoots: string[];
 }
 
 const DEFAULT_RULES: Record<string, RuleSeverity> = {
@@ -89,6 +93,10 @@ export function getSettings(): SfpXmlLinterSettings {
   const templateBuilderMode = cfg.get<"fast" | "debug" | "release">("templateBuilder.mode", "debug");
   const templateBuilderPostBuildFormat = cfg.get<boolean>("templateBuilder.postBuildFormat", false);
   const templateBuilderProvenanceMode = cfg.get<"off" | "fileComment">("templateBuilder.provenanceMode", "off");
+  const templateBuilderGeneratorsEnabled = cfg.get<boolean>("templateBuilder.generators.enabled", true);
+  const templateBuilderGeneratorTimeoutMs = Math.max(50, cfg.get<number>("templateBuilder.generators.timeoutMs", 150));
+  const templateBuilderGeneratorEnableUserScripts = cfg.get<boolean>("templateBuilder.generators.enableUserScripts", true);
+  const templateBuilderGeneratorUserScriptsRoots = cfg.get<string[]>("templateBuilder.generators.userScriptsRoots", ["XML_Generators"]);
 
   return {
     workspaceRoots,
@@ -101,7 +109,11 @@ export function getSettings(): SfpXmlLinterSettings {
     componentSaveBuildScope,
     templateBuilderMode,
     templateBuilderPostBuildFormat,
-    templateBuilderProvenanceMode
+    templateBuilderProvenanceMode,
+    templateBuilderGeneratorsEnabled,
+    templateBuilderGeneratorTimeoutMs,
+    templateBuilderGeneratorEnableUserScripts,
+    templateBuilderGeneratorUserScriptsRoots
   };
 }
 

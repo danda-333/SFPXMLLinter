@@ -8,6 +8,8 @@ import {
   stripXmlComponentExtension
 } from "./buildXmlTemplatesCore";
 import { applyTemplateOutputQuality, TemplateBuilderProvenanceMode } from "./outputQuality";
+import { runTemplateGenerators } from "./generators";
+import { loadWorkspaceUserGenerators } from "./generators/userGeneratorLoader";
 
 interface BuildRunOptions {
   silent?: boolean;
@@ -16,6 +18,10 @@ interface BuildRunOptions {
   provenanceMode?: TemplateBuilderProvenanceMode;
   provenanceLabel?: string;
   formatterMaxConsecutiveBlankLines?: number;
+  generatorsEnabled?: boolean;
+  generatorTimeoutMs?: number;
+  generatorEnableUserScripts?: boolean;
+  generatorUserScriptsRoots?: string[];
   onLogLine?: (line: string) => void;
   onFileStatus?: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
   onTemplateEvaluated?: (
@@ -104,6 +110,13 @@ export class BuildXmlTemplatesService {
     }
 
     const componentLibrary = buildComponentLibrary(componentSources);
+    const userGenerators = options.generatorEnableUserScripts === false
+      ? []
+      : await loadWorkspaceUserGenerators(
+          workspaceFolder.uri.fsPath,
+          options.generatorUserScriptsRoots ?? ["XML_Generators"],
+          options.onLogLine
+        );
     const summary: BuildRunSummary = { updated: 0, skipped: 0, errors: 0 };
     const total = templateUris.length;
     let current = 0;
@@ -128,7 +141,30 @@ export class BuildXmlTemplatesService {
               }
             : undefined
         );
-        const rendered = applyTemplateOutputQuality(renderedRaw, templateText, {
+        const generated = runTemplateGenerators(
+          {
+            xml: renderedRaw,
+            sourceTemplateText: templateText,
+            relativeTemplatePath: relPath,
+            mode: options.mode ?? "debug"
+          },
+          {
+            enabled: options.generatorsEnabled !== false,
+            timeoutMs: Math.max(50, options.generatorTimeoutMs ?? 150),
+            userGenerators
+          },
+          options.onLogLine
+        );
+        for (const warning of generated.warnings) {
+          options.onLogLine?.(`[generator][warning] ${warning.code}: ${warning.message}`);
+        }
+        if ((options.mode ?? "debug") === "debug") {
+          options.onLogLine?.(
+            `[generator] summary: applied=${generated.appliedGeneratorIds.length}, warnings=${generated.warnings.length}, duration=${generated.durationMs} ms`
+          );
+        }
+
+        const rendered = applyTemplateOutputQuality(generated.xml, templateText, {
           postBuildFormat: options.postBuildFormat === true,
           provenanceMode: options.provenanceMode ?? "off",
           provenanceLabel: options.provenanceLabel,

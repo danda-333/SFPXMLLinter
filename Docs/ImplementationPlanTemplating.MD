@@ -98,6 +98,12 @@ Posunout soucasny XML template builder od prostych `Using` insertu k feature-ori
   - quick-fix command loguje start/retry/result do Composition output channelu
 - linter fixtures:
   - pridany valid primitive-heavy scenar v `tests/fixtures/linter` (Form + WorkFlow + primitive knihovna)
+- generator authoring UX:
+  - nova dokumentace `Docs/TemplateGenerators.MD`
+  - commandy pro scaffold hello-world generatoru:
+    - `SFP XML Linter: Create Generator Template (Document)`
+    - `SFP XML Linter: Create Generator Template (Snippet)`
+  - auto-vytvoreni souboru v `XML_Generators` vcetne unikátního suffixu pri kolizi jmena
 
 ### Prave probiha
 - dokonceni `effective composition model` jako jednotneho zdroje i pro builder/debug vrstvu
@@ -1017,6 +1023,9 @@ Aktualne hotovo:
   - doplneny composition settings stub pro nove builder volby
 
 ### Milestone M11: Programovatelne generovani
+Stav:
+- `[PROBIHA]`
+
 Obsah:
 - `T11` Programovatelne generovani uvnitr feature
 
@@ -1038,6 +1047,41 @@ Smysl testu:
 
 Gate pro release:
 - generatory resi slozite patterny bez zavedení noveho pseudojazyka a bez destabilizace builderu.
+
+Aktualne hotovo:
+- zavedeny jednotny generator kontrakt:
+  - `src/template/generators/types.ts`
+  - `kind: "document"` (full XML pass)
+  - `kind: "snippet"` (jen pro `UseGenerator="..."`)
+- zavedeny generator runtime/executor:
+  - `src/template/generators/index.ts`
+  - soft timeout budget na soubor
+  - debug logy o aplikovanych/no-op generatorech
+- napojeni do builder pipeline:
+  - `src/template/buildXmlTemplatesService.ts`
+  - generator pass bezi mezi renderem a output-quality
+- konfigurace:
+  - `templateBuilder.generators.enabled`
+  - `templateBuilder.generators.timeoutMs`
+  - `templateBuilder.generators.enableUserScripts`
+  - `templateBuilder.generators.userScriptsRoots`
+- user-defined generator vrstva:
+  - loader z workspace slozek (`XML_Generators` default)
+  - podporovane soubory `*.js`, `*.cjs`, `*.mjs`, `*.ts`
+  - explicitni kontrakt:
+    - document: `kind + applies(ctx)? + run(ctx)`
+    - snippet: `kind + selector + run(ctx)`
+  - zadna legacy kompatibilitni cesta (stare shape nejsou podporovane)
+  - generator je mozne pouzit jako rozsireni Primitive/Feature authoringu pro slozite transformace nad finalnim XML
+  - helper API pro autory generatoru (`ctx.helpers.xml.*`) je sdilene v runtime
+  - referencni user generatory:
+    - `actionShareCodeLift.generator.js` (document)
+    - `buttonWithDialog.generator.js` (snippet)
+- test coverage:
+  - unit testy generatoru (`runTemplateGeneratorsTests`)
+  - fixture scenar nad realnym template-workflow vstupem (`999_T11GeneratorDemo`) s kontrolou liftu + idempotence
+  - snippet+primitive scenar (`999_T11ButtonDialogDemo`) pro `UseGenerator` flow
+  - command scaffold je integrovany v extension (`src/extension.ts`, `package.json`)
 
 ## Prvni pilot
 Prvni implementacni vlna by mela byt vedena nad jednou feature s vysokou slozitosti a zaroven dobrou citelnosti zavislosti.

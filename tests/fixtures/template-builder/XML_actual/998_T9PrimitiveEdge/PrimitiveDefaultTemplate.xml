@@ -1,0 +1,7 @@
+<Form Ident="PrimitiveDefaultTemplate">
+  <HTMLTemplate><![CDATA[
+
+    <div class="row"><ControlLabel ControlID="DialogAssignedGroupID" /><Control ID="DialogAssignedGroupID" /></div>
+
+  ]]></HTMLTemplate>
+</Form>

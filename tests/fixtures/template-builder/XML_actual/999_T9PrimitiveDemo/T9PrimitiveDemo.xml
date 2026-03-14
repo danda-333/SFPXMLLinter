@@ -1,0 +1,13 @@
+<Form Ident="T9PrimitiveDemo">
+  <Sections>
+
+    <Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignDialogSection" TitleResourceKey="AssignDialogTitle">
+      <HTMLTemplate><![CDATA[
+
+    <div class="row"><ControlLabel ControlID="DialogAssignedGroupID" /><Control ID="DialogAssignedGroupID" /></div>
+
+      ]]></HTMLTemplate>
+    </Section>
+
+  </Sections>
+</Form>

@@ -27,6 +27,8 @@
     "onStartupFinished",
     "onCommand:sfpXmlLinter.buildXmlTemplates",
     "onCommand:sfpXmlLinter.buildXmlTemplatesAll",
+    "onCommand:sfpXmlLinter.createDocumentGeneratorTemplate",
+    "onCommand:sfpXmlLinter.createSnippetGeneratorTemplate",
     "onCommand:sfpXmlLinter.showBuildQueueLog",
     "onCommand:sfpXmlLinter.showIndexLog",
     "onCommand:sfpXmlLinter.showCompositionLog",
@@ -92,6 +94,14 @@
       {
         "command": "sfpXmlLinter.buildXmlTemplatesAll",
         "title": "SFP XML Linter: Build XML Templates (All)"
+      },
+      {
+        "command": "sfpXmlLinter.createDocumentGeneratorTemplate",
+        "title": "SFP XML Linter: Create Generator Template (Document)"
+      },
+      {
+        "command": "sfpXmlLinter.createSnippetGeneratorTemplate",
+        "title": "SFP XML Linter: Create Generator Template (Snippet)"
       },
       {
         "command": "sfpXmlLinter.showBuildQueueLog",
@@ -333,6 +343,32 @@
           "default": "off",
           "description": "Adds optional provenance marker to final built XML output."
         },
+        "sfpXmlLinter.templateBuilder.generators.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable build-time XML generators pipeline (deterministic transform stage after rendering)."
+        },
+        "sfpXmlLinter.templateBuilder.generators.timeoutMs": {
+          "type": "number",
+          "default": 150,
+          "minimum": 50,
+          "description": "Soft timeout budget for template generators per file in milliseconds."
+        },
+        "sfpXmlLinter.templateBuilder.generators.enableUserScripts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable user-defined JS/TS generators loaded from workspace roots."
+        },
+        "sfpXmlLinter.templateBuilder.generators.userScriptsRoots": {
+          "type": "array",
+          "default": [
+            "XML_Generators"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Workspace-relative folders scanned for user-defined template generators (*.js, *.cjs, *.mjs, *.ts)."
+        },
         "sfpXmlLinter.composition.openMode": {
           "type": "string",
           "enum": [
@@ -393,19 +429,19 @@
     "test:linter": "npm run compile && node out/tests/linter/runLinterFixtures.js && node out/tests/linter/runIgnoreCodeActionProviderTests.js",
     "test:linter:perf": "npm run compile && node out/tests/linter/runLinterPerformance.js",
     "test:composition": "npm run compile && node out/tests/composition/runCompositionModelTests.js && node out/tests/composition/runCompositionWorkspaceTests.js && node out/tests/composition/runCompositionDiagnosticsTests.js && node out/tests/composition/runCompositionBootstrapTests.js && node out/tests/composition/runDocumentCompositionModelTests.js && node out/tests/composition/runCompositionOrderingFixtureTests.js && node out/tests/composition/runPrimitiveQuickFixCommandTests.js && node out/tests/composition/runTreeQuickFixPayloadTests.js && node out/tests/indexer/runWorkspaceIndexerUsageTests.js",
-    "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js",
+    "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runTemplateGeneratorsTests.js",
     "test:templates:service": "npm run compile && node out/tests/template/runBuildTemplateServiceTests.js",
-    "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runBuildTemplatePrimitiveTests.js && node out/tests/template/runBuildTemplateServiceTests.js && node out/tests/template/runBuildTemplateFixtures.js",
+    "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runTemplateGeneratorsTests.js && node out/tests/template/runBuildTemplatePrimitiveTests.js && node out/tests/template/runBuildTemplateServiceTests.js && node out/tests/template/runBuildTemplateFixtures.js",
     "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",
     "package:vsix": "npx @vscode/vsce package"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "@types/vscode": "^1.90.0",
-    "typescript": "^5.5.4"
+    "@types/vscode": "^1.90.0"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.8.11",
-    "xpath": "^0.0.34"
+    "xpath": "^0.0.34",
+    "typescript": "^5.5.4"
   }
 }

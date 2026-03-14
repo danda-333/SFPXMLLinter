@@ -1,0 +1,5 @@
+<Form Ident="PrimitiveUnknownTemplate">
+  <Sections>
+    <UsePrimitive Name="Common/Dialogs/ConfirmFormDialogSection" Template="MissingTemplate" DialogIdent="X" TitleKey="Y" />
+  </Sections>
+</Form>

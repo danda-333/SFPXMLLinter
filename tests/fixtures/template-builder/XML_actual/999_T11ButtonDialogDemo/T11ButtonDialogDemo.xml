@@ -1,0 +1,27 @@
+<Form FormIdent="T11ButtonDialogDemo">
+  <Buttons>
+
+    <Button Ident="AssignButton" TitleResourceKey="AssignButton_ITSM" IsSave="true" xsi:type="FormButton">
+  <Extensions>
+    <Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignConfirmFormDialogSection" />
+  </Extensions>
+  <Actions><Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" /></Actions>
+</Button>
+
+  </Buttons>
+  <Sections>
+  
+<Section xsi:type="ConfirmFormDialogSection" Ident="AssignConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignConfirmFormDialogSectionTitle_ITSM">
+  <HTMLTemplate><![CDATA[
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <ControlLabel ControlID="DialogAssignedGroupID" />
+              <Control ID="DialogAssignedGroupID" />
+            </div>
+          </div>
+        </div>
+      ]]></HTMLTemplate>
+</Section>
+</Sections>
+</Form>

@@ -1,0 +1,21 @@
+<WorkFlow FormIdent="T11GeneratorDemo">
+  <ActionShareCodes>
+  
+    <ActionShareCode Ident="AutoLiftActionShareCode1">
+      <Action xsi:type="SetValue" ControlIdent="AssignedGroupID" Value="'A'" />
+      <Action xsi:type="SetValue" ControlIdent="AssignedAccountID" Value="'B'" />
+    </ActionShareCode>
+  </ActionShareCodes>
+  <Buttons>
+    <Button Ident="AssignButton">
+      <Actions>
+        <Action xsi:type="ShareCode" Ident="AutoLiftActionShareCode1" />
+      </Actions>
+    </Button>
+    <Button Ident="AssignToMeButton">
+      <Actions>
+        <Action xsi:type="ShareCode" Ident="AutoLiftActionShareCode1" />
+      </Actions>
+    </Button>
+  </Buttons>
+</WorkFlow>

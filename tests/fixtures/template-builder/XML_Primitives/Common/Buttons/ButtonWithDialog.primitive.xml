@@ -1,0 +1,17 @@
+<Primitive>
+  <Template>
+    <GeneratorSnippet
+      UseGenerator="Common/Buttons/ButtonWithDialog"
+      Ident="{{Ident}}"
+      TitleResourceKey="{{TitleResourceKey}}"
+      IsSave="{{IsSave}}"
+      DialogSectionIdent="{{DialogSectionIdent}}"
+      DialogExtensionIdent="{{DialogExtensionIdent}}"
+      DialogTitleResourceKey="{{DialogTitleResourceKey}}"
+      DialogConfirmButtonTitleResourceKey="{{DialogConfirmButtonTitleResourceKey}}"
+      DialogCloseButtonTitleResourceKey="{{DialogCloseButtonTitleResourceKey}}">
+      <Actions>{{Slot:Actions}}</Actions>
+      <DialogHTMLTemplate><![CDATA[{{Slot:DialogBody}}]]></DialogHTMLTemplate>
+    </GeneratorSnippet>
+  </Template>
+</Primitive>

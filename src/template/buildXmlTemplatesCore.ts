@@ -66,6 +66,21 @@ export interface XPathInsertTargetStats {
   insertCount: number;
 }
 
+export type XPathInsertMode = "append" | "prepend" | "before" | "after";
+
+export interface XPathInsertRequest {
+  targetXPath: string;
+  content: string;
+  insertMode?: XPathInsertMode;
+  allowMultipleInserts?: boolean;
+}
+
+export interface XPathInsertResult {
+  xml: string;
+  matchCount: number;
+  insertCount: number;
+}
+
 export function countXPathInsertTargets(
   text: string,
   targetXPath: string | undefined,
@@ -923,46 +938,68 @@ function insertSectionContent(text: string, section: ComponentSection, content: 
   if (targetXPath.length === 0) {
     return text;
   }
+  return applyXPathInsert(text, {
+    targetXPath,
+    content,
+    insertMode: normalizeInsertMode(section.insert),
+    allowMultipleInserts: section.allowMultipleInserts
+  }, context).xml;
+}
 
-  const ranges = findTargetRanges(text, targetXPath, context);
-  if (ranges.length === 0) {
-    return text;
+export function applyXPathInsert(
+  text: string,
+  request: XPathInsertRequest,
+  context?: { onDebugLog?: (line: string) => void }
+): XPathInsertResult {
+  const targetXPath = request.targetXPath.trim();
+  if (!targetXPath) {
+    return { xml: text, matchCount: 0, insertCount: 0 };
   }
 
+  const ranges = findTargetRanges(text, targetXPath, context as RenderContext | undefined);
+  if (ranges.length === 0) {
+    return { xml: text, matchCount: 0, insertCount: 0 };
+  }
+
+  const allowMultipleInserts = request.allowMultipleInserts === true;
   if (ranges.length > 1 && context?.onDebugLog) {
     context.onDebugLog(
       `[TargetXPath] '${targetXPath}' matched ${ranges.length} nodes; ` +
-      `${section.allowMultipleInserts ? "applying to all matches" : "using first match only"}`
+      `${allowMultipleInserts ? "applying to all matches" : "using first match only"}`
     );
   }
 
-  const insertMode = (section.insert ?? "append").toLowerCase();
-  const applicableRanges = section.allowMultipleInserts ? ranges : [ranges[0]];
+  const insertMode = request.insertMode ?? "append";
+  const applicableRanges = allowMultipleInserts ? ranges : [ranges[0]];
   const sortedRanges = [...applicableRanges].sort((a, b) => insertionPointForMode(b, insertMode) - insertionPointForMode(a, insertMode));
 
   let out = text;
   for (const range of sortedRanges) {
     if (insertMode === "prepend") {
-      out = out.slice(0, range.openEnd) + content + out.slice(range.openEnd);
+      out = out.slice(0, range.openEnd) + request.content + out.slice(range.openEnd);
       continue;
     }
     if (insertMode === "before") {
-      out = out.slice(0, range.openStart) + content + out.slice(range.openStart);
+      out = out.slice(0, range.openStart) + request.content + out.slice(range.openStart);
       continue;
     }
     if (insertMode === "after") {
-      out = out.slice(0, range.closeEnd) + content + out.slice(range.closeEnd);
+      out = out.slice(0, range.closeEnd) + request.content + out.slice(range.closeEnd);
       continue;
     }
-    out = out.slice(0, range.closeStart) + content + out.slice(range.closeStart);
+    out = out.slice(0, range.closeStart) + request.content + out.slice(range.closeStart);
   }
 
-  return out;
+  return {
+    xml: out,
+    matchCount: ranges.length,
+    insertCount: applicableRanges.length
+  };
 }
 
 function insertionPointForMode(
   range: { openStart: number; openEnd: number; closeStart: number; closeEnd: number },
-  insertMode: string
+  insertMode: XPathInsertMode
 ): number {
   if (insertMode === "prepend") {
     return range.openEnd;
@@ -974,6 +1011,14 @@ function insertionPointForMode(
     return range.closeEnd;
   }
   return range.closeStart;
+}
+
+function normalizeInsertMode(insertMode: string | undefined): XPathInsertMode {
+  const normalized = (insertMode ?? "append").toLowerCase();
+  if (normalized === "prepend" || normalized === "before" || normalized === "after") {
+    return normalized;
+  }
+  return "append";
 }
 
 function findTargetRanges(

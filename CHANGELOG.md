@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 0.0.17
+## 0.1.0
 
 - Template generators (T11) completion:
   - finalized generator v2 contract with explicit kinds:

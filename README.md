@@ -106,7 +106,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - `{{Feature:Common/Shared/Assign,Contribution:Html,CustomParam:ParamValue}}`
     - enables replacements inside inserted section content (e.g. `{{CustomParam}}`)
   - output quality options:
-    - `sfpXmlLinter.templateBuilder.postBuildFormat`
+    - `sfpXmlLinter.templateBuilder.postBuildFormat` (default `true`)
     - `sfpXmlLinter.templateBuilder.provenanceMode` (`off` | `fileComment`)
   - builder modes:
     - `sfpXmlLinter.templateBuilder.mode` (`fast` | `debug` | `release`)
@@ -141,7 +141,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - `SFP XML Linter: Composition Open Source`
   - Tree View shows:
     - local/injected symbols
-    - `Using` status (`effective` / `partial` / `unused`)
+    - `Using` status (`effective` / `partial` / `unused` / `inert`)
     - contribution meta and insert trace (`TargetXPath`, matches, inserts, placeholder usage)
 - Index command:
   - `SFP XML Linter: Rebuild Full Index`

@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -331,7 +331,7 @@
         },
         "sfpXmlLinter.templateBuilder.postBuildFormat": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "When enabled, final built XML is passed through internal tolerant formatter before write."
         },
         "sfpXmlLinter.templateBuilder.provenanceMode": {

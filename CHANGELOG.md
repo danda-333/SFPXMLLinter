@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.1
+
+- Template builder:
+  - `sfpXmlLinter.templateBuilder.postBuildFormat` is now enabled by default (`true`), so final build outputs are formatted by the internal tolerant formatter unless explicitly disabled.
+- Performance and responsiveness:
+  - reduced repeated validation scheduling on editor/tab visibility changes.
+  - reduced Composition Tree refresh churn with debounced refresh and in-memory tree/use-location caching.
+  - lowered noisy standalone validation skip logs.
+
 ## 0.1.0
 
 - Template generators (T11) completion:

@@ -111,6 +111,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   let suppressSqlSuggestUntil = 0;
   let activeProjectScopeKey: string | undefined;
   const standaloneValidationVersionByUri = new Map<string, number>();
+  const visibleSweepValidatedVersionByUri = new Map<string, number>();
   const indexedValidationLogSignatureByUri = new Map<string, string>();
   let lastCompositionSelection:
     | {
@@ -1670,7 +1671,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const docKey = document.uri.toString();
       const alreadyValidatedVersion = standaloneValidationVersionByUri.get(docKey);
       if (alreadyValidatedVersion === document.version) {
-        logSingleFile(`validate standalone SKIP unchanged version: ${relOrPath} v${document.version}`);
         return;
       }
 
@@ -1755,7 +1755,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           : document.uri.toString();
         logIndex(`onDidOpenTextDocument xml: ${relOrPath}`);
       }
-      validateDocument(document);
+      if (!documentInConfiguredRoots(document)) {
+        validateDocument(document);
+      }
       compositionTreeProvider.refresh();
       if (isUserOpenDocument(document.uri) && documentInConfiguredRoots(document)) {
         enqueueValidation(document.uri, "high");
@@ -1769,6 +1771,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
 
+      if (document.uri.scheme !== "file" && document.uri.scheme !== "untitled") {
+        return;
+      }
+
       if (!documentInConfiguredRoots(document)) {
         const relOrPath = document.uri.scheme === "file"
           ? vscode.workspace.asRelativePath(document.uri, false)
@@ -1776,6 +1782,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         logSingleFile(`onDidCloseTextDocument: ${relOrPath}`);
         diagnostics.delete(document.uri);
         standaloneValidationVersionByUri.delete(document.uri.toString());
+        visibleSweepValidatedVersionByUri.delete(document.uri.toString());
         indexedValidationLogSignatureByUri.delete(document.uri.toString());
         logSingleFile(`closed standalone file, diagnostics cleared: ${relOrPath}`);
       }
@@ -1784,35 +1791,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.onDidChangeTextDocument((event) => {
       scheduleSqlSuggestOnTyping(event);
       pendingContentChangesSinceLastSave.add(event.document.uri.toString());
-      validateDocument(event.document);
+      if (!documentInConfiguredRoots(event.document)) {
+        validateDocument(event.document);
+      }
       compositionTreeProvider.refresh();
       if (isUserOpenDocument(event.document.uri) && documentInConfiguredRoots(event.document)) {
         enqueueValidation(event.document.uri, "high");
       }
     }),
     vscode.window.onDidChangeVisibleTextEditors(() => {
-      validateOpenDocuments();
       clearClosedStandaloneDiagnostics();
       compositionTreeProvider.refresh();
-      for (const uri of getUserOpenUris()) {
-        const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
-        if (!doc || !documentInConfiguredRoots(doc)) {
-          continue;
+      const document = vscode.window.activeTextEditor?.document;
+      if (document && document.languageId === "xml") {
+        const key = document.uri.toString();
+        if (visibleSweepValidatedVersionByUri.get(key) !== document.version) {
+          visibleSweepValidatedVersionByUri.set(key, document.version);
+          if (!documentInConfiguredRoots(document)) {
+            validateDocument(document);
+          } else if (document.uri.scheme === "file") {
+            enqueueValidation(document.uri, "high");
+          }
         }
-        enqueueValidation(uri, "high");
       }
     }),
     vscode.window.tabGroups.onDidChangeTabs(() => {
-      validateOpenDocuments();
       clearClosedStandaloneDiagnostics();
       compositionTreeProvider.refresh();
-      for (const uri of getUserOpenUris()) {
-        const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
-        if (!doc || !documentInConfiguredRoots(doc)) {
-          continue;
-        }
-        enqueueValidation(uri, "high");
-      }
+      enqueueActiveEditorValidation("high");
     }),
     vscode.workspace.onDidSaveTextDocument((document) => {
       if (isSfpSettingsUri(document.uri)) {
@@ -1826,7 +1832,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const hadContentChanges = pendingContentChangesSinceLastSave.has(saveKey);
       pendingContentChangesSinceLastSave.delete(saveKey);
 
-      validateDocument(document);
+      if (!documentInConfiguredRoots(document)) {
+        validateDocument(document);
+      }
       compositionTreeProvider.refresh();
       if (isUserOpenDocument(document.uri) && documentInConfiguredRoots(document)) {
         enqueueValidation(document.uri, "high");
@@ -1975,6 +1983,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       logIndex(`Activation warmup validating: ${relOrPath}`);
       validateDocument(doc);
     }
+  }
+
+  function enqueueActiveEditorValidation(priority: "high" | "low"): void {
+    const editor = vscode.window.activeTextEditor;
+    const document = editor?.document;
+    if (!document || document.languageId !== "xml" || document.uri.scheme !== "file") {
+      return;
+    }
+    if (!documentInConfiguredRoots(document)) {
+      return;
+    }
+    enqueueValidation(document.uri, priority);
   }
   compositionTreeProvider.refresh();
 

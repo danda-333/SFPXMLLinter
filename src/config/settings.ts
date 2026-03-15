@@ -91,7 +91,7 @@ export function getSettings(): SfpXmlLinterSettings {
   const autoBuildOnSave = cfg.get<boolean>("templateBuilder.autoBuildOnSave", true);
   const componentSaveBuildScope = cfg.get<"dependents" | "full">("templateBuilder.componentSaveBuildScope", "dependents");
   const templateBuilderMode = cfg.get<"fast" | "debug" | "release">("templateBuilder.mode", "debug");
-  const templateBuilderPostBuildFormat = cfg.get<boolean>("templateBuilder.postBuildFormat", false);
+  const templateBuilderPostBuildFormat = cfg.get<boolean>("templateBuilder.postBuildFormat", true);
   const templateBuilderProvenanceMode = cfg.get<"off" | "fileComment">("templateBuilder.provenanceMode", "off");
   const templateBuilderGeneratorsEnabled = cfg.get<boolean>("templateBuilder.generators.enabled", true);
   const templateBuilderGeneratorTimeoutMs = Math.max(50, cfg.get<number>("templateBuilder.generators.timeoutMs", 150));

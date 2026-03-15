@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { parseDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
+import { parseDocumentFacts, ParsedDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
 import { WorkspaceIndex, IndexedComponentContributionSummary } from "../indexer/types";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { FeatureManifestRegistry } from "./workspace";
@@ -91,9 +91,22 @@ interface AggregatedSymbol {
   usageLocations?: vscode.Location[];
 }
 
+interface CachedRootTree {
+  documentUri: string;
+  documentVersion: number;
+  indexRef: WorkspaceIndex;
+  factsRef: ParsedDocumentFacts | undefined;
+  registryRef: FeatureManifestRegistry;
+  relativePath: string;
+  nodes: CompositionTreeNode[];
+}
+
 export class CompositionTreeProvider implements vscode.TreeDataProvider<CompositionTreeNode> {
   private readonly didChangeTreeDataEmitter = new vscode.EventEmitter<CompositionTreeNode | undefined | null | void>();
   private readonly expandedNodeIds = new Set<string>();
+  private refreshTimer: NodeJS.Timeout | undefined;
+  private readonly refreshDebounceMs = 75;
+  private cachedRootTree: CachedRootTree | undefined;
 
   public readonly onDidChangeTreeData = this.didChangeTreeDataEmitter.event;
 
@@ -104,7 +117,14 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
   ) {}
 
   public refresh(): void {
-    this.didChangeTreeDataEmitter.fire();
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = undefined;
+      this.cachedRootTree = undefined;
+      this.didChangeTreeDataEmitter.fire();
+    }, this.refreshDebounceMs);
   }
 
   public setExpanded(nodeId: string | undefined, expanded: boolean): void {
@@ -163,6 +183,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
 
     const document = this.getActiveDocument();
     if (!document || document.languageId !== "xml") {
+      this.cachedRootTree = undefined;
       return [
         infoNode("Open an XML file to inspect feature composition and final injected symbols.")
       ];
@@ -170,31 +191,87 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
 
     const registry = this.getFeatureRegistry();
     const index = this.getIndexForUri(document.uri);
-    const facts = index.parsedFactsByUri.get(document.uri.toString());
+    const documentUri = document.uri.toString();
+    const facts = index.parsedFactsByUri.get(documentUri);
     if (!facts) {
+      this.cachedRootTree = undefined;
       return [
         infoNode("Index facts are not available for this document yet. Run Revalidate Workspace/Project.")
       ];
     }
     const relPath = vscode.workspace.asRelativePath(document.uri, false).replace(/\\/g, "/");
+    const cached = this.cachedRootTree;
+    if (
+      cached &&
+      cached.documentUri === documentUri &&
+      cached.documentVersion === document.version &&
+      cached.indexRef === index &&
+      cached.factsRef === facts &&
+      cached.registryRef === registry &&
+      cached.relativePath === relPath
+    ) {
+      return cached.nodes;
+    }
+
+    let nodes: CompositionTreeNode[];
     const featureReport = findFeatureForRelativePath(registry, relPath);
     if (featureReport) {
-      return buildFeatureTree(featureReport, registry, index, document.uri);
+      nodes = buildFeatureTree(featureReport, registry, index, document.uri);
+      this.cachedRootTree = {
+        documentUri,
+        documentVersion: document.version,
+        indexRef: index,
+        factsRef: facts,
+        registryRef: registry,
+        relativePath: relPath,
+        nodes
+      };
+      return nodes;
     }
 
     const regularXmlTree = buildRegularXmlTree(document, facts, index);
     if (regularXmlTree.length > 0) {
-      return regularXmlTree;
+      nodes = regularXmlTree;
+      this.cachedRootTree = {
+        documentUri,
+        documentVersion: document.version,
+        indexRef: index,
+        factsRef: facts,
+        registryRef: registry,
+        relativePath: relPath,
+        nodes
+      };
+      return nodes;
     }
 
     const usingTree = buildUsingTree(document, facts, index);
     if (usingTree.length > 0) {
-      return usingTree;
+      nodes = usingTree;
+      this.cachedRootTree = {
+        documentUri,
+        documentVersion: document.version,
+        indexRef: index,
+        factsRef: facts,
+        registryRef: registry,
+        relativePath: relPath,
+        nodes
+      };
+      return nodes;
     }
 
-    return [
+    nodes = [
       infoNode(`No feature composition or Using impact available for '${relPath}'.`)
     ];
+    this.cachedRootTree = {
+      documentUri,
+      documentVersion: document.version,
+      indexRef: index,
+      factsRef: facts,
+      registryRef: registry,
+      relativePath: relPath,
+      nodes
+    };
+    return nodes;
   }
 }
 
@@ -542,6 +619,19 @@ function buildUsingTree(
   index: WorkspaceIndex,
   compositionModel?: DocumentCompositionModel
 ): CompositionTreeNode[] {
+  const usageLocationsByKey = new Map<string, vscode.Location[]>();
+  const ownerByUri = new Map<string, string | undefined>();
+  const resolveUsageLocations = (componentKey: string, contributionName?: string): vscode.Location[] => {
+    const cacheKey = `${componentKey}#${contributionName ?? "*"}`;
+    const cached = usageLocationsByKey.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    const resolved = getUsingUsageLocations(facts, index, componentKey, contributionName, ownerByUri);
+    usageLocationsByKey.set(cacheKey, resolved);
+    return resolved;
+  };
+
   const composition = compositionModel ?? buildDocumentCompositionModel(facts, index);
   const effectiveUsings = composition.usings;
   const suppressedUsings = facts.usingReferences.filter((ref) => ref.suppressInheritance);
@@ -562,16 +652,16 @@ function buildUsingTree(
     }
 
     const contributionRows = usingModel.contributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const filteredRows = usingModel.filteredContributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const placeholderRows = usingModel.placeholderContributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const filteredPlaceholderRows = usingModel.filteredPlaceholderContributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution)
+      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const children: CompositionTreeNode[] =
       contributionRows.length > 0 ? [...contributionRows] : [detailNode("No root-relevant contributions found.")];
@@ -610,7 +700,7 @@ function buildUsingTree(
       contextValue: "compositionUsing",
       resourceUri: component.uri,
       sourceLocation: usingModel.sectionValue ? component.contributionDefinitions.get(usingModel.sectionValue) : component.componentLocation,
-      usageLocations: getUsingUsageLocations(facts, index, usingModel.componentKey, usingModel.sectionValue),
+      usageLocations: resolveUsageLocations(usingModel.componentKey, usingModel.sectionValue),
       command: getUsingOpenCommand(component, usingModel.sectionValue),
       children
     } satisfies UsingNode;
@@ -648,7 +738,7 @@ function buildUsingTree(
       contextValue: "compositionUsing",
       resourceUri: component.uri,
       sourceLocation: ref.sectionValue ? component.contributionDefinitions.get(ref.sectionValue) : component.componentLocation,
-      usageLocations: getUsingUsageLocations(facts, index, ref.componentKey, ref.sectionValue),
+      usageLocations: resolveUsageLocations(ref.componentKey, ref.sectionValue),
       command: getUsingOpenCommand(component, ref.sectionValue),
       children: metaChildren
     } satisfies UsingNode;
@@ -816,7 +906,8 @@ function buildUsingContributionNode(
   index: WorkspaceIndex,
   usingModel: { componentKey: string },
   component: NonNullable<ReturnType<typeof resolveComponentByKey>>,
-  contributionModel: DocumentUsingContributionModel
+  contributionModel: DocumentUsingContributionModel,
+  resolveUsageLocations: (componentKey: string, contributionName?: string) => vscode.Location[]
 ): ContributionNode {
   const contribution = contributionModel.contribution;
   const componentKey = usingModel.componentKey;
@@ -859,7 +950,7 @@ function buildUsingContributionNode(
     contextValue: "compositionContribution",
     resourceUri: component.uri,
     sourceLocation: location,
-    usageLocations: getUsingUsageLocations(facts, index, componentKey, contribution.contributionName),
+    usageLocations: resolveUsageLocations(componentKey, contribution.contributionName),
     children: [metaGroup, ...(placeholderGroup ? [placeholderGroup] : []), ...typeGroups, ...(typeGroups.length === 0 ? [detailNode("No typed symbols.")] : [])]
   };
 }
@@ -1394,7 +1485,8 @@ function getUsingUsageLocations(
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   componentKey: string,
-  contributionName?: string
+  contributionName?: string,
+  ownerByUri?: Map<string, string | undefined>
 ): vscode.Location[] {
   const currentOwner = facts.formIdent ?? facts.workflowFormIdent;
   const locations = contributionName
@@ -1406,8 +1498,15 @@ function getUsingUsageLocations(
 
   return locations
     .filter((location) => {
-      const locationFacts = index.parsedFactsByUri.get(location.uri.toString());
-      const locationOwner = locationFacts?.formIdent ?? locationFacts?.workflowFormIdent;
+      const key = location.uri.toString();
+      let locationOwner: string | undefined;
+      if (ownerByUri?.has(key)) {
+        locationOwner = ownerByUri.get(key);
+      } else {
+        const locationFacts = index.parsedFactsByUri.get(key);
+        locationOwner = locationFacts?.formIdent ?? locationFacts?.workflowFormIdent;
+        ownerByUri?.set(key, locationOwner);
+      }
       return locationOwner === currentOwner;
     })
     .sort(compareLocations);

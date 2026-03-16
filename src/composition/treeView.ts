@@ -2,8 +2,9 @@ import * as vscode from "vscode";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseDocumentFacts, ParsedDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
-import { WorkspaceIndex, IndexedComponentContributionSummary, IndexedForm } from "../indexer/types";
+import { WorkspaceIndex, IndexedComponentContributionSummary, IndexedForm, IndexedSymbolProvenanceProvider } from "../indexer/types";
 import { resolveComponentByKey } from "../indexer/componentResolve";
+import { toIndexUriKey } from "../indexer/uriKey";
 import { FeatureManifestRegistry } from "./workspace";
 import {
   buildDocumentCompositionModel,
@@ -82,7 +83,7 @@ interface SymbolNode extends BaseNode {
 
 interface AggregatedSymbol {
   ident: string;
-  origin: "local" | "injected" | "inherited" | "final";
+  origin: "local" | "injected" | "inherited" | "resolved" | "final";
   source?: string;
   resourceUri?: vscode.Uri;
   sourceLocation?: vscode.Location;
@@ -461,16 +462,16 @@ function buildRegularXmlTree(
         : undefined;
     const finalFormOverlay =
       resolvedFinalForm && resolvedFinalForm.form.uri.toString() !== document.uri.toString()
-        ? resolvedFinalForm.form
+        ? resolvedFinalForm
         : undefined;
 
     let controls = aggregateFormControls(document.uri, facts, index, composition);
     let buttons = aggregateFormButtons(document.uri, facts, index, composition);
     let sections = aggregateFormSections(document.uri, facts, index, composition);
     if (finalFormOverlay) {
-      controls = overlayFinalIndexedFormSymbols(controls, finalFormOverlay, "control");
-      buttons = overlayFinalIndexedFormSymbols(buttons, finalFormOverlay, "button");
-      sections = overlayFinalIndexedFormSymbols(sections, finalFormOverlay, "section");
+      controls = overlayFinalIndexedFormSymbols(controls, finalFormOverlay.form, finalFormOverlay.index, "control");
+      buttons = overlayFinalIndexedFormSymbols(buttons, finalFormOverlay.form, finalFormOverlay.index, "button");
+      sections = overlayFinalIndexedFormSymbols(sections, finalFormOverlay.form, finalFormOverlay.index, "section");
     }
     children.push(buildSymbolGroup("Controls", controls, "symbol-field", sharedSectionNodeId("Controls")));
     children.push(buildSymbolGroup("Buttons", buttons, "symbol-event", sharedSectionNodeId("Buttons")));
@@ -1286,6 +1287,7 @@ function aggregateFormSections(
 function overlayFinalIndexedFormSymbols(
   symbols: readonly AggregatedSymbol[],
   form: IndexedForm,
+  index: WorkspaceIndex,
   kind: "control" | "button" | "section"
 ): AggregatedSymbol[] {
   const out = new Map<string, AggregatedSymbol>();
@@ -1301,22 +1303,44 @@ function overlayFinalIndexedFormSymbols(
     kind === "control" ? form.controlDefinitions :
     kind === "button" ? form.buttonDefinitions :
     form.sectionDefinitions;
+  const providersBySymbol = index.builtSymbolProvidersByUri?.get(toIndexUriKey(form.uri));
 
   for (const ident of idents) {
     if (out.has(ident)) {
       continue;
     }
     const sourceLocation = definitions.get(ident);
+    const providerKey = `${kind}:${ident}`.toLowerCase();
+    const providers = providersBySymbol?.get(providerKey) ?? [];
     out.set(ident, {
       ident,
-      origin: "final",
-      source: `final-index:${form.ident}`,
+      origin: providers.length > 0 ? "resolved" : "final",
+      source: providers.length > 0
+        ? summarizeProviders(providers)
+        : `final-index:${form.ident}${providersBySymbol ? ` (providers=${providersBySymbol.size})` : ""}`,
       resourceUri: sourceLocation?.uri ?? form.uri,
       sourceLocation
     });
   }
 
   return [...out.values()].sort((a, b) => a.ident.localeCompare(b.ident));
+}
+
+function summarizeProviders(providers: readonly IndexedSymbolProvenanceProvider[]): string {
+  const labels = new Set<string>();
+  for (const provider of providers) {
+    if (provider.sourceKind === "primitive") {
+      labels.add(provider.primitiveKey
+        ? `primitive:${provider.primitiveKey}${provider.templateName ? `#${provider.templateName}` : ""}`
+        : "primitive");
+      continue;
+    }
+
+    const feature = provider.featureKey ?? provider.sourceKind;
+    const contribution = provider.contributionName ? `#${provider.contributionName}` : "";
+    labels.add(`${provider.sourceKind}:${feature}${contribution}`);
+  }
+  return [...labels].sort((a, b) => a.localeCompare(b)).join(", ");
 }
 
 function aggregateWorkflowShareCodes(
@@ -1432,13 +1456,15 @@ function buildSymbolGroup(label: string, symbols: readonly AggregatedSymbol[], i
             label: symbol.ident,
             description: symbol.usageCount !== undefined ? `${symbol.origin}, used ${symbol.usageCount}` : symbol.origin,
             tooltip: symbol.source
-              ? `${symbol.origin === "inherited" ? "Inherited" : symbol.origin === "injected" ? "Injected" : symbol.origin === "final" ? "Final" : "Local"} from ${symbol.source}`
+              ? `${symbol.origin === "inherited" ? "Inherited" : symbol.origin === "injected" ? "Injected" : symbol.origin === "resolved" ? "Resolved" : symbol.origin === "final" ? "Final" : "Local"} from ${symbol.source}`
               : symbol.origin,
             icon: new vscode.ThemeIcon(
               symbol.origin === "local"
                 ? "circle-large-filled"
                 : symbol.origin === "inherited"
                   ? "arrow-both"
+                  : symbol.origin === "resolved"
+                    ? "link"
                   : symbol.origin === "final"
                     ? "database"
                   : "arrow-circle-right"

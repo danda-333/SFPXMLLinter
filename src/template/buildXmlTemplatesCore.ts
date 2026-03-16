@@ -48,6 +48,38 @@ interface RenderContext {
   maxDepth: number;
   templateRoot: string;
   onDebugLog?: (line: string) => void;
+  onMutation?: (record: TemplateMutationRecord) => void;
+}
+
+export type TemplateSymbolKind =
+  | "control"
+  | "button"
+  | "section"
+  | "actionShareCode"
+  | "controlShareCode"
+  | "buttonShareCode";
+
+export interface TemplateSymbolRef {
+  kind: TemplateSymbolKind;
+  ident: string;
+}
+
+export interface TemplateMutationSource {
+  kind: "using" | "include" | "placeholder" | "primitive";
+  featureKey?: string;
+  contributionName?: string;
+  primitiveKey?: string;
+  templateName?: string;
+}
+
+export interface TemplateMutationRecord {
+  source: TemplateMutationSource;
+  insertedSymbols: TemplateSymbolRef[];
+}
+
+export interface RenderTemplateResult {
+  xml: string;
+  mutations: TemplateMutationRecord[];
 }
 
 interface UsingDirective {
@@ -151,12 +183,24 @@ export function renderTemplateText(
   onDebugLog?: (line: string) => void,
   inheritedUsingsXml?: string
 ): string {
+  return renderTemplateWithTrace(templateText, library, maxDepth, onDebugLog, inheritedUsingsXml).xml;
+}
+
+export function renderTemplateWithTrace(
+  templateText: string,
+  library: BuildComponentLibrary,
+  maxDepth = 12,
+  onDebugLog?: (line: string) => void,
+  inheritedUsingsXml?: string
+): RenderTemplateResult {
   const normalizedTemplate = templateText.replace(/^\uFEFF/, "");
+  const mutations: TemplateMutationRecord[] = [];
   const context: RenderContext = {
     library,
     maxDepth,
     templateRoot: detectRootTagName(normalizedTemplate),
-    onDebugLog
+    onDebugLog,
+    onMutation: (record) => mutations.push(record)
   };
 
   const templateParams = buildTemplateParams(normalizedTemplate);
@@ -174,7 +218,7 @@ export function renderTemplateText(
   out = trimWhitespaceLikeLegacy(out);
   out = out.replace(/\uFEFF/g, "");
 
-  return out;
+  return { xml: out, mutations };
 }
 
 function expandAuthoringSugar(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
@@ -384,7 +428,13 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
         componentText = normalizeComponentContent(componentText);
       }
 
-      next += applyParamSubstitution(componentText, mergedParams);
+      const renderedInclude = applyParamSubstitution(componentText, mergedParams);
+      reportMutation(context, {
+        kind: "include",
+        featureKey: source.key,
+        contributionName: sectionName
+      }, renderedInclude);
+      next += renderedInclude;
     }
 
     next += result.slice(cursor);
@@ -453,6 +503,11 @@ function renderPrimitiveUsage(block: TagBlock, inheritedParams: Map<string, stri
 
   let rendered = replaceSlotPlaceholders(template.content, slots);
   rendered = applyParamSubstitution(rendered, params);
+  reportMutation(context, {
+    kind: "primitive",
+    primitiveKey: primitive.key,
+    templateName: template.name
+  }, rendered);
   return rendered;
 }
 
@@ -554,6 +609,11 @@ function applyUsingSections(
       renderedInner = applyContributionPatchesToSection(renderedInner, sectionPatches, context);
       renderedInner = replaceComponentPlaceholders(renderedInner, params, context, 1);
       renderedInner = unwrapContributionSlots(renderedInner);
+      reportMutation(context, {
+        kind: "using",
+        featureKey: component.key,
+        contributionName: section.name
+      }, renderedInner);
       out = insertSectionContent(out, section, renderedInner, context);
     }
   }
@@ -607,7 +667,13 @@ function replaceComponentPlaceholders(
 
     const params = mergeParams(inheritedParams, fields);
     const rendered = applyParamSubstitution(section.content, params);
-    out += replaceComponentPlaceholders(rendered, params, context, depth + 1);
+    const renderedPlaceholder = replaceComponentPlaceholders(rendered, params, context, depth + 1);
+    reportMutation(context, {
+      kind: "placeholder",
+      featureKey: component.key,
+      contributionName: section.name
+    }, renderedPlaceholder);
+    out += renderedPlaceholder;
     cursor = token.end;
   }
 
@@ -1247,6 +1313,45 @@ function buildDomNodeSignature(node: Node): string | undefined {
 
 function isElementNode(value: unknown): value is Node {
   return Boolean(value) && typeof value === "object" && "nodeType" in (value as Record<string, unknown>) && (value as Node).nodeType === 1;
+}
+
+function reportMutation(context: RenderContext, source: TemplateMutationSource, insertedXml: string): void {
+  if (!context.onMutation) {
+    return;
+  }
+
+  const insertedSymbols = collectSymbolsFromSnippet(insertedXml);
+  context.onMutation({
+    source,
+    insertedSymbols
+  });
+}
+
+function collectSymbolsFromSnippet(xml: string): TemplateSymbolRef[] {
+  const out = new Map<string, TemplateSymbolRef>();
+  const scan = maskXmlComments(xml);
+  const collect = (kind: TemplateSymbolKind, regex: RegExp): void => {
+    for (const match of scan.matchAll(regex)) {
+      const attrs = match[1] ?? "";
+      const ident = extractAttributeValue(attrs, "Ident");
+      if (!ident) {
+        continue;
+      }
+      const key = `${kind}:${ident}`;
+      if (!out.has(key)) {
+        out.set(key, { kind, ident });
+      }
+    }
+  };
+
+  collect("control", /<Control\b([^>]*)>/gi);
+  collect("button", /<Button\b([^>]*)>/gi);
+  collect("section", /<Section\b([^>]*)>/gi);
+  collect("actionShareCode", /<ActionShareCode\b([^>]*)>/gi);
+  collect("controlShareCode", /<ControlShareCode\b([^>]*)>/gi);
+  collect("buttonShareCode", /<ButtonShareCode\b([^>]*)>/gi);
+
+  return [...out.values()];
 }
 
 function parseBooleanAttribute(value: string | undefined): boolean | undefined {

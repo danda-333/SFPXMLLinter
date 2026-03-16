@@ -373,9 +373,15 @@ export class WorkspaceIndexer {
       fullReady: scope === "all"
     };
 
-    for (const entry of parsedEntries) {
+    const usingTracePass1Start = Date.now();
+    for (let i = 0; i < parsedEntries.length; i++) {
+      const entry = parsedEntries[i];
       populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+      if ((i + 1) % 80 === 0) {
+        await yieldToEventLoop();
+      }
     }
+    const usingTracePass1Ms = Date.now() - usingTracePass1Start;
 
     const formEntries = parsedEntries.filter((entry) => entry.root === "form" && !!entry.facts.formIdent);
     const formsStart = Date.now();
@@ -456,9 +462,15 @@ export class WorkspaceIndexer {
 
     // Recompute insert counts/traces once forms are available,
     // so workflow/dataview inherited usings are reflected in indexed facts.
-    for (const entry of parsedEntries) {
+    const usingTracePass2Start = Date.now();
+    for (let i = 0; i < parsedEntries.length; i++) {
+      const entry = parsedEntries[i];
       populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+      if ((i + 1) % 80 === 0) {
+        await yieldToEventLoop();
+      }
     }
+    const usingTracePass2Ms = Date.now() - usingTracePass2Start;
 
     let processedRefEntries = 0;
     const referencesStart = Date.now();
@@ -652,7 +664,8 @@ export class WorkspaceIndexer {
       phase: "done",
       message:
         `Index ready in ${totalMs} ms: forms=${formsByIdent.size}, components=${componentsByKey.size}, ` +
-        `discover=${discoverMs} ms, parse=${parseMs} ms, components=${componentsMs} ms, forms=${formsMs} ms, refs=${referencesMs} ms.`
+        `discover=${discoverMs} ms, parse=${parseMs} ms, components=${componentsMs} ms, forms=${formsMs} ms, refs=${referencesMs} ms, ` +
+        `trace1=${usingTracePass1Ms} ms, trace2=${usingTracePass2Ms} ms.`
     });
 
     return this.index;

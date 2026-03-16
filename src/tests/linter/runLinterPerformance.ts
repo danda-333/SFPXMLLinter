@@ -2,7 +2,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import Module = require("node:module");
 
-const workspaceRoot = path.resolve(__dirname, "../../../tests/fixtures/linter-performance");
+const configuredFixture = process.env.SFP_LINTER_PERF_FIXTURE?.trim();
+const workspaceRoot = configuredFixture && configuredFixture.length > 0
+  ? path.resolve(configuredFixture)
+  : path.resolve(__dirname, "../../../tests/fixtures/linter-performance");
 // Defaults tuned for larger real-world workspaces (hundreds of XML files).
 // Keep env overrides for stricter local/CI experiments.
 const maxPhaseMs = Number(process.env.SFP_LINTER_PERF_LIMIT_MS ?? "2000");

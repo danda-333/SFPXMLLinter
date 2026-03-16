@@ -205,6 +205,7 @@ export function populateUsingInsertTraceFromText(
   }
 
   const processedUsingKeys = new Set<string>();
+  const xpathStatsCache = new Map<string, { matchCount: number; insertCount: number }>();
   for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
     const usingKey = `${usingRef.componentKey}::${usingRef.sectionValue ?? ""}`;
     if (processedUsingKeys.has(usingKey)) {
@@ -245,7 +246,12 @@ export function populateUsingInsertTraceFromText(
       }
 
       if ((contribution.targetXPath ?? "").trim().length > 0) {
-        const xpathStats = analyzeXPathInsertTargets(text, contribution.targetXPath, contribution.allowMultipleInserts);
+        const xpathKey = `${contribution.targetXPath ?? ""}::${contribution.allowMultipleInserts ? "1" : "0"}`;
+        let xpathStats = xpathStatsCache.get(xpathKey);
+        if (!xpathStats) {
+          xpathStats = analyzeXPathInsertTargets(text, contribution.targetXPath, contribution.allowMultipleInserts);
+          xpathStatsCache.set(xpathKey, xpathStats);
+        }
         counts.set(key, xpathStats.insertCount);
         traces.set(key, {
           strategy: "targetXPath",

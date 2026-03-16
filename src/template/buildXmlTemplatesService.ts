@@ -30,6 +30,7 @@ interface BuildRunOptions {
     templateText: string,
     debugLines: readonly string[]
   ) => void;
+  inheritedUsingsByFormIdent?: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]>;
 }
 
 export interface BuildRunSummary {
@@ -52,7 +53,14 @@ interface ParsedUsingEntry {
   contributionKey?: string;
   suppressInheritance: boolean;
   attributes: ReadonlyArray<{ name: string; value: string }>;
-  rawTag: string;
+}
+
+export interface TemplateInheritedUsingEntry {
+  featureKey: string;
+  contributionKey?: string;
+  suppressInheritance?: boolean;
+  attributes?: ReadonlyArray<{ name: string; value: string }>;
+  rawComponentValue?: string;
 }
 
 export class BuildXmlTemplatesService {
@@ -124,14 +132,9 @@ export class BuildXmlTemplatesService {
 
     const componentLibrary = buildComponentLibrary(componentSources);
     const templateTextByUri = new Map<string, string>();
-    const formUsingsByFormIdent = new Map<string, ParsedUsingEntry[]>();
     for (const templateUri of templateUris) {
       const text = await readWorkspaceTextFile(templateUri);
       templateTextByUri.set(templateUri.toString(), text);
-      const root = parseTemplateRoot(text);
-      if (root.rootTag === "form" && root.formIdent) {
-        formUsingsByFormIdent.set(root.formIdent, parseUsingEntries(text));
-      }
     }
 
     const userGenerators = options.generatorEnableUserScripts === false
@@ -152,7 +155,7 @@ export class BuildXmlTemplatesService {
 
       try {
         const templateText = templateTextByUri.get(templateUri.toString()) ?? await readWorkspaceTextFile(templateUri);
-        const inheritedUsingsXml = buildInheritedUsingsXml(templateText, formUsingsByFormIdent);
+        const inheritedUsingsXml = buildInheritedUsingsXml(templateText, options.inheritedUsingsByFormIdent);
         const debugLines: string[] = [];
         const debugMode = options.mode === "debug";
         const renderedRaw = renderTemplateText(
@@ -299,8 +302,11 @@ function parseTemplateRoot(text: string): ParsedTemplateRoot {
 
 function buildInheritedUsingsXml(
   templateText: string,
-  formUsingsByFormIdent: ReadonlyMap<string, ParsedUsingEntry[]>
+  formUsingsByFormIdent: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]> | undefined
 ): string | undefined {
+  if (!formUsingsByFormIdent) {
+    return undefined;
+  }
   const root = parseTemplateRoot(templateText);
   if ((root.rootTag !== "workflow" && root.rootTag !== "dataview") || !root.formIdent) {
     return undefined;
@@ -329,10 +335,10 @@ function buildInheritedUsingsXml(
   const out: string[] = [];
   const seen = new Set<string>();
   for (const inheritedUsing of inherited) {
-    if (inheritedUsing.suppressInheritance) {
+    if (inheritedUsing.suppressInheritance === true) {
       continue;
     }
-    const key = toUsingEntryKey(inheritedUsing.featureKey, inheritedUsing.contributionKey);
+    const key = toUsingEntryKey(inheritedUsing.featureKey, normalizeContributionKey(inheritedUsing.contributionKey));
     if (seen.has(key)) {
       continue;
     }
@@ -348,7 +354,7 @@ function buildInheritedUsingsXml(
       continue;
     }
 
-    out.push(inheritedUsing.rawTag);
+    out.push(buildInheritedUsingTag(resolveInheritedAttributes(inheritedUsing), inheritedUsing.featureKey, inheritedUsing.contributionKey));
   }
 
   return out.length > 0 ? out.join("\n") : undefined;
@@ -369,26 +375,69 @@ function parseUsingEntries(text: string): ParsedUsingEntry[] {
     }
     const featureKey = stripXmlComponentExtension(normalizePath(featureValue.trim()));
     const contributionRaw = extractAttributeValue(attrs, "Contribution") ?? extractAttributeValue(attrs, "Section");
-    const contributionKey = contributionRaw?.trim();
+    const contributionKey = normalizeContributionKey(contributionRaw);
     const suppressInheritance = parseBooleanAttribute(extractAttributeValue(attrs, "SuppressInheritance"));
     out.push({
       featureKey,
-      contributionKey: contributionKey && contributionKey.length > 0 ? contributionKey : undefined,
+      contributionKey,
       suppressInheritance,
-      attributes: orderedAttrs,
-      rawTag: buildInheritedUsingTag(orderedAttrs)
+      attributes: orderedAttrs
     });
   }
   return out;
 }
 
-function buildInheritedUsingTag(attributes: ReadonlyArray<{ name: string; value: string }>): string {
-  const visibleAttrs = attributes.filter((attr) => attr.name.trim().toLowerCase() !== "suppressinheritance");
+function buildInheritedUsingTag(
+  attributes: ReadonlyArray<{ name: string; value: string }>,
+  fallbackFeatureKey?: string,
+  fallbackContributionKey?: string
+): string {
+  const visibleAttrs = attributes.filter((attr) => {
+    const lower = attr.name.trim().toLowerCase();
+    return lower !== "suppressinheritance" && lower !== "inherit";
+  });
+  if (visibleAttrs.length === 0) {
+    if (!fallbackFeatureKey) {
+      return "<Using />";
+    }
+    const attrsText = [`Feature="${escapeXmlAttribute(fallbackFeatureKey)}"`];
+    if (fallbackContributionKey) {
+      attrsText.push(`Contribution="${escapeXmlAttribute(fallbackContributionKey)}"`);
+    }
+    return `<Using ${attrsText.join(" ")} />`;
+  }
+  if (!visibleAttrs.some((attr) => /^(feature|component|name)$/i.test(attr.name)) && fallbackFeatureKey) {
+    visibleAttrs.unshift({ name: "Feature", value: fallbackFeatureKey });
+  }
+  if (
+    fallbackContributionKey &&
+    !visibleAttrs.some((attr) => /^(contribution|section)$/i.test(attr.name))
+  ) {
+    visibleAttrs.push({ name: "Contribution", value: fallbackContributionKey });
+  }
   if (visibleAttrs.length === 0) {
     return "<Using />";
   }
   const attrsText = visibleAttrs.map((attr) => `${attr.name}="${escapeXmlAttribute(attr.value)}"`).join(" ");
   return `<Using ${attrsText} />`;
+}
+
+function resolveInheritedAttributes(entry: TemplateInheritedUsingEntry): ReadonlyArray<{ name: string; value: string }> {
+  const attrs = entry.attributes ?? [];
+  if (attrs.length > 0) {
+    return attrs;
+  }
+  const out: Array<{ name: string; value: string }> = [];
+  if (entry.rawComponentValue && entry.rawComponentValue.trim().length > 0) {
+    out.push({ name: "Feature", value: entry.rawComponentValue.trim() });
+  } else if (entry.featureKey.trim().length > 0) {
+    out.push({ name: "Feature", value: entry.featureKey.trim() });
+  }
+  const contribution = normalizeContributionKey(entry.contributionKey);
+  if (contribution) {
+    out.push({ name: "Contribution", value: contribution });
+  }
+  return out;
 }
 
 function parseXmlAttributesOrdered(attrs: string): Array<{ name: string; value: string }> {
@@ -414,7 +463,12 @@ function escapeXmlAttribute(value: string): string {
 }
 
 function toUsingEntryKey(featureKey: string, contributionKey?: string): string {
-  return `${featureKey}#${(contributionKey ?? "").trim()}`;
+  return `${featureKey}#${normalizeContributionKey(contributionKey) ?? ""}`;
+}
+
+function normalizeContributionKey(value: string | undefined): string | undefined {
+  const normalized = (value ?? "").trim();
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 function extractAttributeValue(attrs: string, name: string): string | undefined {

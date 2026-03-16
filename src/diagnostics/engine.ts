@@ -1975,6 +1975,9 @@ function collectExpandedIdentOccurrences(
     const defaultControlScopeKey =
       facts.identOccurrences.find((item) => item.kind === "control")?.scopeKey
       ?? "__global_controls__";
+    const rootButtonScopeKey = [...(facts.rootButtonScopeKeys ?? [])][0];
+    const rootSectionScopeKey = [...(facts.rootSectionScopeKeys ?? [])][0];
+    const rootControlScopeKey = [...(facts.rootControlScopeKeys ?? [])][0];
 
     for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
       if (!contributionMatchesDocumentRoot(facts.rootTag, contributionRef.contribution)) {
@@ -1994,7 +1997,7 @@ function collectExpandedIdentOccurrences(
           ident: controlIdent,
           kind: "control",
           range,
-          scopeKey: defaultControlScopeKey
+          scopeKey: resolveInjectedControlScopeKey(contributionRef.contribution.targetXPath, rootControlScopeKey, defaultControlScopeKey)
         });
       }
 
@@ -2011,7 +2014,7 @@ function collectExpandedIdentOccurrences(
           ident: buttonIdent,
           kind: "button",
           range,
-          scopeKey: defaultButtonScopeKey
+          scopeKey: resolveInjectedButtonScopeKey(contributionRef.contribution.targetXPath, rootButtonScopeKey, defaultButtonScopeKey)
         });
       }
 
@@ -2028,7 +2031,7 @@ function collectExpandedIdentOccurrences(
           ident: sectionIdent,
           kind: "section",
           range,
-          scopeKey: defaultSectionScopeKey
+          scopeKey: resolveInjectedSectionScopeKey(contributionRef.contribution.targetXPath, rootSectionScopeKey, defaultSectionScopeKey)
         });
       }
     }
@@ -2432,4 +2435,31 @@ function addNestedRangeMapValue(
 
 function getUsingKey(componentKey: string, sectionValue?: string): string {
   return `${componentKey}::${sectionValue ?? ""}`;
+}
+
+function resolveInjectedControlScopeKey(targetXPath: string | undefined, rootScopeKey: string | undefined, fallback: string): string {
+  const normalized = (targetXPath ?? "").replace(/\s+/g, "").toLowerCase();
+  if (normalized.includes("//form/controls")) {
+    return rootScopeKey ?? fallback;
+  }
+
+  return fallback;
+}
+
+function resolveInjectedButtonScopeKey(targetXPath: string | undefined, rootScopeKey: string | undefined, fallback: string): string {
+  const normalized = (targetXPath ?? "").replace(/\s+/g, "").toLowerCase();
+  if (normalized.includes("//form/buttons")) {
+    return rootScopeKey ?? fallback;
+  }
+
+  return fallback;
+}
+
+function resolveInjectedSectionScopeKey(targetXPath: string | undefined, rootScopeKey: string | undefined, fallback: string): string {
+  const normalized = (targetXPath ?? "").replace(/\s+/g, "").toLowerCase();
+  if (normalized.includes("//form/sections")) {
+    return rootScopeKey ?? fallback;
+  }
+
+  return fallback;
 }

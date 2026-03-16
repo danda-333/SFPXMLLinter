@@ -125,6 +125,9 @@ export interface ParsedDocumentFacts {
   actionShareCodeReferences: NamedIdent[];
   declaredControlInfos: NamedIdent[];
   declaredButtonInfos: NamedIdent[];
+  rootControlScopeKeys?: Set<string>;
+  rootButtonScopeKeys?: Set<string>;
+  rootSectionScopeKeys?: Set<string>;
 }
 
 export interface UsingContributionInsertTrace {
@@ -183,7 +186,10 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     buttonShareCodeButtonIdents: new Map<string, Set<string>>(),
     actionShareCodeReferences: [],
     declaredControlInfos: [],
-    declaredButtonInfos: []
+    declaredButtonInfos: [],
+    rootControlScopeKeys: new Set<string>(),
+    rootButtonScopeKeys: new Set<string>(),
+    rootSectionScopeKeys: new Set<string>()
   };
 
   const rootMatch = /<\s*([A-Za-z_][\w:.-]*)\b/.exec(text);
@@ -204,6 +210,13 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
         }
       }
     }
+  }
+
+  if (rootTagLower === "form") {
+    const rootScopes = collectRootFormContainerScopeKeys(text);
+    facts.rootControlScopeKeys = rootScopes.controls;
+    facts.rootButtonScopeKeys = rootScopes.buttons;
+    facts.rootSectionScopeKeys = rootScopes.sections;
   }
 
   const rootIdentMatch = /<\s*([A-Za-z_][\w:.-]*)\b[^>]*\bIdent\s*=\s*("([^"]*)"|'([^']*)')/i.exec(text);
@@ -860,6 +873,51 @@ function popOpenTag(stack: Array<{ name: string; start: number }>, closingName: 
       return;
     }
   }
+}
+
+function collectRootFormContainerScopeKeys(text: string): {
+  controls: Set<string>;
+  buttons: Set<string>;
+  sections: Set<string>;
+} {
+  const controls = new Set<string>();
+  const buttons = new Set<string>();
+  const sections = new Set<string>();
+  const stack: Array<{ name: string; start: number }> = [];
+  const tagRegex = /<\s*(\/?)\s*([A-Za-z_][\w:.-]*)([^>]*)>/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = tagRegex.exec(text)) !== null) {
+    const isClosing = match[1] === "/";
+    const name = stripPrefix(match[2]).toLowerCase();
+    const rawAttrs = match[3] ?? "";
+    const tagStart = match.index ?? 0;
+    const isSelfClosing = !isClosing && /\/\s*$/.test(rawAttrs);
+
+    if (!isClosing && (name === "controls" || name === "buttons" || name === "sections")) {
+      const inSection = stack.some((item) => item.name === "section");
+      if (!inSection) {
+        if (name === "controls") {
+          controls.add(`controls@${tagStart}`);
+        } else if (name === "buttons") {
+          buttons.add(`buttons@${tagStart}`);
+        } else {
+          sections.add(`sections@${tagStart}`);
+        }
+      }
+    }
+
+    if (isClosing) {
+      popOpenTag(stack, name);
+      continue;
+    }
+
+    if (!isSelfClosing) {
+      stack.push({ name, start: tagStart });
+    }
+  }
+
+  return { controls, buttons, sections };
 }
 
 interface ButtonShareCodeContent {

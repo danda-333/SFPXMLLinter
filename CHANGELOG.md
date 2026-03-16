@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.6
+
+- Duplicate-ident scope fix:
+  - fixed false-positive `duplicate-button-ident` cases where using-injected root buttons were incorrectly scoped to nested section button containers.
+  - duplicate scope matching now uses concrete parent container instances (`controls@...`, `buttons@...`, `sections@...`) and root container keys derived from parsed document structure.
+  - improved consistency for composition-injected symbol diagnostics against real template target XPath placement.
+
 ## 0.1.5
 
 - Diagnostics and composition consistency:

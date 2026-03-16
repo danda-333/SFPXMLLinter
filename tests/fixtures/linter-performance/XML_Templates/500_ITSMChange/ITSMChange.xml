@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMChange" SegmentType="ITSMChangeSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" IsDebug="true">
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" Ident="ITSMChange" SegmentType="ITSMChangeSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" IsDebug="true">
 	<Usings>
 		<Using Component="Common/FolderTreeSetting" />
 		<Using Component="Common/PageSetting" FormIdent="ITSMChange" />
 		<Using Component="Common/SLACriteriaControls" />
 
-		<Using Component="Common/Shared/Assign" FormIdent="ITSMChange" />
-		<Using Component="Common/Shared/Assessment" FormIdent="ITSMChange" ITSMType="Change"/>
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMChange" AssignedToTeamState="-1" />
+		<Using Component="Common/Shared/Assessment" FormIdent="ITSMChange" ITSMType="Change" AssessmentState="60"/>
 		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMChange" />
 		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMChange" />
 		<Using Component="Common/Shared/Resolve" FormIdent="ITSMChange" />
+		<Using Component="Common/Shared/SuspendSolution"/>
+		<Using Component="Common/Shared/SuspendApproval"/>
 
 		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMChange" />
 		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMChange" />
 		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMChange" />
 		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMChange" />
+		<Using Component="Common/Controls/ITSMKnowledgeBase" FormIdent="ITSMChange" />
 		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMChange" />
+		<Using Component="Common/Controls/Var_ButtonIdentControl"/>
 
 		<Using Component="Common/Buttons/CloseButton" />
 		<Using Component="Common/Buttons/SaveGroupButton" />
@@ -30,9 +34,15 @@
 		<string>ITSMSpecialist</string>
 		<string>ITSMOperator</string>
 		<string>ITSMSupplier</string>
+
+		<string>ITSMChangeAssignedCoordinator</string>
+
+		<string>ITSMChangeActualAssessment</string>
+		<string>ITSMChangeAssessment</string>
 	</DataPermissions>
 	<CreatePermissions>
-		<string>ITSMChange</string>
+		<string>ITSMAuthor</string>
+		<string>ITSMOperator</string>
 	</CreatePermissions>
 	<DynamicPermission>
 		<Columns>
@@ -64,29 +74,38 @@
 	<Settings>
 	</Settings>
 	<Buttons>
+		<Button xsi:type="FormButton" Ident="CreateExtendedRequestButton" TitleResourceKey="CreateExtendedRequestButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-calendar52" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="ExtendRequestConfirmFormDialog" ConfirmFormDialogSectionIdent="ExtendRequestConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 
 		<Button xsi:type="FormButton" Ident="SendButton" TitleResourceKey="SendButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="AssignCoordinatorButton" TitleResourceKey="AssignCoordinatorButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SentToProcessButton" TitleResourceKey="SentToProcessButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="AssignCoordinatorButton" TitleResourceKey="AssignCoordinatorButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-user-plus" IsVisible="false" IsStopRedirect="true" >
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignCoordinatorConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignCoordinatorConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="FormButton" Ident="SentToProcessButton" TitleResourceKey="SentToProcessButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-arrow-right7" IsVisible="false" IsStopRedirect="true" />
 
-		<Button xsi:type="FormButton" Ident="SendToPricingOfferButton" TitleResourceKey="SentToPricingOfferButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SendOfferButton" TitleResourceKey="SentOfferButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SendToAssessmentButton" TitleResourceKey="SendToAssessmentButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="ReturnOfferButton" TitleResourceKey="ReturnOfferButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="SendToPricingOfferButton" TitleResourceKey="SentToPricingOfferButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-price-tag" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="SendOfferButton" TitleResourceKey="SentOfferButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-drag-right" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="SendToAssessmentButton" TitleResourceKey="SendToAssessmentButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-forward" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="ReturnOfferButton" TitleResourceKey="ReturnOfferButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-rotate-ccw3" IsVisible="false" IsStopRedirect="true" />
 		<Button xsi:type="FormButton" Ident="SendToRedoButton" TitleResourceKey="SendToRedoButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SendToRealizationButton" TitleResourceKey="SendToRealizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="SendToRealizationButton" TitleResourceKey="SendToRealizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-stack-check" IsVisible="false" IsStopRedirect="true" />
 		<Button xsi:type="FormButton" Ident="SolveButton" TitleResourceKey="SolveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="BackToRealizationButton" TitleResourceKey="BackToRealizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="BackToRealizationButton" TitleResourceKey="BackToRealizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-drag-left" IsVisible="false" IsStopRedirect="true" />
 
-		<Button xsi:type="FormButton" Ident="InvalidChangeButton" TitleResourceKey="InvalidChangeButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="CancelButton" TitleResourceKey="CancelButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SendToSignButton" TitleResourceKey="SendToSignButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SendToAcceptenceButton" TitleResourceKey="SendToAcceptenceButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true">
+		<Button xsi:type="FormButton" Ident="InvalidChangeButton" TitleResourceKey="InvalidChangeButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross2" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="CancelButton" TitleResourceKey="CancelButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross2" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="SendToSignButton" TitleResourceKey="SendToSignButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-compose" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="SendToAcceptenceButton" TitleResourceKey="SendToAcceptenceButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-forward" IsVisible="false" IsStopRedirect="true">
 			<Extensions>
 				<Extension xsi:type="ConfirmFormDialogExtension" Ident="ResolveConfirmFormDialog" ConfirmFormDialogSectionIdent="ResolveConfirmFormDialogSection" />
 			</Extensions>
 		</Button>
-		<Button xsi:type="FormButton" Ident="DeliveryDateExtendButton" TitleResourceKey="DeliveryDateExtendButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="DeliveryDateExtendButton" TitleResourceKey="DeliveryDateExtendButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-calendar2" IsVisible="false" IsStopRedirect="true" />
 
 	</Buttons>
 	<Controls>
@@ -127,7 +146,7 @@
 					SET @Result = (
 						SELECT dial.TextValue
 						FROM usr.ITSMChangeManagementProcessCategory AS dial
-							INNER JOIN usr.ITSMChangeManagementProcessCategorySetting AS dialsetting 
+							INNER JOIN usr.ITSMChangeManagementProcessCategorySetting AS dialsetting
 								ON dialsetting.Guid = dial.Guid
 							WHERE 
 								dial.LanguageID = @UserLanguageID
@@ -250,6 +269,12 @@
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
+		<Control xsi:type="TextBoxControl" Ident="ExtendedDeliveryDate" DataType="Date" TitleResourceKey="ExtendedDeliveryDate_ITSM" IsFakeReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+		
+		<Control xsi:type="TextBoxControl" Ident="DialogExtendedDeliveryDate" DataType="Date" TitleResourceKey="DialogDeliveryDate_ITSM" IsCreateColumn="false"/>
+
 		<Control xsi:type="TextBoxControl" Ident="ApprovalSubmissionDate" DataType="Date" TitleResourceKey="ApprovalSubmissionDate_ITSM" IsReadOnly="true">
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
@@ -269,12 +294,75 @@
 		<Control xsi:type="TextAreaControl" Ident="ChangeDeploymentInformation" DataType="String" Rows="3" TitleResourceKey="ChangeDeploymentInformation_ITSM" IsReadOnly="true">
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="ExtendedRequestDescription" DataType="String" Rows="3" TitleResourceKey="ExtendedRequestDescription_ITSM" IsFakeReadOnly="true">
+			<TimeLineDataBind TransformType="Copy" />
+		</Control>
+
+		<Control xsi:type="TextAreaControl" Ident="DialogExtendedRequestDescription" DataType="String" Rows="3" TitleResourceKey="ExtendedRequestDescription_ITSM" IsCreateColumn="false">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ExtendedRequestDescription" DataBindType="Value" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT @ExtendedRequestDescription AS ExtendedRequestDescription
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ExtendedRequestDescription" DataType="String"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IsExtended" DataType="Number"/>
 		<!--/SpecificColumns-->
 
 		<!-- PHs -->
+    <Control xsi:type="PlaceHolderControl" Ident="PHExtendedRequest"  IsVisible="false"/>
     <Control xsi:type="PlaceHolderControl" Ident="PHOfferPricing"  IsVisible="false"/>
     <Control xsi:type="PlaceHolderControl" Ident="PHAcceptance"  IsVisible="false"/>
 		<!-- PHs -->
+
+		
+		<Control xsi:type="AutoCompleteControl" Ident="CoordinatorAccountID" DataType="Number" TitleResourceKey="CoordinatorAccountID_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.FullName LIKE @CoordinatorAccountID
+						AND acc.[State] = @AccountActiveState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CoordinatorAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.ID = @CoordinatorAccountID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CoordinatorAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
+		</Control>
 
 
 	</Controls>
@@ -299,7 +387,7 @@
 										</div>
 									</div>
 									<div class="card-body">
-										{{Component:Common/Shared/FolderGroupSegment,Contribution:Html}}
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
 										<div class="row">
 											<div class="col-md-3">
 												<div class="form-group">
@@ -447,7 +535,7 @@
 							</div>
 						</Control>
 
-						<Include Component="Common/Shared/Assessment" Contribution="Html" ITSMType="Change" />
+						<Include Component="Common/Shared/Assessment" Section="Html" ITSMType="Change" />
 
 						<Control ID="PHAcceptance">
 							<div class="row">
@@ -492,24 +580,147 @@
 							</div>
 						</Control>
 
-						{{Component:Common/Controls/CommunicationControls,Contribution:Html}}
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
 
 					</div><!-- //Levý sloupec -->
 
 					<div class="col-md-3"><!-- Pravý sloupec -->
 
-						{{Component:Common/Controls/ReporterControls,Contribution:Html}}
-						{{Component:Common/Shared/Assign,Contribution:Html}}
-						{{Component:Common/Shared/Resolve,Contribution:Html}}
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Assign,Section:Html}}
+						{{Component:Common/Shared/Resolve,Section:Html}}
+
+						<Control ID="PHExtendedRequest">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#ExtendedRequest_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse" />
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ExtendedDeliveryDate"/>
+														<Control ID="ExtendedDeliveryDate" />
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12">
+													<div class="form-group">
+														<ControlLabel ControlID="ExtendedRequestDescription"/>
+														<Control ID="ExtendedRequestDescription" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</Control>
 
 					</div><!-- //Pravý sloupec -->
 
 				</div>
 				
 				<!--HelpControls-->
-				{{Component:Common/Shared/ITSMKey,Contribution:Html}}
+				{{Component:Common/Shared/ITSMKey,Section:Html}}
 				<!--HelpControls-->
 			]]></HTMLTemplate>
+		</Section>
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="ExtendRequestConfirmFormDialogSection" CloseButtonTitleResourceKey="ExtendRequestConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="ExtendRequestConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ExtendRequestConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-6">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogExtendedDeliveryDate" />
+							<Control ID="DialogExtendedDeliveryDate" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogExtendedRequestDescription" />
+							<Control ID="DialogExtendedRequestDescription" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignCoordinatorConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignCoordinatorConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignCoordinatorConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignCoordinatorConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="CoordinatorAccountID" />
+							<Control ID="CoordinatorAccountID" />
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" />
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="GlobalChangeSection" Ident="ParentITSMGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="ParentITSMGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMChange AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] IN (
+									@ClosedState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="220" />
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Buttons>
+				<Button xsi:type="FormButton" Ident="SaveButton" />
+			</Buttons>
+			<Controls>
+				<wffc:FormControl Ident="ParentTableID" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ParentTableID" />
+							<Control ID="ParentTableID" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
 		</Section>
 
 	</Sections>

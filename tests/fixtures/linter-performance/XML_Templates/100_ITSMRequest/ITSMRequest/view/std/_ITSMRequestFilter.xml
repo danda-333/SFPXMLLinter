@@ -1,0 +1,28 @@
+<Filter xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ITSMRequestFilter" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" PackageIdent="ITSMPackage">
+	<Controls>
+	
+		<Include Component="Common/Shared/FolderGroupSegment" Section="Filter" FormIdent="ITSMRequest"/>
+		<Include Component="Common/Shared/BaseView" Section="Filter" FormIdent="ITSMRequest"/>
+    
+	</Controls>
+	<ExtensionControls>
+		<Include Component="Common/Controls/ReporterControls" Section="Filter"/>
+		<Include Component="Common/Shared/Resolve" Section="Filter"/>
+		<Include Component="Common/Shared/Assign" Section="Filter"/>
+	</ExtensionControls>
+
+  <FullText>
+		<FilterConditions>
+			<DataSource>
+				<SQL><![CDATA[
+					(
+						CONTAINS(itsReq.*, @FullText)
+					)
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FullText" ConstantType="FullText" DataType="String" />
+				</Parameters>
+			</DataSource>
+		</FilterConditions>
+	</FullText>
+</Filter>

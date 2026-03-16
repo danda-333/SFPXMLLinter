@@ -8,24 +8,24 @@
     </States>
   </Definition>
 
-	<GlobalJavaScripts>
-		<JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeGroup" ControlIdent="ApproverType">
-			<Selectors>
-				<string>.js-showIfApprovaTypeGroup</string>
-			</Selectors>
-			<ShowValues>
-				<string>Group</string>
-			</ShowValues>
-		</JavaScript>
-		<JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeAccount" ControlIdent="ApproverType">
-			<Selectors>
-				<string>.js-showIfApprovaTypeAccount</string>
-			</Selectors>
-			<ShowValues>
-				<string>Account</string>
-			</ShowValues>
-		</JavaScript>
-	</GlobalJavaScripts>
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeGroup" ControlIdent="ApproverType">
+      <Selectors>
+        <string>.js-showIfApprovaTypeGroup</string>
+      </Selectors>
+      <ShowValues>
+        <string>Group</string>
+      </ShowValues>
+    </JavaScript>
+    <JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeAccount" ControlIdent="ApproverType">
+      <Selectors>
+        <string>.js-showIfApprovaTypeAccount</string>
+      </Selectors>
+      <ShowValues>
+        <string>Account</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
 
   <ControlShareCodes>
     <ControlShareCode Ident="EnableAllControlShareCode">
@@ -65,7 +65,7 @@
                   <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
                   <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
                   <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="MainFormITSMKey" AlterIdent="ITSMKey" DataType="String" SetDataType="ParentData"/>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="MainFormITSMKey" AlterIdent="ITSMKey" DataType="String" SetDataType="ParentData" />
                 </Parameters>
               </DataSource>
             </Action> -->

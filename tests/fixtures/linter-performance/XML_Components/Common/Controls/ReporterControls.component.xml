@@ -2,62 +2,207 @@
 <Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
 
 	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
-		<Control xsi:type="AutoCompleteControl" Ident="ReporterAccountID" DataType="Number" TitleResourceKey="ReporterAccountID_ITSM" IsVisible="false" IsReadOnly="true">
-			<DataBind DefaultTitleResourceKey="SelectValue">
-				<Columns>
-					<Column Ident="ID" DataBindType="Value"/>
-					<Column Ident="FullName" DataBindType="Title"/>
-				</Columns>
-				<SQL><![CDATA[
-					SELECT 
-						ID,
-						FullName
-					FROM 
-						dbo.Account
-					WHERE 
-						FullName LIKE @ReporterAccountID
-						AND [State] = @ActiveState
-				]]></SQL>
-				<Parameters>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="String" LikeType="Both"/>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
-
-				</Parameters>
-			</DataBind>
-			<SelectedDataBind>
+		<Control xsi:type="AutoCompleteControl" Ident="ReporterAccountID" DataType="Number" TitleResourceKey="ReporterAccountID_ITSM" IsVisible="false" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind Ident="ReporterAccountID_EmptyDataBind">
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+					<string>ITSMCategoryLevel2Ident</string>
+					<string>ITSMCategoryLevel3Ident</string>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
-					SELECT 
-						ID, 
-						FullName
-					FROM 
-						dbo.Account
-					WHERE 
-						ID = @ReporterAccountID
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @LastFolderTreeIdent VARCHAR(900) = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+					
+					IF EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'{{FormIdent}}Segment',@PermissionIDs)
+						WHERE FolderTreeIdent = @LastFolderTreeIdent
+					) BEGIN
+
+						INSERT INTO @PermissionIDs VALUES ('ITSMAuthor')
+
+						SELECT TOP(20) itsGaabftap.AccountID AS ID, itsGaabftap.AccountFullName AS FullName
+						FROM usr.ITSM_GetAllowedAccountByFolderTreeAndPermission (@LastFolderTreeIdent, @PermissionIDs) AS itsGaabftap
+					
+					END ELSE BEGIN
+
+						SELECT acc.ID, acc.FullName
+						FROM dbo.Account AS acc
+						WHERE acc.ID = @UserID
+
+					END
+
 				]]></SQL>
 				<Parameters>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsElevatedPermissionOrNotFirstState" DataType="Number" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind Ident="ReporterAccountID_DataBind" DefaultTitleResourceKey="SelectValue">
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+					<string>ITSMCategoryLevel2Ident</string>
+					<string>ITSMCategoryLevel3Ident</string>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="FullName" DataBindType="Title"/>
+				</Columns>
+				<SQL><![CDATA[
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @LastFolderTreeIdent VARCHAR(900) = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+					
+					IF EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'{{FormIdent}}Segment',@PermissionIDs)
+						WHERE FolderTreeIdent = @LastFolderTreeIdent
+					) BEGIN
+
+						INSERT INTO @PermissionIDs VALUES ('ITSMAuthor')
+
+						SELECT itsGaabftap.AccountID AS ID, itsGaabftap.AccountFullName AS FullName
+						FROM usr.ITSM_GetAllowedAccountByFolderTreeAndPermission (@LastFolderTreeIdent, @PermissionIDs) AS itsGaabftap
+						WHERE itsGaabftap.AccountFullName LIKE @ReporterAccountID
+					
+					END ELSE BEGIN
+
+						SELECT acc.ID, acc.FullName
+						FROM dbo.Account AS acc
+						WHERE acc.ID = @UserID
+
+					END
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="String" LikeType="Both"/>
+
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind Ident="ReporterAccountID_SelectedDataBind">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT acc.ID, acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.ID = @ReporterAccountID
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
+
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</SelectedDataBind>
-			<DefaultDataSource>
+			<DefaultDataSource Ident="ReporterAccountID_DefaultDataSource">
 				<Columns>
 					<Column Ident="ReporterAccountID" />
 				</Columns>
 				<SQL><![CDATA[
+
 					SELECT @UserID AS ReporterAccountID
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</DefaultDataSource>
+			<DefaultDependencyDataBind Ident="ReporterAccountID_DefaultDependencyDataBind">
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+					<string>ITSMCategoryLevel2Ident</string>
+					<string>ITSMCategoryLevel3Ident</string>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="FullName" DataBindType="Title"/>
+					<!-- <Column Ident="Selected" DataBindType="Selected"/> -->
+				</Columns>
+				<SQL><![CDATA[
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @NewReporterAccountID INT
+
+					DECLARE @LastFolderTreeIdent VARCHAR(900) = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+					
+					IF EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'{{FormIdent}}Segment',@PermissionIDs)
+						WHERE FolderTreeIdent = @LastFolderTreeIdent
+					) BEGIN
+
+						INSERT INTO @PermissionIDs VALUES ('ITSMAuthor')
+
+						SELECT @NewReporterAccountID = itsGaabftap.AccountID
+						FROM usr.ITSM_GetAllowedAccountByFolderTreeAndPermission (@LastFolderTreeIdent, @PermissionIDs) AS itsGaabftap
+						WHERE itsGaabftap.AccountID = @ReporterAccountID
+					
+					END
+
+					IF @NewReporterAccountID IS  NULL
+						SELECT @NewReporterAccountID = @UserID
+
+					SELECT acc.ID, acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.ID = @NewReporterAccountID
+					
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" SetDataType="SelectedValueData" />
+
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDependencyDataBind>
 			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="ReporterEmail" DataType="String" TitleResourceKey="ReporterEmail_ITSM" IsVisible="false" IsReadOnly="true">
-			<DataBind>
+			<DataBind Ident="ReporterEmail_DataBind">
 				<Dependencies>
 					<string>ReporterAccountID</string>
 				</Dependencies>
@@ -65,14 +210,33 @@
 					<Column Ident="ReporterEmail" DataBindType="Value" />
 				</Columns>
 				<SQL><![CDATA[
+
 					SELECT Email AS ReporterEmail
 					FROM dbo.Account
 					WHERE ID = @ReporterAccountID
+
+					INSERT INTO ##TmpTbl ([Message]) SELECT CONCAT('ReporterEmail - ReporterAccountID: ', @ReporterAccountID)
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource Ident="ReporterEmail_DefaultDataSource">
+				<Columns>
+					<Column Ident="ReporterEmail" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT Email AS ReporterEmail
+					FROM dbo.Account
+					WHERE ID = @UserID
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDataSource>
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
@@ -85,6 +249,7 @@
 					<Column Ident="IsReporterEmailDifferent" DataBindType="Value" />
 				</Columns>
 				<SQL><![CDATA[
+
 					SELECT IIF(
 						ISNULL((
 							SELECT Email
@@ -92,16 +257,27 @@
 							WHERE ID = @ReporterAccountID
 						), '') != ISNULL(@ReporterEmail, '')
 					,1,0) AS IsReporterEmailDifferent
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterEmail" DataType="String" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="IsReporterEmailDifferent" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT 0 AS IsReporterEmailDifferent
+
+				]]></SQL>
+			</DefaultDataSource>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="ReporterPhone" DataType="String" TitleResourceKey="ReporterPhone_ITSM" IsVisible="false" IsReadOnly="true">
-			<DataBind >
+			<DataBind>
 				<Dependencies>
 					<string>ReporterAccountID</string>
 				</Dependencies>
@@ -117,10 +293,26 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource>
+				<Dependencies>
+					<string>ReporterAccountID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ReporterPhone" DataBindType="Value" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT Phone AS ReporterPhone
+					FROM dbo.Account
+					WHERE ID = @UserID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDataSource>
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
-		<Control xsi:type="TextBoxControl" Ident="IsReporterPhoneDifferent" DataType="Number" TitleResourceKey="IsReporterPhoneDifferent_ITSM" IsVisible="false" IsReadOnly="true" IsCreateColumn="false">
+		<Control xsi:type="TextBoxControl" Ident="IsReporterPhoneDifferent" DataType="Number" TitleResourceKey="IsReporterPhoneDifferent_ITSM" IsVisible="false" IsReadOnly="true" IsCreateColumn="false" IsRefresh="true">
 			<DataBind>
 				<Dependencies>
 					<string>ReporterPhone</string>
@@ -136,16 +328,27 @@
 							WHERE ID = @ReporterAccountID
 						), '') != ISNULL(@ReporterPhone, '')
 					,1,0) AS IsReporterPhoneDifferent
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterPhone" DataType="String" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="IsReporterPhoneDifferent" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT 0 AS IsReporterPhoneDifferent
+					
+				]]></SQL>
+			</DefaultDataSource>
 		</Control>
 
 		<!-- @Ignore ident-convention-lookup-control -->
-		<Control xsi:type="DropDownListControl" Ident="ITSMEntryMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMEntryMethodTypeGuid_ITSM" IsFakeReadOnly="true">
+		<Control xsi:type="DropDownListControl" Ident="ITSMEntryMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMEntryMethodTypeGuid_ITSM" IsReadOnly="true" IsShowRequired="true">
 			<DataBind>
 				<Columns>
 					<Column Ident="Guid" DataBindType="Value" />
@@ -202,6 +405,123 @@
 		<Control xsi:type="PlaceHolderControl" Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="false"/>
 	</Section>
 
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				accRep.FullName AS ReporterAccountID
+			]]></SQL>
+		</Column>
+		<Column Ident="ReporterEmail" TitleResourceKey="ReporterEmail_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.ReporterEmail
+			]]></SQL>
+		</Column>
+		<Column Ident="ReporterPhone" TitleResourceKey="ReporterPhone_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.ReporterPhone
+			]]></SQL>
+		</Column>
+		<Column Ident="ITSMEntryMethodTypeGuid" TitleResourceKey="ITSMEntryMethodTypeGuid_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsEntMetTyp.TextValue AS ITSMEntryMethodTypeGuid
+			]]></SQL>
+		</Column>
+	</Section>
+
+	<Section Root="DataView" Name="Froms" TargetXPath="//DataView/DataSource/Froms | //DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms" AllowMultipleInserts="true" Insert="append">
+		<dsf:From Ident="accRep">
+			<dsf:Columns>
+				<dsf:string>ReporterAccountID</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN dbo.Account AS accRep ON accRep.ID = itsm.ReporterAccountID
+			</dsf:SQL>
+		</dsf:From>
+		<dsf:From Ident="itsEntMetTyp">
+			<dsf:Columns>
+				<dsf:string>ITSMEntryMethodTypeGuid</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN usr.ITSMEntryMethodType AS itsEntMetTyp ON itsEntMetTyp.Guid = itsm.ITSMEntryMethodTypeGuid AND itsEntMetTyp.LanguageID = @UserLanguageID
+			</dsf:SQL>
+		</dsf:From>
+	</Section>
+
+	<Section Root="Filter" Name="Filter" Insert="placeholder">
+		<!-- @Ignore duplicate-control-ident -->
+		<Control xsi:type="AutoCompleteControl" Ident="ReporterAccountID" DataType="Number" TitleResourceKey="ReporterAccountID_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="FullName" DataBindType="Title"/>
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID,
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						FullName LIKE @ReporterAccountID
+						AND [State] = @ActiveState
+					ORDER BY FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="String" LikeType="Both"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+					
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+          <Column Ident="ID" DataBindType="Value" />
+          <Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID, 
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						ID = @ReporterAccountID
+				]]></SQL>
+				<Parameters>          
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number"/>           
+				</Parameters>     
+			</SelectedDataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsReq.[ReporterAccountID] = @ReporterAccountID
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<!-- @Ignore duplicate-control-ident -->
+		<Control xsi:type="TextBoxControl" Ident="ReporterEmail" DataType="String" MaxLength="100" TitleResourceKey="ReporterEmail_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsReq.[ReporterEmail] LIKE '%' + @ReporterEmail + '%'
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control> 
+
+		<!-- @Ignore duplicate-control-ident -->
+		<Control xsi:type="TextBoxControl" Ident="ReporterPhone" DataType="String" MaxLength="20" TitleResourceKey="ReporterPhone_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsReq.[ReporterEmail] LIKE '%' + @ReporterPhone + '%'
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+	</Section>
+
 	<Section Root="Form" Name="Html" Insert="placeholder">
 		<Control ID="ReporterInformationCardPlaceHolder">
 			<div class="row">
@@ -216,7 +536,7 @@
 							</div>
 						</div>
 						<div class="card-body">
-							<div class="row">
+							<div class="row js-showIfElevatedPermissionOrNotFirstState" style="display: none;">
 								<div class="col-md-12">
 									<div class="form-group">
 										<ControlLabel ControlID="ReporterAccountID" />
@@ -276,7 +596,7 @@
 									</div> 
 								</div>
 							</Control>
-							<div class="row">
+							<div class="row js-showIfElevatedPermissionOrNotFirstState" style="display: none;">
 								<div class="col-md-12">
 									<div class="form-group">
 										<ControlLabel ControlID="ITSMEntryMethodTypeGuid" />
@@ -334,14 +654,132 @@
 
 		<ControlShareCode Ident="EnableReporterInformationControlShare">
 			<Controls>
-				<FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
 				<FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
 				<FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true"/>
 				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
 			</Controls>
 		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableAdvancedReporterInformationControlShare">
+			<Controls>
+				
+				<FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
+				<FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
+
+				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAdvancedReporterInformationControlShare" /> -->
 		
 	</Section>
+
+	<Section Root="WorkFlow" Name="InjectToInProcessRequiredActionShare" TargetXPath="//WorkFlow/ActionShareCodes/ActionShareCode[@Ident='InProcessRequiredActionShare']/Actions" Insert="append">
+		
+		<Action xsi:type="Required" ActionStart="BeforeValidation">
+			<Idents>
+				<string>ReporterAccountID</string>
+				<string>ITSMEntryMethodTypeGuid</string>
+			</Idents>
+		</Action>
+
+	</Section>
+	
+	<Section Root="WorkFlow" Name="GlobalActions" TargetXPath="//WorkFlow/GlobalActions" Insert="append">
+
+		<Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL><![CDATA[
+
+          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @LastITSMCategoryIdent VARCHAR(900) = @ITSMCategoryLevel2Ident;
+          IF @IsShowCategoryLevel3 = 1
+            SET @LastITSMCategoryIdent = @ITSMCategoryLevel3Ident
+          IF @IsShowCategoryLevel4 = 1
+            SET @LastITSMCategoryIdent = @ITSMCategoryLevel4Ident
+          IF @IsShowCategoryLevel5 = 1
+            SET @LastITSMCategoryIdent = @ITSMCategoryLevel5Ident
+
+					SELECT IIF(
+						EXISTS(
+							SELECT NULL
+							FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'{{FormIdent}}Segment',@PermissionIDs)
+							WHERE
+								FolderTreeIdent = @LastITSMCategoryIdent
+						)
+						OR ISNULL(@ID, 0) != 0
+					, 0, 1)
+
+        ]]></SQL>
+        <Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel3" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel4" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+        </Parameters>
+      </Condition>
+      <TrueActions>
+
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL><![CDATA[
+
+							SELECT IIF(
+								ISNULL(@Var_ButtonIdent, '') != 'SendToCategorizationButton'
+							, 1, 0)
+
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Var_ButtonIdent" DataType="String" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+
+						<Action xsi:type="ActionValue" Ident="ITSMEntryMethodTypeGuid_Update_Action" ControlIdent="ITSMEntryMethodTypeGuid" ActionStart="BeforeValidation">
+							<DataSource>
+								<SQL><![CDATA[
+
+									SELECT CAST([GUID] AS VARCHAR(MAX)) AS ITSMEntryMethodTypeGuid
+									FROM usr.ITSMEntryMethodTypeSetting
+									WHERE FunctionalKey = 'itsm' AND [State] != @DeletedState
+
+								]]></SQL>
+								<Parameters>
+									<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+								</Parameters>
+							</DataSource>
+						</Action>
+
+					</TrueActions>
+				</Action>
+
+				<Action xsi:type="ActionValue" Ident="ReporterAccountID_Update_Action" ControlIdent="ReporterAccountID" ActionStart="BeforeValidation">
+					<DataSource>
+						<SQL><![CDATA[
+
+							SELECT @UserID AS ReporterAccountID
+							
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				
+
+      </TrueActions>
+    </Action>
+
+	</Section>
+
 	
 </Component>

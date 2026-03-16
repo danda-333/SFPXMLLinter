@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMKnowledgeBaseCommonFolderSubForm" IsSubForm="true" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage">
+	<DataPermissions>
+    <string>ITSMSettingAdmin</string>
+  </DataPermissions>
+  <CreatePermissions>
+    <string>ITSMSettingAdmin</string>
+  </CreatePermissions>
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number"/>
+		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150"/>
+
+		<Control xsi:type="AutoCompleteControl" Ident="CommonFolderTreeIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="CommonFolderTreeIdent_ITSM" IsReadOnly="true" IsRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT TOP 20
+            fot.Ident
+						,fotAgg.FolderNames AS [Name]
+          FROM dbo.FolderTree as fot
+          INNER JOIN dbo.Folder as fol on fol.ID = fot.FolderID AND fol.[State] = @FolderActiveState
+					OUTER APPLY (
+						SELECT TOP(1) fotC.ParentFolderTreeID
+						FROM dbo.FolderTree AS fotC
+						INNER JOIN dbo.Folder AS folC ON folC.ID = fotC.FolderID AND folC.[State] = @FolderActiveState
+						WHERE fotC.ParentFolderTreeID = fot.ID
+					) AS fotC
+          OUTER APPLY (
+						SELECT STRING_AGG(folP.[Name], ' → ') WITHIN GROUP (ORDER BY fotP.Level ASC) AS FolderNames
+						FROM dbo.FolderTree AS fotP
+						INNER JOIN dbo.Folder AS folP ON folP.ID = fotP.FolderID
+						WHERE fot.Ident LIKE fotP.Ident + '%'
+					) AS fotAgg
+          WHERE
+            fol.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+						AND fotC.ParentFolderTreeID IS NULL
+          ORDER BY fot.Ident
+				]]></SQL>
+				<Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup"/>
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+            fot.Ident
+						,fotAgg.FolderNames AS [Name]
+          FROM dbo.FolderTree as fot
+          INNER JOIN dbo.Folder as fol on fol.ID = fot.FolderID AND fol.[State] = @FolderActiveState
+					OUTER APPLY (
+						SELECT TOP(1) fotC.ParentFolderTreeID
+						FROM dbo.FolderTree AS fotC
+						INNER JOIN dbo.Folder AS folC ON folC.ID = fotC.FolderID AND folC.[State] = @FolderActiveState
+						WHERE fotC.ParentFolderTreeID = fot.ID
+					) AS fotC
+          OUTER APPLY (
+						SELECT STRING_AGG(folP.[Name], ' → ') WITHIN GROUP (ORDER BY fotP.Level ASC) AS FolderNames
+						FROM dbo.FolderTree AS fotP
+						INNER JOIN dbo.Folder AS folP ON folP.ID = fotP.FolderID
+						WHERE fot.Ident LIKE fotP.Ident + '%'
+					) AS fotAgg
+          WHERE
+            fol.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+						AND fotC.ParentFolderTreeID IS NULL
+						AND fol.[Name] LIKE @CommonFolderTreeIdent
+          ORDER BY fot.Ident
+				]]></SQL>
+				<Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CommonFolderTreeIdent" DataType="String" MaxLength="200" LikeType="Both"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+            fot.Ident
+						,fotAgg.FolderNames AS [Name]
+          FROM dbo.FolderTree as fot
+          INNER JOIN dbo.Folder as fol on fol.ID = fot.FolderID
+          OUTER APPLY (
+						SELECT STRING_AGG(folP.[Name], ' → ') WITHIN GROUP (ORDER BY fotP.Level ASC) AS FolderNames
+						FROM dbo.FolderTree AS fotP
+						INNER JOIN dbo.Folder AS folP ON folP.ID = fotP.FolderID
+						WHERE fot.Ident LIKE fotP.Ident + '%'
+					) AS fotAgg
+          WHERE
+            fol.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+            AND fot.[Ident] = @CommonFolderTreeIdent
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CommonFolderTreeIdent" DataType="VarChar" MaxLength="900"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup"/>
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="CommonFolderTreeIdent"/>
+							<Control ID="CommonFolderTreeIdent"/>
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

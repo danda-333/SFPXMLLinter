@@ -18,10 +18,12 @@
 			<Buttons>
 				<Button Ident="SaveButton" IsVisible="true">
 					<Actions>
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
 					</Actions>
 				</Button>
 				<Button Ident="SaveAndExitButton" IsVisible="true">
 					<Actions>
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
 					</Actions>
 				</Button>
 			</Buttons>

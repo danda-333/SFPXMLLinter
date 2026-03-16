@@ -12,9 +12,11 @@
     <ControlShareCode Ident="EnableAllControlShare">
       <Controls>
         <FormControl Ident="Name" IsReadOnly="false" />
+        <FormControl Ident="Active" IsReadOnly="false" />
+        <FormControl Ident="IconCssClass" IsReadOnly="false" />
+        <FormControl Ident="ColorCssClass" IsReadOnly="false" />
         <FormControl Ident="Address" IsReadOnly="false" />
         <FormControl Ident="Note" IsReadOnly="false" />
-        <FormControl Ident="Active" IsReadOnly="false" />
         <FormControl Ident="IsShareAmongAuthors" IsReadOnly="false" />
         <FormControl Ident="FolderPermission" IsReadOnly="false" />
       </Controls>

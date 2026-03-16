@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMRequestAssignedToMeView" SegmentType="ITSMRequestSegment" TitleResourceKey="ITSMRequestAssignedToMeView_ITSM" GroupTitleResourceKey="ITSMRequestAllGroup_ITSM" Priority="40" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMRequestFilter" ShareFilterIdent="ITSMRequestFilter" CountColorCssClass="warning" PackageIdent="ITSMPackage" FormIdent="ITSMRequest">
+  <AccessPermissions>
+    <string>ITSMRequest</string>
+  </AccessPermissions>
+  <DenyPermissions>
+    <string>ITSMRequestSimpleMode</string>
+  </DenyPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true"/>
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMRequestButton" FormIdent="ITSMRequest" TitleResourceKey="NewITSMRequestButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMRequest">
+    <DataPermissions>
+      <string>ITSMSpecialist</string>
+      <string>ITSMOperator</string>
+    </DataPermissions>
+		<Columns>
+      <Include Component="Common/Shared/BaseView" Section="Columns"/>
+      <Include Component="Common/Shared/ITSMKey" Section="Columns"/>
+      <UsePrimitive Name="Common/Columns/SQLColumn" Ident="Subject" TableAlias="itsm" ColumnName="Subject" Width="20"/>
+      <Include Component="Common/Shared/FolderGroupSegment" Section="Columns"/>
+      <Include Component="Common/Shared/BaseView" Section="WorkFlowStateColumn" FormIdent="ITSMRequest"/>
+      <Include Component="Common/Controls/ReporterControls" Section="Columns"/>
+      <UsePrimitive Name="Common/Columns/OptionalSQLColumn" Ident="Description" TableAlias="itsm" ColumnName="Description"/>
+      <Include Component="Common/Shared/Resolve" Section="Columns"/>
+      <Include Component="Common/Shared/Assign" Section="Columns"/>
+      <Include Component="Common/Shared/AdditionalFields" Section="Columns"/>
+		</Columns>
+    <Froms>
+    </Froms>
+		<SQL><![CDATA[
+      
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT 
+            itsm.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMRequest AS itsm
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+          #ADDFROM#
+          WHERE
+            itsm.[State] NOT IN (@DeletedState, @ClosedState, @ResolvedState, @ResolvedOperatorState)
+            AND itsm.AssignedAccountID = @UserID
+            AND #PERMISSION[ITSMRequest(itsm)]# #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+
+    ]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" ConstantType="UserID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" /> 
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="Number" Value="160" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedOperatorState" DataType="Number" Value="155" />
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL><![CDATA[
+      
+      SELECT COUNT(itsm.ID)
+      FROM usr.ITSMRequest AS itsm
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+      WHERE
+        itsm.[State] NOT IN (@DeletedState, @ClosedState, @ResolvedState, @ResolvedOperatorState)
+        AND itsm.AssignedAccountID = @UserID
+        AND #PERMISSION[ITSMRequest(itsm)]# #FILTER#
+
+    ]]></SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="Number" Value="160" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedOperatorState" DataType="Number" Value="155" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" ConstantType="UserID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <GeneratorSnippet UseGenerator="Common/XML/CopyXPathContent" SourceXPath="/DataView/DataSource" CopyMode="inner" />
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

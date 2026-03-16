@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMProblemToMySolutionView" SegmentType="ITSMProblemSegment" TitleResourceKey="ITSMProblemToMySolutionView_ITSM" GroupTitleResourceKey="ITSMProblemGroup_ITSM" Priority="130" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMProblemFilter" ShareFilterIdent="ITSMProblemFilter" CountColorCssClass="warning" PackageIdent="ITSMPackage">
+	<Usings>
+		<Using Component="Common/Shared/BaseView" FormIdent="ITSMProblem"/>
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMProblem" AssignedToTeamState="30" />
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMProblem" />
+		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMProblem" />
+		<Using Component="Common/Shared/SuspendSolution"/>
+		<Using Component="Common/Shared/SuspendApproval"/>
+		<Using Component="Common/Shared/Resolve" FormIdent="ITSMProblem" />
+	</Usings>
+  <AccessPermissions>
+    <string>ITSMProblem</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true"/>
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMProblemButton" FormIdent="ITSMProblem" TitleResourceKey="NewITSMProblemButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMProblem">
+    <DataPermissions>
+      <string>ITSMProblemReporter</string>
+      <string>ITSMSpecialist</string>
+      <string>ITSMOperator</string>
+      <string>ITSMSupplier</string>
+    </DataPermissions>
+		<Columns>
+      <Include Component="Common/Shared/BaseView" Section="Columns"/>
+      <Include Component="Common/Shared/ITSMKey" Section="Columns"/>
+      <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="20" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsm.[Subject]
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/FolderGroupSegment" Section="Columns"/>
+      <Include Component="Common/Shared/BaseView" Section="WorkFlowStateColumn" FormIdent="ITSMProblem"/>
+      <Include Component="Common/Controls/ReporterControls" Section="Columns"/>
+      <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsm.[Description]
+        ]]></SQL>
+      </Column>
+      <Column Ident="ProblemCause" TitleResourceKey="ProblemCause_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsm.[ProblemCause]
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/Resolve" Section="Columns"/>
+      <Include Component="Common/Shared/Assign" Section="Columns"/>
+		</Columns>
+    <Froms>
+    </Froms>
+		<SQL><![CDATA[
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT 
+            itsm.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMProblem AS itsm
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+          #ADDFROM#
+          WHERE
+            itsm.[State] NOT IN (@DeletedState,@ClosedState)
+            AND 
+            (
+              (itsm.State IN (@Registration,@Resolved) AND #PERMISSION[ITSMProblem(itsm)|ITSMOperator|]#)
+              OR
+              (itsm.State IN (@SolutionAssignedToTeam,@SolutionAssigned) AND #PERMISSION[ITSMProblem(itsm)|ITSMSpecialist|]#)
+            ) #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    ]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Registration" DataType="Number" Value="20" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssignedToTeam" DataType="Number" Value="30" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssigned" DataType="Number" Value="40" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Resolved" DataType="Number" Value="50" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" /> 
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL><![CDATA[
+      SELECT COUNT(itsm.ID)
+      FROM usr.ITSMProblem AS itsm
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+      WHERE
+        itsm.[State] NOT IN (@DeletedState,@ClosedState)
+        AND 
+        (
+          (itsm.State IN (@Registration,@Resolved) AND #PERMISSION[ITSMProblem(itsm)|ITSMOperator|]#)
+          OR
+          (itsm.State IN (@SolutionAssignedToTeam,@SolutionAssigned) AND #PERMISSION[ITSMProblem(itsm)|ITSMSpecialist|]#)
+        ) #FILTER#
+    ]]></SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Registration" DataType="Number" Value="20" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssignedToTeam" DataType="Number" Value="30" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssigned" DataType="Number" Value="40" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Resolved" DataType="Number" Value="50" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <GeneratorSnippet UseGenerator="Common/XML/CopyXPathContent" SourceXPath="/DataView/DataSource" CopyMode="inner" />
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

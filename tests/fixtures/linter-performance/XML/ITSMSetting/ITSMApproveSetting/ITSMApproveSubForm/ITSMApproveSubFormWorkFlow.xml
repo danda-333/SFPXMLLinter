@@ -8,24 +8,24 @@
     </States>
   </Definition>
 
-	<GlobalJavaScripts>
-		<JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeGroup" ControlIdent="ApproverType">
-			<Selectors>
-				<string>.js-showIfApprovaTypeGroup</string>
-			</Selectors>
-			<ShowValues>
-				<string>Group</string>
-			</ShowValues>
-		</JavaScript>
-		<JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeAccount" ControlIdent="ApproverType">
-			<Selectors>
-				<string>.js-showIfApprovaTypeAccount</string>
-			</Selectors>
-			<ShowValues>
-				<string>Account</string>
-			</ShowValues>
-		</JavaScript>
-	</GlobalJavaScripts>
+  <GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeGroup" ControlIdent="ApproverType">
+      <Selectors>
+        <string>.js-showIfApprovaTypeGroup</string>
+      </Selectors>
+      <ShowValues>
+        <string>Group</string>
+      </ShowValues>
+    </JavaScript>
+    <JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeAccount" ControlIdent="ApproverType">
+      <Selectors>
+        <string>.js-showIfApprovaTypeAccount</string>
+      </Selectors>
+      <ShowValues>
+        <string>Account</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
 
   <ControlShareCodes>
     <ControlShareCode Ident="EnableAllControlShareCode">

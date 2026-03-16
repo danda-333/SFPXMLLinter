@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" Ident="ITSMRequestBreakdownFormDialog" TitleResourceKey="ITSMRequestBreakdownFormDialog_ITSM" SegmentType="ITSMRequestSegment" IsCreateTable="false" Width="1280" IsSubForm="true" PackageIdent="ITSMPackage">
+  <DataPermissions>
+    <string>ITSMRequest</string>
+  </DataPermissions>
+  <CreatePermissions>
+    <string>ITSMRequest</string>
+  </CreatePermissions>
+  <Buttons>
+    <Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-cross2" />
+  </Buttons>
+
+  <Controls>
+
+    <Control xsi:type="TreeSelectBoxControl" Ident="BreakdownFolderTreeIdent" ContentHeight="420" DataType="VarCharList" TitleResourceKey="BreakdownFolderTreeIdent_ITSM" IsExpanded="true" NotSelectedTitleResourceKey="NotSelected_ITSM" SelectedTitleResourceKey="Selected_ITSM">
+      <DataSource>
+        <Columns>
+          <Column Ident="Ident" TitleResourceKey="Ident_ITSM" DataBindType="Value" IsVisible="false" />
+          <Column Ident="Name" TitleResourceKey="Name_ITSM" Width="80" DataBindType="Title" />
+          <Column Ident="ParentIdent" TitleResourceKey="ParentIdent_ITSM" DataBindType="ParentIdent" IsVisible="false" />
+          <Column Ident="IsSelectable" Title="IsSelectable" DataBindType="Selectable" IsVisible="false" />
+        </Columns>
+        <SQL><![CDATA[
+          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+			    INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
+
+          DECLARE @LastTreeIdent VARCHAR(900)	=	(SELECT COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent))
+
+          DECLARE @ITSMCategoryBreakdownID INT = (
+            SELECT ITSMCategoryBreakdownID 
+            FROM usr.ITSMCategory AS cat
+            INNER JOIN dbo.FolderTreeView AS folTre ON folTre.TableID = cat.ID AND folTre.FormIdent = @FormIdent
+            WHERE folTre.Ident = @LastTreeIdent
+          )
+
+          ;WITH BreakdownLeafs AS (
+            -- Listové uzly z ITSMCategoryBreakdownSubForm pro vybrané ITSMCategoryBreakdownID
+            SELECT
+              folTreBre.Ident,
+              folTreBre.ParentFolderTreeID
+            FROM usr.ITSMCategoryBreakdownSubForm AS catBreSub
+            INNER JOIN dbo.FolderTree AS folTreBre ON folTreBre.Ident = catBreSub.BreakdownFolderTreeIdent
+            WHERE
+              catBreSub.TableID = @ITSMCategoryBreakdownID
+              AND catBreSub.FormIdent = 'ITSMCategoryBreakdown'
+              AND catBreSub.[State] != @DeletedState
+          ),
+          Hierarchy AS (
+            SELECT
+              Ident,
+              ParentFolderTreeID,
+              1 AS IsSelectable
+            FROM BreakdownLeafs
+
+            UNION ALL
+
+            SELECT
+              parent.Ident,
+              parent.ParentFolderTreeID,
+              0 AS IsSelectable
+            FROM Hierarchy AS h
+            INNER JOIN dbo.FolderTree AS parent ON parent.ID = h.ParentFolderTreeID
+            WHERE h.ParentFolderTreeID IS NOT NULL
+          )
+          SELECT
+            fot.Ident
+            ,fol.[Name]
+            ,fotP.Ident AS ParentIdent
+            ,MAX(h.IsSelectable) AS IsSelectable
+          FROM Hierarchy AS h
+          INNER JOIN dbo.FolderTree AS fot ON fot.Ident = h.Ident
+          INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID AND fol.[State] = @FolderActiveState
+          LEFT JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID
+          WHERE EXISTS (
+              SELECT NULL
+              FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,'ITSMCommonFolderGroup','ITSMRequestSegment',@PermissionIDs)
+              WHERE FolderTreeIdent = fot.Ident
+          )
+          GROUP BY fot.Ident, fol.[Name], fotP.Ident
+          ORDER BY fot.Ident
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="String" SetDataType="ParentData"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="String" SetDataType="ParentData"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="String" SetDataType="ParentData"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="String" SetDataType="ParentData"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" SetDataType="ParentData"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" Value="ITSMCategory" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+        </Parameters>
+      </DataSource>
+    </Control>
+
+
+  </Controls>
+
+  <Sections>
+    <Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM">
+      <HTMLTemplate><![CDATA[
+
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <Control ID="BreakdownFolderTreeIdent"/>
+            </div>
+          </div>
+        </div>  
+
+      ]]></HTMLTemplate>
+    </Section>
+  </Sections>
+</Form>

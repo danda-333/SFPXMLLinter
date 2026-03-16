@@ -1,36 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMProblemWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMProblem" PackageIdent="ITSMPackage">
-	<Usings>
-		<Using Component="Common/FolderTreeSetting" />
-		<Using Component="Common/PageSetting" FormIdent="ITSMProblem" />
-		<Using Component="Common/SLACriteriaControls" />
-
-		<Using Component="Common/Shared/Assign" FormIdent="ITSMProblem" />
-		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMProblem" />
-		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMProblem" KeyPrefix="P"/>
-		<Using Component="Common/Shared/Resolve" FormIdent="ITSMProblem" />
-
-		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMProblem" />
-		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMProblem" />
-		<Using Component="Common/Controls/AdditionalFields" FormIdent="ITSMProblem" />
-		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMProblem" />
-		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMProblem" />
-		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMProblem" />
-		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMProblem" />
-
-		<Using Component="Common/Buttons/SendToCategorizationButton" State="10" FunctionalKey="email"/>
-		<Using Component="Common/Buttons/SendToProcessButton" />
-		<Using Component="Common/Buttons/CloseButton" />
-		<Using Component="Common/Buttons/CancelButton" />
-		<Using Component="Common/Buttons/SaveGroupButton" />
-		<Using Component="Common/Buttons/DeleteButton" />
-		<Using Component="Common/Buttons/BackButton" />
-	</Usings>
   <Definition>
     <States>
       <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/> <!--Deleted-->
       <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning"/> <!--New-->
-			<State Value="10" TitleResourceKey="Categorization_ITSM" ColorCssClass="warning"/>									<!-- Categorization : Kategorizace -->
       <State Value="20" TitleResourceKey="Registration_ITSM" ColorCssClass="warning"/> <!--Registration-->  
 			<State Value="30" TitleResourceKey="SolutionAssignedToTeam_ITSM" ColorCssClass="success" />					<!-- SolutionAssignedToTeam : Přiděleno řešitelskému týmu -->
 			<State Value="40" TitleResourceKey="SolutionAssigned_ITSM" ColorCssClass="success" />								<!-- SolutionAssigned : Přiděleno řešiteli -->
@@ -40,14 +13,14 @@
   </Definition>
 
   <GlobalJavaScripts>
-    <JavaScript xsi:type="ShowHide" Ident="ShowHideProblemSolutionJustification" ControlIdent="IsProblemSolved" >
+    <!-- <JavaScript xsi:type="ShowHide" Ident="ShowHideProblemSolutionJustification" ControlIdent="IsProblemSolved" >
       <Selectors>
         <string>.js-showHideProblemSolutionJustification</string>
       </Selectors>
       <ShowValues>
         <string>0</string>
       </ShowValues>
-    </JavaScript>
+    </JavaScript> -->
   </GlobalJavaScripts>
 
   <ControlShareCodes>
@@ -56,8 +29,8 @@
 			<Controls>
 				<FormControl Ident="Subject" IsReadOnly="false" />
 				<FormControl Ident="Description" IsReadOnly="false" />
-				<FormControl Ident="ITSMIncidentClassificationTypeGuid" IsReadOnly="false" />
-				<FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsReadOnly="false" />
+				<!-- <FormControl Ident="ITSMIncidentClassificationTypeGuid" IsReadOnly="false" /> -->
+				<!-- <FormControl Ident="ITSMOperationalEnvironmentTypeGuid" IsReadOnly="false" /> -->
 			</Controls>
 		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" /> -->
 
@@ -131,27 +104,66 @@
       <Buttons>
         <Button Ident="SubmitButton" IsVisible="true">
           <Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="SubmitButton" ActionStart="AfterValidation" />
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>Subject</string>
+                <string>Description</string>
+                <string>ReporterAccountID</string>
+                <string>ITSMCategoryLevel2Ident</string>
+                <string>ITSMCategoryLevel3Ident</string>
+                <string>ITSMCategoryLevel4Ident</string>
+              </Idents>
+            </Action>
+            <Action xsi:type="IF" ActionStart="BeforeValidation">
+              <Condition>
+                <SQL><![CDATA[
+                  SELECT IIF(
+                    @IsShowCategoryLevel5 = 1
+                    ,1
+                    ,0
+                  )
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number"/>
+                </Parameters>
+              </Condition>
+              <TrueActions>
+                <Action xsi:type="Required" ActionStart="BeforeValidation">
+                  <Idents>
+                    <string>ITSMCategoryLevel5Ident</string>
+                  </Idents>
+                </Action>
+              </TrueActions>
+            </Action>
             <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" />
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="SubmitCommunication_ITSM" ActionStart="AfterSave" />
           </Actions>
         </Button>
       </Buttons>
     </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SubmitButtonShare" />  -->
 
-    <ButtonShareCode Ident="SolveButtonShare">
-      <Buttons>
-        <Button Ident="SolveButton" IsVisible="true">
-          <Actions>
+		<ButtonShareCode Ident="ResolveButtonShare">
+			<Buttons>
+				<Button Ident="ResolveButton" IsVisible="true">
+					<Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="ResolveButton" ActionStart="AfterValidation" />
             <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolveButtonShare" />  -->
+
+						<Action xsi:type="ShareCode" Ident="Resolution_Update_FromDialog_ActionShare" />
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="ResolveCommunication_ITSM" ActionStart="AfterSave" />
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" /> -->
 
     <ButtonShareCode Ident="CloseButtonShare">
       <Buttons>
         <Button Ident="CloseButton" IsVisible="true">
           <Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="CloseButton" ActionStart="AfterValidation" />
             <Action xsi:type="ChangeState" State="200" ActionStart="AfterSave" />
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="CloseCommunication_ITSM" ActionStart="AfterSave" />
           </Actions>
         </Button>
       </Buttons>
@@ -161,6 +173,7 @@
       <Buttons>
         <Button Ident="DeleteButton" IsVisible="true">
           <Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="DeleteButton" ActionStart="AfterValidation" />
             <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
           </Actions>
         </Button>
@@ -171,8 +184,11 @@
 			<Buttons>
 				<Button Ident="AssignToGroupButton" IsVisible="true">
 					<Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignToGroupButton" ActionStart="AfterValidation" />
 						<Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" />
 						<Action xsi:type="ShareCode" Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare" />
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignToGroupCommunication_ITSM" ActionStart="AfterSave" />
+		        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToGroupCommunication_ITSM" ActionStart="AfterSave" />
 					</Actions>
 				</Button>
 			</Buttons>
@@ -182,8 +198,11 @@
 			<Buttons>
 				<Button Ident="AssignButton" IsVisible="true">
 					<Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignButton" ActionStart="AfterValidation" />
 						<Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
 						<Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" />
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignCommunication_ITSM" ActionStart="AfterSave" />
+		        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignCommunication_ITSM" ActionStart="AfterSave" />
 					</Actions>
 				</Button>
 			</Buttons>
@@ -219,8 +238,11 @@
 						</Parameters>
 					</VisibleCondition>
 					<Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignToMeButton" ActionStart="AfterValidation" />
 						<Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
 						<Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" />
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignToMeCommunication_ITSM" ActionStart="AfterSave" />
+		        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToMeCommunication_ITSM" ActionStart="AfterSave" />
 					</Actions>
 				</Button>
 
@@ -251,8 +273,11 @@
 						</Parameters>
 					</VisibleCondition>
 					<Actions>
+						<Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignToMeMultipleGroupButton" ActionStart="AfterValidation" />
 						<Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
 						<Action xsi:type="ShareCode" Ident="Assignee_Update_ToMeMultipleGroup_ActionShare" />
+		        <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignToMeMultipleGroupCommunication_ITSM" ActionStart="AfterSave" />
+		        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToMeMultipleGroupCommunication_ITSM" ActionStart="AfterSave" />
 					</Actions>
 				</Button>
 
@@ -282,11 +307,11 @@
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMProblem</string>
+            <string>ITSMAuthor</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SubmitButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SendToCategorizationButtonShare" />
           </Buttons>
           <Sections>
             <Section Ident="HeaderSection" IsVisible="true" />
@@ -297,29 +322,11 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> 
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
           </Controls>
         </Group>
       </Groups>
     </Step> <!--New-->
-    <Step State="10">
-      <Groups>
-        <Group>
-          <Permissions>
-            <string>ITSMOperator</string>
-          </Permissions>
-          <Buttons>
-            <Button xsi:type="ShareCodeButton" Ident="SubmitButtonShare" />
-          </Buttons>
-          <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> 
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-          </Controls>
-        </Group>
-      </Groups>
-    </Step> <!--Registration-->
     <Step State="20">
       <Groups>
         <Group>
@@ -337,6 +344,25 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> 
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+						
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMProblemReporter</string>
+            <string>ITSMProblemSharedReporter</string>
+		        <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
           </Controls>
         </Group>
       </Groups>
@@ -345,13 +371,15 @@
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMProblem</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSpecialist</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
@@ -359,6 +387,24 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> 
             <FormControl xsi:type="ShareCodeControl" Ident="EnableDocumentationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+						
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMProblemReporter</string>
+            <string>ITSMProblemSharedReporter</string>
+		        <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
           </Controls>
         </Group>
       </Groups>
@@ -367,14 +413,15 @@
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMProblem</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSpecialist</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SolveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
@@ -382,6 +429,24 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> 
             <FormControl xsi:type="ShareCodeControl" Ident="EnableDocumentationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+						
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMProblemReporter</string>
+            <string>ITSMProblemSharedReporter</string>
+		        <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
           </Controls>
         </Group>
       </Groups>
@@ -390,10 +455,13 @@
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMProblem</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
@@ -401,6 +469,25 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> 
             <FormControl xsi:type="ShareCodeControl" Ident="ShowDocumentationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+						
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMProblemReporter</string>
+            <string>ITSMProblemSharedReporter</string>
+		        <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
           </Controls>
         </Group>
       </Groups>
@@ -419,6 +506,7 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> 
             <FormControl xsi:type="ShareCodeControl" Ident="ShowDocumentationControlShare" />
+						<FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
           </Controls>
         </Group>
       </Groups>

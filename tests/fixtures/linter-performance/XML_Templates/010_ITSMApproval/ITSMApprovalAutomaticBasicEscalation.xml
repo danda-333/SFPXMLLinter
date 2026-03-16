@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutomaticOperation xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMApproval" Ident="ITSMApprovalAutomaticBasicEscalation">
+	<Source>
+		<SQL>
+      SELECT itsmApp.ID AS TableID
+      FROM usr.ITSMApproval AS itsmApp
+      WHERE 
+        itsmApp.[State] != @DeletedState 
+        AND itsmApp.IsApproved IS NULL
+        AND itsmApp.ApproveRoundStartDateTime IS NOT NULL
+        AND itsmApp.ApproverType = 'Account'
+        AND DATEADD(DAY, 7, itsmApp.ApproveRoundStartDateTime) <= GETDATE()
+        AND
+        (
+          EXISTS(
+            SELECT NULL 
+            FROM usr.ITSMRequest
+            WHERE 
+              itsmApp.FormIdent = 'ITSMRequest'
+              AND itsmApp.TableID = ID
+              AND ActualApproveRoundGuid = itsmApp.ApproveRoundGUID
+              AND State != @DeletedState
+          )
+          OR 
+          EXISTS(
+            SELECT NULL 
+            FROM usr.ITSMRelease
+            WHERE 
+              itsmApp.FormIdent = 'ITSMRelease'
+              AND itsmApp.TableID = ID
+              AND ActualApproveRoundGuid = itsmApp.ApproveRoundGUID
+              AND State != @DeletedState
+          )
+        )
+		</SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+		</Parameters> 
+	</Source>
+	<Actions>
+    <Action Ident="ActionTrigger" xsi:type="ActionTrigger">
+      <DataSource>
+        <SQL>
+          INSERT INTO usr.ITSMApprovalEscalation (AccountID,State,ITSMApprovalID, EscalatedFromEscalationID, EscalatedApproverAccountID, EscalationDateTime)
+          SELECT
+            1 AS AccountID,
+            1 AS State,
+            itsmApp.ID AS ITSMApprovalID,
+            NULL AS EscalatedFromEscalationID,
+            bossAcc.ID AS EscalatedApproverAccountID,
+            GETDATE() AS EscalationDateTime
+          FROM usr.ITSMApproval AS itsmApp
+          INNER JOIN dbo.Account AS acc ON acc.ID = itsmApp.ApproverAccountID
+          INNER JOIN dbo.Account AS bossAcc ON bossAcc.ID = acc.BossAccountID
+          WHERE itsmApp.ID = @ID
+          
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"/>
+        </Parameters>
+      </DataSource>
+    </Action>
+	</Actions>
+</AutomaticOperation> 

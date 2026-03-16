@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMRequestSimpleModeInSolutionView" SegmentType="ITSMRequestSegment" TitleResourceKey="ITSMRequestSimpleModeInSolutionView_ITSM" GroupTitleResourceKey="ITSMRequestAllGroup_ITSM" Priority="10" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMRequestFilter" ShareFilterIdent="ITSMRequestFilter" CountColorCssClass="warning" PackageIdent="ITSMPackage">
+
+  <AccessPermissions>
+    <string>ITSMRequestSimpleMode</string>
+  </AccessPermissions>
+  <Settings>
+    <dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true" />
+  </Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMRequestButton" FormIdent="ITSMRequest" TitleResourceKey="NewITSMRequestButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMRequest">
+    <DataPermissions>
+      <string>ITSMRequestReporter</string>
+
+      <string>ITSMOperator</string>
+      <string>ITSMSpecialist</string>
+      <string>ITSMSupplier</string>
+
+      <string>ITSMReporterBossApprover</string>
+      <string>ITSMApproverGroupMember</string>
+
+      <string>ITSMRequestActualApprover</string>
+      <string>ITSMRequestApprover</string>
+    </DataPermissions>
+    <Columns>
+
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number" />
+      <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
+        <SQL><![CDATA[
+          itsm.CreateDate
+        ]]></SQL>
+      </Column>
+      <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          accCreator.FullName AS AccountID
+        ]]></SQL>
+      </Column>
+
+      <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsm.ITSMKey
+        ]]></SQL>
+      </Column>
+
+      <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" Width="20">
+        <SQL><![CDATA[
+          [itsm].[Description]
+        ]]></SQL>
+        <SQL><![CDATA[
+          [itsm].[Description] AS [Description]
+        ]]></SQL>
+      </Column>
+
+      <Column Ident="ITSMCompanyIdent" TitleResourceKey="ITSMCompanyIdent_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          ftvCom.[FolderName] AS ITSMCompanyIdent
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel2Ident" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          ftvCat2.[FolderName] AS ITSMCategoryLevel2Ident
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel3Ident" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          ftvCat3.[FolderName] AS ITSMCategoryLevel3Ident
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel4Ident" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" Width="15" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" Width="15" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          ftvCat5.[FolderName] AS ITSMCategoryLevel5Ident
+        ]]></SQL>
+      </Column>
+
+      <!-- @Ignore unknown-form-ident -->
+      <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMRequest" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsm.State
+        ]]></SQL>
+      </Column>
+
+      <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
+
+        <SQL><![CDATA[
+          [itsm].[Description] AS [Description]
+        ]]></SQL>
+
+      </Column>
+
+    </Columns>
+    <Froms>
+
+      <dsf:From Ident="wfs">
+        <dsf:Columns>
+          <dsf:string>SimpleModeState</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          INNER JOIN @WorkFlowStates AS wfs ON wfs.[Value] = itsm.[State]
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accCreator">
+        <dsf:Columns>
+          <dsf:string>AccountID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsm.AccountID
+        </dsf:SQL>
+      </dsf:From>
+
+      <dsf:From Ident="ftvCat2">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel2Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat2 ON ftvCat2.FolderTreeIdent = itsm.ITSMCategoryLevel2Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat3">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel3Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat3 ON ftvCat3.FolderTreeIdent = itsm.ITSMCategoryLevel3Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat4">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel4Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat4 ON ftvCat4.FolderTreeIdent = itsm.ITSMCategoryLevel4Ident
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="ftvCat5">
+        <dsf:Columns>
+          <dsf:string>ITSMCategoryLevel5Ident</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat5 ON ftvCat5.FolderTreeIdent = itsm.ITSMCategoryLevel5Ident
+        </dsf:SQL>
+      </dsf:From>
+
+      <dsf:From Ident="genResMetTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMGeneralResolutionMethodTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMGeneralResolutionMethodType as genResMetTyp on genResMetTyp.Guid = itsm.ITSMGeneralResolutionMethodTypeGuid AND genResMetTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+
+      <dsf:From Ident="gro">
+        <dsf:Columns>
+          <dsf:string>AssignedGroupID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.[Group] AS gro ON gro.ID = itsm.AssignedGroupID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="accAss">
+        <dsf:Columns>
+          <dsf:string>AssignedAccountID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.[Account] AS accAss ON accAss.ID = itsm.AssignedAccountID
+        </dsf:SQL>
+      </dsf:From>
+
+      <dsf:From Ident="accRep">
+        <dsf:Columns>
+          <dsf:string>ReporterAccountID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN dbo.Account AS accRep ON accRep.ID = itsm.ReporterAccountID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="itsEntMetTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMEntryMethodTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMEntryMethodType AS itsEntMetTyp ON itsEntMetTyp.Guid = itsm.ITSMEntryMethodTypeGuid AND itsEntMetTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+    </Froms>
+    <SQL><![CDATA[
+
+      DECLARE @WorkFlowStates TABLE ([Value] INT, [Badge] VARCHAR(255))
+      INSERT INTO @WorkFlowStates
+      SELECT itsGwfs.[Value], CONCAT('<span class="badge badge-', itsGwfs.SimpleModeColorCssClass, '">', usr.GetResourceText(itsGwfs.SimpleModeTitleResourceKey, @UserLanguageID), '</span>') AS [Badge]
+      FROM usr.ITSM_GetWorkFlowState ('ITSMRequestWorkFlow') AS itsGwfs
+
+        SELECT *
+        FROM (
+          SELECT *, #ROWNUM#
+          FROM (
+            SELECT
+              itsm.ID
+              #ADDCOLUMN#
+            FROM usr.ITSMRequest AS itsm
+            INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+            #ADDFROM#
+            WHERE
+              itsm.[State] NOT IN (@DeletedState, @ClosedState, @ResolvedState)
+              AND (
+                (
+                  ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter|]#
+                )
+                OR
+                (
+                  ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter,ITSMAuthor|]#
+                )
+                OR
+                (
+                  #PERMISSION[ITSMRequest(itsm)]#
+                )
+              ) #FILTER#
+          ) AS tbl
+        ) AS tbl
+        WHERE RowNum BETWEEN @StartPage AND @EndPage
+    ]]></SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="String" Value="160" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+    </Parameters>
+  </DataSource>
+
+  <CountDataSource>
+    <SQL><![CDATA[
+
+      SELECT COUNT(itsm.ID)
+      FROM usr.ITSMRequest AS itsm
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+      WHERE
+        itsm.[State] NOT IN (@DeletedState, @ClosedState, @ResolvedState)
+        AND (
+          (
+            ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter|]#
+          )
+          OR
+          (
+            ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter,ITSMAuthor|]#
+          )
+          OR
+          (
+            #PERMISSION[ITSMRequest(itsm)]#
+          )
+        ) #FILTER#
+
+    ]]></SQL>
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="String" Value="160" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <DataPermissions>
+          <string>ITSMRequestReporter</string>
+
+          <string>ITSMOperator</string>
+          <string>ITSMSpecialist</string>
+          <string>ITSMSupplier</string>
+
+          <string>ITSMReporterBossApprover</string>
+          <string>ITSMApproverGroupMember</string>
+
+          <string>ITSMRequestActualApprover</string>
+          <string>ITSMRequestApprover</string>
+        </DataPermissions>
+        <Columns>
+
+          <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number" />
+          <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
+            <SQL><![CDATA[
+              itsm.CreateDate
+            ]]></SQL>
+          </Column>
+          <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+            <SQL><![CDATA[
+              accCreator.FullName AS AccountID
+            ]]></SQL>
+          </Column>
+
+          <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+            <SQL><![CDATA[
+              itsm.ITSMKey
+            ]]></SQL>
+          </Column>
+
+          <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" Width="20">
+            <SQL><![CDATA[
+              [itsm].[Description]
+            ]]></SQL>
+            <SQL><![CDATA[
+              [itsm].[Description] AS [Description]
+            ]]></SQL>
+          </Column>
+
+          <Column Ident="ITSMCompanyIdent" TitleResourceKey="ITSMCompanyIdent_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL><![CDATA[
+              ftvCom.[FolderName] AS ITSMCompanyIdent
+            ]]></SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel2Ident" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL><![CDATA[
+              ftvCat2.[FolderName] AS ITSMCategoryLevel2Ident
+            ]]></SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel3Ident" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL><![CDATA[
+              ftvCat3.[FolderName] AS ITSMCategoryLevel3Ident
+            ]]></SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel4Ident" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM" Width="15" TableAlterIdent="tbl">
+            <SQL><![CDATA[
+              ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
+            ]]></SQL>
+          </Column>
+          <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" Width="15" TableAlterIdent="tbl" IsOptional="true">
+            <SQL><![CDATA[
+              ftvCat5.[FolderName] AS ITSMCategoryLevel5Ident
+            ]]></SQL>
+          </Column>
+
+          <!-- @Ignore unknown-form-ident -->
+          <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMRequest" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+            <SQL><![CDATA[
+              itsm.State
+            ]]></SQL>
+          </Column>
+
+          <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
+
+            <SQL><![CDATA[
+              [itsm].[Description] AS [Description]
+            ]]></SQL>
+
+          </Column>
+
+        </Columns>
+        <Froms>
+
+          <dsf:From Ident="wfs">
+            <dsf:Columns>
+              <dsf:string>SimpleModeState</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              INNER JOIN @WorkFlowStates AS wfs ON wfs.[Value] = itsm.[State]
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accCreator">
+            <dsf:Columns>
+              <dsf:string>AccountID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsm.AccountID
+            </dsf:SQL>
+          </dsf:From>
+
+          <dsf:From Ident="ftvCat2">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel2Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat2 ON ftvCat2.FolderTreeIdent = itsm.ITSMCategoryLevel2Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat3">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel3Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat3 ON ftvCat3.FolderTreeIdent = itsm.ITSMCategoryLevel3Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat4">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel4Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat4 ON ftvCat4.FolderTreeIdent = itsm.ITSMCategoryLevel4Ident
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="ftvCat5">
+            <dsf:Columns>
+              <dsf:string>ITSMCategoryLevel5Ident</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSM_FolderTreeView AS ftvCat5 ON ftvCat5.FolderTreeIdent = itsm.ITSMCategoryLevel5Ident
+            </dsf:SQL>
+          </dsf:From>
+
+          <dsf:From Ident="genResMetTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMGeneralResolutionMethodTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMGeneralResolutionMethodType as genResMetTyp on genResMetTyp.Guid = itsm.ITSMGeneralResolutionMethodTypeGuid AND genResMetTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+
+          <dsf:From Ident="gro">
+            <dsf:Columns>
+              <dsf:string>AssignedGroupID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.[Group] AS gro ON gro.ID = itsm.AssignedGroupID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="accAss">
+            <dsf:Columns>
+              <dsf:string>AssignedAccountID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.[Account] AS accAss ON accAss.ID = itsm.AssignedAccountID
+            </dsf:SQL>
+          </dsf:From>
+
+          <dsf:From Ident="accRep">
+            <dsf:Columns>
+              <dsf:string>ReporterAccountID</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN dbo.Account AS accRep ON accRep.ID = itsm.ReporterAccountID
+            </dsf:SQL>
+          </dsf:From>
+          <dsf:From Ident="itsEntMetTyp">
+            <dsf:Columns>
+              <dsf:string>ITSMEntryMethodTypeGuid</dsf:string>
+            </dsf:Columns>
+            <dsf:SQL>
+              LEFT JOIN usr.ITSMEntryMethodType AS itsEntMetTyp ON itsEntMetTyp.Guid = itsm.ITSMEntryMethodTypeGuid AND itsEntMetTyp.LanguageID = @UserLanguageID
+            </dsf:SQL>
+          </dsf:From>
+        </Froms>
+        <SQL><![CDATA[
+
+          DECLARE @WorkFlowStates TABLE ([Value] INT, [Badge] VARCHAR(255))
+          INSERT INTO @WorkFlowStates
+          SELECT itsGwfs.[Value], CONCAT('<span class="badge badge-', itsGwfs.SimpleModeColorCssClass, '">', usr.GetResourceText(itsGwfs.SimpleModeTitleResourceKey, @UserLanguageID), '</span>') AS [Badge]
+          FROM usr.ITSM_GetWorkFlowState ('ITSMRequestWorkFlow') AS itsGwfs
+
+             SELECT *
+             FROM (
+               SELECT *, #ROWNUM#
+               FROM (
+                 SELECT
+                   itsm.ID
+                   #ADDCOLUMN#
+                 FROM usr.ITSMRequest AS itsm
+                 INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+                 #ADDFROM#
+                 WHERE
+                   itsm.[State] NOT IN (@DeletedState, @ClosedState, @ResolvedState)
+                   AND (
+                     (
+                       ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter|]#
+                     )
+                     OR
+                     (
+                       ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter,ITSMAuthor|]#
+                     )
+                     OR
+                     (
+                       #PERMISSION[ITSMRequest(itsm)]#
+                     )
+                   ) #FILTER#
+               ) AS tbl
+             ) AS tbl
+             WHERE RowNum BETWEEN @StartPage AND @EndPage
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="String" Value="160" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+        </Parameters>
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

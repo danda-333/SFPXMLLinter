@@ -55,11 +55,21 @@
 					WHERE gra.AccountID = @AccountID
 						
 				)
-				SELECT DISTINCT fot.ID AS FolderTreeID, fot.Ident AS FolderTreeIdent, fot.[Level] AS FolderLevel, fot.ParentFolderTreeID, fotPar.Ident AS ParentFolderTreeIdent, fol.[Name] AS FolderName/*, pes.PermissionID*/
+				,UserSegmentAccess AS (
+					SELECT sgt.ID
+					FROM dbo.SegmentType AS sgt
+					INNER JOIN dbo.[Role] AS rol ON rol.ASPNETRoleID = sgt.ASPNETRoleID
+					INNER JOIN dbo.AccountPermissionStaticComputed AS apsc ON apsc.PermissionID = rol.PermissionID
+					WHERE apsc.AccountID = @AccountID
+				)
+				SELECT DISTINCT fot.ID AS FolderTreeID, fot.Ident AS FolderTreeIdent, fot.[Level] AS FolderLevel, fot.ParentFolderTreeID, fotPar.Ident AS ParentFolderTreeIdent, fol.[Name] AS FolderName, fol.TableID, fol.FormIdent, fol.[State] AS FolderState/*, pes.PermissionID*/
 				FROM PermissionSources AS pes 
 				INNER JOIN dbo.FolderTree AS fot ON COALESCE(fot.InheritFromFolderTreeID, fot.ID) = pes.PermissionSourceFolderTreeID
 				INNER JOIN dbo.Folder AS fol ON fol.[State] != 2 AND fol.ID = fot.FolderID
 				LEFT JOIN dbo.FolderTree as fotPar on fotPar.ID = fot.ParentFolderTreeID
+
+				INNER JOIN usr.ITSMFolderTreeSegmentType AS itsFotSgt ON itsFotSgt.FolderTreeID = fot.ID AND itsFotSgt.SegmentTypeID IN (SELECT ID FROM UserSegmentAccess)
+				
 
 		);
 

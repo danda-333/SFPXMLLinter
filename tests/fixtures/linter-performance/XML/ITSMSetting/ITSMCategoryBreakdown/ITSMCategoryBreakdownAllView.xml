@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMCategoryBreakdownAllView" SegmentType="ITSMSettingSegment" TitleResourceKey="ITSMCategoryBreakdownAllView_ITSM" GroupTitleResourceKey="ITSMSettingGroup_ITSM" Priority="140" CountColorCssClass="primary" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+
+		Číselník: Rozpad požadavku
+
+	]]></XMLDescription>
+	<AccessPermissions>
+		<string>ITSMSettingAdmin</string>
+	</AccessPermissions>
+
+	<Buttons>
+		<Button xsi:type="LinkButton" Ident="NewITSMCategoryBreakdownButton" FormIdent="ITSMCategoryBreakdown" TitleResourceKey="NewITSMCategoryBreakdownButton_ITSM" />
+	</Buttons>
+
+	<DataSource FormIdent="ITSMCategoryBreakdown">
+		<DataPermissions>
+			<string>ITSMSettingAdmin</string>
+		</DataPermissions>
+		<Columns>
+			<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" DataType="Number" />
+			<Column Ident="BreakdownName" TitleResourceKey="BreakdownName_ITSM" Width="100" />
+		</Columns>
+		<SQL><![CDATA[
+			SELECT
+			  dial.ID
+			  , dial.BreakdownName
+			FROM usr.ITSMCategoryBreakdown AS dial
+			WHERE
+			 dial.[State] != @DeletedState
+		]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+		</Parameters>
+	</DataSource>
+
+	<CountDataSource>
+		<SQL><![CDATA[
+			SELECT COUNT(dial.ID)
+			FROM usr.ITSMCategoryBreakdown AS dial
+			WHERE
+			 dial.[State] != @DeletedState
+		]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+		</Parameters>
+	</CountDataSource>
+</DataView>

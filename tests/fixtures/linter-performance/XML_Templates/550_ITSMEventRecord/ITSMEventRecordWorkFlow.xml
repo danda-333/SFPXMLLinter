@@ -1,24 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMEventRecordWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMEventRecord" PackageIdent="ITSMPackage">
-  <Usings>
-		<Using Component="Common/FolderTreeSetting" />
-		<Using Component="Common/PageSetting" FormIdent="ITSMEventRecord" />
-
-		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMEventRecord" />
-		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMEventRecord" KeyPrefix="ER"/>
-
-		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMEventRecord" />
-		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMEventRecord" />
-		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMEventRecord" />
-		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMEventRecord" />
-		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMEventRecord" />
-		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMEventRecord" />
-		
-		<Using Component="Common/Buttons/DeleteButton" />
-		<Using Component="Common/Buttons/BackButton" />
-		<Using Component="Common/Buttons/SaveGroupButton" />
-
-	</Usings>
   <Definition>
     <States>
       <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/> <!--Deleted-->

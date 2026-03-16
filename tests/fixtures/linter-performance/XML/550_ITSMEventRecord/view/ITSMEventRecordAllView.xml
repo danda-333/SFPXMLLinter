@@ -3,9 +3,9 @@
   <AccessPermissions>
     <string>ITSMEventRecord</string>
   </AccessPermissions>
-	<Settings>
-		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true" />
-	</Settings>
+  <Settings>
+    <dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true" />
+  </Settings>
   <Buttons>
     <Button xsi:type="LinkButton" Ident="NewITSMEventRecordButton" FormIdent="ITSMEventRecord" TitleResourceKey="NewITSMEventRecordButton_ITSM" />
   </Buttons>
@@ -15,7 +15,7 @@
       <string>ITSMSpecialist</string>
       <string>ITSMOperator</string>
     </DataPermissions>
-		<Columns>
+    <Columns>
       <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number" />
       <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
         <SQL><![CDATA[
@@ -112,7 +112,7 @@
           itsReq.[AssignedAccountID]
         ]]></SQL>
       </Column> -->
-		</Columns>
+    </Columns>
     <Froms>
       <dsf:From Ident="ftvCat2">
         <dsf:Columns>
@@ -163,7 +163,7 @@
         </dsf:SQL>
       </dsf:From> -->
     </Froms>
-		<SQL><![CDATA[
+    <SQL><![CDATA[
       SELECT *
       FROM (
         SELECT *, #ROWNUM#
@@ -194,13 +194,13 @@
       ) AS tbl
       WHERE RowNum BETWEEN @StartPage AND @EndPage
     ]]></SQL>
-		<Parameters>
-			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+    <Parameters>
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
       <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
       <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
       <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" />
-		</Parameters>
-	</DataSource>
+    </Parameters>
+  </DataSource>
 
   <CountDataSource>
     <SQL><![CDATA[
@@ -224,23 +224,28 @@
         ) #FILTER#
     ]]></SQL>
     <Parameters>
-			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
     </Parameters>
   </CountDataSource>
 
   <Sections>
     <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
       <DataSource>
+        <DataPermissions>
+          <string>ITSMEventRecordReporter</string>
+          <string>ITSMSpecialist</string>
+          <string>ITSMOperator</string>
+        </DataPermissions>
         <Columns>
-          <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" DataType="Number" />
-          <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="25" TableAlterIdent="tbl">
-            <SQL><![CDATA[
-              itsReq.[Subject]
-            ]]></SQL>
-          </Column>
-          <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="15" TableAlterIdent="tbl">
+          <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number" />
+          <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
             <SQL><![CDATA[
               itsReq.ITSMKey
+            ]]></SQL>
+          </Column>
+          <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="20" TableAlterIdent="tbl">
+            <SQL><![CDATA[
+              itsReq.[Subject]
             ]]></SQL>
           </Column>
           <Column Ident="ITSMCompanyIdent" TitleResourceKey="ITSMCompanyIdent_ITSM" Width="15" TableAlterIdent="tbl">
@@ -263,67 +268,67 @@
               ftvCat4.[FolderName] AS ITSMCategoryLevel4Ident
             ]]></SQL>
           </Column>
-          <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMEventRecord" TitleResourceKey="State_ITSM" IsColor="true" Width="15" TableAlterIdent="tbl">
+          <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMEventRecord" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
             <SQL><![CDATA[
               itsReq.State
             ]]></SQL>
           </Column>
-          <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" DataType="DateTime">
+          <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
             <SQL><![CDATA[
               itsReq.CreateDate
             ]]></SQL>
           </Column>
-          <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl">
+          <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               accCreator.FullName AS AccountID
             ]]></SQL>
           </Column>
-          <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" TableAlterIdent="tbl">
+          <Column Ident="ITSMCategoryLevel5Ident" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               ftvCat5.[FolderName] AS ITSMCategoryLevel5Ident
             ]]></SQL>
           </Column>
-          <Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" TableAlterIdent="tbl">
+          <Column Ident="ReporterAccountID" TitleResourceKey="ReporterAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               accRep.[FullName] AS ReporterAccountID
             ]]></SQL>
           </Column>
-          <Column Ident="ReporterEmail" TitleResourceKey="ReporterEmail_ITSM" TableAlterIdent="tbl">
+          <Column Ident="ReporterEmail" TitleResourceKey="ReporterEmail_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               itsReq.[ReporterEmail]
             ]]></SQL>
           </Column>
-          <Column Ident="ReporterPhone" TitleResourceKey="ReporterPhone_ITSM" TableAlterIdent="tbl">
+          <Column Ident="ReporterPhone" TitleResourceKey="ReporterPhone_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               itsReq.[ReporterPhone]
             ]]></SQL>
           </Column>
-          <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl">
+          <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               itsReq.[Description]
             ]]></SQL>
           </Column>
-          <!-- <Column Ident="ITSMGeneralResolutionMethodTypeGuid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl">
+          <!-- <Column Ident="ITSMGeneralResolutionMethodTypeGuid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               genResMetTyp.[TextValue] AS ITSMGeneralResolutionMethodTypeGuid
             ]]></SQL>
           </Column>
-          <Column Ident="SolutionDescription" TitleResourceKey="SolutionDescription_ITSM" TableAlterIdent="tbl">
+          <Column Ident="SolutionDescription" TitleResourceKey="SolutionDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               itsReq.[SolutionDescription]
             ]]></SQL>
           </Column>
-          <Column Ident="SolutionAditionalInformation" TitleResourceKey="SolutionAditionalInformation_ITSM" TableAlterIdent="tbl">
+          <Column Ident="SolutionAditionalInformation" TitleResourceKey="SolutionAditionalInformation_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               itsReq.[SolutionAditionalInformation]
             ]]></SQL>
           </Column>
-          <Column Ident="AssignedGroupID" TitleResourceKey="AssignedGroupID_ITSM" TableAlterIdent="tbl">
+          <Column Ident="AssignedGroupID" TitleResourceKey="AssignedGroupID_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               itsReq.[AssignedGroupID]
             ]]></SQL>
           </Column>
-          <Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl">
+          <Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
             <SQL><![CDATA[
               itsReq.[AssignedAccountID]
             ]]></SQL>
@@ -380,34 +385,41 @@
           </dsf:From> -->
         </Froms>
         <SQL><![CDATA[
-
-          SELECT
-            itsReq.ID
-            #ADDCOLUMN#
-          FROM usr.ITSMEventRecord AS itsReq
-          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
-          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
-          #ADDFROM#
-          WHERE
-            itsReq.[State] != @DeletedState
-            AND (
-              (
-                ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMEventRecord(itsReq)|ITSMEventRecordReporter|]#
-              )
-              OR
-              (
-                ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMEventRecord(itsReq)|ITSMEventRecordReporter,ITSMAuthor|]#
-              )
-              OR
-              (
-                #PERMISSION[ITSMEventRecord(itsReq)]#
-              )
-            ) #FILTER#
-
+          SELECT *
+          FROM (
+            SELECT *, #ROWNUM#
+            FROM (
+              SELECT
+                itsReq.ID
+                #ADDCOLUMN#
+              FROM usr.ITSMEventRecord AS itsReq
+              INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+              INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsReq.ITSMCompanyIdent
+              #ADDFROM#
+              WHERE
+                itsReq.[State] != @DeletedState
+                AND (
+                  (
+                    ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMEventRecord(itsReq)|ITSMEventRecordReporter|]#
+                  )
+                  OR
+                  (
+                    ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMEventRecord(itsReq)|ITSMEventRecordReporter,ITSMAuthor|]#
+                  )
+                  OR
+                  (
+                    #PERMISSION[ITSMEventRecord(itsReq)]#
+                  )
+                ) #FILTER#
+            ) AS tbl
+          ) AS tbl
+          WHERE RowNum BETWEEN @StartPage AND @EndPage
         ]]></SQL>
         <Parameters>
           <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
           <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" />
         </Parameters>
       </DataSource>
     </Section>

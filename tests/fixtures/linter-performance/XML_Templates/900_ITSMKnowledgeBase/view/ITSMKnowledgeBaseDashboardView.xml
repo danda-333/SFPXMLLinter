@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" Ident="ITSMKnowledgeBaseDashboardView" SegmentType="ITSMKnowledgeBaseSegment" ViewType="ContentView" Priority="12" TitleResourceKey="ITSMKnowledgeBaseDashboardView_ITSM" GroupTitleResourceKey="ITSMKnowledgeBaseOverview_ITSM" DefaultFilterIdent="ITSMKnowledgeBaseDashboardFilter" ShareFilterIdent="ITSMKnowledgeBaseDashboardFilter" IsRazorEngine="true" PackageIdent="ITSMPackage">
+	<AccessPermissions>
+		<string>ITSMKnowledgeBase</string>
+	</AccessPermissions>
+	<!-- <ExternalCssRelativePaths>
+		<string>~/AppAsset/Packages/ITSM/Styles/WikiDashboardView.css</string>
+	</ExternalCssRelativePaths> -->
+	<Buttons>
+		<!-- <Button xsi:type="LinkButton" Ident="HomeButton" TitleResourceKey="_ITSM" IconCssClass="icon-home2" Color="#2196F3" Url="~/ContentView/Index/ITSMKnowledgeBaseDashboardView"/> -->
+	</Buttons>
+	<Sections>
+		<Section xsi:type="ContentSourceSection">
+			<DataSources>
+				<DataSource Ident="ChildrenFolderTree">
+					<DataPermissions>
+						<string>ITSMKnowledgeBase</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="Ident"/>
+						<Column Ident="FolderTreeID"/>
+						<Column Ident="Name"/>
+						<Column Ident="ParentFolderTreeID"/>
+						<Column Ident="Level"/>
+
+						<Column Ident="IconCssClass"/>
+						<Column Ident="ColorCssClass"/>
+						<Column Ident="Description"/>
+						<Column Ident="ITSMKnowledgeBaseCount"/>
+					</Columns>
+					<SQL><![CDATA[
+						DECLARE @FilterLen INT = LEN('#FILTER[FilterSet]#');
+
+						SELECT 
+							fot.Ident
+							,fot.ID AS FolderTreeID
+							,fol.[Name]
+							,NULL AS ParentFolderTreeID
+							,1 AS [Level]
+
+							,itsCom.IconCssClass
+							,itsCom.ColorCssClass
+							,'' AS [Description]
+							,itsKnbAgg.[RowCount] AS ITSMKnowledgeBaseCount
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID AND fol.[State] = @FolderActiveState AND fol.FormIdent = 'ITSMCompany'
+						INNER JOIN usr.ITSMCompany AS itsCom ON itsCom.ID = fol.TableID AND itsCom.[State] != @DeletedState
+						OUTER APPLY (
+							SELECT COUNT(DISTINCT itsKnbSetting.ID) AS [RowCount]
+							FROM usr.ITSMKnowledgeBaseCommonFolderSubForm AS itsKbcfsf
+							INNER JOIN usr.ITSMKnowledgeBaseSetting AS itsKnbSetting ON itsKnbSetting.ID = itsKbcfsf.TableID AND itsKnbSetting.[State] != @DeletedState
+							WHERE
+								itsKbcfsf.CommonFolderTreeIdent LIKE fot.Ident + '%'
+								AND itsKbcfsf.[State] != @DeletedState
+								AND itsKbcfsf.FormIdent = 'ITSMKnowledgeBaseSetting'
+						) AS itsKnbAgg
+						WHERE @FilterLen <= 0
+
+						UNION ALL
+
+						SELECT 
+							fot.Ident
+							,fot.ID AS FolderTreeID
+							,fol.[Name]
+							,fot.ParentFolderTreeID
+							,fot.[Level]
+							
+							,itsCat.IconCssClass
+							,itsCat.ColorCssClass
+							,'' AS [Description]
+							,itsKnbAgg.[RowCount] AS ITSMKnowledgeBaseCount
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID AND fol.[State] = @FolderActiveState AND fol.FormIdent = 'ITSMCategory'
+						INNER JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND itsCat.[State] != @DeletedState
+						OUTER APPLY (
+							SELECT COUNT(DISTINCT itsKnbSetting.ID) AS [RowCount]
+							FROM usr.ITSMKnowledgeBaseCommonFolderSubForm AS itsKbcfsf
+							INNER JOIN usr.ITSMKnowledgeBaseSetting AS itsKnbSetting ON itsKnbSetting.ID = itsKbcfsf.TableID AND itsKnbSetting.[State] != @DeletedState
+							WHERE
+								itsKbcfsf.CommonFolderTreeIdent LIKE fot.Ident + '%'
+								AND itsKbcfsf.[State] != @DeletedState
+								AND itsKbcfsf.FormIdent = 'ITSMKnowledgeBaseSetting'
+						) AS itsKnbAgg
+						WHERE
+							fot.ParentFolderTreeID = @CurrentFolderTreeID
+							AND @FilterLen >= 1
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="900"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentFolderTreeID" DataType="Number" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="CurrentFolderTree">
+					<DataPermissions>
+						<string>ITSMKnowledgeBase</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="ParentFolderTreeID"/>
+						<Column Ident="ID"/>
+					</Columns>
+					<SQL><![CDATA[
+						DECLARE @FilterLen INT = LEN('#FILTER[FilterSet]#');
+
+						SELECT 
+							fot.ParentFolderTreeID
+							,fot.ID
+						FROM dbo.FolderTree AS fot
+						WHERE ID = @CurrentFolderTreeID
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="900"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentFolderTreeID" DataType="Number" />
+					</Parameters>
+				</DataSource>
+				
+				<DataSource Ident="ITSMKnowledgeBase">
+					<DataPermissions>
+						<string>ITSMKnowledgeBase</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="ID"/>
+						<Column Ident="Title"/>
+						<Column Ident="CreateDate"/>
+						<Column Ident="AccountID"/>
+						<Column Ident="IconCssClass"/>
+						<Column Ident="ColorCssClass"/>
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT
+							itsKnbSetting.ID
+							,CONCAT(itsKbt.TextValue + ' - ' ,itsKnb.Title) AS Title
+							,FORMAT(itsKnb.CreateDate, 'dd.MM.yyyy', @UICultureCode) AS CreateDate
+							,creatorAcc.FullName AS AccountID
+							,ISNULL(itsKbtSetting.IconCssClass, 'ph-file') AS IconCssClass
+							,ISNULL(itsKbtSetting.ColorCssClass, 'primary') AS ColorCssClass
+						FROM dbo.FolderTree AS fot
+						INNER JOIN usr.ITSMKnowledgeBaseCommonFolderSubForm AS itsKbcfsf ON itsKbcfsf.CommonFolderTreeIdent = fot.Ident AND itsKbcfsf.[State] != @DeletedState AND itsKbcfsf.FormIdent = 'ITSMKnowledgeBaseSetting'
+						INNER JOIN usr.ITSMKnowledgeBaseSetting AS itsKnbSetting ON itsKnbSetting.ID = itsKbcfsf.TableID AND itsKnbSetting.[State] != @DeletedState
+						INNER JOIN usr.ITSMKnowledgeBase AS itsKnb ON itsKnb.Guid = itsKnbSetting.Guid AND itsKnb.LanguageID = @UserLanguageID
+						LEFT JOIN usr.ITSMKnowledgeBaseTypeSetting AS itsKbtSetting ON itsKbtSetting.Guid = itsKnbSetting.ITSMKnowledgeBaseTypeGuid
+						LEFT JOIN usr.ITSMKnowledgeBaseType AS itsKbt ON itsKbt.Guid = itsKbtSetting.Guid AND itsKbt.LanguageID = @UserLanguageID
+						LEFT JOIN dbo.Account AS creatorAcc ON creatorAcc.ID = itsKnb.AccountID
+						WHERE fot.ID = @CurrentFolderTreeID
+						ORDER BY itsKnb.CreateDate DESC
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentFolderTreeID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UICultureCode" DataType="String" ConstantType="UICultureCode" />
+					</Parameters>
+				</DataSource>
+				
+				<DataSource Ident="BreadCrumb">
+					<DataPermissions>
+						<string>ITSMKnowledgeBase</string>
+					</DataPermissions>
+					<Columns>
+						<Column Ident="FolderTreeID"/>
+						<Column Ident="Name"/>
+					</Columns>
+					<SQL><![CDATA[
+						/*#FILTER[FilterSet]#*/
+
+						SELECT fotP.ID AS FolderTreeID, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%'
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fotP.FolderID AND fol.[State] = @FolderActiveState
+						WHERE
+							fot.ID = @CurrentFolderTreeID
+						ORDER BY fotP.Level ASC
+						
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentFolderTreeID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+					</Parameters>
+				</DataSource>
+			</DataSources>
+		</Section>
+	</Sections>
+	<HTMLTemplate><![CDATA[
+		@*@model SFP.Common.Models.RazorEngines.ViewModelRazorEngine*@
+
+		@{
+			var childrenFolderTree = (List<dynamic>)Model.Data.ChildrenFolderTree;
+			var currentFolderTree = (List<dynamic>)Model.Data.CurrentFolderTree;
+			var itsmKnowledgeBase = (List<dynamic>)Model.Data.ITSMKnowledgeBase;
+			var breadcrumb = (List<dynamic>)Model.Data.BreadCrumb;
+
+			int itsmKnowledgeBaseCount = itsmKnowledgeBase.Count();
+			int? parentFolderTreeID = currentFolderTree?.ToList().FirstOrDefault()?.ParentFolderTreeID is not System.DBNull ? currentFolderTree?.ToList().FirstOrDefault()?.ParentFolderTreeID : 0;
+			int? currentFolderTreeID = currentFolderTree?.ToList().FirstOrDefault()?.ID;
+		}
+
+		@functions {
+
+			void RenderCategory(List<dynamic> childrenFolderTree)
+			{
+				foreach(var item in childrenFolderTree){
+					<div class="col-xl-3 col-md-4 col-sm-6 d-flex-lmtl4">
+						<div class="card-lmtl4 flex-fill-lmtl4">
+							<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView?filter=CurrentFolderTreeID:@item.FolderTreeID" class="card-body-lmtl4 d-flex-lmtl4 align-items-center-lmtl4">
+								<span class="badge-lmtl4 badge-pill-lmtl4 position-absolute-lmtl4 top-0-lmtl4 end-0-lmtl4 m-1-lmtl4 rounded-pill-lmtl4 bg-@item.ColorCssClass">@item.ITSMKnowledgeBaseCount</span>
+								<span class="bg-@item.ColorCssClass rounded-pill-lmtl4 p-2-lmtl4 me-3-lmtl4">
+									<i class="@item.IconCssClass d-block-lmtl4"></i>
+								</span>
+
+								<div class="flex-fill-lmtl4">
+									<h6 class="fw-semibold-lmtl4 mb-0-lmtl4">@item.Name</h6>
+								</div>
+							</a>
+						</div>
+					</div>
+
+				}
+			}
+
+			void RenderITSMKnowledgeBase(List<dynamic> itsmKnowledgeBase)
+			{
+				if(itsmKnowledgeBase is not null && itsmKnowledgeBase.Count > 0) {
+					foreach(var item in itsmKnowledgeBase){
+						
+						<div class="col-xl-3 col-md-4 col-sm-6 d-flex-lmtl4">
+							<div class="card-lmtl4 flex-fill-lmtl4">
+								<a href="~/Form/Detail/ITSMKnowledgeBaseSetting/@item.ID" class="card-body-lmtl4 d-flex-lmtl4 align-items-center-lmtl4">
+									<span class="me-3-lmtl4">
+										<i class="@item.IconCssClass text-@item.ColorCssClass ph-2x d-block-lmtl4"></i>
+									</span>
+
+									<div class="flex-fill-lmtl4">
+										<h6 class="fw-semibold-lmtl4 mb-0-lmtl4">@item.Title</h6>
+										@item.CreateDate @item.AccountID
+									</div>
+								</a>
+							</div>
+						</div>
+					}
+				} else {
+					<div class="col-xl-3 col-md-4 col-sm-6 d-flex-lmtl4">
+						<div class="card-lmtl4 flex-fill-lmtl4">
+							<div class="card-body-lmtl4 d-flex-lmtl4 align-items-center-lmtl4">
+								<span class="me-3-lmtl4">
+									<i class="ph-file-dotted text-grey ph-2x d-block-lmtl4"></i>
+								</span>
+
+								<div class="flex-fill-lmtl4">
+									<h6 class="fw-semibold-lmtl4 mb-0-lmtl4">@Resx["NoKnowledgeBaseHere_ITSM"]</h6>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+				}
+			}
+
+			void RenderBreadCrumb(List<dynamic> breadcrumb)
+			{
+				<div class="row">
+					<div class="col-md-12">
+						<div class="d-flex">
+							<div class="breadcrumb-lmtl4">
+								<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView" class="breadcrumb-item-lmtl4 py-2-lmtl4"><i class="ph-book-bookmark me-1-lmtl4"></i></a>
+								@{
+									foreach(var item in breadcrumb){
+										<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView?filter=CurrentFolderTreeID:@item.FolderTreeID" class="breadcrumb-item-lmtl4 py-2-lmtl4">@item.Name</a>
+									}
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+			}
+
+		}
+
+		@if(childrenFolderTree is not null && childrenFolderTree.Count > 0) {
+
+			<div class="card-lmtl4">
+				<div class="card-header-lmtl4">
+					<h5 class="mb-0-lmtl4">Vítejte ve znalostní bázi</h5>
+				</div>
+
+				<div class="card-body-lmtl4">
+					<p>Znalostní báze slouží jako místo, kde najdete návody, odpovědi na časté otázky a řešení běžných problémů bez nutnosti zakládat nový požadavek.<br/>
+					Obsah je rozdělen do složek podle typu požadavků a problémů. Díky tomuto členění můžete snadno najít oblast, která odpovídá vaší situaci.<br/>
+					V jednotlivých složkách jsou k dispozici samostatné články, které vás krok za krokem provedou řešením konkrétního problému nebo vysvětlí, jak postupovat v dané situaci.<br/>
+					Doporučujeme nejprve projít znalostní bázi a vyhledat odpovídající téma. Často zde najdete řešení rychleji, než kdybyste vytvářeli nový požadavek.</p>
+				</div>
+			</div>
+			
+		}
+
+		@if(currentFolderTreeID is not null) {
+			@{
+				RenderBreadCrumb(breadcrumb.ToList());
+			}
+		}
+
+		@if(childrenFolderTree is not null && childrenFolderTree.Count > 0) {
+
+			<div class="row mb-2">
+				<div class="col-md-12">
+					<ul class="nav-lmtl4 nav-tabs-lmtl4 nav-tabs-underline-lmtl4 d-flex-lmtl4 align-items-baseline-lmtl4">
+						<li class="nav-item-lmtl4">
+							<span class="nav-link-lmtl4 active-lmtl4">
+								<i class="ph-folder me-2-lmtl4"></i> @Resx["Folders_ITSM"]
+							</span>
+						</li>
+						@if(parentFolderTreeID is not null && parentFolderTreeID != 0) {
+							<li class="nav-item-lmtl4 ms-auto-lmtl4">
+								<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView?filter=CurrentFolderTreeID:@parentFolderTreeID" class="btn-lmtl4 d-block-lmtl4 px-4-lmtl4 py-1-lmtl4 btn-primary-lmtl4"><i class="ph-arrow-elbow-left-up d-block-lmtl4"></i></a>
+							</li>
+						} else if (parentFolderTreeID is not null) {
+							<li class="nav-item-lmtl4 ms-auto-lmtl4">
+								<a href="~/ContentView/Index/ITSMKnowledgeBaseDashboardView" class="btn-lmtl4 d-block-lmtl4 px-4-lmtl4 py-1-lmtl4 btn-primary-lmtl4"><i class="ph-arrow-elbow-left-up d-block-lmtl4"></i></a>
+							</li>
+						}
+					</ul>
+				</div>
+			</div>
+
+			<div class="row">
+				@{
+					RenderCategory(childrenFolderTree.ToList()); 
+				}
+			</div>
+
+		}
+
+		@if(childrenFolderTree is null || childrenFolderTree.Count <= 0) {
+
+			<div class="row mb-2">
+				<div class="col-md-12">
+					<ul class="nav-lmtl4 nav-tabs-lmtl4 nav-tabs-underline-lmtl4 custom-underlineDanger">
+						<li class="nav-item-lmtl4">
+							<span class="nav-link-lmtl4 active-lmtl4">
+								<i class="ph-file me-2-lmtl4"></i> @Resx["Articles_ITSM"] <span class="badge badge-pill bg-primary-lmtl4 ms-2-lmtl4">@itsmKnowledgeBaseCount</span>
+							</span>
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="row">
+				@{
+					RenderITSMKnowledgeBase(itsmKnowledgeBase.ToList()); 
+				}
+			</div>
+
+		}
+		
+		<!-- <style>
+			.icon-home2{
+				margin-right: 0rem !important;
+			}
+			/* Subcategory card pro dashboard view (vnořená v hlavní kategorii) */
+			.subcategory-card {
+				border-left: 3px solid #6c757d;
+				padding-left: 8px;
+				background: #f8f9fa;
+			}
+			.subcategory-card h6 {
+				font-size: 0.95em;
+			}
+			/* Subcategory card pro single view (samostatná karta vedle sebe) */
+			.subcategory-card-single-view {
+				border: 1px solid #dee2e6;
+				border-radius: 4px;
+				padding: 15px;
+				background: #fff;
+				min-height: 150px;
+			}
+			.subcategory-card-single-view h6 {
+				font-size: 1em;
+			}
+		</style> -->
+	]]></HTMLTemplate>
+</DataView>

@@ -2,12 +2,86 @@
 <Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMAssessment" PackageIdent="ITSMPackage">
 	<Controls>
 
+		<Control xsi:type="HiddenControl" Ident="ApprovedAccountID" DataType="Number"/>
+		<Control xsi:type="HiddenControl" Ident="IsApproved" DataType="Number"/>
+		<Control xsi:type="HiddenControl" Ident="ApproveDateTime" DataType="DateTime"/>
+
 		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number"/>
 		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150"/>
-		<Control xsi:type="HiddenControl" Ident="IsApproved" DataType="Number"/>
 		<Control xsi:type="HiddenControl" Ident="IsUserAction" DataType="Number" Default="0"/>
+		<Control xsi:type="HiddenControl" Ident="ITSMKey" DataType="String" MaxLength="255"/>
+
+		<Control xsi:type="RichTextBoxControl" Ident="AssessmentComment" DataType="String"/>
 
 		<Control xsi:type="TextBoxControl" Ident="AssessmentOrder" DataType="Number" TitleResourceKey="AssessmentOrder_ITSM" IsFakeReadOnly="true"/>
+
+		<Control xsi:type="TextBoxControl" Ident="AssessmentRoundStartDateTime" DataType="DateTime" TitleResourceKey="AssessmentRoundStartDateTime_ITSM"/>
+
+		<Control xsi:type="TextBoxControl" Ident="AssessmentRoundGUID" DataType="Guid" TitleResourceKey="AssessmentRoundGUID_ITSM" />
+
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="DropDownListControl" Ident="AssessmentType" DataType="String" TitleResourceKey="AssessmentType_ITSM">
+			<ListItems>
+				<ListItem TitleResourceKey="Group_ITSM" Value="Group" />
+				<ListItem TitleResourceKey="Account_ITSM" Value="Account" />
+			</ListItems>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="AssessmentGroupID" DataType="Number" TitleResourceKey="AssessmentGroupID_ITSM" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT TOP(20)
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE gro.[State] = @GroupActiveState
+					ORDER BY gro.[Name] ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						gro.ID
+						,gro.[Name] 
+					FROM dbo.[Group] AS gro
+					WHERE 
+						gro.[State] = @GroupActiveState
+						AND gro.[Name] LIKE @AssessmentGroupID
+					ORDER BY gro.[Name] ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentGroupID" DataType="String" MaxLength="200" LikeType="Both"/>
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						gro.ID
+						,gro.[Name] 
+					FROM dbo.[Group] AS gro
+					WHERE gro.ID = @AssessmentGroupID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentGroupID" DataType="Number"/>
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
 
 		<Control xsi:type="AutoCompleteControl" Ident="AssessmentAccountID" DataType="Number" TitleResourceKey="AssessmentAccountID_ITSM" IsReadOnly="true" IsShowRequired="true">
 			<EmptyDataBind>
@@ -57,7 +131,7 @@
 						acc.ID
 						,acc.FullName
 					FROM dbo.Account AS acc
-					WHERE acc.ID = @ApproverAccountID
+					WHERE acc.ID = @AssessmentAccountID
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentAccountID" DataType="Number"/>

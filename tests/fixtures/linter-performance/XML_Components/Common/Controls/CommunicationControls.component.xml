@@ -4,29 +4,46 @@
 	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
 		<Control xsi:type="CommunicationControl" Ident="Communication" Height="400" DataType="String" IsVisible="false" IsReadOnly="true" TitleResourceKey="Communication_ITSM">
 			<SettingPermissions>
-				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="Zadavatel" IconCssClass="icon-user" ColorCssClass="blue-600">
+				<SettingPermission Ident="InternalMessage" IsChecked="true" TitleResourceKey="InternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="primary">
 					<VisiblePermissions>
-						<string>Creator</string>
+						<string>ITSMAuthor</string>
+						<string>ITSMSpecialist</string>
+						<string>ITSMOperator</string>
+					</VisiblePermissions>
+				</SettingPermission>
+				<SettingPermission Ident="ExternalMessage" IsChecked="false" TitleResourceKey="ExternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="danger">
+					<VisiblePermissions>
+						<string>ITSMIncidentReporter</string>
+						<string>ITSMIncidentSharedReporter</string>
 					</VisiblePermissions>
 				</SettingPermission>
 			</SettingPermissions>
 			<Settings>
-				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="ITSMIncidentReporter" />
 			</Settings>
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
 		<Control xsi:type="CommunicationControl" Ident="DialogCommunication" Height="400" DataType="String" TitleResourceKey="Communication_ITSM">
-			<SettingPermissions>
-				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="ITSMAuthor_ITSM" IconCssClass="icon-user" ColorCssClass="blue-600">
+			<!-- <SettingPermissions>
+				<SettingPermission Ident="InternalMessage" IsChecked="true" TitleResourceKey="InternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="primary">
 					<VisiblePermissions>
-						<string>Creator</string>
+						<string>ITSMAuthor</string>
+						<string>ITSMSpecialist</string>
+						<string>ITSMOperator</string>
 					</VisiblePermissions>
 				</SettingPermission>
-			</SettingPermissions>
+				<SettingPermission Ident="ExternalMessage" IsChecked="false" TitleResourceKey="ExternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="danger">
+					<VisiblePermissions>
+						<string>ITSMIncidentReporter</string>
+						<string>ITSMIncidentSharedReporter</string>
+					</VisiblePermissions>
+				</SettingPermission>
+			</SettingPermissions> -->
 			<Settings>
-				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="ITSMIncidentReporter" />
 			</Settings>
+			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
 		<Control xsi:type="CommunicationListControl" Ident="CommunicationList" TitleResourceKey="CommunicationList_ITSM" CommunicationControlIdent="Communication" IsVisible="false">
@@ -45,6 +62,7 @@
 		</Control>
 
 		<Control xsi:type="PlaceHolderControl" Ident="CommunicationCardPlaceHolder" IsVisible="false"/>
+		<Control xsi:type="PlaceHolderControl" Ident="DialogCommunicationRequiredPlaceHolder" IsVisible="false"/>
 	</Section>
 
 	<Section Root="Form" Name="Html" Insert="placeholder">
@@ -100,12 +118,168 @@
 
 			</Controls>
 		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
+
+		<ControlShareCode Ident="EnableRequiredDialogCommunicationControlShare">
+			<Controls>
+				<FormControl xsi:type="IFControl">
+          <Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String"  />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</Condition>
+          <TrueControls>
+            <FormControl Ident="DialogCommunicationRequiredPlaceHolder" IsVisible="true" />
+          </TrueControls>
+        </FormControl>
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" /> -->
 		
 	</Section>
-	
-	<Section Root="WorkFlow" Name="GlobalActions" TargetXPath="//WorkFlow/GlobalActions" Insert="append">
+
+	<Section Root="WorkFlow" Name="//WorkFlow/Steps/Step/Groups/Group/Controls" TargetXPath="//WorkFlow/Steps/Step/Groups/Group/Controls" Insert="append" AllowMultipleInserts="true">
+
+		<FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
 		
-		<Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+	</Section>
+
+	<Section Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+
+		<ActionShareCode Ident="DialogCommunicationRequiredActionShare">
+			<Actions>
+				
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String"  />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="Required" ActionStart="BeforeValidation">
+							<Idents>
+								<string>DialogCommunication</string>
+							</Idents>
+						</Action>
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="DialogCommunicationRequiredActionShare" /> -->
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="SaveDialogCommunicationAction" Insert="placeholder">
+
+		<GeneratorSnippet UseGenerator="Common/WorkFlow/LiftActionsToShareCode" ShareCodeIdentPostFix="{{ShareCodeIdentPostFix}}">
+			<Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="{{CommunicationTypeID}}" ActionStart="AfterSave" />
+
+			<Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+				<DataSource>
+					<SQL><![CDATA[
+
+						DECLARE @CommunicationID INT
+
+						SELECT @CommunicationID = com.ID
+						FROM dbo.Communication AS com
+						WHERE 
+							com.FormIdent = '{{FormIdent}}'
+							AND com.ControlIdent = 'DialogCommunication'
+							AND com.TableID = @ID
+							AND com.AccountID = @UserID
+						
+						IF @CommunicationID IS NOT NULL BEGIN
+
+							UPDATE com
+							SET ControlIdent = 'Communication'
+							FROM dbo.Communication AS com
+							WHERE com.ID = @CommunicationID
+
+							DELETE FROM dbo.CommunicationPermission
+							WHERE CommunicationID = @CommunicationID
+
+							INSERT INTO dbo.CommunicationPermission (
+								[CommunicationID]
+								,[SettingIdent]
+							)
+							SELECT 
+								[CommunicationID] = @CommunicationID
+								,[SettingIdent] = 'InternalMessage'
+
+							IF '{{IsExternalMessage}}' = 'true' 
+								INSERT INTO dbo.CommunicationPermission (
+									[CommunicationID]
+									,[SettingIdent]
+								)
+								SELECT 
+									[CommunicationID] = @CommunicationID
+									,[SettingIdent] = 'ExternalMessage'
+
+						END
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String"  />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					</Parameters>
+				</DataSource>
+			</Action>
+		</GeneratorSnippet>
 		
 	</Section>
 	

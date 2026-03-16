@@ -1,7 +1,7 @@
 <Filter xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ITSMPlannedShutdownFilter" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" PackageIdent="ITSMPackage">
 	<Controls>
 
-    <Control xsi:type="AutoCompleteControl" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCompanyIdent_ITSM">
+		<Control xsi:type="AutoCompleteControl" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCompanyIdent_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
 				<Columns>
 					<Column Ident="Ident" DataBindType="Value" />
@@ -45,13 +45,13 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</SelectedDataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCompanyIdent] = @ITSMCompanyIdent
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ITSMCompanyIdent] = @ITSMCompanyIdent
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM">
@@ -83,13 +83,13 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel2Ident] = @ITSMCategoryLevel2Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ITSMCategoryLevel2Ident] = @ITSMCategoryLevel2Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM">
@@ -121,13 +121,13 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel3Ident] = @ITSMCategoryLevel3Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ITSMCategoryLevel3Ident] = @ITSMCategoryLevel3Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM">
@@ -159,13 +159,13 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel4Ident] = @ITSMCategoryLevel4Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ITSMCategoryLevel4Ident] = @ITSMCategoryLevel4Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM">
@@ -197,18 +197,18 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel5Ident] = @ITSMCategoryLevel5Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ITSMCategoryLevel5Ident] = @ITSMCategoryLevel5Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<!-- @Ignore ident-convention-lookup-control -->
 		<Control xsi:type="ListBoxControl" Ident="State" DataType="NumberList" TitleResourceKey="State_ITSM">
-      <DataBind>
+			<DataBind>
 				<Columns>
 					<Column Ident="Value" DataBindType="Value" />
 					<Column Ident="TitleResourceKey" IsTranslate="true" DataBindType="Title" />
@@ -225,14 +225,14 @@
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="WorkFlowIdent" DataType="String" Value="ITSMPlannedShutdownWorkFlow" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[State] IN (SELECT ID FROM @State)
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
-    </Control>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[State] IN (SELECT ID FROM @State)
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
 
 		<Control xsi:type="AutoCompleteControl" Ident="AccountID" DataType="Number" TitleResourceKey="AccountID_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue">
@@ -258,8 +258,8 @@
 			</DataBind>
 			<SelectedDataBind>
 				<Columns>
-          <Column Ident="ID" DataBindType="Value" />
-          <Column Ident="FullName" DataBindType="Title" />
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
 					SELECT
@@ -274,33 +274,33 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
 				</Parameters>
 			</SelectedDataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[AccountID] = @AccountID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[AccountID] = @AccountID
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="CreateDateFrom" DataType="Date" TitleResourceKey="CreateDateFrom_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            CAST(itsReq.[CreateDate] AS DATE) >= @CreateDateFrom
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						CAST(itsReq.[CreateDate] AS DATE) >= @CreateDateFrom
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="CreateDateTo" DataType="Date" TitleResourceKey="CreateDateTo_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            CAST(itsReq.[CreateDate] AS DATE) <= @CreateDateTo
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						CAST(itsReq.[CreateDate] AS DATE) <= @CreateDateTo
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 	</Controls>
@@ -330,8 +330,8 @@
 			</DataBind>
 			<SelectedDataBind>
 				<Columns>
-          <Column Ident="ID" DataBindType="Value" />
-          <Column Ident="FullName" DataBindType="Title" />
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
 					SELECT
@@ -346,34 +346,34 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</SelectedDataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ReporterAccountID] = @ReporterAccountID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ReporterAccountID] = @ReporterAccountID
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="ReporterEmail" DataType="String" MaxLength="100" TitleResourceKey="ReporterEmail_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ReporterEmail] LIKE '%' + @ReporterEmail + '%'
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
-    </Control>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ReporterEmail] LIKE '%' + @ReporterEmail + '%'
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="ReporterPhone" DataType="String" MaxLength="20" TitleResourceKey="ReporterPhone_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ReporterEmail] LIKE '%' + @ReporterPhone + '%'
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
-    </Control>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ReporterEmail] LIKE '%' + @ReporterPhone + '%'
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
 
 		<!-- <Control xsi:type="DropDownListControl" Ident="ITSMGeneralResolutionMethodTypeGuid" DataType="String" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
@@ -394,28 +394,28 @@
 					ORDER BY dial.OrderValue ASC
 				]]></SQL>
 				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMGeneralResolutionMethodTypeGuid] = @ITSMGeneralResolutionMethodTypeGuid
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+	  <FilterConditions>
+		<DataSource>
+		  <SQL><![CDATA[
+			itsReq.[ITSMGeneralResolutionMethodTypeGuid] = @ITSMGeneralResolutionMethodTypeGuid
+		  ]]></SQL>
+		</DataSource>
+	  </FilterConditions>
 		</Control> -->
 
 		<!-- <Control xsi:type="AutoCompleteControl" Ident="AssignedGroupID" DataType="VarChar" MaxLength="900" TitleResourceKey="AssignedGroupID_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-        <Dependencies>
-          <string>ITSMCompanyIdent</string>
-          <string>ITSMCategoryLevel2Ident</string>
-          <string>ITSMCategoryLevel3Ident</string>
-          <string>ITSMCategoryLevel4Ident</string>
-          <string>ITSMCategoryLevel5Ident</string>
-        </Dependencies>
+		<Dependencies>
+		  <string>ITSMCompanyIdent</string>
+		  <string>ITSMCategoryLevel2Ident</string>
+		  <string>ITSMCategoryLevel3Ident</string>
+		  <string>ITSMCategoryLevel4Ident</string>
+		  <string>ITSMCategoryLevel5Ident</string>
+		</Dependencies>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="Name" DataBindType="Title" />
@@ -424,33 +424,33 @@
 					SELECT NULL AS ID, 'Default' AS [Name]
 					/*
 					WHERE
-          fot.Ident = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+		  fot.Ident = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
 					*/
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="String" LikeType="Both" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[AssignedGroupID] = @AssignedGroupID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+	  <FilterConditions>
+		<DataSource>
+		  <SQL><![CDATA[
+			itsReq.[AssignedGroupID] = @AssignedGroupID
+		  ]]></SQL>
+		</DataSource>
+	  </FilterConditions>
 		</Control>
 
 		<Control xsi:type="AutoCompleteControl" Ident="AssignedAccountID" DataType="VarChar" MaxLength="900" TitleResourceKey="AssignedAccountID_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-        <Dependencies>
-          <string>AssignedGroupID</string>
-        </Dependencies>
+		<Dependencies>
+		  <string>AssignedGroupID</string>
+		</Dependencies>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="FullName" DataBindType="Title" />
@@ -464,68 +464,68 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[AssignedAccountID] = @AssignedAccountID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+	  <FilterConditions>
+		<DataSource>
+		  <SQL><![CDATA[
+			itsReq.[AssignedAccountID] = @AssignedAccountID
+		  ]]></SQL>
+		</DataSource>
+	  </FilterConditions>
 		</Control> -->
 
 		<Control xsi:type="TextBoxControl" Ident="DateTimeFromStart" DataType="DateTime" TitleResourceKey="DateTimeFromStart_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[DateTimeFrom] >= @DateTimeFromStart
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[DateTimeFrom] >= @DateTimeFromStart
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="DateTimeFromEnd" DataType="DateTime" TitleResourceKey="DateTimeFromEnd_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[DateTimeFrom] <= @DateTimeFromEnd
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[DateTimeFrom] <= @DateTimeFromEnd
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="DateTimeToStart" DataType="DateTime" TitleResourceKey="DateTimeToStart_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[DateTimeTo] >= @DateTimeToStart
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[DateTimeTo] >= @DateTimeToStart
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="DateTimeToEnd" DataType="DateTime" TitleResourceKey="DateTimeToEnd_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[DateTimeTo] <= @DateTimeToEnd
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[DateTimeTo] <= @DateTimeToEnd
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 	</ExtensionControls>
 
-  <!-- <FullText>
-		<FilterConditions>
-			<DataSource>
-				<SQL><![CDATA[
-					(
-						CONTAINS(itsReq.*, @FullText)
-					)
-				]]></SQL>
-				<Parameters>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FullText" ConstantType="FullText" DataType="String" />
-				</Parameters>
-			</DataSource>
-		</FilterConditions>
-	</FullText> -->
+	<!-- <FullText>
+		  <FilterConditions>
+			  <DataSource>
+				  <SQL><![CDATA[
+					  (
+						  CONTAINS(itsReq.*, @FullText)
+					  )
+				  ]]></SQL>
+				  <Parameters>
+					  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FullText" ConstantType="FullText" DataType="String" />
+				  </Parameters>
+			  </DataSource>
+		  </FilterConditions>
+	  </FullText> -->
 </Filter>

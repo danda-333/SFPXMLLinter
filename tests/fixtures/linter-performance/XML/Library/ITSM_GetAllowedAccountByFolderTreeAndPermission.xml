@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_GetAllowedAccountByFolderTreeAndPermission" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: Funkce pro vrácení skupin dle oprávnění a FolderTreeIdentu
+	]]></XMLDescription>
+	<Description>
+		<![CDATA[
+		
+		]]>
+	</Description>
+<Command><![CDATA[
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+
+		-- =============================================
+		-- Author:			Aleš Procházka
+		-- Create date: 2026-01-19
+		-- Description:	Funkce pro vrácení skupin dle oprávnění a FolderTreeIdentu
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(
+			@FolderTreeIdent VARCHAR(900),
+		@PermissionIDs dbo.ListNVarchar100Type READONLY
+		)
+		RETURNS TABLE
+		AS
+		RETURN (
+
+			WITH SearchFolderTree AS (
+				SELECT fot.*
+				FROM dbo.FolderTree AS fot
+				WHERE fot.Ident = @FolderTreeIdent
+			)
+			SELECT DISTINCT
+				acc.ID AS AccountID
+				,acc.FullName AS AccountFullName
+			FROM SearchFolderTree AS sft
+			INNER JOIN dbo.FolderTree AS fot ON fot.ID = ISNULL(sft.InheritFromFolderTreeID, sft.ID)
+			INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
+			INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
+			INNER JOIN @PermissionIDs AS pIDs ON pIDs.Id = gftp.PermissionID
+			INNER JOIN dbo.[Group] AS gro ON gro.ID = gft.GroupID AND gro.[State] = 1
+			INNER JOIN dbo.[GroupAccount] AS gra ON gra.GroupID = gro.ID
+			INNER JOIN dbo.Account AS acc ON acc.ID = gra.AccountID AND acc.[State] = 1
+
+			UNION
+
+			SELECT DISTINCT
+				acc.ID AS AccountID
+				,acc.FullName AS AccountFullName
+			FROM SearchFolderTree AS sft
+			INNER JOIN dbo.FolderTree AS fot ON fot.ID = ISNULL(sft.InheritFromFolderTreeID, sft.ID)
+			INNER JOIN dbo.AccountFolderTree AS aft ON aft.FolderTreeID = fot.ID
+			INNER JOIN dbo.AccountFolderTreePermission AS aftp ON aftp.AccountFolderTreeID = aft.ID
+			INNER JOIN @PermissionIDs AS pIDs ON pIDs.Id = aftp.PermissionID
+			INNER JOIN dbo.Account AS acc ON acc.ID = aft.AccountID AND acc.[State] = 1
+
+		);
+
+	]]></Command>
+</Library>

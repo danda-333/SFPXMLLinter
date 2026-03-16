@@ -1,7 +1,8 @@
 <Filter xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ITSMIncidentFilter" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" PackageIdent="ITSMPackage">
 	<Controls>
 
-    <Control xsi:type="AutoCompleteControl" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCompanyIdent_ITSM">
+		<!-- @Ignore duplicate-control-ident -->
+		<Control xsi:type="AutoCompleteControl" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCompanyIdent_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
 				<Columns>
 					<Column Ident="Ident" DataBindType="Value" />
@@ -9,12 +10,12 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
 					SELECT
 						itsmFolPer.FolderTreeIdent AS Ident
 						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMIncidentSegment',@PermissionIDs) as itsmFolPer
 					WHERE
 						itsmFolPer.FolderLevel = @Level
 						AND itsmFolPer.FolderName LIKE @ITSMCompanyIdent
@@ -44,15 +45,16 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</SelectedDataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCompanyIdent] = @ITSMCompanyIdent
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[ITSMCompanyIdent] = @ITSMCompanyIdent
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel2Ident_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
@@ -64,12 +66,12 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
 					SELECT
 						itsmFolPer.FolderTreeIdent AS Ident
 						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMIncidentSegment',@PermissionIDs) as itsmFolPer
 					WHERE
 						itsmFolPer.FolderLevel = @Level
 						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCompanyIdent
@@ -82,15 +84,16 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel2Ident] = @ITSMCategoryLevel2Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[ITSMCategoryLevel2Ident] = @ITSMCategoryLevel2Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel3Ident_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
@@ -102,12 +105,12 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
 					SELECT
 						itsmFolPer.FolderTreeIdent AS Ident
 						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMIncidentSegment',@PermissionIDs) as itsmFolPer
 					WHERE
 						itsmFolPer.FolderLevel = @Level
 						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel2Ident
@@ -121,15 +124,16 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel3Ident] = @ITSMCategoryLevel3Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[ITSMCategoryLevel3Ident] = @ITSMCategoryLevel3Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel4Ident_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
@@ -141,12 +145,12 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
 					SELECT
 						itsmFolPer.FolderTreeIdent AS Ident
 						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMIncidentSegment',@PermissionIDs) as itsmFolPer
 					WHERE
 						itsmFolPer.FolderLevel = @Level
 						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel3Ident
@@ -160,15 +164,16 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel4Ident] = @ITSMCategoryLevel4Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[ITSMCategoryLevel4Ident] = @ITSMCategoryLevel4Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="DropDownListControl" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCategoryLevel5Ident_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
@@ -180,12 +185,12 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
 					SELECT
 						itsmFolPer.FolderTreeIdent AS Ident
 						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
+					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMIncidentSegment',@PermissionIDs) as itsmFolPer
 					WHERE
 						itsmFolPer.FolderLevel = @Level
 						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel4Ident
@@ -199,18 +204,18 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMCategoryLevel5Ident] = @ITSMCategoryLevel5Ident
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[ITSMCategoryLevel5Ident] = @ITSMCategoryLevel5Ident
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<!-- @Ignore ident-convention-lookup-control -->
 		<Control xsi:type="ListBoxControl" Ident="State" DataType="NumberList" TitleResourceKey="State_ITSM">
-      <DataBind>
+			<DataBind>
 				<Columns>
 					<Column Ident="Value" DataBindType="Value" />
 					<Column Ident="TitleResourceKey" IsTranslate="true" DataBindType="Title" />
@@ -224,17 +229,16 @@
 						[Value] NOT IN (0,1)
 				]]></SQL>
 				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="WorkFlowIdent" DataType="String" Value="ITSMIncidentWorkFlow" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[State] IN (SELECT ID FROM @State)
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
-    </Control>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[State] IN (SELECT ID FROM @State)
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
 
 		<Control xsi:type="AutoCompleteControl" Ident="AccountID" DataType="Number" TitleResourceKey="AccountID_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue">
@@ -260,8 +264,8 @@
 			</DataBind>
 			<SelectedDataBind>
 				<Columns>
-          <Column Ident="ID" DataBindType="Value" />
-          <Column Ident="FullName" DataBindType="Title" />
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
 					SELECT
@@ -276,37 +280,39 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
 				</Parameters>
 			</SelectedDataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[AccountID] = @AccountID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[AccountID] = @AccountID
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="CreateDateFrom" DataType="Date" TitleResourceKey="CreateDateFrom_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            CAST(itsReq.[CreateDate] AS DATE) >= @CreateDateFrom
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						CAST(itsm.[CreateDate] AS DATE) >= @CreateDateFrom
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="CreateDateTo" DataType="Date" TitleResourceKey="CreateDateTo_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            CAST(itsReq.[CreateDate] AS DATE) <= @CreateDateTo
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						CAST(itsm.[CreateDate] AS DATE) <= @CreateDateTo
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
 	</Controls>
 	<ExtensionControls>
+
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="AutoCompleteControl" Ident="ReporterAccountID" DataType="Number" TitleResourceKey="ReporterAccountID_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue">
 				<Columns>
@@ -332,8 +338,8 @@
 			</DataBind>
 			<SelectedDataBind>
 				<Columns>
-          <Column Ident="ID" DataBindType="Value" />
-          <Column Ident="FullName" DataBindType="Title" />
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
 					SELECT
@@ -348,35 +354,38 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</SelectedDataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ReporterAccountID] = @ReporterAccountID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ReporterAccountID] = @ReporterAccountID
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="TextBoxControl" Ident="ReporterEmail" DataType="String" MaxLength="100" TitleResourceKey="ReporterEmail_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ReporterEmail] LIKE '%' + @ReporterEmail + '%'
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
-    </Control>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ReporterEmail] LIKE '%' + @ReporterEmail + '%'
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="TextBoxControl" Ident="ReporterPhone" DataType="String" MaxLength="20" TitleResourceKey="ReporterPhone_ITSM">
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ReporterEmail] LIKE '%' + @ReporterPhone + '%'
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
-    </Control>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsReq.[ReporterEmail] LIKE '%' + @ReporterPhone + '%'
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
+		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="DropDownListControl" Ident="ITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Columns>
@@ -400,34 +409,63 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
 				</Parameters>
 			</DataBind>
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[ITSMGeneralResolutionMethodTypeGuid] = @ITSMGeneralResolutionMethodTypeGuid
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[ITSMGeneralResolutionMethodTypeGuid] = @ITSMGeneralResolutionMethodTypeGuid
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="AutoCompleteControl" Ident="AssignedGroupID" DataType="VarChar" MaxLength="900" TitleResourceKey="AssignedGroupID_ITSM">
-			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-        <Dependencies>
-          <string>ITSMCompanyIdent</string>
-          <string>ITSMCategoryLevel2Ident</string>
-          <string>ITSMCategoryLevel3Ident</string>
-          <string>ITSMCategoryLevel4Ident</string>
-          <string>ITSMCategoryLevel5Ident</string>
-        </Dependencies>
+			<EmptyDataBind>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="Name" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
-					SELECT NULL AS ID, 'Default' AS [Name]
-					/*
-					WHERE
-          fot.Ident = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
-					*/
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT TOP(20)
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+					WHERE [GroupName] LIKE @AssignedGroupID
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="String" LikeType="Both" />
@@ -439,59 +477,120 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</DataBind>
-			<!-- <SelectedDataBind>
+			<SelectedDataBind>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="Name" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
 					SELECT
-						gro.ID,
-						gro.[Name]
-					FROM dbo.Group AS gro
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
 					WHERE
 						gro.ID = @AssignedGroupID
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
 				</Parameters>
-			</SelectedDataBind> -->
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[AssignedGroupID] = @AssignedGroupID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			</SelectedDataBind>
+			<DefaultDependencyDataBind>
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+					WHERE GroupID = @AssignedGroupID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" SetDataType="SelectedValueData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDependencyDataBind>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[AssignedGroupID] = @AssignedGroupID
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
 
+		<!-- @Ignore duplicate-control-ident -->
 		<Control xsi:type="AutoCompleteControl" Ident="AssignedAccountID" DataType="VarChar" MaxLength="900" TitleResourceKey="AssignedAccountID_ITSM">
-			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-        <Dependencies>
-          <string>AssignedGroupID</string>
-        </Dependencies>
+			<EmptyDataBind>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
-					SELECT NULL AS ID, 'Default' AS [FullName]
+					SELECT TOP(20)
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE
+						gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
 				]]></SQL>
 				<Parameters>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="String" LikeType="Both" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
 				</Parameters>
-			</DataBind>
-			<!-- <SelectedDataBind>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>AssignedGroupID</string>
+				</Dependencies>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
 					SELECT
-						acc.ID,
-						acc.[FullName]
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE
+						acc.FullName LIKE @AssignedAccountID
+						AND gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						acc.ID
+						,acc.FullName
 					FROM dbo.Account AS acc
 					WHERE
 						acc.ID = @AssignedAccountID
@@ -499,23 +598,49 @@
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="Number" />
 				</Parameters>
-			</SelectedDataBind> -->
-      <FilterConditions>
-        <DataSource>
-          <SQL><![CDATA[
-            itsReq.[AssignedAccountID] = @AssignedAccountID
-          ]]></SQL>
-        </DataSource>
-      </FilterConditions>
+			</SelectedDataBind>
+			<DefaultDependencyDataBind>
+				<Dependencies>
+					<string>AssignedGroupID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE
+						acc.ID = @AssignedAccountID
+						AND gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="Number" SetDataType="SelectedValueData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DefaultDependencyDataBind>
+			<FilterConditions>
+				<DataSource>
+					<SQL><![CDATA[
+						itsm.[AssignedAccountID] = @AssignedAccountID
+					]]></SQL>
+				</DataSource>
+			</FilterConditions>
 		</Control>
+
 	</ExtensionControls>
 
-  <FullText>
+	<FullText>
 		<FilterConditions>
 			<DataSource>
 				<SQL><![CDATA[
 					(
-						CONTAINS(itsReq.*, @FullText)
+						CONTAINS(itsm.*, @FullText)
 					)
 				]]></SQL>
 				<Parameters>

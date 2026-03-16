@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMAssessmentChangeFakeSubForm" IsSubForm="true" SegmentType="ITSMChangeSegment" PackageIdent="ITSMPackage" MainIdent="ITSMAssessment">
 	<DataPermissions>
-    <string>ITSMChange</string>
-  </DataPermissions>
-  <CreatePermissions>
-    <string>ITSMChange</string>
-  </CreatePermissions>
+		<string>ITSMChange</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMChange</string>
+	</CreatePermissions>
 	<Buttons>
 		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
 
@@ -17,10 +17,111 @@
 	</Buttons>
 	<Controls>
 
+		<Control xsi:type="HiddenControl" Ident="ApprovedAccountID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="IsApproved" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="ApproveDateTime" DataType="DateTime" />
+
 		<Control xsi:type="HiddenControl" Ident="TableID" DataType="Number" />
 		<Control xsi:type="HiddenControl" Ident="FormIdent" DataType="String" MaxLength="150" />
+		<Control xsi:type="HiddenControl" Ident="ITSMKey" DataType="String" MaxLength="255" />
+
+		<Control xsi:type="TextBoxControl" Ident="AssessmentRoundStartDateTime" DataType="DateTime" TitleResourceKey="AssessmentRoundStartDateTime_ITSM" />
+
+		<Control xsi:type="TextBoxControl" Ident="AssessmentRoundGUID" DataType="Guid" TitleResourceKey="AssessmentRoundGUID_ITSM">
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="AssessmentRoundGUID" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT @ActualAssessmentRoundGuid AS AssessmentRoundGUID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" SetDataType="ParentData" />
+				</Parameters>
+			</DefaultDataSource>
+		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="AssessmentOrder" DataType="Number" TitleResourceKey="AssessmentOrder_ITSM" IsFakeReadOnly="true" />
+
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="DropDownListControl" Ident="AssessmentType" DataType="String" TitleResourceKey="AssessmentType_ITSM">
+			<ListItems>
+				<ListItem TitleResourceKey="Group_ITSM" Value="Group" />
+				<ListItem TitleResourceKey="Account_ITSM" Value="Account" />
+			</ListItems>
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="AssessmentTypeValue" DataType="String" TitleResourceKey="AssessmentTypeValue_ITSM" IsCreateColumn="false">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Dependencies>
+					<string>AssessmentType</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="AssessmentTypeValue" DataBindType="Value" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT @AssessmentType AS AssessmentTypeValue
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentType" DataType="String" MaxLength="200" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="AssessmentGroupID" DataType="Number" TitleResourceKey="AssessmentGroupID_ITSM" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT TOP(20)
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE gro.[State] = @GroupActiveState
+					ORDER BY gro.[Name] ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE
+						gro.[State] = @GroupActiveState
+						AND gro.[Name] LIKE @AssessmentGroupID
+					ORDER BY gro.[Name] ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="GroupActiveState" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentGroupID" DataType="String" MaxLength="200" LikeType="Both" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE gro.ID = @AssessmentGroupID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssessmentGroupID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
 
 		<Control xsi:type="AutoCompleteControl" Ident="AssessmentAccountID" DataType="Number" TitleResourceKey="AssessmentAccountID_ITSM" IsReadOnly="true" IsShowRequired="true">
 			<EmptyDataBind>
@@ -86,16 +187,43 @@
 				<div class="row">
 					<div class="col-md-3">
 						<div class="form-group">
-							<ControlLabel ControlID="AssessmentOrder"/>
-							<Control ID="AssessmentOrder"/>
+							<ControlLabel ControlID="AssessmentOrder" />
+							<Control ID="AssessmentOrder" />
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="form-group">
+							<ControlLabel ControlID="AssessmentType" />
+							<Control ID="AssessmentType" />
+						</div>
+						<div class="form-group d-none">
+							<ControlLabel ControlID="AssessmentTypeValue" />
+							<Control ID="AssessmentTypeValue" />
 						</div>
 					</div>
 				</div>
-				<div class="row">
+				<div class="row js-showIfApprovaTypeGroup">
 					<div class="col-md-12">
 						<div class="form-group">
-							<ControlLabel ControlID="AssessmentAccountID"/>
-							<Control ID="AssessmentAccountID"/>
+							<ControlLabel ControlID="AssessmentGroupID" />
+							<Control ID="AssessmentGroupID" />
+						</div>
+					</div>
+				</div>
+				<div class="row js-showIfApprovaTypeAccount">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="AssessmentAccountID" />
+							<Control ID="AssessmentAccountID" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row d-none">
+					<div class="col-md-3">
+						<div class="form-group">
+							<Control ID="AssessmentRoundStartDateTime" />
+							<Control ID="AssessmentRoundGUID" />
 						</div>
 					</div>
 				</div>

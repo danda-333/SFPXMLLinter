@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Component" TargetXPath="//Form/Components" Insert="append">
+
+		<Component ComponentIdent="ITSMKnowledgeBaseComponent" Ident="ITSMKnowledgeBase">
+			<Setting>
+				<KnowledgeBaseTree CountSectionIdent="KnowledgeBaseSection" Type="ArticleOnly">
+					<DynamicFolderTreeIdent>
+						<string>ITSMCompanyIdent</string>
+						<string>ITSMCategoryLevel2Ident</string>
+						<string>ITSMCategoryLevel3Ident</string>
+						<string>ITSMCategoryLevel4Ident</string>
+						<string>ITSMCategoryLevel5Ident</string>
+					</DynamicFolderTreeIdent>
+				</KnowledgeBaseTree>
+			</Setting>
+		</Component>
+
+		<Component ComponentIdent="ITSMKnowledgeBaseComponent" Ident="ITSMKnowledgeBaseSuggest">
+			<Setting>
+				<KnowledgeBaseTree Type="ArticleSuggest" SubjectControlIdent="Subject" DescriptionControlIdent="Description">
+					<DynamicFolderTreeIdent>
+						<string>ITSMCompanyIdent</string>
+						<string>ITSMCategoryLevel2Ident</string>
+						<string>ITSMCategoryLevel3Ident</string>
+						<string>ITSMCategoryLevel4Ident</string>
+						<string>ITSMCategoryLevel5Ident</string>
+					</DynamicFolderTreeIdent>
+				</KnowledgeBaseTree>
+			</Setting>
+		</Component>
+
+	</Section>
+	
+	<Section Root="Form" Name="Section" TargetXPath="//Form/Sections" Insert="append">
+		<Section Root="Form" xsi:type="ContentSection" Ident="KnowledgeBaseSection" TitleResourceKey="KnowledgeBaseSection_ITSM" IconCssClass="icon-book">
+			<HTMLTemplate><![CDATA[
+				<fieldset>
+					<div class="row">
+						<div class="col-md-12">
+							<Component ID="ITSMKnowledgeBase"/>
+						</div>
+					</div>
+				</fieldset>
+			]]></HTMLTemplate>
+		</Section>
+	</Section>
+	
+	<Section Root="Form" Name="SuggestHtml" Insert="placeholder">
+		<div class="row">
+			<div class="col-md-12">
+				<Component ID="ITSMKnowledgeBaseSuggest"/>
+			</div>
+		</div>
+	</Section>
+
+</Component>

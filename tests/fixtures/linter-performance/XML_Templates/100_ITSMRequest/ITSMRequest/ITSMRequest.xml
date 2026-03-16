@@ -1,12 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMRequest" SegmentType="ITSMRequestSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" IsDebug="true">
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" Ident="ITSMRequest" SegmentType="ITSMRequestSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" IsDebug="true">
 	<Usings>
 		<Using Component="Common/FolderTreeSetting" />
 		<Using Component="Common/PageSetting" FormIdent="ITSMRequest" />
 		<Using Component="Common/SLACriteriaControls" />
 
-		<Using Component="Common/Shared/Approval" FormIdent="ITSMRequest" />
+		<Using Component="Common/Shared/Approval" FormIdent="ITSMRequest" TeamApproveState="60" PersonApproveState="70"/>
 		<Using Component="Common/Shared/Assign" FormIdent="ITSMRequest" />
+		<Using Component="Common/Shared/SuspendSolution"/>
+		<Using Component="Common/Shared/SuspendApproval"/>
 		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMRequest" />
 		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMRequest" KeyPrefix="R"/>
 		<Using Component="Common/Shared/Resolve" FormIdent="ITSMRequest" />
@@ -17,17 +19,17 @@
 		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMRequest" />
 		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMRequest" />
 		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMRequest" />
+		<Using Component="Common/Controls/ITSMKnowledgeBase" FormIdent="ITSMRequest" />
 		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMRequest" />
+		<Using Component="Common/Controls/Var_ButtonIdentControl"/>
 
 		<Using Component="Common/Buttons/SendToCategorizationButton" />
 		<Using Component="Common/Buttons/SendToProcessButton" />
 		<Using Component="Common/Buttons/ReturnToReporterButton" />
 		<Using Component="Common/Buttons/ResendToProcessButton" />
 		<Using Component="Common/Buttons/SupervisorApprovalButtons" />
-		<Using Component="Common/Buttons/SuspendApprovalGroupButton" />
 		<Using Component="Common/Buttons/AnswerApprovalButton" />
 		<Using Component="Common/Buttons/AnswerSolutionButton" />
-		<Using Component="Common/Buttons/SuspendSolutionGroupButton" />
 		<Using Component="Common/Buttons/ResolveToReporterButton" />
 		<Using Component="Common/Buttons/ClaimSolutionButton" />
 		<Using Component="Common/Buttons/CloseButton" />
@@ -35,11 +37,17 @@
 		<Using Component="Common/Buttons/SaveGroupButton" />
 		<Using Component="Common/Buttons/DeleteButton" />
 		<Using Component="Common/Buttons/BackButton" />
+
+		<!-- @Ignore unused-using -->
+		<Using Component="ITSMRequest/Shared/SimpleMode" />
+		<!-- @Ignore unused-using -->
+		<Using Component="Common/Shared/BaseView" />
 	</Usings>
 	<ExternalJavaScriptRelativePaths>
 	</ExternalJavaScriptRelativePaths>
 	<DataPermissions>
 		<string>ITSMRequest</string>
+		<string>ITSMRequestSimpleMode</string>
 		<string>ITSMRequestReporter</string>
 		<string>ITSMRequestSharedReporter</string>
 
@@ -55,8 +63,7 @@
 		<string>ITSMRequestApprover</string>
 	</DataPermissions>
 	<CreatePermissions>
-		<string>ITSMAuthor</string>
-		<string>ITSMOperator</string>
+		<string>ITSMRequest</string>
 	</CreatePermissions>
 	<DynamicPermission>
 		<Columns>
@@ -92,29 +99,170 @@
 
 	<Controls>
 
-		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsFullText="true" IsReadOnly="true">
+		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsFullText="true" IsReadOnly="true" IsShowRequired="true">
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
-		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsFullText="true" IsReadOnly="true">
+		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsFullText="true" IsReadOnly="true" IsShowRequired="true">
 			<TimeLineDataBind TransformType="Copy" />
-		</Control>    
+		</Control>
 
-		<!-- ========== SKRYTÁ POLE PRO VÍCEKROKOVÉ SCHVALOVÁNÍ ========== -->
-		<Control xsi:type="HiddenControl" Ident="ITSMApproveSettingID" DataType="Number" />
-		<Control xsi:type="HiddenControl" Ident="CurrentApproveOrder" DataType="Number" />
-		<Control xsi:type="HiddenControl" Ident="TotalApproveOrder" DataType="Number" />
-		<Control xsi:type="HiddenControl" Ident="CurrentApproveGroupID" DataType="Number" />
+		<Control xsi:type="FileControl" Ident="Attachments" TitleResourceKey="Attachments_ITSM" IsReadOnly="true" IsShowDeleteButton="true" />
+
+		
+		<Control xsi:type="HiddenControl" Ident="IsBreakdownDone" DataType="Number"/>
+
+		
+		<Control xsi:type="FormDialogControl" Ident="ITSMRequestBreakdownFormDialogOpen" CreateButtonTitleResourceKey="AddITSMRequestBreakdownButton_ITSM" FormIdent="ITSMRequestBreakdownFormDialog" IsReadOnly="true">
+			<Actions>
+				<Action xsi:type="GenerateSubForm" ControlIdent="ITSMRequestBreakdownSubForm" ActionStart="BeforeValidation" >
+					<DataSource>
+						<Columns>
+							<Column Ident="BreakdownFolderTreeIdent" DataBindType="Value"/>
+							<Column Ident="BreakdownFolderTreeIdentName" DataBindType="Title" ParentColumnIdent="BreakdownFolderTreeIdent"/>
+						</Columns>
+						<SQL><![CDATA[
+							SELECT
+								ft.Ident AS BreakdownFolderTreeIdent
+								,STUFF(
+									(
+										SELECT ' → ' + ftv.FolderName
+										FROM (
+											SELECT TOP (LEN(ft.Ident) / 7)
+											ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+											FROM sys.objects
+										) x
+										INNER JOIN dbo.FolderTreeView as ftv on ftv.Ident = LEFT(ft.Ident,(7*n))
+										
+
+										FOR XML PATH('')
+								), 1, 3, '') AS BreakdownFolderTreeIdentName
+							FROM dbo.FolderTree as ft
+							INNER JOIN dbo.Folder as f on f.ID = ft.FolderID AND f.[State] = @StateOne 
+							WHERE
+								ft.[Ident] IN (SELECT ID FROM @BreakdownFolderTreeIdent)
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="BreakdownFolderTreeIdent" DataType="VarCharList"/>
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1"/>
+						</Parameters>
+					</DataSource>
+				</Action>
+			</Actions>
+		</Control>
+
+		<Control xsi:type="SubFormControl" Ident="ITSMRequestBreakdownSubForm" TextResourceKey="ITSMRequestBreakdownSubForm_ITSM" FormIdent="ITSMRequestBreakdownSubForm" IsSortable="true" SortableControlIdent="ApproveOrder" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column Ident="BreakdownFolderTreeIdent" TitleResourceKey="BreakdownFolderTreeIdent_ITSM" Width="70" />
+					<Column xsi:type="DeleteColumn" Ident="ID" Width="10"/>
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						itsmSupConSF.ID
+						,STUFF(
+							(
+								SELECT ' → ' + ftv.FolderName
+								FROM (
+									SELECT TOP (LEN(itsmSupConSF.BreakdownFolderTreeIdent) / 7)
+									ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+									FROM sys.objects
+								) x
+								INNER JOIN dbo.FolderTreeView as ftv on ftv.Ident = LEFT(itsmSupConSF.BreakdownFolderTreeIdent,(7*n))
+								
+
+								FOR XML PATH('')
+						), 1, 3, '') AS BreakdownFolderTreeIdent
+					FROM usr.ITSMRequestBreakdownSubForm as itsmSupConSF
+					WHERE
+						itsmSupConSF.TableID = @ID
+						AND itsmSupConSF.FormIdent = @ThisFormIdent
+						AND itsmSupConSF.[State] != @DeletedState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="ITSMRequest"/>
+				</Parameters>
+			</DataSource>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IsShowITSMRequestBreakdown" DataType="Number" TitleResourceKey="IsShowITSMRequestBreakdown_ITSM" IsCreateColumn="false" IsFakeReadOnly="true" IsServerDataHackValidation="true">
+			<DataBind>
+				<Dependencies>
+					<string>ITSMCategoryLevel3Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsShowITSMRequestBreakdown" DataBindType="Value"/>
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @LastTreeIdent VARCHAR(900)	=	(SELECT COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent))
+
+					SELECT
+						IIF(
+							EXISTS(
+								SELECT NULL
+								FROM usr.ITSMCategory AS cat
+								INNER JOIN dbo.FolderTreeView AS folTre ON folTre.TableID = cat.ID AND folTre.FormIdent = @FormIdent
+								WHERE folTre.Ident = @LastTreeIdent AND ISNULL(cat.IsBreakdown,0) = 1 AND cat.State != @DeletedState
+							)
+							, 1
+							, 0
+						) AS IsShowITSMRequestBreakdown
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" Value="ITSMCategory" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="String" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="String" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="String" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="String" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+				</Parameters>
+			</DataBind>
+		</Control>
 
 	</Controls>
 	<Components>
+		
 	</Components>
 	<Sections>
 
-		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark" IsRazorEngine="true">
 			<HTMLTemplate><![CDATA[
-				{{Component:Common/Shared/Approval,Contribution:ApproveDataGridHTML}}
 
+				<style>
+					.no-label > label {
+						display: none !important;
+					}
+
+					.custom-table td,
+					.custom-table th {
+						padding: .15rem .5rem !important;
+					}
+
+					.custom-color-picker .sp-replacer{
+						display: flex;
+						width: 100%;
+					}
+
+					.custom-color-picker .sp-replacer .sp-preview {
+						flex-grow: 1;
+					}
+
+					.custom-table div:nth-child(2) {
+						display: none;
+					}
+
+					.select-bold select {
+						font-weight: bold;
+					}
+
+					a.js-subFormAdd[data-formident="ITSMRequestBreakdownSubForm"] {
+						display:none !important;
+					}
+				</style>
 				<div class="row">
 
 					<div class="col-md-9"><!-- Levý sloupec -->
@@ -131,7 +279,22 @@
 										</div>
 									</div>
 									<div class="card-body">
-										{{Component:Common/Shared/FolderGroupSegment,Contribution:Html}}
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
+										<div class="row">
+											<div class="col-md-12 js-ShowHideITSMRequestBreakdown" style="display:none;">
+												<div class="form-group">
+													<ControlLabel ControlID="ITSMRequestBreakdownSubForm" />
+													<Control ID="ITSMRequestBreakdownSubForm" />
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12 js-ShowHideITSMRequestBreakdown" style="display:none;">
+												<div class="form-group">
+													<Control ID="ITSMRequestBreakdownFormDialogOpen" />
+												</div>
+											</div>
+										</div>
 
 										<div class="row">
 											<div class="col-md-12">
@@ -149,30 +312,183 @@
 												</div>
 											</div>
 										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<ControlLabel ControlID="Attachments" />
+													<Control ID="Attachments" />
+												</div>
+											</div>
+										</div>
 									</div>
-									{{Component:Common/Controls/AdditionalFields,Contribution:Html}}
+									{{Component:Common/Controls/AdditionalFields,Section:Html}}
 								</div>
 							</div>
 						</div>
 
-						{{Component:Common/Controls/CommunicationControls,Contribution:Html}}
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
 
 					</div><!-- //Levý sloupec -->
 
 					<div class="col-md-3"><!-- Pravý sloupec -->
 
-						{{Component:Common/Controls/ReporterControls,Contribution:Html}}
-						{{Component:Common/Shared/Assign,Contribution:Html}}
-						{{Component:Common/Shared/Approval,Contribution:Html}}
-						{{Component:Common/Shared/Resolve,Contribution:Html}}
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Assign,Section:Html}}
+						{{Component:Common/Shared/Approval,Section:Html}}
+						{{Component:Common/Shared/Resolve,Section:Html}}
 
 					</div><!-- //Pravý sloupec -->
 
 				</div>
+				<div class="d-none">
+					<Control ID="IsShowITSMRequestBreakdown"/>
+				</div>
 				
-				{{Component:Common/Shared/ITSMKey,Contribution:Html}}
-				{{Component:Common/Controls/ThisFormIdent,Contribution:Html}}
+				{{Component:Common/Shared/ITSMKey,Section:Html}}
+				{{Component:Common/Shared/SuspendSolution,Section:Html}}
+				{{Component:Common/Controls/ThisFormIdent,Section:Html}}
 			]]></HTMLTemplate>
+		</Section>
+
+		
+		<Section xsi:type="GlobalChangeSection" Ident="SuspendSolutionGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="SuspendSolutionGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMRequest AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] NOT IN (
+									@SolutionAssignedToTeamState
+									,@SolutionAssignedState
+									,@SolutionInternallySuspendedState
+									,@SolutionSuspendedForReviewState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssignedToTeamState" DataType="Number" Value="110" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssignedState" DataType="Number" Value="120" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionInternallySuspendedState" DataType="Number" Value="130" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionSuspendedForReviewState" DataType="Number" Value="140" />
+
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Controls>
+				<wffc:FormControl Ident="DialogITSMSolutionSuspendReasonGuid" IsRequired="true" IsVisible="true" IsReadOnly="false" />
+				<wffc:FormControl Ident="DialogCommunication" IsRequired="true" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+			<Controls>
+				<wffc:FormControl Ident="DialogITSMSolutionSuspendReasonGuid" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-6">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMSolutionSuspendReasonGuid" />
+							<Control ID="DialogITSMSolutionSuspendReasonGuid" />
+						</div>
+					</div>	
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" />
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>	
+				</div>
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="GlobalChangeSection" Ident="CloseGlobalChangeSection" ConfirmButtonTitleResourceKey="ConfirmGlobalChangeButton_ITSM">
+			<ValidationBeforeOpen ErrorMessageResourceKey="CloseGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMRequest AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] NOT IN (
+									@ResolvedForReviewState
+									,@ResolvedState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedForReviewState" DataType="Number" Value="155" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="Number" Value="160" />
+
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Controls>
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<p>[#CloseGlobalChangeSection_Description_ITSM#]</p>
+					</div>	
+				</div>
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="GlobalChangeSection" Ident="ParentITSMGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="ParentITSMGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMRequest AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] IN (
+									@ClosedState
+									, @SuspendedSolutionState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SuspendedSolutionState" DataType="Number" Value="150" />
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Buttons>
+				<Button xsi:type="FormButton" Ident="SaveButton" />
+			</Buttons>
+			<Controls>
+				<wffc:FormControl Ident="ParentTableID" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ParentTableID" />
+							<Control ID="ParentTableID" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
 		</Section>
 
 	</Sections>

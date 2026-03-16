@@ -8,266 +8,499 @@
 		</States>
 	</Definition>
 
-  <ControlShareCodes>
-    <ControlShareCode Ident="EnableAllControlShare">
-      <Controls>
-        <FormControl Ident="Name" IsReadOnly="false" IsVisible="true" />
-        <FormControl Ident="ITSMOptionalFieldID" IsReadOnly="false" />
-        <FormControl Ident="ITSMApproveSettingID" IsReadOnly="false" />
-        <FormControl Ident="IsSuperiorApprove" IsReadOnly="false" />
-        <FormControl Ident="IsOperatorReviewMandatory" IsReadOnly="false" />
-        <FormControl Ident="Active" IsReadOnly="false" />
-        <FormControl Ident="ShareMainFolder" IsReadOnly="false" />
-        <FormControl Ident="FolderPermission" IsReadOnly="false" />
-        <FormControl Ident="DashboardIcon" IsReadOnly="false" />
-        <FormControl Ident="Color" IsReadOnly="false" />
+	<ControlShareCodes>
+		<ControlShareCode Ident="EnableAllControlShare">
+			<Controls>
+				<FormControl Ident="Name" IsReadOnly="false" IsVisible="true" />
+				<FormControl Ident="SegmentTypeID" IsReadOnly="false" />
+				<FormControl Ident="ITSMOptionalFieldID" IsReadOnly="false" />
+				<FormControl Ident="ITSMApproveSettingID" IsReadOnly="false" />
+				<FormControl Ident="IsSuperiorApprove" IsReadOnly="false" />
+				<FormControl Ident="IsOperatorReviewMandatory" IsReadOnly="false" />
+				<FormControl Ident="Active" IsReadOnly="false" />
+				<FormControl Ident="ShareMainFolder" IsReadOnly="false" />
+				<FormControl Ident="FolderPermission" IsReadOnly="false" />
+				<FormControl Ident="IconCssClass" IsReadOnly="false" />
+				<FormControl Ident="ColorCssClass" IsReadOnly="false" />
+				<FormControl Ident="IsBreakdown" IsReadOnly="false" />
+				<FormControl Ident="ITSMCategoryBreakdownID" IsReadOnly="false" />
 
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL><![CDATA[
-              DECLARE @CurrentLevel int
+				<FormControl xsi:type="IFControl">
+					<Condition>
+						<SQL><![CDATA[
+							DECLARE @CurrentLevel int
 
-              SELECT TOP 1 @CurrentLevel = [Level]
-              FROM dbo.FolderTree
-              WHERE ID = @ParentFolderTreeID
+							SELECT TOP 1 @CurrentLevel = [Level]
+							FROM dbo.FolderTree
+							WHERE ID = @ParentFolderTreeID
 
-              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
-                SET @CurrentLevel = @CurrentLevel + 1;
+							IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
+								SET @CurrentLevel = @CurrentLevel + 1;
 
-                /*DECLARE @Msg NVARCHAR(1000) = 'CurrentLevel: ' + CAST(@CurrentLevel AS VARCHAR(10))
-                ;THROW 50000, @Msg, 1;*/
-              END
+								/*DECLARE @Msg NVARCHAR(1000) = 'CurrentLevel: ' + CAST(@CurrentLevel AS VARCHAR(10))
+								;THROW 50000, @Msg, 1;*/
+							END
 
-              SELECT IIF(@CurrentLevel = 2, 1, 0)
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="CategoryName" IsReadOnly="false" IsVisible="true" IsRequired="true" />
-          </TrueControls>
-        </FormControl>
+							SELECT IIF(@CurrentLevel = 2, 1, 0)
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+						</Parameters>
+					</Condition>
+					<TrueControls>
+						<FormControl Ident="CategoryName" IsReadOnly="false" IsVisible="true" IsRequired="true" />
+					</TrueControls>
+				</FormControl>
 
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL><![CDATA[
-              DECLARE @CurrentLevel int
+				<FormControl xsi:type="IFControl">
+					<Condition>
+						<SQL><![CDATA[
+							DECLARE @CurrentLevel int
 
-              SELECT TOP 1 @CurrentLevel = [Level]
-              FROM dbo.FolderTree
-              WHERE ID = @ParentFolderTreeID
+							SELECT TOP 1 @CurrentLevel = [Level]
+							FROM dbo.FolderTree
+							WHERE ID = @ParentFolderTreeID
 
-              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
-                SET @CurrentLevel = @CurrentLevel + 1
-              END
+							IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
+								SET @CurrentLevel = @CurrentLevel + 1
+							END
 
-              SELECT IIF(@CurrentLevel = 3, 1, 0)
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="ITSMServiceIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
-          </TrueControls>
-        </FormControl>
+							SELECT IIF(@CurrentLevel = 3, 1, 0)
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+						</Parameters>
+					</Condition>
+					<TrueControls>
+						<FormControl Ident="ITSMServiceIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
+					</TrueControls>
+				</FormControl>
 
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL><![CDATA[
-              DECLARE @CurrentLevel int
+				<FormControl xsi:type="IFControl">
+					<Condition>
+						<SQL><![CDATA[
+							DECLARE @CurrentLevel int
 
-              SELECT TOP 1 @CurrentLevel = [Level]
-              FROM dbo.FolderTree
-              WHERE ID = @ParentFolderTreeID
+							SELECT TOP 1 @CurrentLevel = [Level]
+							FROM dbo.FolderTree
+							WHERE ID = @ParentFolderTreeID
 
-              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
-                SET @CurrentLevel = @CurrentLevel + 1
-              END
+							IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
+								SET @CurrentLevel = @CurrentLevel + 1
+							END
 
-              SELECT IIF(@CurrentLevel IN (4,5), 1, 0)
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="ITSMCatalogSheetIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
-          </TrueControls>
-        </FormControl>
+							SELECT IIF(@CurrentLevel IN (4,5), 1, 0)
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
+						</Parameters>
+					</Condition>
+					<TrueControls>
+						<FormControl Ident="ITSMCatalogSheetIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
+						<FormControl Ident="DefaultAssignedGroupID" IsReadOnly="false" IsVisible="true" />
+					</TrueControls>
+				</FormControl>
 
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL><![CDATA[
-              DECLARE @CurrentLevel int
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+	</ControlShareCodes>
 
-              SELECT TOP 1 @CurrentLevel = [Level]
-              FROM dbo.FolderTree
-              WHERE ID = @ParentFolderTreeID
+	<ButtonShareCodes>
 
-              IF (@ParentFolderTreeID != @FolderTreeID) BEGIN
-                SET @CurrentLevel = @CurrentLevel + 1
-              END
+		<ButtonShareCode Ident="SaveFirstStateButtonShare">
+			<Buttons>
+				<Button Ident="SaveButton" IsVisible="true">
+					<Actions>
+						<Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+					</Actions>
+				</Button>
 
-              SELECT IIF(@CurrentLevel IN (4,5), 1, 0)
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="FolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentFolderTreeID" DataType="Number" SetDataType="ExtensionData" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="ITSMCatalogSheetIdent" IsReadOnly="false" IsVisible="true" IsRequired="true" />
-          </TrueControls>
-        </FormControl>
+				<Button Ident="SaveAndUpdatePermissionToAllFoldersAboveButton" IsVisible="true">
+					<Actions>
 
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
-  </ControlShareCodes>
+						<Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
 
-  <ButtonShareCodes>
+						<Action xsi:type="ActionTrigger" Ident="UpdatePermissionToAllFoldersAboveAction" ActionStart="AfterPermission">
+							<DataSource>
+								<SQL><![CDATA[
 
-    <ButtonShareCode Ident="SaveFirstStateButtonShare">
-      <Buttons>
-        <Button Ident="SaveButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+									MERGE dbo.GroupFolderTree AS trg
+									USING (
+										SELECT
+											fotP.ID AS FolderTreeID
+											,gft.GroupID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
 
-    <ButtonShareCode Ident="SaveButtonShare">
-      <Buttons>
-        <Button Ident="SaveButton" IsVisible="true">
-          <Actions>
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
 
-    <ButtonShareCode Ident="DeleteButtonShare">
-      <Buttons>
-        <Button Ident="DeleteButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+										WHERE itsCat.ID = @ID
+									) AS src ON (
+										src.FolderTreeID = trg.FolderTreeID
+										AND src.GroupID = trg.GroupID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (FolderTreeID, GroupID)
+										VALUES (src.FolderTreeID, src.GroupID)
+									;
 
-  </ButtonShareCodes>
+									MERGE dbo.GroupFolderTreePermission AS trg
+									USING (
+										SELECT
+											gftPa.ID AS GroupFolderTreeID
+											,gftp.PermissionID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
+										INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
 
-  <GlobalActions>
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
+										INNER JOIN dbo.GroupFolderTree AS gftPa ON gftPa.FolderTreeID = fotP.ID AND gftPa.GroupID = gft.GroupID
+									) AS src ON (
+										src.GroupFolderTreeID = trg.GroupFolderTreeID
+										AND src.PermissionID = trg.PermissionID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (GroupFolderTreeID, PermissionID)
+										VALUES (src.GroupFolderTreeID, src.PermissionID)
+									;
 
-    <Action xsi:type="IF" ActionStart="BeforeValidation">
-      <Condition>
-        <SQL><![CDATA[
-          SELECT IIF(
-            @CategoryName IS NOT NULL
-          , 1, 0)
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryName" DataType="String" />
-        </Parameters>
-      </Condition>
-      <TrueActions>
+									MERGE dbo.AccountFolderTree AS trg
+									USING (
+										SELECT
+											fotP.ID AS FolderTreeID
+											,aft.AccountID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.AccountFolderTree AS aft ON aft.FolderTreeID = fot.ID
 
-        <Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
-          <DataSource>
-            <SQL><![CDATA[
-              SELECT
-                @CategoryName
-            ]]></SQL>
-            <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryName" DataType="String" />
-            </Parameters>
-          </DataSource>
-        </Action>
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
 
-      </TrueActions>
-    </Action>
+										WHERE itsCat.ID = @ID
+									) AS src ON (
+										src.FolderTreeID = trg.FolderTreeID
+										AND src.AccountID = trg.AccountID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (FolderTreeID, AccountID)
+										VALUES (src.FolderTreeID, src.AccountID)
+									;
 
-    <Action xsi:type="IF" ActionStart="BeforeValidation">
-      <Condition>
-        <SQL><![CDATA[
-          SELECT IIF(
-            @ITSMServiceIdent IS NOT NULL
-          , 1, 0)
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" />
-        </Parameters>
-      </Condition>
-      <TrueActions>
+									MERGE dbo.GroupFolderTreePermission AS trg
+									USING (
+										SELECT
+											gftPa.ID AS GroupFolderTreeID
+											,gftp.PermissionID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
+										INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
 
-        <Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
-          <DataSource>
-            <SQL><![CDATA[
-              SELECT
-                itsmSer.[Name]
-              FROM usr.ITSMService AS itsmSer
-              INNER JOIN dbo.Folder AS folItsmSer ON folItsmSer.TableID = itsmSer.ID AND folItsmSer.FormIdent = 'ITSMService'
-              INNER JOIN dbo.FolderTree AS fotItsmSer ON fotItsmSer.FolderID = folItsmSer.ID
-              WHERE
-                fotItsmSer.Ident = @ITSMServiceIdent
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" />
-            </Parameters>
-          </DataSource>
-        </Action>
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
+										INNER JOIN dbo.GroupFolderTree AS gftPa ON gftPa.FolderTreeID = fotP.ID AND gftPa.GroupID = gft.GroupID
+									) AS src ON (
+										src.GroupFolderTreeID = trg.GroupFolderTreeID
+										AND src.PermissionID = trg.PermissionID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (GroupFolderTreeID, PermissionID)
+										VALUES (src.GroupFolderTreeID, src.PermissionID)
+									;
 
-      </TrueActions>
-    </Action>
+									MERGE dbo.AccountFolderTreePermission AS trg
+									USING (
+										SELECT
+											aftPa.ID AS AccountFolderTreeID
+											,aftp.PermissionID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.AccountFolderTree AS aft ON aft.FolderTreeID = fot.ID
+										INNER JOIN dbo.AccountFolderTreePermission AS aftp ON aftp.AccountFolderTreeID = aft.ID
 
-    <Action xsi:type="IF" ActionStart="BeforeValidation">
-      <Condition>
-        <SQL><![CDATA[
-          SELECT IIF(
-            @ITSMCatalogSheetIdent IS NOT NULL
-          , 1, 0)
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" />
-        </Parameters>
-      </Condition>
-      <TrueActions>
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
+										INNER JOIN dbo.AccountFolderTree AS aftPa ON aftPa.FolderTreeID = fotP.ID AND aftPa.AccountID = aft.AccountID
+									) AS src ON (
+										src.AccountFolderTreeID = trg.AccountFolderTreeID
+										AND src.PermissionID = trg.PermissionID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (AccountFolderTreeID, PermissionID)
+										VALUES (src.AccountFolderTreeID, src.PermissionID)
+									;
 
-        <Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
-          <DataSource>
-            <SQL><![CDATA[
-              SELECT
-                itsmSubSer.[Name]
-              FROM usr.ITSMCatalogSheet AS itsmSubSer
-              INNER JOIN dbo.Folder AS folItsmSubSer ON folItsmSubSer.TableID = itsmSubSer.ID AND folItsmSubSer.FormIdent = 'ITSMCatalogSheet'
-              INNER JOIN dbo.FolderTree AS fotITSMubSer ON fotITSMubSer.FolderID = folItsmSubSer.ID
-              WHERE
-                fotITSMubSer.Ident = @ITSMCatalogSheetIdent
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" />
-            </Parameters>
-          </DataSource>
-        </Action>
+								]]></SQL>
+								<Parameters>
+									<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+								</Parameters>
+							</DataSource>
+						</Action>
 
-      </TrueActions>
-      <FalseActions>
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
 
-      </FalseActions>
-    </Action>
+		<ButtonShareCode Ident="SaveButtonShare">
+			<Buttons>
+				<Button Ident="SaveButton" IsVisible="true">
+					<Actions />
+				</Button>
+				<Button Ident="SaveAndUpdatePermissionToAllFoldersAboveButton" IsVisible="true">
+					<Actions>
 
-    <Action xsi:type="Required" ActionStart="BeforeValidation">
-      <Idents>
-        <string>Name</string>
-      </Idents>
-    </Action>
+						<Action xsi:type="ActionTrigger" Ident="UpdatePermissionToAllFoldersAboveAction" ActionStart="AfterPermission">
+							<DataSource>
+								<SQL><![CDATA[
 
-  </GlobalActions>
+									MERGE dbo.GroupFolderTree AS trg
+									USING (
+										SELECT
+											fotP.ID AS FolderTreeID
+											,gft.GroupID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
+
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
+
+										WHERE itsCat.ID = @ID
+									) AS src ON (
+										src.FolderTreeID = trg.FolderTreeID
+										AND src.GroupID = trg.GroupID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (FolderTreeID, GroupID)
+										VALUES (src.FolderTreeID, src.GroupID)
+									;
+
+									MERGE dbo.GroupFolderTreePermission AS trg
+									USING (
+										SELECT
+											gftPa.ID AS GroupFolderTreeID
+											,gftp.PermissionID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
+										INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
+
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
+										INNER JOIN dbo.GroupFolderTree AS gftPa ON gftPa.FolderTreeID = fotP.ID AND gftPa.GroupID = gft.GroupID
+
+										WHERE itsCat.ID = @ID
+									) AS src ON (
+										src.GroupFolderTreeID = trg.GroupFolderTreeID
+										AND src.PermissionID = trg.PermissionID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (GroupFolderTreeID, PermissionID)
+										VALUES (src.GroupFolderTreeID, src.PermissionID)
+									;
+
+									MERGE dbo.AccountFolderTree AS trg
+									USING (
+										SELECT
+											fotP.ID AS FolderTreeID
+											,aft.AccountID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.AccountFolderTree AS aft ON aft.FolderTreeID = fot.ID
+
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
+
+										WHERE itsCat.ID = @ID
+									) AS src ON (
+										src.FolderTreeID = trg.FolderTreeID
+										AND src.AccountID = trg.AccountID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (FolderTreeID, AccountID)
+										VALUES (src.FolderTreeID, src.AccountID)
+									;
+
+									MERGE dbo.AccountFolderTreePermission AS trg
+									USING (
+										SELECT
+											aftPa.ID AS AccountFolderTreeID
+											,aftp.PermissionID
+										FROM usr.ITSMCategory AS itsCat
+										INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+										INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+										INNER JOIN dbo.AccountFolderTree AS aft ON aft.FolderTreeID = fot.ID
+										INNER JOIN dbo.AccountFolderTreePermission AS aftp ON aftp.AccountFolderTreeID = aft.ID
+
+										INNER JOIN dbo.FolderTree AS fotP ON fot.Ident LIKE fotP.Ident + '%' AND fotP.ID != fot.ID
+										INNER JOIN dbo.AccountFolderTree AS aftPa ON aftPa.FolderTreeID = fotP.ID AND aftPa.AccountID = aft.AccountID
+
+										WHERE itsCat.ID = @ID
+									) AS src ON (
+										src.AccountFolderTreeID = trg.AccountFolderTreeID
+										AND src.PermissionID = trg.PermissionID
+									)
+									WHEN NOT MATCHED BY TARGET
+										THEN INSERT (AccountFolderTreeID, PermissionID)
+										VALUES (src.AccountFolderTreeID, src.PermissionID)
+									;
+
+								]]></SQL>
+								<Parameters>
+									<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+								</Parameters>
+							</DataSource>
+						</Action>
+
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+		<ButtonShareCode Ident="DeleteButtonShare">
+			<Buttons>
+				<Button Ident="DeleteButton" IsVisible="true">
+					<Actions>
+						<Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+
+	</ButtonShareCodes>
+
+	<GlobalActions>
+
+		<Action xsi:type="IF" ActionStart="BeforeValidation">
+			<Condition>
+				<SQL><![CDATA[
+					SELECT IIF(
+						@CategoryName IS NOT NULL
+					, 1, 0)
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryName" DataType="String" />
+				</Parameters>
+			</Condition>
+			<TrueActions>
+
+				<Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT
+								@CategoryName
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CategoryName" DataType="String" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</TrueActions>
+		</Action>
+
+		<Action xsi:type="IF" ActionStart="BeforeValidation">
+			<Condition>
+				<SQL><![CDATA[
+					SELECT IIF(
+						@ITSMServiceIdent IS NOT NULL
+					, 1, 0)
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</Condition>
+			<TrueActions>
+
+				<Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT
+								itsmSer.[Name]
+							FROM usr.ITSMService AS itsmSer
+							INNER JOIN dbo.Folder AS folItsmSer ON folItsmSer.TableID = itsmSer.ID AND folItsmSer.FormIdent = 'ITSMService'
+							INNER JOIN dbo.FolderTree AS fotItsmSer ON fotItsmSer.FolderID = folItsmSer.ID
+							WHERE
+								fotItsmSer.Ident = @ITSMServiceIdent
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMServiceIdent" DataType="VarChar" MaxLength="900" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</TrueActions>
+		</Action>
+
+		<Action xsi:type="IF" ActionStart="BeforeValidation">
+			<Condition>
+				<SQL><![CDATA[
+					SELECT IIF(
+						@ITSMCatalogSheetIdent IS NOT NULL
+					, 1, 0)
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</Condition>
+			<TrueActions>
+
+				<Action xsi:type="ActionValue" ControlIdent="Name" ActionStart="BeforeValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT
+								itsmSubSer.[Name]
+							FROM usr.ITSMCatalogSheet AS itsmSubSer
+							INNER JOIN dbo.Folder AS folItsmSubSer ON folItsmSubSer.TableID = itsmSubSer.ID AND folItsmSubSer.FormIdent = 'ITSMCatalogSheet'
+							INNER JOIN dbo.FolderTree AS fotITSMubSer ON fotITSMubSer.FolderID = folItsmSubSer.ID
+							WHERE
+								fotITSMubSer.Ident = @ITSMCatalogSheetIdent
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCatalogSheetIdent" DataType="VarChar" MaxLength="900" />
+						</Parameters>
+					</DataSource>
+				</Action>
+
+			</TrueActions>
+			<FalseActions />
+		</Action>
+
+		<Action xsi:type="Required" ActionStart="BeforeValidation">
+			<Idents>
+				<string>Name</string>
+			</Idents>
+		</Action>
+
+		<Action xsi:type="ActionTrigger" Ident="UpdateITSMFolderTreeSegmentType" ActionStart="AfterPermission">
+			<DataSource>
+				<SQL><![CDATA[
+
+					DECLARE @FolderTreeID INT
+					SELECT @FolderTreeID = fot.ID
+					FROM usr.ITSMCategory AS itsCat
+					INNER JOIN dbo.Folder AS fol ON fol.TableID = itsCat.ID AND fol.FormIdent = 'ITSMCategory'
+					INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+					WHERE itsCat.ID = @ID
+
+					EXEC usr.ITSM_FolderTreeSegmentType_RebuildByFolderTreeID @FolderTreeID
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+				</Parameters>
+			</DataSource>
+		</Action>
+
+	</GlobalActions>
 
 	<Steps>
 		<Step State="1">
@@ -279,9 +512,9 @@
 					<Buttons>
 						<Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
 					</Buttons>
-          <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-          </Controls>
+					<Controls>
+						<FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+					</Controls>
 				</Group>
 			</Groups>
 		</Step>
@@ -295,9 +528,9 @@
 						<Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
 						<Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
 					</Buttons>
-          <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-          </Controls>
+					<Controls>
+						<FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+					</Controls>
 				</Group>
 			</Groups>
 		</Step>

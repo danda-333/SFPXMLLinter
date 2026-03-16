@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- @IgnoreFile unknown-form-ident -->
-<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMSecurityIncident" SegmentType="ITSMSecurityIncidentSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" Ident="ITSMSecurityIncident" SegmentType="ITSMSecurityIncidentSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
 	<Usings>
 		<Using Component="Common/FolderTreeSetting" />
 		<Using Component="Common/PageSetting" FormIdent="ITSMSecurityIncident" />
 		<Using Component="Common/SLACriteriaControls" />
 
-		<Using Component="Common/Shared/Assign" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMSecurityIncident" AssignedToTeamState="80" />
 		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMSecurityIncident" />
 		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMSecurityIncident" KeyPrefix="SI"/>
 		<Using Component="Common/Shared/Resolve" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Shared/SuspendSolution"/>
+		<Using Component="Common/Shared/SuspendApproval"/>
 
 		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMSecurityIncident" />
 		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMSecurityIncident" />
@@ -17,20 +19,28 @@
 		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMSecurityIncident" />
 		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMSecurityIncident" />
 		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/ITSMKnowledgeBase" FormIdent="ITSMSecurityIncident" />
 		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMSecurityIncident" />
+		<Using Component="Common/Controls/Var_ButtonIdentControl"/>
 
 		<Using Component="Common/Buttons/SendToCategorizationButton" />
 		<Using Component="Common/Buttons/SendToProcessButton" />
+		<Using Component="Common/Buttons/ApprovalButton" />
 		<Using Component="Common/Buttons/CloseButton" />
 		<Using Component="Common/Buttons/CancelButton" />
 		<Using Component="Common/Buttons/SaveGroupButton" />
 		<Using Component="Common/Buttons/DeleteButton" />
-		<Using Component="Common/Buttons/BackButton" />
+
+		<!-- @Ignore unused-using -->
+		<Using Component="ITSMSecurityIncident/Shared/SimpleMode" />
 	</Usings>
 	<ExternalJavaScriptRelativePaths>
 	</ExternalJavaScriptRelativePaths>
 	<DataPermissions>
 		<string>ITSMSecurityIncident</string>
+		<string>ITSMSecurityIncidentSimpleMode</string>
+		<string>ITSMSecurityIncidentOKB</string>
+		<string>ITSMSecurityIncidentOKBManager</string>
 		<string>ITSMSecurityIncidentReporter</string>
 		<string>ITSMSecurityIncidentSharedReporter</string>
 		<string>ITSMAuthor</string>
@@ -72,21 +82,41 @@
 	</Settings>
 	<Buttons>
 
-		<Button xsi:type="FormButton" Ident="SolutionRejectedButton" TitleResourceKey="SolutionRejectedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false"  IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SolutionRejectedButton" TitleResourceKey="SolutionRejectedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false"  IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SolutionRejectedConfirmFormDialog" ConfirmFormDialogSectionIdent="SolutionRejectedConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 
-		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true"/>
-
-		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true"/>
-
-		<Button xsi:type="FormButton" Ident="SendToHDMZeButton" TitleResourceKey="SendToHDMZeButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToHDMZeButton" TitleResourceKey="SendToHDMZeButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SendToHDMZeConfirmFormDialog" ConfirmFormDialogSectionIdent="SendToHDMZeConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 		
-		<Button xsi:type="FormButton" Ident="SentToOKBManagerApproveButton" TitleResourceKey="SentToOKBManagerApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-hammer-wrench" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SentToOKBManagerApproveButton" TitleResourceKey="SentToOKBManagerApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-hammer-wrench" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SentToOKBManagerApproveConfirmFormDialog" ConfirmFormDialogSectionIdent="SentToOKBManagerApproveConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 		
-		<Button xsi:type="FormButton" Ident="SolvedButton" TitleResourceKey="SolvedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SolvedButton" TitleResourceKey="SolvedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SolvedConfirmFormDialog" ConfirmFormDialogSectionIdent="SolvedConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 		
-		<Button xsi:type="FormButton" Ident="SendBackToAnalysisButton" TitleResourceKey="SendBackToAnalysisButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-thumbs-down2" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendBackToAnalysisButton" TitleResourceKey="SendBackToAnalysisButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-thumbs-down2" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SendBackToAnalysisConfirmFormDialog" ConfirmFormDialogSectionIdent="SendBackToAnalysisConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 		
-		<Button xsi:type="FormButton" Ident="SendToMeasureAndSolutionSignificantRiskButton" TitleResourceKey="SendToMeasureAndSolutionSignificantRiskButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-thumbs-up2" IsVisible="false" IsStopRedirect="true"/>
+		<Button xsi:type="FormButton" Ident="SendToMeasureAndSolutionSignificantRiskButton" TitleResourceKey="SendToMeasureAndSolutionSignificantRiskButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-thumbs-up2" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SendToMeasureAndSolutionSignificantRiskConfirmFormDialog" ConfirmFormDialogSectionIdent="SendToMeasureAndSolutionSignificantRiskConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 
 		<Button xsi:type="GroupButton" Ident="AnalysisGroupButton" TitleResourceKey="AnalysisGroupButton_ITSM" IsVisible="false" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-eye4">
 			<Buttons>
@@ -1149,8 +1179,7 @@
 										</div>
 									</div>
 									<div class="card-body">
-										{{Component:Common/Shared/FolderGroupSegment,Contribution:Html}}
-
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
 										<div class="row">
 											<div class="col-md-12">
 												<div class="form-group">
@@ -1167,6 +1196,7 @@
 												</div>
 											</div>
 										</div>
+										{{Component:Common/Controls/ITSMKnowledgeBase,Section:SuggestHtml}}
 									</div>
 								</div>
 							</div>
@@ -1867,23 +1897,197 @@
 							</div>
 						</Control>
 
-						{{Component:Common/Controls/CommunicationControls,Contribution:Html}}
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
 
 					</div><!-- //Levý sloupec -->
 
 					<div class="col-md-3"><!-- Pravý sloupec -->
 
-						{{Component:Common/Controls/ReporterControls,Contribution:Html}}
-						{{Component:Common/Shared/Assign,Contribution:Html}}
-						{{Component:Common/Shared/Resolve,Contribution:Html}}
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Assign,Section:Html}}
 
 					</div><!-- //Pravý sloupec -->
 
 				</div>
+
+				{{Component:Common/Shared/ITSMKey,Section:Html}}
 				
 			]]></HTMLTemplate>
 		</Section>
-		{{Component:Common/Shared/ITSMKey,Contribution:Html}}
+		
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SolutionRejectedConfirmFormDialogSection" CloseButtonTitleResourceKey="SolutionRejectedConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="SolutionRejectedConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SolutionRejectedConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SendToHDMZeConfirmFormDialogSection" CloseButtonTitleResourceKey="SendToHDMZeConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="SendToHDMZeConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SendToHDMZeConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SentToOKBManagerApproveConfirmFormDialogSection" CloseButtonTitleResourceKey="SentToOKBManagerApproveConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="SentToOKBManagerApproveConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SentToOKBManagerApproveConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SolvedConfirmFormDialogSection" CloseButtonTitleResourceKey="SolvedConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="SolvedConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SolvedConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SendBackToAnalysisConfirmFormDialogSection" CloseButtonTitleResourceKey="SendBackToAnalysisConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="SendBackToAnalysisConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SendBackToAnalysisConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SendToMeasureAndSolutionSignificantRiskConfirmFormDialogSection" CloseButtonTitleResourceKey="SendToMeasureAndSolutionSignificantRiskConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="SendToMeasureAndSolutionSignificantRiskConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SendToMeasureAndSolutionSignificantRiskConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="GlobalChangeSection" Ident="CloseGlobalChangeSection" ConfirmButtonTitleResourceKey="ConfirmGlobalChangeButton_ITSM">
+			<ValidationBeforeOpen ErrorMessageResourceKey="CloseGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMSecurityIncident AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] NOT IN (
+									@IncidentEvaluationState
+									,@SentToHDMZEState
+									,@SolutionValidationState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="IncidentEvaluationState" DataType="Number" Value="50" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SentToHDMZEState" DataType="Number" Value="60" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionValidationState" DataType="Number" Value="100" />
+
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Controls>
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<p>[#CloseGlobalChangeSection_Description_ITSM#]</p>
+					</div>	
+				</div>
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="GlobalChangeSection" Ident="ParentITSMGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="ParentITSMGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMSecurityIncident AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] IN (
+									@ClosedState
+									, @SolutionValidationState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionValidationState" DataType="Number" Value="100" />
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Buttons>
+				<Button xsi:type="FormButton" Ident="SaveButton" />
+			</Buttons>
+			<Controls>
+				<wffc:FormControl Ident="ParentTableID" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ParentTableID" />
+							<Control ID="ParentTableID" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
 
 	</Sections>
 </Form>

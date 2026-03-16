@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<DataView xGroupTitleResourceKey="MyProfileCalendarGroup_MyProfile" Ident="ITSMPlannedShutdownCalendarView" Priority="1000" SegmentType="ITSMPlannedShutdownSegment" TitleResourceKey="ITSMPlannedShutdownCalendarView_ITSMPlannedShutdown" DefaultFilterIdent="ITSMPlannedShutdownCalendarFilter" ShareFilterIdent="ITSMPlannedShutdownCalendarFilter" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" ViewType="CalendarView">
+<DataView xGroupTitleResourceKey="ITSMPlannedShutdownGroup_ITSM" Ident="ITSMPlannedShutdownCalendarView" Priority="1000" SegmentType="ITSMPlannedShutdownSegment" TitleResourceKey="ITSMPlannedShutdownCalendarView_ITSMPlannedShutdown" DefaultFilterIdent="ITSMPlannedShutdownCalendarFilter" ShareFilterIdent="ITSMPlannedShutdownCalendarFilter" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" ViewType="CalendarView">
   <AccessPermissions>
     <string>ITSMPlannedShutdown</string>
   </AccessPermissions>

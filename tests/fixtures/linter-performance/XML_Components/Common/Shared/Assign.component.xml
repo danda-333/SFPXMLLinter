@@ -513,6 +513,255 @@
 		<Control xsi:type="PlaceHolderControl" Ident="AssignedCardPlaceHolder" IsVisible="false"/>
 	</Section>
 
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="AssignedGroupID" TitleResourceKey="AssignedGroupID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				gro.[Name] AS AssignedGroupID
+			]]></SQL>
+		</Column>
+		<Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				accAss.[FullName] AS AssignedAccountID
+			]]></SQL>
+		</Column>
+	</Section>
+	<Section Root="DataView" Name="Froms" TargetXPath="//DataView/DataSource/Froms | //DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms" AllowMultipleInserts="true" Insert="append">
+		<dsf:From Ident="gro">
+			<dsf:Columns>
+				<dsf:string>AssignedGroupID</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN dbo.[Group] AS gro ON gro.ID = itsm.AssignedGroupID
+			</dsf:SQL>
+		</dsf:From>
+		<dsf:From Ident="accAss">
+			<dsf:Columns>
+				<dsf:string>AssignedAccountID</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN dbo.[Account] AS accAss ON accAss.ID = itsm.AssignedAccountID
+			</dsf:SQL>
+		</dsf:From>
+	</Section>
+
+	<Section Root="Filter" Name="Filter" Insert="placeholder">
+		<!-- @Ignore duplicate-control-ident -->
+		<Control xsi:type="AutoCompleteControl" Ident="AssignedGroupID" DataType="VarChar" MaxLength="900" TitleResourceKey="AssignedGroupID_ITSM">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT TOP(20)
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT 
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+					WHERE [GroupName] LIKE @AssignedGroupID 
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						gro.ID
+						,gro.[Name]
+					FROM dbo.[Group] AS gro
+					WHERE
+						gro.ID = @AssignedGroupID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDependencyDataBind>
+				<Dependencies>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+					SELECT 
+							GroupID AS ID
+							,[GroupName] AS [Name]
+					FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+							COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+							@PermissionIDs
+					)
+					WHERE GroupID = @AssignedGroupID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" SetDataType="SelectedValueData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDependencyDataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsm.[AssignedGroupID] = @AssignedGroupID
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<!-- @Ignore duplicate-control-ident -->
+		<Control xsi:type="AutoCompleteControl" Ident="AssignedAccountID" DataType="VarChar" MaxLength="900" TitleResourceKey="AssignedAccountID_ITSM">
+			<EmptyDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT TOP(20)
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>AssignedGroupID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						acc.FullName LIKE @AssignedAccountID
+						AND gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					WHERE 
+						acc.ID = @AssignedAccountID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="Number" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDependencyDataBind>
+				<Dependencies>
+					<string>AssignedGroupID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						acc.ID
+						,acc.FullName
+					FROM dbo.Account AS acc
+					INNER JOIN dbo.GroupAccount AS gas ON gas.AccountID = acc.ID
+					WHERE 
+						acc.ID = @AssignedAccountID
+						AND gas.GroupID = @AssignedGroupID
+						AND acc.[State] = @AccountActiveState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedAccountID" DataType="Number" SetDataType="SelectedValueData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AssignedGroupID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="AccountActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DefaultDependencyDataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsm.[AssignedAccountID] = @AssignedAccountID
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+	</Section>
+	
+
 	<Section Root="Form" Name="Sections" TargetXPath="//Form/Sections" Insert="append">
 		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignToGroupConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignToGroupConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignToGroupConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignToGroupConfirmFormDialogSectionTitle_ITSM">
 			<HTMLTemplate><![CDATA[
@@ -528,6 +777,7 @@
 				<div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
 							<Control ID="DialogCommunication" />
 						</div>
 					</div>
@@ -636,6 +886,49 @@
 		<ActionShareCode Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare">
 			<Actions>
 
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String"  />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="Required" ActionStart="BeforeValidation">
+							<Idents>
+								<string>DialogCommunication</string>
+							</Idents>
+						</Action>
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
 				<Action xsi:type="Required" ActionStart="BeforeValidation">
           <Idents>
             <string>DialogAssignedGroupID</string>
@@ -659,6 +952,49 @@
 		<ActionShareCode Ident="Assignee_Update_FromDialog_ActionShare">
 			<Actions>
 
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String"  />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="Required" ActionStart="BeforeValidation">
+							<Idents>
+								<string>DialogCommunication</string>
+							</Idents>
+						</Action>
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
 				<Action xsi:type="Required" ActionStart="BeforeValidation">
           <Idents>
             <string>DialogAssignedGroupID</string>
@@ -737,7 +1073,6 @@
 		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" /> -->
 		<ActionShareCode Ident="Assignee_Update_ToMeMultipleGroup_ActionShare">
 			<Actions>
-
 				<Action xsi:type="Required" ActionStart="BeforeValidation">
           <Idents>
             <string>DialogAssignedToMyGroupID</string>
@@ -767,6 +1102,69 @@
 
 			</Actions>
 		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMeMultipleGroup_ActionShare" /> -->
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="GlobalActions" TargetXPath="//WorkFlow/GlobalActions" Insert="append">
+		
+		<Action xsi:type="ActionTrigger" Ident="AssignedGroupID_Update_GroupFromCategory_Action" ActionStart="AfterSave">
+			<DataSource>
+				<SQL><![CDATA[
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @UpdateOutput TABLE (OldAssignedGroupID INT, NewAssignedGroupID INT)
+
+					UPDATE itsReq
+						SET AssignedGroupID = ISNULL(itsCat.DefaultAssignedGroupID, itsGagbttap.GroupID)
+					OUTPUT DELETED.AssignedGroupID AS OldAssignedGroupID, INSERTED.AssignedGroupID AS NewAssignedGroupID
+					INTO @UpdateOutput (OldAssignedGroupID, NewAssignedGroupID)
+					FROM usr.{{FormIdent}} AS itsReq
+					LEFT JOIN dbo.FolderTree AS fot ON fot.Ident = COALESCE(itsReq.ITSMCategoryLevel5Ident, itsReq.ITSMCategoryLevel4Ident, itsReq.ITSMCategoryLevel3Ident, itsReq.ITSMCategoryLevel2Ident)
+					LEFT JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+					LEFT JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND fol.FormIdent = 'ITSMCategory'
+					OUTER APPLY (
+						SELECT TOP(1) *
+						FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission (COALESCE(itsReq.ITSMCategoryLevel5Ident, itsReq.ITSMCategoryLevel4Ident, itsReq.ITSMCategoryLevel3Ident, itsReq.ITSMCategoryLevel2Ident),@PermissionIDs)
+					) AS itsGagbttap
+					WHERE
+						itsReq.ID = @ID
+						AND itsReq.[State] = 110
+						AND itsReq.AssignedGroupID IS NULL
+
+					IF EXISTS(
+						SELECT NULL
+						FROM @UpdateOutput
+						WHERE ISNULL(OldAssignedGroupID, -1) != ISNULL(NewAssignedGroupID, -1)
+					) BEGIN
+
+						DECLARE @LastHistoryID INT = usr.ITSM_GetLastHistoryID_ByFormIdentTableIDHistoryTypeIDAccountID('{{FormIdent}}', @ID, 'Save', @UserID)
+
+						IF @LastHistoryID IS NOT NULL BEGIN
+
+							DECLARE
+								@OldAssignedGroupID VARCHAR(MAX)
+								,@NewAssignedGroupID VARCHAR(MAX)
+
+							SELECT
+								@OldAssignedGroupID = ISNULL(CAST(OldAssignedGroupID AS VARCHAR(MAX)), '')
+								,@NewAssignedGroupID = ISNULL(CAST(NewAssignedGroupID AS VARCHAR(MAX)), '')
+							FROM @UpdateOutput
+
+							EXEC usr.ITSM_HistoryDataInsert @LastHistoryID, 'AssignedGroupID', @OldAssignedGroupID, @NewAssignedGroupID
+
+						END
+
+					END
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataSource>
+		</Action>
 		
 	</Section>
 

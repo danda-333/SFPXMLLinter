@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Primitive xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMProblemMyCreatedView">
+  <Template Name="Simple">
+
+    <Section xsi:type="ConfirmFormDialogSection" Ident="{{Ident}}ConfirmFormDialogSection" CloseButtonTitleResourceKey="{{Ident}}ConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="{{Ident}}ConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="{{Ident}}ConfirmFormDialogSectionTitle_ITSM">
+      <HTMLTemplate><![CDATA[
+        {{Slot:Body}}
+      ]]></HTMLTemplate>
+    </Section>
+
+  </Template>
+</Primitive>

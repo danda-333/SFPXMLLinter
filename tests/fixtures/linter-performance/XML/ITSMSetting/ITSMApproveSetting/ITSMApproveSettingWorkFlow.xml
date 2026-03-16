@@ -8,48 +8,48 @@
 		</States>
 	</Definition>
 
-  <ControlShareCodes>
-    <ControlShareCode Ident="EnableAllControlShare">
-      <Controls>
-        <FormControl Ident="ITSMApproveSettingName" IsReadOnly="false" />
-        <FormControl Ident="ITSMApproveSettingNameDescription" IsReadOnly="false" />
-        <FormControl Ident="ITSMApproveSubForm" IsReadOnly="false" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
-  </ControlShareCodes>
+	<ControlShareCodes>
+		<ControlShareCode Ident="EnableAllControlShare">
+			<Controls>
+				<FormControl Ident="ITSMApproveSettingName" IsReadOnly="false" />
+				<FormControl Ident="ITSMApproveSettingNameDescription" IsReadOnly="false" />
+				<FormControl Ident="ITSMApproveSubForm" IsReadOnly="false" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+	</ControlShareCodes>
 
-  <ButtonShareCodes>
+	<ButtonShareCodes>
 
-    <ButtonShareCode Ident="SaveFirstStateButtonShare">
-      <Buttons>
-        <Button Ident="SaveButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+		<ButtonShareCode Ident="SaveFirstStateButtonShare">
+			<Buttons>
+				<Button Ident="SaveButton" IsVisible="true">
+					<Actions>
+						<Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
 
-    <ButtonShareCode Ident="SaveButtonShare">
-      <Buttons>
-        <Button Ident="SaveButton" IsVisible="true">
-          <Actions>
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+		<ButtonShareCode Ident="SaveButtonShare">
+			<Buttons>
+				<Button Ident="SaveButton" IsVisible="true">
+					<Actions>
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
 
-    <ButtonShareCode Ident="DeleteButtonShare">
-      <Buttons>
-        <Button Ident="DeleteButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
+		<ButtonShareCode Ident="DeleteButtonShare">
+			<Buttons>
+				<Button Ident="DeleteButton" IsVisible="true">
+					<Actions>
+						<Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+					</Actions>
+				</Button>
+			</Buttons>
+		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
 
-  </ButtonShareCodes>
+	</ButtonShareCodes>
 
 	<Steps>
 		<Step State="1">
@@ -61,9 +61,9 @@
 					<Buttons>
 						<Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
 					</Buttons>
-          <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-          </Controls>
+					<Controls>
+						<FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+					</Controls>
 				</Group>
 			</Groups>
 		</Step>
@@ -77,9 +77,9 @@
 						<Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
 						<Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
 					</Buttons>
-          <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-          </Controls>
+					<Controls>
+						<FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+					</Controls>
 				</Group>
 			</Groups>
 		</Step>

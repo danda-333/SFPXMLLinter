@@ -8,7 +8,8 @@
 	</CreatePermissions>
 	<Buttons>
 		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" /><!-- Uložit -->
-		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2"><!-- Smazat -->
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<!-- Smazat -->
 			<Extensions>
 				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
 			</Extensions>
@@ -24,41 +25,207 @@
 		<Control xsi:type="FolderPermissionControl" Ident="FolderPermission" DataType="NumberList" TitleResourceKey="FolderPermission_ITSM" IsReadOnly="true" />
 
 		<Control xsi:type="SwitchControl" Ident="IsShareAmongAuthors" TitleResourceKey="IsShareAmongAuthors_ITSM" IsReadOnly="true" />
+
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="AutoCompleteControl" Ident="IconCssClass" MaxLength="255" DataType="String" TitleResourceKey="IconCssClass_Utility" IsReadOnly="false" IsRequired="true" Default="ph-folder">
+			<DataBind DefaultTitleResourceKey="SelectValue_Utility" DefaultValue="">
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+					<Column Ident="Title" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT ico.[Key] AS [Value], CONCAT('<i class="mr-2 ', ico.[Key],'" style="width: 1rem; height: 1rem; border-radius: 50%; display: inline-block; margin-bottom: -2px;"></i>', ico.[Key]) AS [Title]
+					FROM usr.Icon AS ico
+					WHERE
+						ico.[Group] = 'ph'
+						AND (
+							ico.[Key] LIKE '%' + @IconCssClass + '%'
+							OR @IconCssClass IS NULL
+						)
+
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IconCssClass" DataType="String" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+					<Column Ident="Title" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT @IconCssClass AS [Value], CONCAT('<i class="mr-2 ', @IconCssClass,'" style="width: 1rem; height: 1rem; border-radius: 50%; display: inline-block; margin-bottom: -2px;"></i>', @IconCssClass) AS [Title]
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IconCssClass" DataType="String" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT 'ph-folder' AS [Value]
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="OriginalHistoryTypeID" DataType="String" />
+				</Parameters>
+			</DefaultDataSource>
+		</Control>
+
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="AutoCompleteControl" Ident="ColorCssClass" MaxLength="255" DataType="String" TitleResourceKey="ColorCssClass_Utility" IsReadOnly="false" IsRequired="true" Default="orange">
+			<DataBind DefaultTitleResourceKey="SelectValue_Utility" DefaultValue="">
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+					<Column Ident="Title" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					DECLARE @SFPColors TABLE (ColorCssClass NVARCHAR(255));
+
+							  INSERT INTO @SFPColors (ColorCssClass)
+							  VALUES
+								  ('primary-300'),('primary-400'),('primary'),('primary-600'),('primary-700'),('primary-800')
+								  ,('danger-300'),('danger-400'),('danger'),('danger-600'),('danger-700'),('danger-800')
+								  ,('success-300'),('success-400'),('success'),('success-600'),('success-700'),('success-800')
+								  ,('warning-300'),('warning-400'),('warning'),('warning-600'),('warning-700'),('warning-800')
+								  ,('info-300'),('info-400'),('info'),('info-600'),('info-700'),('info-800')
+								  ,('pink-300'),('pink-400'),('pink'),('pink-600'),('pink-700'),('pink-800')
+								  ,('violet-300'),('violet-400'),('violet'),('violet-600'),('violet-700'),('violet-800')
+								  ,('purple-300'),('purple-400'),('purple'),('purple-600'),('purple-700'),('purple-800')
+								  ,('indigo-300'),('indigo-400'),('indigo'),('indigo-600'),('indigo-700'),('indigo-800')
+								  ,('blue-300'),('blue-400'),('blue'),('blue-600'),('blue-700'),('blue-800')
+								  ,('teal-300'),('teal-400'),('teal'),('teal-600'),('teal-700'),('teal-800')
+								  ,('green-300'),('green-400'),('green'),('green-600'),('green-700'),('green-800')
+								  ,('orange-300'),('orange-400'),('orange'),('orange-600'),('orange-700'),('orange-800')
+								  ,('brown-300'),('brown-400'),('brown'),('brown-600'),('brown-700'),('brown-800')
+								  ,('grey-300'),('grey-400'),('grey'),('grey-600'),('grey-700'),('grey-800')
+								  ,('slate-300'),('slate-400'),('slate'),('slate-600'),('slate-700'),('slate-800')
+
+							  SELECT ColorCssClass AS [Value], CONCAT('<span class="mr-2 bg-', ColorCssClass,'" style="width: 1rem; height: 1rem; border-radius: 50%; display: inline-block; margin-bottom: -2px;"></span>', ColorCssClass) AS [Title]
+							  FROM @SFPColors
+							  WHERE
+								  ColorCssClass LIKE '%' + @ColorCssClass + '%'
+								  OR @ColorCssClass IS NULL
+
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ColorCssClass" DataType="String" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+					<Column Ident="Title" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT @ColorCssClass AS [Value], CONCAT('<span class="mr-2 bg-', @ColorCssClass,'" style="width: 1rem; height: 1rem; border-radius: 50%; display: inline-block; margin-bottom: -2px;"></span>', @ColorCssClass) AS [Title]
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ColorCssClass" DataType="String" />
+				</Parameters>
+			</SelectedDataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value" />
+				</Columns>
+				<SQL>
+					SELECT 'orange' AS [Value]
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="OriginalHistoryTypeID" DataType="String" />
+				</Parameters>
+			</DefaultDataSource>
+		</Control>
 	</Controls>
 	<Sections>
 		<Section xsi:type="ContentSection" Ident="BasicInformation" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
+			<Sources>
+				<DataSource Ident="AdditionalInformation">
+					<Columns>
+						<Column Ident="ITSMCompanyID" />
+						<Column Ident="FolderTreeID" />
+						<Column Ident="FolderTreeIdent" />
+					</Columns>
+					<SQL>
+
+						SELECT
+							itsCom.ID AS ITSMCompanyID
+							,fot.ID AS FolderTreeID
+							,fot.Ident AS FolderTreeIdent
+						FROM usr.ITSMCompany AS itsCom
+						LEFT JOIN dbo.Folder AS fol ON fol.TableID = itsCom.ID AND fol.FormIdent = 'ITSMCompany'
+						LEFT JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
+						WHERE itsCom.ID = @ID
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					</Parameters>
+				</DataSource>
+			</Sources>
 			<HTMLTemplate><![CDATA[
 				<fieldset>
+
+					[FOR Source="AdditionalInformation"]
+					<div class="row">
+						<div class="col-md-12">
+							<div class="form-group">
+							<ul class="list-inline-lmtl4">
+								<li><label>ID:</label> [%ITSMCompanyID%]</li>
+								<li><label>FolderTreeID:</label> [%FolderTreeID%]</li>
+								<li><label>Ident:</label> [%FolderTreeIdent%]</li>
+							</ul>
+							</div>
+						</div>
+					</div>
+					[/FOR]
+
 					<div class="row">
 						<div class="col-md-6">
 							<div class="form-group">
-								<ControlLabel ControlID="Name"/>
-								<Control ID="Name"/>
+								<ControlLabel ControlID="Name" />
+								<Control ID="Name" />
 							</div>
 						</div>
 						<div class="col-md-6">
 							<div class="form-group">
-								<Control ID="Active"/>
+								<Control ID="Active" />
 							</div>
 						</div>
 					</div>
 					<div class="row">
 						<div class="col-md-6">
 							<div class="form-group">
-								<ControlLabel ControlID="Address"/>
-								<Control ID="Address"/>
+								<ControlLabel ControlID="IconCssClass" />
+								<Control ID="IconCssClass" />
 							</div>
 						</div>
 						<div class="col-md-6">
 							<div class="form-group">
-								<Control ID="IsShareAmongAuthors"/>
+								<ControlLabel ControlID="ColorCssClass" />
+								<Control ID="ColorCssClass" />
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<ControlLabel ControlID="Address" />
+								<Control ID="Address" />
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<Control ID="IsShareAmongAuthors" />
 							</div>
 						</div>
 					</div>
 					<div class="row">
 						<div class="col-md-12">
 							<div class="form-group">
-								<Control ID="Note"/>
+								<Control ID="Note" />
 							</div>
 						</div>
 					</div>
@@ -70,7 +237,7 @@
 				<div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="FolderPermission"/>
+							<Control ID="FolderPermission" />
 						</div>
 					</div>
 				</div>

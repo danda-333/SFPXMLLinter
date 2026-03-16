@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMApproveSubForm" IsSubForm="true" SegmentType="ITSMSettingSegment" PackageIdent="ITSMPackage">
 	<DataPermissions>
-    <string>ITSMSettingAdmin</string>
-  </DataPermissions>
-  <CreatePermissions>
-    <string>ITSMSettingAdmin</string>
-  </CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</CreatePermissions>
 	<Buttons>
 		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
 
@@ -166,34 +166,34 @@
 				<div class="row">
 					<div class="col-md-3">
 						<div class="form-group">
-							<ControlLabel ControlID="ApproveOrder"/>
-							<Control ID="ApproveOrder"/>
+							<ControlLabel ControlID="ApproveOrder" />
+							<Control ID="ApproveOrder" />
 						</div>
 					</div>
 					<div class="col-md-3">
 						<div class="form-group">
-							<ControlLabel ControlID="ApproverType"/>
-							<Control ID="ApproverType"/>
+							<ControlLabel ControlID="ApproverType" />
+							<Control ID="ApproverType" />
 						</div>
 						<div class="form-group d-none">
-							<ControlLabel ControlID="ApproverTypeValue"/>
-							<Control ID="ApproverTypeValue"/>
+							<ControlLabel ControlID="ApproverTypeValue" />
+							<Control ID="ApproverTypeValue" />
 						</div>
 					</div>
 				</div>
 				<div class="row js-showIfApprovaTypeGroup">
 					<div class="col-md-12">
 						<div class="form-group">
-							<ControlLabel ControlID="ApproverGroupID"/>
-							<Control ID="ApproverGroupID"/>
+							<ControlLabel ControlID="ApproverGroupID" />
+							<Control ID="ApproverGroupID" />
 						</div>
 					</div>
 				</div>
 				<div class="row js-showIfApprovaTypeAccount">
 					<div class="col-md-12">
 						<div class="form-group">
-							<ControlLabel ControlID="ApproverAccountID"/>
-							<Control ID="ApproverAccountID"/>
+							<ControlLabel ControlID="ApproverAccountID" />
+							<Control ID="ApproverAccountID" />
 						</div>
 					</div>
 				</div>

@@ -116,6 +116,8 @@
 					<string>ITSMSpecialist</string>
 					<string>ITSMAssigned</string>
 					<string>Creator</string>
+					<string>{{FormIdent}}Reporter</string>
+					<string>{{FormIdent}}SharedReporter</string>
 				</DataPermissions>
 				<Columns>
 					<Column Ident="SourceID" TitleResourceKey="ID" IsPrimaryKey="true" IsVisible="false"/>
@@ -148,6 +150,25 @@
 			</DataSource>
 		</Control>
 
+	</Section>
+
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="ParentTableID" TitleResourceKey="ParentTableID_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				CONCAT(itsFor.ITSMKey,' - ',itsFor.[Subject]) AS ParentTableID
+			]]></SQL>
+		</Column>
+	</Section>
+
+	<Section Root="DataView" Name="Froms" TargetXPath="//DataView/DataSource/Froms | //DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms" AllowMultipleInserts="true" Insert="append">
+		<dsf:From Ident="itsFor">
+			<dsf:Columns>
+				<dsf:string>ParentTableID</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN usr.ITSM_FormFullView AS itsFor ON itsFor.SourceID = itsm.ParentTableID
+			</dsf:SQL>
+		</dsf:From>
 	</Section>
 
 	<Section Root="Form" Name="ITSMLinkSection" TargetXPath="//Form/Sections" Insert="append">

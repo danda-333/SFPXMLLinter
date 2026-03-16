@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+    <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number"/>
+		<Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
+			<SQL><![CDATA[
+				itsm.CreateDate
+			]]></SQL>
+		</Column>
+		<Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				accCreator.FullName AS AccountID
+			]]></SQL>
+		</Column>
+	</Section>
+	<Section Root="DataView" Name="WorkFlowStateColumn" Insert="placeholder">
+		<!-- @Ignore unknown-form-ident -->
+		<Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="{{FormIdent}}" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.State
+			]]></SQL>
+		</Column>
+	</Section>
+	<Section Root="DataView" Name="WorkFlowStateColumnSimpleMode" Insert="placeholder">
+		<!-- @Ignore unknown-form-ident -->
+		<Column Ident="SimpleModeState" FormIdent="{{FormIdent}}" TitleResourceKey="State_ITSM" Width="10" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				wfs.[Badge] AS [SimpleModeState]
+			]]></SQL>
+		</Column>
+	</Section>
+	<Section Root="DataView" Name="SimpleModeWorkFlowStateSQL" Insert="placeholder">
+		DECLARE @WorkFlowStates TABLE ([Value] INT, [Badge] VARCHAR(255))
+		INSERT INTO @WorkFlowStates
+		SELECT itsGwfs.[Value], CONCAT('<span class="badge badge-', itsGwfs.SimpleModeColorCssClass, '">', usr.GetResourceText(itsGwfs.SimpleModeTitleResourceKey, @UserLanguageID), '</span>') AS [Badge]
+		FROM usr.ITSM_GetWorkFlowState ('{{FormIdent}}WorkFlow') AS itsGwfs
+	</Section>
+
+	<Section Root="DataView" Name="Froms" TargetXPath="//DataView/DataSource/Froms | //DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms" AllowMultipleInserts="true" Insert="append">
+		<dsf:From Ident="wfs">
+			<dsf:Columns>
+				<dsf:string>SimpleModeState</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+        INNER JOIN @WorkFlowStates AS wfs ON wfs.[Value] = itsm.[State]
+			</dsf:SQL>
+		</dsf:From>
+		<dsf:From Ident="accCreator">
+			<dsf:Columns>
+				<dsf:string>AccountID</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+        INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsm.AccountID
+			</dsf:SQL>
+		</dsf:From>
+	</Section>
+
+	<Section Root="Filter" Name="Filter" Insert="placeholder">
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="ListBoxControl" Ident="State" DataType="NumberList" TitleResourceKey="State_ITSM">
+      <DataBind>
+				<Columns>
+					<Column Ident="Value" DataBindType="Value"/>
+					<Column Ident="TitleResourceKey" IsTranslate="true" DataBindType="Title"/>
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						[Value]
+						, TitleResourceKey
+					FROM dbo.GetWorkFlowState('{{FormIdent}}WorkFlow')
+					WHERE
+						[Value] NOT IN (0,1)
+				]]></SQL>
+				<Parameters>
+				</Parameters>
+			</DataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsm.[State] IN (SELECT ID FROM @State) 
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+    </Control>
+
+		<Control xsi:type="AutoCompleteControl" Ident="AccountID" DataType="Number" TitleResourceKey="AccountID_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue">
+				<Columns>
+					<Column Ident="ID" DataBindType="Value"/>
+					<Column Ident="FullName" DataBindType="Title"/>
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID,
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						FullName LIKE @AccountID
+						AND [State] = @ActiveState
+					ORDER BY FullName ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="String" LikeType="Both"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+          <Column Ident="ID" DataBindType="Value" />
+          <Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						ID, 
+						FullName
+					FROM 
+						dbo.Account
+					WHERE 
+						ID = @AccountID
+				]]></SQL>
+				<Parameters>          
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number"/>           
+				</Parameters>     
+			</SelectedDataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsm.[AccountID] = @AccountID
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="CreateDateFrom" DataType="Date" TitleResourceKey="CreateDateFrom_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            CAST(itsm.[CreateDate] AS DATE) >= @CreateDateFrom
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="CreateDateTo" DataType="Date" TitleResourceKey="CreateDateTo_ITSM">
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            CAST(itsm.[CreateDate] AS DATE) <= @CreateDateTo
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
+	</Section>
+</Component>

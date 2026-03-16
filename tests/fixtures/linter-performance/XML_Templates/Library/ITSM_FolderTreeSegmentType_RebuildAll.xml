@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_FolderTreeSegmentType_RebuildAll" LibraryType="StoredProcedure" PackageIdent="ITSMPackage">
+	<Description><![CDATA[
+		
+	]]></Description>
+	<Command><![CDATA[
+
+    SET ANSI_NULLS ON
+    GO
+    SET QUOTED_IDENTIFIER ON
+    GO
+
+    -- =============================================
+    -- Author:		  Daniel Šašek
+    -- Create date: 2029-03-02
+    -- Description:	
+    -- =============================================
+    #MODIFIER# PROCEDURE #NAME#
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        SET XACT_ABORT ON;
+
+        BEGIN TRY
+            BEGIN TRAN;
+
+            -- Full refresh
+            TRUNCATE TABLE usr.ITSMFolderTreeSegmentType;
+
+            ;WITH Configured AS
+            (
+                SELECT DISTINCT
+                    ft.ID AS SourceFolderTreeID,
+                    cat.SegmentTypeID
+                FROM dbo.FolderTree ft
+                JOIN dbo.Folder f
+                    ON f.ID = ft.FolderID
+                JOIN usr.ITSMCategory cat
+                    ON cat.ID = f.TableID
+                WHERE cat.SegmentTypeID IS NOT NULL
+            ),
+            Propagate AS
+            (
+                SELECT
+                    c.SourceFolderTreeID,
+                    c.SourceFolderTreeID AS FolderTreeID,
+                    c.SegmentTypeID
+                FROM Configured c
+
+                UNION ALL
+
+                SELECT
+                    p.SourceFolderTreeID,
+                    parent.ID AS FolderTreeID,
+                    p.SegmentTypeID
+                FROM Propagate p
+                JOIN dbo.FolderTree cur
+                    ON cur.ID = p.FolderTreeID
+                JOIN dbo.FolderTree parent
+                    ON parent.ID = cur.ParentFolderTreeID
+            )
+            INSERT INTO usr.ITSMFolderTreeSegmentType (AccountID, [State], FolderTreeID, SegmentTypeID)
+            SELECT DISTINCT
+                0,
+                2,
+                p.FolderTreeID,
+                p.SegmentTypeID
+            FROM Propagate p
+            OPTION (MAXRECURSION 0);
+
+            COMMIT;
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0 ROLLBACK;
+            THROW;
+        END CATCH
+    END;
+
+	]]></Command>
+</Library>

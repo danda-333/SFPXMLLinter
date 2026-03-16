@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMKnowledgeBaseSettingWorkFlow" FormIdent="ITSMKnowledgeBaseSetting" PackageIdent="ITSMPackage"> 
+	<XMLDescription><![CDATA[
+    WorkFlow: Znalostní báze
+	]]></XMLDescription>
+  <Definition>
+    <States>
+      <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" /> <!--Deleted-->
+      <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning" /> <!--New-->
+      <State Value="2" TitleResourceKey="Saved_ITSM" ColorCssClass="primary" /> <!--Saved-->
+    </States>
+  </Definition>
+
+  <ControlShareCodes>
+    <ControlShareCode Ident="EnableAllControlShare">
+      <Controls>
+        <FormControl Ident="ITSMKnowledgeBaseCommonFolderSubForm" IsReadOnly="false" />
+        <FormControl Ident="ITSMKnowledgeBaseTypeGuid" IsReadOnly="false" />
+        <FormControl Ident="ITSMLabelIDs" IsReadOnly="false" />
+        <FormControl Ident="ITSMKnowledgeBase" IsReadOnly="false" />
+        <FormControl Ident="Attachments" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" /> -->
+  </ControlShareCodes>
+
+  <ActionShareCodes>
+    <ActionShareCode Ident="BasicValidationActionShare">
+      <Actions>
+        <Action xsi:type="GlobalValidation" ActionStart="BeforeValidation" ErrorMessageResourceKey="TranslationHasToBeCreatedForAllLanguagesJustOnce_Error_ITSM">
+          <Condition>
+            <SQL><![CDATA[
+              SELECT IIF(
+                EXISTS (
+                  SELECT COUNT(dial.LanguageID)
+                  FROM dbo.[Language] AS lan
+                  LEFT JOIN @ITSMKnowledgeBase AS dial
+                    ON dial.LanguageID = lan.ID
+                  WHERE lan.[State] = @LanguageActiveState
+                  GROUP BY lan.ID
+                  HAVING COUNT(dial.LanguageID) != 1
+                ),
+                0,
+                1
+              )
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Date" />
+              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="LanguageActiveState" DataType="Number" Value="1" />
+              <dsp:Parameter xsi:type="dsp:TableParameter" Ident="ITSMKnowledgeBase" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+            </Parameters>
+          </Condition>
+          <ControlIdents>
+            <string>ITSMKnowledgeBase</string>
+          </ControlIdents>
+        </Action>
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" /> -->
+  </ActionShareCodes>
+
+  <ButtonShareCodes>
+    <ButtonShareCode Ident="SaveFirstStateButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" />
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="SaveAndExitButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" />
+            <Action xsi:type="ChangeState" State="2" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" />
+          </Actions>
+        </Button>
+        <Button Ident="SaveAndExitButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="BasicValidationActionShare" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />  -->
+
+    <ButtonShareCode Ident="DeleteButtonShare">
+      <Buttons>
+        <Button Ident="DeleteButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="ChangeState" State="0" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode>
+  </ButtonShareCodes>
+
+  <GlobalActions>
+
+    <Action xsi:type="ActionTrigger" Ident="SetIdent" ActionStart="AfterSave">
+      <DataSource>
+        <SQL><![CDATA[
+          IF EXISTS (
+            SELECT NULL
+            FROM usr.ITSMKnowledgeBaseSetting
+            WHERE ID = @ID
+              AND Guid IS NULL
+          )
+          BEGIN
+            UPDATE dialSetting
+            SET Guid = NEWID()
+            FROM usr.ITSMKnowledgeBaseSetting AS dialSetting
+            WHERE dialSetting.ID = @ID
+          END
+
+          UPDATE dial
+          SET Guid = dialSetting.Guid
+          FROM usr.ITSMKnowledgeBaseSetting AS dialSetting
+          INNER JOIN usr.ITSMKnowledgeBase AS dial
+            ON dial.TableID = dialSetting.ID
+            AND dial.FormIdent = 'ITSMKnowledgeBaseSetting'
+          WHERE dialSetting.ID = @ID
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+        </Parameters>
+      </DataSource>
+    </Action>
+
+    <Action xsi:type="ActionTrigger" Ident="ITSMLabelUpsert" ActionStart="AfterSave">
+			<DataSource>
+				<SQL>
+
+					DECLARE @MergeOutput TABLE (ITSMLabelID INT, MultiSelectID INT, [Value] VARCHAR(MAX));
+
+					UPDATE mus
+					SET [Value] = ticLab.ID
+					FROM usr.ITSMKnowledgeBaseSetting AS tic
+					INNER JOIN dbo.MultiSelect AS mus
+						ON mus.TableID = tic.ID
+						AND mus.FormIdent = 'ITSMKnowledgeBaseSetting'
+						AND mus.ControlIdent = 'ITSMLabelIDs'
+						AND LEFT(mus.Value, 4) = '##%%'
+						AND RIGHT(mus.Value, 4) = '%%##'
+					INNER JOIN usr.ITSMLabel AS ticLab
+						ON '##%%' + ticLab.TextValue + '%%##' = mus.Value
+					WHERE
+						tic.ID = @ID
+
+					MERGE usr.ITSMLabel AS ticLab
+					USING (
+						SELECT
+							mus.ID
+							,SUBSTRING(mus.[Value], 5, LEN(mus.[Value]) - 8) AS [Value]
+						FROM usr.ITSMKnowledgeBaseSetting AS tic
+						INNER JOIN dbo.MultiSelect AS mus
+							ON mus.TableID = tic.ID
+							AND mus.FormIdent = 'ITSMKnowledgeBaseSetting'
+							AND mus.ControlIdent = 'ITSMLabelIDs'
+							AND LEFT(mus.Value, 4) = '##%%'
+							AND RIGHT(mus.Value, 4) = '%%##'
+						WHERE
+							tic.ID = @ID
+					) AS src ON (
+						1 = 0
+					)
+					WHEN NOT MATCHED
+						THEN INSERT (
+							[AccountID]
+							,[State]
+							,[TextValue]
+						)
+						VALUES (
+							@UserID
+							,2
+							,src.[Value]
+						)
+					OUTPUT inserted.ID, src.ID, src.[Value]
+					INTO @MergeOutput;
+
+					INSERT INTO dbo.History (
+						[FormIdent]
+						,[TableID]
+						,[CreateDate]
+						,[HistoryTypeID]
+						,[AccountID]
+						,[State]
+						,[Data]
+						,[SubTableID]
+					)
+					SELECT
+						[FormIdent] = 'ITSMLabel'
+						,[TableID] = meo.ITSMLabelID
+						,[CreateDate] = GETDATE()
+						,[HistoryTypeID] = 'Create'
+						,[AccountID] = @UserID
+						,[State] = NULL
+						,[Data] = NULL
+						,[SubTableID] = NULL
+					FROM @MergeOutput AS meo
+
+					INSERT INTO dbo.History (
+						[FormIdent]
+						,[TableID]
+						,[CreateDate]
+						,[HistoryTypeID]
+						,[AccountID]
+						,[State]
+						,[Data]
+						,[SubTableID]
+					)
+					SELECT
+						[FormIdent] = 'ITSMLabel'
+						,[TableID] = meo.ITSMLabelID
+						,[CreateDate] = DATEADD(MILLISECOND, 2, GETDATE())
+						,[HistoryTypeID] = 'ChangeState'
+						,[AccountID] = @UserID
+						,[State] = 2
+						,[Data] = NULL
+						,[SubTableID] = NULL
+					FROM @MergeOutput AS meo
+
+					UPDATE mus
+					SET [Value] = ticLab.[ID]
+					FROM @MergeOutput AS meo
+					INNER JOIN dbo.MultiSelect AS mus ON mus.ID = meo.MultiSelectID
+					INNER JOIN usr.ITSMLabel AS ticLab ON ticLab.ID = meo.ITSMLabelID
+
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DataSource>
+		</Action>
+
+  </GlobalActions>
+
+  <Steps>
+    <Step State="1">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSettingAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveFirstStateButtonShare" />
+          </Buttons>
+          <Sections>
+            <Section Ident="ContentSection" IsVisible="false" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--New-->
+    <Step State="2">
+      <Groups>
+        <Group>
+          <Permissions>
+            <string>ITSMSettingAdmin</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
+          </Controls>
+        </Group>
+      </Groups>
+    </Step> <!--Saved-->
+  </Steps>
+</WorkFlow>

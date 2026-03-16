@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_KnowledgeBaseBuildFullTextQuery" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: 
+	]]></XMLDescription>
+	<Description><![CDATA[
+		
+	]]></Description>
+	<Command><![CDATA[
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+		
+		-- =============================================
+		-- Author:			Daniel Šašek
+		-- Create date: 2026-03-02
+		-- Description:	
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(
+				@UserText NVARCHAR(4000)
+		)
+		RETURNS NVARCHAR(4000)
+		AS
+		BEGIN
+				DECLARE @t NVARCHAR(4000) = LTRIM(RTRIM(ISNULL(@UserText, N'')));
+
+				-- sjednocení whitespace
+				WHILE CHARINDEX(N'  ', @t) > 0
+						SET @t = REPLACE(@t, N'  ', N' ');
+
+				-- prázdné / moc krátké -> NULL (FTS se nevolá)
+				IF LEN(@t) < 2
+						RETURN NULL;
+
+				-- escape uvozovek
+				SET @t = REPLACE(@t, N'"', N'""');
+
+				DECLARE @phrase NVARCHAR(4000) = N'"' + @t + N'"';
+				DECLARE @andq   NVARCHAR(4000) = N'"' + REPLACE(@t, N' ', N'" AND "') + N'"';
+
+				-- Fráze má vysokou relevanci, AND je fallback
+				RETURN @phrase + N' OR (' + @andq + N')';
+		END
+		GO
+
+	]]></Command>
+</Library>

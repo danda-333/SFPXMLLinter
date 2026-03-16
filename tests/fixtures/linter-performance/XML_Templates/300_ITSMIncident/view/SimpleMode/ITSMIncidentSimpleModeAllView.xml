@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMIncidentSimpleModeAllView" SegmentType="ITSMIncidentSegment" TitleResourceKey="ITSMIncidentAllView_ITSM" GroupTitleResourceKey="ITSMIncidentGroup_ITSM" Priority="160" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMIncidentFilter" ShareFilterIdent="ITSMIncidentFilter" CountColorCssClass="primary" PackageIdent="ITSMPackage" IsCheckBox="true">
+	<Usings>
+		<Using Component="Common/Shared/BaseView" FormIdent="ITSMIncident"/>
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMIncident" AssignedToTeamState="40" />
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMIncident" />
+		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMIncident" />
+		<Using Component="Common/Shared/SuspendSolution"/>
+		<Using Component="Common/Shared/SuspendApproval"/>
+		<Using Component="Common/Shared/Resolve" FormIdent="ITSMIncident" />
+	</Usings>
+  <AccessPermissions>
+    <string>ITSMIncidentSimpleMode</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true"/>
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMIncidentButton" FormIdent="ITSMIncident" TitleResourceKey="NewITSMIncidentButton_ITSM" />
+
+    <Button xsi:type="GroupButton" Ident="GlobalChangeButtonGroup" TitleResourceKey="GlobalChangeButtonGroup_ITSM">
+      <Buttons>
+        <Button xsi:type="GlobalChangeButton" Ident="CloseButton" TitleResourceKey="CloseButton_ITSM" FormIdent="ITSMIncident" GlobalChangeSectionIdent="CloseGlobalChangeSection" />
+      </Buttons>
+    </Button>
+    
+  </Buttons>
+  <DataSource FormIdent="ITSMIncident">
+    <DataPermissions>
+      <string>ITSMIncidentReporter</string>
+      <string>ITSMSpecialist</string>
+      <string>ITSMOperator</string>
+		  <string>ITSMSupplier</string>
+    </DataPermissions>
+		<Columns>
+      <Include Component="Common/Shared/BaseView" Section="Columns"/>
+      <Include Component="Common/Shared/ITSMKey" Section="Columns"/>
+      <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="20" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsm.[Subject]
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/FolderGroupSegment" Section="Columns"/>
+      <Include Component="Common/Shared/BaseView" Section="WorkFlowStateColumnSimpleMode" FormIdent="ITSMIncident"/>
+      <Include Component="Common/Controls/ReporterControls" Section="Columns"/>
+      <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsm.[Description]
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/Resolve" Section="Columns"/>
+      <Column Ident="ITSMIncidentClassificationTypeGuid" TitleResourceKey="ITSMIncidentClassificationTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          incClaTyp.[TextValue] AS ITSMIncidentClassificationTypeGuid
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMOperationalEnvironmentTypeGuid" TitleResourceKey="ITSMOperationalEnvironmentTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          opeEnvTyp.[TextValue] AS ITSMOperationalEnvironmentTypeGuid
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/Assign" Section="Columns"/>
+      <Column Ident="ReporterResponseDeadlineDateTime" TitleResourceKey="ReporterResponseDeadlineDateTime_ITSM" DataType="DateTime" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsm.[ReporterResponseDeadlineDateTime]
+        ]]></SQL>
+      </Column>
+      <Column Ident="UserResponse" TitleResourceKey="UserResponse_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsm.[UserResponse]
+        ]]></SQL>
+      </Column>
+      <Column Ident="SolutionAssessment" TitleResourceKey="SolutionAssessment_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsm.[SolutionAssessment]
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/SuspendSolution" Section="Columns"/>
+      <Include Component="Common/Shared/SuspendApproval" Section="Columns"/>
+		</Columns>
+    <Froms>
+      <dsf:From Ident="incClaTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMIncidentClassificationTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMIncidentClassificationType as incClaTyp on incClaTyp.Guid = itsm.ITSMIncGuidClassificationTypeGuid AND incClaTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="opeEnvTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMOperationalEnvironmentTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMOperationalEnvironmentType as opeEnvTyp on opeEnvTyp.Guid = itsm.ITSMOperationalEnvironmentTypeGuid AND opeEnvTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+    </Froms>
+		<SQL><![CDATA[
+      {{Component:Common/Shared/BaseView,Section:SimpleModeWorkFlowStateSQL,FormIdent:ITSMIncident}}
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT 
+            itsm.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMIncident AS itsm
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+          #ADDFROM#
+          WHERE
+            itsm.[State] != @DeletedState
+            AND (
+              (
+                ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMIncident(itsm)|ITSMIncidentReporter|]#
+              )
+              OR
+              (
+                ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMIncident(itsm)|ITSMIncidentReporter,ITSMAuthor|]#
+              )
+              OR
+              (
+                #PERMISSION[ITSMIncident(itsm)]#
+              )
+            ) #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    ]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" /> 
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL><![CDATA[
+      SELECT COUNT(itsm.ID)
+      FROM usr.ITSMIncident AS itsm
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+      WHERE
+        itsm.[State] != @DeletedState
+        AND (
+          (
+            ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMIncident(itsm)|ITSMIncidentReporter|]#
+          )
+          OR
+          (
+            ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMIncident(itsm)|ITSMIncidentReporter,ITSMAuthor|]#
+          )
+          OR
+          (
+            #PERMISSION[ITSMIncident(itsm)]#
+          )
+        ) #FILTER#
+    ]]></SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <GeneratorSnippet UseGenerator="Common/XML/CopyXPathContent" SourceXPath="/DataView/DataSource" CopyMode="inner" />
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

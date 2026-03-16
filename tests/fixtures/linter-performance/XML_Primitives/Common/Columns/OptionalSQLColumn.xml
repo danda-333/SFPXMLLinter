@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Primitive xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMProblemMyCreatedView">
+  <Template>
+
+    <Column Ident="{{Ident}}" TitleResourceKey="{{Ident}}_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<If Param="ColumnName" Equals="{{Ident}}">
+				<SQL><![CDATA[
+					[{{TableAlias}}].[{{ColumnName}}]
+				]]></SQL>
+			</If>
+			<If Param="ColumnName" NotEquals="{{Ident}}">
+				<SQL><![CDATA[
+					[{{TableAlias}}].[{{ColumnName}}] AS [{{Ident}}]
+				]]></SQL>
+			</If>
+		</Column>
+
+  </Template>
+</Primitive>

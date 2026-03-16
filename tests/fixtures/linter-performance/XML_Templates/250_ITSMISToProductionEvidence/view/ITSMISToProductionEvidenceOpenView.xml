@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMISToProductionEvidenceOpenView" SegmentType="ITSMISToProductionEvidenceSegment" TitleResourceKey="ITSMISToProductionEvidenceOpenView_ITSM" XGroupTitleResourceKey="ITSMISToProductionEvidenceGroup_ITSM" Priority="110" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMISToProductionEvidenceFilter" ShareFilterIdent="ITSMISToProductionEvidenceFilter" CountColorCssClass="primary" PackageIdent="ITSMPackage">
+  <AccessPermissions>
+    <string>ITSMISToProductionEvidence</string>
+    <string>ITSMISToProductionEvidenceAdmin</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true"/>
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMISToProductionEvidenceButton" FormIdent="ITSMISToProductionEvidence" TitleResourceKey="NewITSMISToProductionEvidenceButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMISToProductionEvidence">
+    <DataPermissions>
+      <string>ITSMISToProductionEvidence</string>
+      <string>ITSMISToProductionEvidenceAdmin</string>
+    </DataPermissions>
+		<Columns>
+      <Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" Width="10" TableAlterIdent="tbl" IsVisible="false" DataType="Number"/>
+      <Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsReq.ITSMKey
+        ]]></SQL>
+      </Column>
+      <Column Ident="SystemName" TitleResourceKey="SystemName_ITSM" Width="20" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsReq.[SystemName]
+        ]]></SQL>
+      </Column>
+      <Column xsi:type="WorkFlowStateColumn" Ident="State" FormIdent="ITSMISToProductionEvidence" TitleResourceKey="State_ITSM" IsColor="true" Width="10" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsReq.State
+        ]]></SQL>
+      </Column>
+      <Column Ident="CreateDate" TitleResourceKey="CreateDate_ITSM" TableAlterIdent="tbl" Width="10" DataType="DateTime">
+        <SQL><![CDATA[
+          itsReq.CreateDate
+        ]]></SQL>
+      </Column>
+      <Column Ident="AccountID" TitleResourceKey="AccountID_ITSM" TableAlterIdent="tbl" Width="15">
+        <SQL><![CDATA[
+          accCreator.FullName AS AccountID
+        ]]></SQL>
+      </Column>
+      <Column Ident="SystemDescription" TitleResourceKey="SystemDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[SystemDescription]
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMSupplierOrganizationEntityGuid" TitleResourceKey="SupplierOrganizationEntityGuid_ITSM" TableAlterIdent="tbl" Width="15">
+        <SQL><![CDATA[
+          supOrg.[TextValue] AS ITSMSupplierOrganizationEntityGuid
+        ]]></SQL>
+      </Column>
+      <Column Ident="SupplierOrganizationEntityAddress" TitleResourceKey="SupplierOrganizationEntityAddress_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[SupplierOrganizationEntityAddress]
+        ]]></SQL>
+      </Column>
+      <Column Ident="ContractNumber" TitleResourceKey="ContractNumber_ITSM" TableAlterIdent="tbl" Width="10">
+        <SQL><![CDATA[
+          itsReq.[ContractNumber]
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMSupplierContractID" TitleResourceKey="ITSMSupplierContractID_ITSM" TableAlterIdent="tbl" Width="10">
+        <SQL><![CDATA[
+          supCon.[ContractName] AS ITSMSupplierContractID
+        ]]></SQL>
+      </Column>
+      <Column Ident="TechnicalGarant" TitleResourceKey="TechnicalGarant_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[TechnicalGarant]
+        ]]></SQL>
+      </Column>
+      <Column Ident="MaterialGarant" TitleResourceKey="MaterialGarant_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[MaterialGarant]
+        ]]></SQL>
+      </Column>
+      <Column Ident="Surveillance" TitleResourceKey="Surveillance_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[Surveillance]
+        ]]></SQL>
+      </Column>
+      <Column Ident="IncreasedMonitoring" TitleResourceKey="IncreasedMonitoring_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[IncreasedMonitoring]
+        ]]></SQL>
+      </Column>
+      <Column Ident="TicketSendingForm" TitleResourceKey="TicketSendingForm_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[TicketSendingForm]
+        ]]></SQL>
+      </Column>
+      <Column Ident="SolverTeam" TitleResourceKey="SolverTeam_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[SolverTeam]
+        ]]></SQL>
+      </Column>
+      <Column Ident="SystemDocumentation" TitleResourceKey="SystemDocumentation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[SystemDocumentation]
+        ]]></SQL>
+      </Column>
+      <Column Ident="DocumentationLocation" TitleResourceKey="DocumentationLocation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[DocumentationLocation]
+        ]]></SQL>
+      </Column>
+      <Column Ident="SystemHandoverDate" TitleResourceKey="SystemHandoverDate_ITSM" TableAlterIdent="tbl" IsOptional="true" DataType="DateTime">
+        <SQL><![CDATA[
+          itsReq.[SystemHandoverDate]
+        ]]></SQL>
+      </Column>
+      <Column Ident="TraindeEmployees" TitleResourceKey="TraindeEmployees_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsReq.[TraindeEmployees]
+        ]]></SQL>
+      </Column>
+		</Columns>
+    <Froms>
+      <dsf:From Ident="supOrg">
+        <dsf:Columns>
+          <dsf:string>ITSMSupplierOrganizationEntityGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSupplierOrganizationEntity AS supOrg ON supOrg.Guid = itsReq.ITSMSupplierOrganizationEntityGuid AND supOrg.[State] != 0
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="supCon">
+        <dsf:Columns>
+          <dsf:string>ITSMSupplierContractID</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSupplierContract AS supCon ON supCon.ID = itsReq.ITSMSupplierContractID AND supCon.[State] != 0
+        </dsf:SQL>
+      </dsf:From>
+    </Froms>
+		<SQL><![CDATA[
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT 
+            itsReq.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMISToProductionEvidence AS itsReq
+          INNER JOIN dbo.Account AS accCreator ON accCreator.ID = itsReq.AccountID
+          #ADDFROM#
+          WHERE
+            itsReq.[State] = @OpenState
+            AND #PERMISSION[ITSMISToProductionEvidence(itsReq)]#
+            #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    ]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="OpenState" DataType="Number" Value="3" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" /> 
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL><![CDATA[
+      SELECT COUNT(itsReq.ID)
+      FROM usr.ITSMISToProductionEvidence AS itsReq
+      WHERE
+        itsReq.[State] = @OpenState
+        AND #PERMISSION[ITSMISToProductionEvidence(itsReq)]#
+        #FILTER#
+    ]]></SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="OpenState" DataType="Number" Value="3" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <GeneratorSnippet UseGenerator="Common/XML/CopyXPathContent" SourceXPath="/DataView/DataSource" CopyMode="inner" />
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

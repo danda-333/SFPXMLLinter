@@ -15,35 +15,33 @@
     <Control xsi:type="TreeSelectBoxControl" Ident="ServiceFolderTreeIdent" ContentHeight="420" DataType="VarCharList" TitleResourceKey="ServiceFolderTreeIdent_ITSM" IsExpanded="true" NotSelectedTitleResourceKey="NotSelected_ITSM" SelectedTitleResourceKey="Selected_ITSM">
       <DataSource>
         <Columns>
-          <Column Ident="Guid" TitleResourceKey="Guid_ITSM" DataBindType="Value" IsVisible="false" />
+          <Column Ident="Ident" TitleResourceKey="Ident_ITSM" DataBindType="Value" IsVisible="false" />
           <Column Ident="Name" TitleResourceKey="Name_ITSM" Width="80" DataBindType="Title" />
           <Column Ident="ParentIdent" TitleResourceKey="ParentIdent_ITSM" DataBindType="ParentIdent" IsVisible="false" />
           <Column Ident="IsSelectable" Title="IsSelectable" DataBindType="Selectable" IsVisible="false" />
         </Columns>
         <SQL><![CDATA[
           SELECT
-            ft.Ident
-            , f.[Name]
-            , ftPar.Ident AS ParentIdent
-            , IIF(
+            fot.Ident
+            ,fol.[Name]
+            ,fotP.Ident AS ParentIdent
+            ,IIF(
               NOT EXISTS(
                 SELECT NULL
-                FROM dbo.FolderTree
-                WHERE
-                  Ident LIKE ft.Ident + '%' AND Ident != ft.Ident
+                FROM dbo.FolderTree AS fotC
+                INNER JOIN dbo.Folder AS folC ON folC.ID = fotC.FolderID AND folC.[State] = @FolderActiveState
+                WHERE fotC.Ident LIKE fot.Ident + '%' AND fotC.Ident != fot.Ident
               )
-              ,1
-              ,0
-            ) AS IsSelectable
-          FROM dbo.FolderTree as ft
-          INNER JOIN dbo.Folder as f on f.ID = ft.FolderID AND f.[State] = @StateOne
-          LEFT JOIN dbo.FolderTree as ftPar on ftPar.ID = ft.ParentFolderTreeID
+            ,1,0) AS IsSelectable
+          FROM dbo.FolderTree as fot
+          INNER JOIN dbo.Folder as fol on fol.ID = fot.FolderID AND fol.[State] = @FolderActiveState
+          LEFT JOIN dbo.FolderTree as fotP on fotP.ID = fot.ParentFolderTreeID
           WHERE
-            f.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
-          ORDER BY ft.Ident
+            fol.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+          ORDER BY fot.Ident
         ]]></SQL>
         <Parameters>
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
           <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMServiceFolderGroup" />
         </Parameters>
       </DataSource>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMRequestSimpleModeInSolutionView" SegmentType="ITSMRequestSegment" TitleResourceKey="ITSMRequestSimpleModeInSolutionView_ITSM" GroupTitleResourceKey="ITSMRequestAllGroup_ITSM" Priority="10" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMRequestFilter" ShareFilterIdent="ITSMRequestFilter" CountColorCssClass="warning" PackageIdent="ITSMPackage">
+  <Usings>
+		<Using Component="Common/Shared/BaseView"/>
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMRequest"/>
+		<Using Component="Common/Shared/Resolve"/>
+		<Using Component="Common/Shared/Assign"/>
+
+		<Using Component="Common/Controls/ReporterControls"/>
+  </Usings>
+  <AccessPermissions>
+    <string>ITSMRequestSimpleMode</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true"/>
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMRequestButton" FormIdent="ITSMRequest" TitleResourceKey="NewITSMRequestButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMRequest">
+    <DataPermissions>
+      <string>ITSMRequestReporter</string>
+
+      <string>ITSMOperator</string>
+      <string>ITSMSpecialist</string>
+      <string>ITSMSupplier</string>
+
+      <string>ITSMReporterBossApprover</string>
+      <string>ITSMApproverGroupMember</string>
+
+      <string>ITSMRequestActualApprover</string>
+      <string>ITSMRequestApprover</string>
+    </DataPermissions>
+		<Columns>
+      <Include Component="Common/Shared/BaseView" Section="Columns"/>
+      <Include Component="Common/Shared/ITSMKey" Section="Columns"/>
+      <UsePrimitive Name="Common/Columns/SQLColumn" Ident="Description" TableAlias="itsm" ColumnName="Description" Width="20"/>
+      <Include Component="Common/Shared/FolderGroupSegment" Section="Columns"/>
+      <Include Component="Common/Shared/BaseView" Section="WorkFlowStateColumn" FormIdent="ITSMRequest"/>
+      <UsePrimitive Name="Common/Columns/OptionalSQLColumn" Ident="Description" TableAlias="itsm" ColumnName="Description"/>
+		</Columns>
+    <Froms>
+    </Froms>
+		<SQL><![CDATA[
+
+      {{Component:Common/Shared/BaseView,Section:SimpleModeWorkFlowStateSQL,FormIdent:ITSMRequest}}
+
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT 
+            itsm.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMRequest AS itsm
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+          #ADDFROM#
+          WHERE
+            itsm.[State] NOT IN (@DeletedState, @ClosedState, @ResolvedState)
+            AND (
+              (
+                ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter|]#
+              )
+              OR
+              (
+                ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter,ITSMAuthor|]#
+              )
+              OR
+              (
+                #PERMISSION[ITSMRequest(itsm)]#
+              )
+            ) #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    ]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="String" Value="160"/>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL><![CDATA[
+      
+      SELECT COUNT(itsm.ID)
+      FROM usr.ITSMRequest AS itsm
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+      WHERE
+        itsm.[State] NOT IN (@DeletedState, @ClosedState, @ResolvedState)
+        AND (
+          (
+            ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter|]#
+          )
+          OR
+          (
+            ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMRequest(itsm)|ITSMRequestReporter,ITSMAuthor|]#
+          )
+          OR
+          (
+            #PERMISSION[ITSMRequest(itsm)]#
+          )
+        ) #FILTER#
+
+    ]]></SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="String" Value="160"/>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <GeneratorSnippet UseGenerator="Common/XML/CopyXPathContent" SourceXPath="/DataView/DataSource" CopyMode="inner" />
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

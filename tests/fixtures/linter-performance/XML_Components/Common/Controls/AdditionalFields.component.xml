@@ -133,6 +133,180 @@
 		</Control>
 	</Section>
 
+	
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="UserName" TitleResourceKey="UserName_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[UserName]
+			]]></SQL>
+		</Column>
+		<Column Ident="CertificateType" TitleResourceKey="CertificateType_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[CertificateType]
+			]]></SQL>
+		</Column>
+		<Column Ident="RequestType" TitleResourceKey="RequestType_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[RequestType]
+			]]></SQL>
+		</Column>
+		<Column Ident="ConsumerName" TitleResourceKey="ConsumerName_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[ConsumerName]
+			]]></SQL>
+		</Column>
+		<Column Ident="ValidityPeriod" TitleResourceKey="ValidityPeriod_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[ValidityPeriod]
+			]]></SQL>
+		</Column>
+		<Column Ident="OriginalHWIMNumber" TitleResourceKey="OriginalHWIMNumber_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[OriginalHWIMNumber]
+			]]></SQL>
+		</Column>
+		<Column Ident="Justification" TitleResourceKey="Justification_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Justification]
+			]]></SQL>
+		</Column>
+		<Column Ident="RequestCategory" TitleResourceKey="RequestCategory_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[RequestCategory]
+			]]></SQL>
+		</Column>
+		<Column Ident="Renewal" TitleResourceKey="Renewal_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Renewal]
+			]]></SQL>
+		</Column>
+		<Column Ident="Failure" TitleResourceKey="Failure_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Failure]
+			]]></SQL>
+		</Column>
+		<Column Ident="Employee" TitleResourceKey="Employee_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Employee]
+			]]></SQL>
+		</Column>
+		<Column Ident="Requirement" TitleResourceKey="Requirement_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Requirement]
+			]]></SQL>
+		</Column>
+		<Column Ident="CompletionDate" TitleResourceKey="CompletionDate_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[CompletionDate]
+			]]></SQL>
+		</Column>
+		<Column Ident="Attachment" TitleResourceKey="Attachment_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Attachment]
+			]]></SQL>
+		</Column>
+		<Column Ident="Login" TitleResourceKey="Login_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Login]
+			]]></SQL>
+		</Column>
+		<Column Ident="Permission" TitleResourceKey="Permission_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Permission]
+			]]></SQL>
+		</Column>
+		<Column Ident="SerialNumber" TitleResourceKey="SerialNumber_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[SerialNumber]
+			]]></SQL>
+		</Column>
+		<Column Ident="ExpirationDate" TitleResourceKey="ExpirationDate_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[ExpirationDate]
+			]]></SQL>
+		</Column>
+		<Column Ident="Environment" TitleResourceKey="Environment_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Environment]
+			]]></SQL>
+		</Column>
+		<Column Ident="CommonName" TitleResourceKey="CommonName_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[CommonName]
+			]]></SQL>
+		</Column>
+		<Column Ident="Email" TitleResourceKey="Email_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Email]
+			]]></SQL>
+		</Column>
+		<Column Ident="Organization" TitleResourceKey="Organization_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Organization]
+			]]></SQL>
+		</Column>
+		<Column Ident="SecondOrganization" TitleResourceKey="SecondOrganization_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[SecondOrganization]
+			]]></SQL>
+		</Column>
+		<Column Ident="Locality" TitleResourceKey="Locality_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Locality]
+			]]></SQL>
+		</Column>
+		<Column Ident="StateField" TitleResourceKey="StateField_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[StateField]
+			]]></SQL>
+		</Column>
+		<Column Ident="Country" TitleResourceKey="Country_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Country]
+			]]></SQL>
+		</Column>
+		<Column Ident="SANAttribute" TitleResourceKey="SANAttribute_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[SANAttribute]
+			]]></SQL>
+		</Column>
+		<Column Ident="ServerName" TitleResourceKey="ServerName_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[ServerName]
+			]]></SQL>
+		</Column>
+		<Column Ident="IPAddress" TitleResourceKey="IPAddress_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[IPAddress]
+			]]></SQL>
+		</Column>
+		<Column Ident="Zone" TitleResourceKey="Zone_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Zone]
+			]]></SQL>
+		</Column>
+		<Column Ident="vdom" TitleResourceKey="vdom_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[vdom]
+			]]></SQL>
+		</Column>
+		<Column Ident="Transport" TitleResourceKey="Transport_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Transport]
+			]]></SQL>
+		</Column>
+		<Column Ident="Port" TitleResourceKey="Port_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[Port]
+			]]></SQL>
+		</Column>
+		<Column Ident="RevocationRequestDescription" TitleResourceKey="RevocationRequestDescription_AditionalField_ITSM" Width="5" IsOptional="true" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.[RevocationRequestDescription]
+			]]></SQL>
+		</Column>
+	</Section>
+
 	<Section Root="Form" Name="Html" Insert="placeholder">
 		<div class="row d-none">
 			<div class="col-md-12">
@@ -490,6 +664,43 @@
 
 	<Section Root="Form" Name="ExternalJavaScriptRelativePaths" TargetXPath="//Form/ExternalJavaScriptRelativePaths" Insert="append">
 		<string>~/AppAsset/Packages/ITSM/Scripts/ITSMAdditionalFields.js</string>
+	</Section>
+
+	<Section Root="WorkFlow" Name="InjectToBasicControlShare" TargetXPath="//WorkFlow/ControlShareCodes/ControlShareCode[@Ident='EnableBasicControlShare']/Controls" Insert="append">
+		<FormControl Ident="UserName" IsReadOnly="false" />
+		<FormControl Ident="CertificateType" IsReadOnly="false" />
+		<FormControl Ident="RequestType" IsReadOnly="false" />
+		<FormControl Ident="ConsumerName" IsReadOnly="false" />
+		<FormControl Ident="ValidityPeriod" IsReadOnly="false" />
+		<FormControl Ident="OriginalHWIMNumber" IsReadOnly="false" />
+		<FormControl Ident="Justification" IsReadOnly="false" />
+		<FormControl Ident="RequestCategory" IsReadOnly="false" />
+		<FormControl Ident="Renewal" IsReadOnly="false" />
+		<FormControl Ident="Failure" IsReadOnly="false" />
+		<FormControl Ident="Employee" IsReadOnly="false" />
+		<FormControl Ident="Requirement" IsReadOnly="false" />
+		<FormControl Ident="CompletionDate" IsReadOnly="false" />
+		<FormControl Ident="Attachment" IsReadOnly="false" />
+		<FormControl Ident="Login" IsReadOnly="false" />
+		<FormControl Ident="Permission" IsReadOnly="false" />
+		<FormControl Ident="SerialNumber" IsReadOnly="false" />
+		<FormControl Ident="ExpirationDate" IsReadOnly="false" />
+		<FormControl Ident="Environment" IsReadOnly="false" />
+		<FormControl Ident="CommonName" IsReadOnly="false" />
+		<FormControl Ident="Email" IsReadOnly="false" />
+		<FormControl Ident="Organization" IsReadOnly="false" />
+		<FormControl Ident="SecondOrganization" IsReadOnly="false" />
+		<FormControl Ident="Locality" IsReadOnly="false" />
+		<FormControl Ident="StateField" IsReadOnly="false" />
+		<FormControl Ident="Country" IsReadOnly="false" />
+		<FormControl Ident="SANAttribute" IsReadOnly="false" />
+		<FormControl Ident="ServerName" IsReadOnly="false" />
+		<FormControl Ident="IPAddress" IsReadOnly="false" />
+		<FormControl Ident="Zone" IsReadOnly="false" />
+		<FormControl Ident="vdom" IsReadOnly="false" />
+		<FormControl Ident="Transport" IsReadOnly="false" />
+		<FormControl Ident="Port" IsReadOnly="false" />
+		<FormControl Ident="RevocationRequestDescription" IsReadOnly="false" />
 	</Section>
 	
 </Component>

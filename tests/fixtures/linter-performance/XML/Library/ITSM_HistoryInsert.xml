@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_HistoryInsert" LibraryType="StoredProcedure" PackageIdent="UtilityPackage">
+	<Description>
+	</Description>
+<Command>
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+#MODIFIER# PROCEDURE #NAME#
+(
+	@FormIdent NVARCHAR(255)
+	,@TableID INT
+	,@HistoryTypeID NVARCHAR(255)
+	,@UserID INT
+	,@State INT
+	,@Data NVARCHAR(MAX)
+	,@SubTableID INT
+)
+AS
+BEGIN
+
+	INSERT INTO dbo.History (
+		[FormIdent]
+		,[TableID]
+		,[CreateDate]
+		,[HistoryTypeID]
+		,[AccountID]
+		,[State]
+		,[Data]
+		,[SubTableID]
+	)
+	SELECT
+		[FormIdent] = @FormIdent
+		,[TableID] = @TableID
+		,[CreateDate] = GETDATE()
+		,[HistoryTypeID] = @HistoryTypeID
+		,[AccountID] = @UserID
+		,[State] = @State
+		,[Data] = @Data
+		,[SubTableID] = @SubTableID
+
+	RETURN SCOPE_IDENTITY();
+
+END
+
+	</Command>
+</Library>

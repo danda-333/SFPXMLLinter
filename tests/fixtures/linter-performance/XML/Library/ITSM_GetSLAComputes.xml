@@ -3,10 +3,12 @@
 	<XMLDescription><![CDATA[
 		Funkce: Vrací výpočty SLA pro daný záznam
 	]]></XMLDescription>
-	<Description><![CDATA[
-
-	]]></Description>
-	<Command><![CDATA[
+	<Description>
+		<![CDATA[
+		
+		]]>
+	</Description>
+<Command><![CDATA[
 
 		SET ANSI_NULLS ON
 		GO

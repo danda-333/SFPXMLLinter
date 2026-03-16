@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMKnowledgeBaseFileExtension" SegmentType="ITSMKnowledgeBaseSegment" PackageIdent="ITSMPackage" FormType="FileExtension">
+	<XMLDescription><![CDATA[
+		Formulář: rozšíření meta informací pro nahrání soborů pro přílohy znalostní báze
+	]]></XMLDescription>
+	<DataPermissions>
+		<string>ITSMSettingAdmin</string>
+	</DataPermissions>
+	<CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</CreatePermissions>
+
+	<Buttons>
+		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+	</Buttons>
+	<Controls>
+
+		<Control xsi:type="ListBoxControl" Ident="LanguageIDs" DataType="SmallNumberList" TitleResourceKey="LanguageIDs_ITSM" IsRequired="true">
+			<DataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						lan.ID,
+						lan.[Name]
+					FROM dbo.Language AS lan
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+	</Controls>
+	<Sections>
+		<Section xsi:type="ContentSection" TitleResourceKey="BasicInformationSection_ITSM" Ident="BasicInformationSection">
+			<HTMLTemplate><![CDATA[
+				<fieldset>
+				  <div class="row">
+					<div class="col-md-12">
+					  <div class="form-group">
+										<ControlLabel ControlID="LanguageIDs" />
+						<Control ID="LanguageIDs" />
+					  </div>
+					</div>
+				  </div>
+				</fieldset>
+			]]></HTMLTemplate>
+		</Section>
+		<Section xsi:type="RenderItemSection" Ident="RenderItem">
+			<DataSources>
+				<DataSource Ident="Main">
+					<Columns>
+						<Column Ident="LanguageNames" />
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT STRING_AGG(lan.[Name], ', ') AS LanguageNames
+						FROM dbo.MultiSelect AS mus
+						INNER JOIN dbo.Language AS lan ON lan.ID = TRY_CAST(mus.[Value] AS INT)
+						WHERE
+							mus.TableID = @ID
+							AND mus.FormIdent = 'ITSMKnowledgeBaseFileExtension'
+							AND mus.ControlIdent = 'LanguageIDs'
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					</Parameters>
+				</DataSource>
+			</DataSources>
+			<HTMLTemplate><![CDATA[
+				<div class="mt-1">[#LanguageIDs_ITSM#]: [FOR Source="Main"][%LanguageNames%][/FOR]</div>
+			]]></HTMLTemplate>
+		</Section>
+
+	</Sections>
+</Form>

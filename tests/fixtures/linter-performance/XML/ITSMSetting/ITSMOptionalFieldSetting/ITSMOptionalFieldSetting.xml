@@ -8,7 +8,7 @@
 	</CreatePermissions>
 	<Buttons>
 		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SaveAndCloseButton" TitleResourceKey="SaveAndCloseButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+		<Button xsi:type="FormButton" Ident="SaveAndExitButton" TitleResourceKey="SaveAndExitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
 		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
 			<Extensions>
 				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
@@ -109,8 +109,8 @@
 									<div class="col-md-4">
 
 										<div class="form-group">
-											<ControlLabel ControlID="OptionalFieldSettingName"/>
-											<Control ID="OptionalFieldSettingName"/>
+											<ControlLabel ControlID="OptionalFieldSettingName" />
+											<Control ID="OptionalFieldSettingName" />
 										</div>
 
 									</div>
@@ -119,8 +119,8 @@
 									<div class="col-md-12">
 
 										<div class="form-group">
-											<ControlLabel ControlID="OptionalFieldSettingDescription"/>
-											<Control ID="OptionalFieldSettingDescription"/>
+											<ControlLabel ControlID="OptionalFieldSettingDescription" />
+											<Control ID="OptionalFieldSettingDescription" />
 										</div>
 
 									</div>
@@ -143,7 +143,7 @@
 									<div class="col-md-12">
 
 										<div class="form-group">
-											<Control ID="OptionalFieldIdent"/>
+											<Control ID="OptionalFieldIdent" />
 										</div>
 
 									</div>

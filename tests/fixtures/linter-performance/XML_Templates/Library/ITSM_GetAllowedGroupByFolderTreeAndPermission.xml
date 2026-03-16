@@ -36,7 +36,7 @@
 				gro.ID AS GroupID
 				,gro.[Name] AS GroupName
 			FROM SearchFolderTree AS sft
-			INNER JOIN dbo.FolderTree AS fot ON fot.ID = ISNULL(sft.InheritFromFolderTreeID, fot.ID)
+			INNER JOIN dbo.FolderTree AS fot ON fot.ID = ISNULL(sft.InheritFromFolderTreeID, sft.ID)
 			INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
 			INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
 			INNER JOIN @PermissionIDs AS pIDs ON pIDs.Id = gftp.PermissionID

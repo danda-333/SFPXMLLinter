@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Primitive xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMProblemMyCreatedView">
+  <Template Name="Simple">
+
+		<div class="row">
+			<div class="col-md-12">
+				<div class="form-group">
+					<ControlLabel ControlID="{{ControlIdent}}" />
+					<Control ID="{{ControlIdent}}" />
+				</div>
+			</div>
+		</div>
+
+  </Template>
+  <Template Name="DialogCommunication">
+
+		<div class="row">
+			<div class="col-md-12">
+				<div class="form-group">
+					<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+					<Control ID="DialogCommunication" />
+				</div>
+			</div>
+		</div>
+
+  </Template>
+</Primitive>

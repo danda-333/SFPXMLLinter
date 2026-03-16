@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMFolderTreeSegmentType" SegmentType="Admin" PackageIdent="ITSMPackage">
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="FolderTreeID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="SegmentTypeID" DataType="String" MaxLength="255" />
+
+	</Controls>
+</Form>

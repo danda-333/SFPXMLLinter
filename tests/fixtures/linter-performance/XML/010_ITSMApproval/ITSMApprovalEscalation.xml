@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMApprovalEscalation" PackageIdent="ITSMPackage">
+	<Controls>
+
+		<Control xsi:type="HiddenControl" Ident="ITSMApprovalID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="EscalatedFromEscalationID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="EscalatedApproverAccountID" DataType="Number" />
+		<Control xsi:type="HiddenControl" Ident="EscalationDateTime" DataType="DateTime" />
+
+	</Controls>
+</Form>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_GetLastHistoryID_ByFormIdentTableIDHistoryTypeIDAccountID" LibraryType="Function" PackageIdent="ITSMPackage">
+	<XMLDescription><![CDATA[
+		Funkce: 
+	]]></XMLDescription>
+	<Description><![CDATA[
+		
+	]]></Description>
+	<Command><![CDATA[
+
+		SET ANSI_NULLS ON
+		GO
+		SET QUOTED_IDENTIFIER ON
+		GO
+		
+		-- =============================================
+		-- Author:			Daniel Šašek
+		-- Create date: 2023-12-01
+		-- Description:	
+		-- =============================================
+		#MODIFIER# FUNCTION #NAME#
+		(	
+			@FormIdent VARCHAR(255)
+			,@TableID INT
+			,@HistoryTypeID VARCHAR(255)
+			,@AccountID INT
+		)
+		RETURNS INT
+		AS 
+		BEGIN
+
+			DECLARE @HistoryID INT
+
+			SELECT TOP(1) @HistoryID = his.ID
+			FROM dbo.History AS his
+			WHERE 
+				his.TableID = 1
+				AND his.FormIdent = ''
+				AND his.HistoryTypeID = 'Save'
+				AND his.AccountID = 1
+			ORDER BY his.ID DESC
+
+			RETURN @HistoryID
+		
+		END
+
+	]]></Command>
+</Library>

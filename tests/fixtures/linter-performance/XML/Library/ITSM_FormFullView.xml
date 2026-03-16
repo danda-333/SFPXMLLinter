@@ -3,10 +3,12 @@
 	<XMLDescription><![CDATA[
 		View: Interface pro všechny segmenty ITSM
 	]]></XMLDescription>
-	<Description><![CDATA[
-
-	]]></Description>
-	<Command><![CDATA[
+	<Description>
+		<![CDATA[
+		
+		]]>
+	</Description>
+<Command><![CDATA[
 
 		SET ANSI_NULLS ON
 		GO
@@ -22,7 +24,7 @@
 		#MODIFIER# VIEW #NAME#
 		AS
 
-    SELECT
+	SELECT
 			itsmReq.ID
 			, itsmReq.ID AS SourceID
 			, 'ITSMRequest' AS SourceFormIdent
@@ -37,7 +39,7 @@
 
 		UNION ALL
 
-    SELECT
+	SELECT
 			itsmInc.ID
 			, itsmInc.ID AS SourceID
 			, 'ITSMIncident' AS SourceFormIdent
@@ -52,7 +54,7 @@
 
 		UNION ALL
 
-    SELECT
+	SELECT
 			itsmSupReq.ID
 			, itsmSupReq.ID AS SourceID
 			, 'ITSMSupplierRequest' AS SourceFormIdent
@@ -67,7 +69,7 @@
 
 		UNION ALL
 
-    SELECT
+	SELECT
 			itsmSecInc.ID
 			, itsmSecInc.ID AS SourceID
 			, 'ITSMSecurityIncident' AS SourceFormIdent
@@ -82,7 +84,7 @@
 
 		UNION ALL
 
-    SELECT
+	SELECT
 			itsmCha.ID
 			, itsmCha.ID AS SourceID
 			, 'ITSMChange' AS SourceFormIdent
@@ -97,7 +99,7 @@
 
 		UNION ALL
 
-    SELECT
+	SELECT
 			itsmRel.ID
 			, itsmRel.ID AS SourceID
 			, 'ITSMRelease' AS SourceFormIdent
@@ -112,7 +114,7 @@
 
 		UNION ALL
 
-    SELECT
+	SELECT
 			itsmPro.ID
 			, itsmPro.ID AS SourceID
 			, 'ITSMProblem' AS SourceFormIdent
@@ -127,7 +129,7 @@
 
 		UNION ALL
 
-    SELECT
+	SELECT
 			itsmIno.ID
 			, itsmIno.ID AS SourceID
 			, 'ITSMInovation' AS SourceFormIdent

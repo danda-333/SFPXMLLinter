@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMProblem" SegmentType="ITSMProblemSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" Ident="ITSMProblem" SegmentType="ITSMProblemSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+	<ExternalCssRelativePaths>
+		<string>~/AppAsset/Packages/ITSM/Styles/ApproverList.css</string>
+	</ExternalCssRelativePaths>
 
 	<ExternalJavaScriptRelativePaths>
 
@@ -12,30 +15,30 @@
 		<string>ITSMAuthor</string>
 		<string>ITSMSpecialist</string>
 		<string>ITSMOperator</string>
-		<string>ITSMSupplier</string>
 	</DataPermissions>
 	<CreatePermissions>
-		<string>ITSMProblem</string>
+		<string>ITSMAuthor</string>
+		<string>ITSMOperator</string>
 	</CreatePermissions>
 	<DynamicPermission>
 		<Columns>
 			<Column Ident="PermissionIdent" DataBindType="Value" />
 		</Columns>
 		<SQL>
-			DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-			INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+				  DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+				  INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
 
-      SELECT 'ITSMProblemSharedReporter' AS PermissionIdent
-			FROM usr.ITSM_FolderTreeView as itsmFolTre
-			WHERE
-				itsmFolTre.FolderTreeIdent = @ITSMCompanyIdent
-				AND itsmFolTre.IsShareAmongAuthors = @StateOne
-				AND EXISTS(
-					SELECT NULL
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID, @FolderGroupSegmentIdent, @PermissionIDs)
-					WHERE
-						FolderTreeIdent = itsmFolTre.FolderTreeIdent
-				)
+			SELECT 'ITSMProblemSharedReporter' AS PermissionIdent
+				  FROM usr.ITSM_FolderTreeView as itsmFolTre
+				  WHERE
+					  itsmFolTre.FolderTreeIdent = @ITSMCompanyIdent
+					  AND itsmFolTre.IsShareAmongAuthors = @StateOne
+					  AND EXISTS(
+						  SELECT NULL
+						  FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID, @FolderGroupSegmentIdent, @PermissionIDs)
+						  WHERE
+							  FolderTreeIdent = itsmFolTre.FolderTreeIdent
+					  )
 		</SQL>
 		<Parameters>
 			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
@@ -112,13 +115,55 @@
 			</Extensions>
 		</Button>
 
-		<Button xsi:type="FormButton" Ident="SendToCategorizationButton" TitleResourceKey="SendToCategorizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="GroupButton" Ident="SuspendSolutionGroupButton" TitleResourceKey="SuspendSolutionGroupButton_ITSM" IsStopRedirect="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-pause">
+			<Buttons>
+
+				<Button xsi:type="FormButton" Ident="InternallySuspendSolutionButton" TitleResourceKey="InternallySuspendSolutionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-pause" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="InternallySuspendSolutionConfirmFormDialog" ConfirmFormDialogSectionIdent="InternallySuspendSolutionConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<Button xsi:type="FormButton" Ident="SuspendSolutionButton" TitleResourceKey="SuspendSolutionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-stop" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="SuspendSolutionConfirmFormDialog" ConfirmFormDialogSectionIdent="SuspendSolutionConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<!--<Button xsi:type="FormButton" Ident="SuspendToReporterSolutionButton" TitleResourceKey="SuspendToReporterSolutionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true" />-->
+
+			</Buttons>
+		</Button>
+
+		<Button xsi:type="GroupButton" Ident="SuspendApprovalGroupButton" TitleResourceKey="SuspendApprovalGroupButton_ITSM" IsStopRedirect="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-pause">
+			<Buttons>
+
+				<Button xsi:type="FormButton" Ident="InternallySuspendApprovalButton" TitleResourceKey="InternallySuspendApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-pause" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="ApprovalSuspendConfirmFormDialog" ConfirmFormDialogSectionIdent="ApprovalSuspendConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<Button xsi:type="FormButton" Ident="SuspendApprovalButton" TitleResourceKey="SuspendApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-stop" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="ApprovalSuspendConfirmFormDialog" ConfirmFormDialogSectionIdent="ApprovalSuspendConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<!--<Button xsi:type="FormButton" Ident="SuspendToReporterApprovalButton" TitleResourceKey="SuspendToReporterApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-pause" IsVisible="false" IsStopRedirect="true" />-->
+
+			</Buttons>
+		</Button>
 
 		<Button xsi:type="FormButton" Ident="SendToProcessButton" TitleResourceKey="SendToProcessButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
 
 		<Button xsi:type="FormButton" Ident="CloseButton" TitleResourceKey="CloseButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-lock" IsVisible="false" IsStopRedirect="true" />
 
-		<Button xsi:type="FormButton" Ident="CancelButton" TitleResourceKey="CancelButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-lock" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="CancelButton" TitleResourceKey="CancelButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-lock" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="CancelConfirmFormDialog" ConfirmFormDialogSectionIdent="CancelConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 
 		<Button xsi:type="GroupButton" Ident="SaveGroupButton" TitleResourceKey="SaveGroupButton_ITSM" IsStopRedirect="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk">
 			<Buttons>
@@ -140,146 +185,68 @@
 	</Buttons>
 	<SLACriteriaControls>
 
-			<!-- <Control xsi:type="DropDownListControl" Ident="ITSMPriorityIdent" DataType="Number" TitleResourceKey="ITSMPriorityIdent_ITSM">
-				<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-					<Columns>
-						<Column Ident="Ident" DataBindType="Value" />
-						<Column Ident="TextValue" DataBindType="Title" />
-					</Columns>
-					<SQL><![CDATA[
-						SELECT dial.Guid, dial.TextValue
-						FROM usr.ITSMPriority AS dial
-						WHERE
-							dial.LanguageID = @UserLanguageID
-							AND dial.[State] != @DeletedState
-						ORDER BY dial.OrderValue ASC
-					]]></SQL>
-					<Parameters>
-						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
-						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
-					</Parameters>
-				</DataBind>
-			</Control> -->
+		<!-- <Control xsi:type="DropDownListControl" Ident="ITSMPriorityIdent" DataType="Number" TitleResourceKey="ITSMPriorityIdent_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT dial.Guid, dial.TextValue
+					FROM usr.ITSMPriority AS dial
+					WHERE
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+		</Control> -->
 
-			<!-- <Control xsi:type="DropDownListControl" Ident="ITSMScaleIdent" DataType="Number" TitleResourceKey="ITSMScaleIdent_ITSM">
-				<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-					<Columns>
-						<Column Ident="Ident" DataBindType="Value" />
-						<Column Ident="TextValue" DataBindType="Title" />
-					</Columns>
-					<SQL><![CDATA[
-						SELECT dial.Guid, dial.TextValue
-						FROM usr.ITSMScale AS dial
-						WHERE
-							dial.LanguageID = @UserLanguageID
-							AND dial.[State] != @DeletedState
-						ORDER BY dial.OrderValue ASC
-					]]></SQL>
-					<Parameters>
-						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
-						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
-					</Parameters>
-				</DataBind>
-			</Control> -->
+		<!-- <Control xsi:type="DropDownListControl" Ident="ITSMScaleIdent" DataType="Number" TitleResourceKey="ITSMScaleIdent_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT dial.Guid, dial.TextValue
+					FROM usr.ITSMScale AS dial
+					WHERE
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+		</Control> -->
 
-		</SLACriteriaControls>
+	</SLACriteriaControls>
 
 	<Controls>
 
-		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true" IsFullText="true">
+		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true" IsFullText="true" IsShowRequired="true">
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
-		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsReadOnly="true" IsFullText="true" />
+		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsReadOnly="true" IsFullText="true" IsShowRequired="true" />
 
 		<Control xsi:type="TextAreaControl" Ident="ProblemCause" DataType="String" Rows="3" TitleResourceKey="ProblemCause_ITSM" IsReadOnly="true" />
 
-		<Control xsi:type="DropDownListControl" Ident="ITSMIncidentClassificationTypeGuid" DataType="Guid" TitleResourceKey="ITSMIncidentClassificationTypeGuid_ITSM" IsReadOnly="true">
-			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-				<Columns>
-					<Column Ident="Guid" DataBindType="Value" />
-					<Column Ident="TextValue" DataBindType="Title" />
-				</Columns>
-				<SQL>
-					SELECT
-						dialsetting.Guid,
-						dial.TextValue
-					FROM usr.ITSMIncidentClassificationType AS dial
-					INNER JOIN usr.ITSMIncidentClassificationTypeSetting AS dialsetting
-						ON dialsetting.Guid = dial.Guid
-					WHERE
-						dial.LanguageID = @UserLanguageID
-						AND dial.[State] != @DeletedState
-					ORDER BY dial.OrderValue ASC
-				</SQL>
-				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
-				</Parameters>
-			</DataBind>
-			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
-				<SQL>
-					SET @Result = (
-						SELECT dial.TextValue
-						FROM usr.ITSMIncidentClassificationType AS dial
-							INNER JOIN usr.ITSMIncidentClassificationTypeSetting AS dialsetting
-								ON dialsetting.Guid = dial.Guid
-							WHERE
-								dial.LanguageID = @UserLanguageID
-								AND dial.[State] != 0
-								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
-					)
-				</SQL>
-			</TimeLineDataBind>
-		</Control>
+		<!-- <Control xsi:type="SwitchControl" Ident="IsProblemSolved" DataType="Bool" TitleResourceKey="IsProblemSolved_ITSM" LabelPlacementType="Right" IsReadOnly="true" />
 
-		<Control xsi:type="DropDownListControl" Ident="ITSMOperationalEnvironmentTypeGuid" DataType="Guid" TitleResourceKey="ITSMOperationalEnvironmentTypeGuid_ITSM" IsReadOnly="true">
-			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-				<Columns>
-					<Column Ident="Guid" DataBindType="Value" />
-					<Column Ident="TextValue" DataBindType="Title" />
-				</Columns>
-				<SQL>
-					SELECT
-						dialsetting.Guid,
-						dial.TextValue
-					FROM usr.ITSMOperationalEnvironmentType AS dial
-					INNER JOIN usr.ITSMOperationalEnvironmentTypeSetting AS dialsetting
-						ON dialsetting.Guid = dial.Guid
-					WHERE
-						dial.LanguageID = @UserLanguageID
-						AND dial.[State] != @DeletedState
-					ORDER BY dial.OrderValue ASC
-				</SQL>
-				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
-				</Parameters>
-			</DataBind>
-			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
-				<SQL>
-					SET @Result = (
-						SELECT dial.TextValue
-						FROM usr.ITSMOperationalEnvironmentType AS dial
-							INNER JOIN usr.ITSMOperationalEnvironmentTypeSetting AS dialsetting
-								ON dialsetting.Guid = dial.Guid
-							WHERE
-								dial.LanguageID = @UserLanguageID
-								AND dial.[State] != 0
-								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
-					)
-				</SQL>
-			</TimeLineDataBind>
-		</Control>
-
-		<Control xsi:type="SwitchControl" Ident="IsProblemSolved" DataType="Bool" TitleResourceKey="IsProblemSolved_ITSM" LabelPlacementType="Right" IsReadOnly="true" />
-
-		<Control xsi:type="TextAreaControl" Ident="ProblemSolutionJustification" DataType="String" Rows="3" TitleResourceKey="ProblemSolutionJustification_ITSM" IsReadOnly="true" />
+		<Control xsi:type="TextAreaControl" Ident="ProblemSolutionJustification" DataType="String" Rows="3" TitleResourceKey="ProblemSolutionJustification_ITSM" IsReadOnly="true" /> -->
 
 		<!-- PHs -->
-    <Control xsi:type="PlaceHolderControl" Ident="PHContactInformationCard" IsVisible="false" />
-    <Control xsi:type="PlaceHolderControl" Ident="PHCommunicationCard" IsVisible="false" />
-    <Control xsi:type="PlaceHolderControl" Ident="PHDocumentationCard" IsVisible="false" />
-    <Control xsi:type="PlaceHolderControl" Ident="PHRequestControlCard" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHContactInformationCard" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHCommunicationCard" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHDocumentationCard" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="PHRequestControlCard" IsVisible="false" />
 		<!-- PHs -->
 
 		<Control xsi:type="AutoCompleteControl" Ident="AssignedGroupID" DataType="Number" MaxLength="900" TitleResourceKey="AssignedGroupID_ITSM" IsReadOnly="true">
@@ -765,22 +732,39 @@
 		<Control xsi:type="PlaceHolderControl" Ident="AssignedCardPlaceHolder" IsVisible="false" />
 
 		<Control xsi:type="AutoCompleteControl" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" TitleResourceKey="ITSMCompanyIdent_ITSM" IsRequired="true" IsReadOnly="true">
-			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+			<EmptyDataBind>
 				<Columns>
 					<Column Ident="Ident" DataBindType="Value" />
 					<Column Ident="Name" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
-					SELECT
-						itsmFolPer.FolderTreeIdent AS Ident
-						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
-					WHERE
-						itsmFolPer.FolderLevel = @Level
-						AND itsmFolPer.FolderName LIKE @ITSMCompanyIdent
+					DECLARE @OperatorOnlyPermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @OperatorOnlyPermissionIDs VALUES ('ITSMOperator');
+
+					IF(@ReporterAccountID IS NULL OR @ReporterAccountID = @UserID)
+
+						SELECT TOP(20)
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPer
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+					ELSE
+
+						SELECT TOP(20)
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@OperatorOnlyPermissionIDs) as itsmFolPer
+						INNER JOIN usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@ReporterAccountID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPerReporter ON itsmFolPerReporter.FolderTreeID = itsmFolPer.FolderTreeID
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.FolderState = @FolderActiveState
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" LikeType="Both" />
@@ -788,6 +772,59 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="1" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
+				<Dependencies>
+					<string>ReporterAccountID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="Ident" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
+
+					DECLARE @OperatorOnlyPermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @OperatorOnlyPermissionIDs VALUES ('ITSMOperator');
+
+					IF(@ReporterAccountID IS NULL OR @ReporterAccountID = @UserID)
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPer
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.FolderState = @FolderActiveState
+							AND itsmFolPer.FolderName LIKE @ITSMCompanyIdent
+
+					ELSE
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@OperatorOnlyPermissionIDs) as itsmFolPer
+						INNER JOIN usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@ReporterAccountID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPerReporter ON itsmFolPerReporter.FolderTreeID = itsmFolPer.FolderTreeID
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.FolderState = @FolderActiveState
+							AND itsmFolPer.FolderName LIKE @ITSMCompanyIdent
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" LikeType="Both" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="1" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
 			<SelectedDataBind>
@@ -798,7 +835,7 @@
 				<SQL><![CDATA[
 					SELECT
 						fot.Ident
-						, fol.[Name]
+						,fol.[Name]
 					FROM dbo.Folder AS fol
 					INNER JOIN dbo.FolderTree AS fot ON fot.FolderID = fol.ID
 					WHERE
@@ -816,6 +853,7 @@
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
 					<string>ITSMCompanyIdent</string>
+					<string>ReporterAccountID</string>
 				</Dependencies>
 				<Columns>
 					<Column Ident="Ident" DataBindType="Value" />
@@ -823,23 +861,63 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
-					SELECT
-						itsmFolPer.FolderTreeIdent AS Ident
-						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
-					WHERE
-						itsmFolPer.FolderLevel = @Level
-						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCompanyIdent
+					DECLARE @OperatorOnlyPermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @OperatorOnlyPermissionIDs VALUES ('ITSMOperator');
+
+					IF(@ReporterAccountID IS NULL OR @ReporterAccountID = @UserID)
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPer
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCompanyIdent
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCompanyIdent
+						WHERE
+							fot.Ident = @ITSMCategoryLevel2Ident
+
+					ELSE
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@OperatorOnlyPermissionIDs) as itsmFolPer
+						INNER JOIN usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@ReporterAccountID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPerReporter ON itsmFolPerReporter.FolderTreeID = itsmFolPer.FolderTreeID
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCompanyIdent
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCompanyIdent
+						WHERE
+							fot.Ident = @ITSMCategoryLevel2Ident
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="2" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
 
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
 			<!-- @Ignore unknown-form-ident -->
@@ -850,6 +928,7 @@
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
 					<string>ITSMCategoryLevel2Ident</string>
+					<string>ReporterAccountID</string>
 				</Dependencies>
 				<Columns>
 					<Column Ident="Ident" DataBindType="Value" />
@@ -857,23 +936,63 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
-					SELECT
-						itsmFolPer.FolderTreeIdent AS Ident
-						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
-					WHERE
-						itsmFolPer.FolderLevel = @Level
-						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel2Ident
+					DECLARE @OperatorOnlyPermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @OperatorOnlyPermissionIDs VALUES ('ITSMOperator');
+
+					IF(@ReporterAccountID IS NULL OR @ReporterAccountID = @UserID)
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPer
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel2Ident
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCategoryLevel2Ident
+						WHERE
+							fot.Ident = @ITSMCategoryLevel3Ident
+
+					ELSE
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@OperatorOnlyPermissionIDs) as itsmFolPer
+						INNER JOIN usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@ReporterAccountID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPerReporter ON itsmFolPerReporter.FolderTreeID = itsmFolPer.FolderTreeID
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel2Ident
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCategoryLevel2Ident
+						WHERE
+							fot.Ident = @ITSMCategoryLevel3Ident
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="3" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
 
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
 			<!-- @Ignore unknown-form-ident -->
@@ -884,6 +1003,7 @@
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
 					<string>ITSMCategoryLevel3Ident</string>
+					<string>ReporterAccountID</string>
 				</Dependencies>
 				<Columns>
 					<Column Ident="Ident" DataBindType="Value" />
@@ -891,23 +1011,63 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
-					SELECT
-						itsmFolPer.FolderTreeIdent AS Ident
-						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
-					WHERE
-						itsmFolPer.FolderLevel = @Level
-						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel3Ident
+					DECLARE @OperatorOnlyPermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @OperatorOnlyPermissionIDs VALUES ('ITSMOperator');
+
+					IF(@ReporterAccountID IS NULL OR @ReporterAccountID = @UserID)
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPer
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel3Ident
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCategoryLevel3Ident
+						WHERE
+							fot.Ident = @ITSMCategoryLevel4Ident
+
+					ELSE
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@OperatorOnlyPermissionIDs) as itsmFolPer
+						INNER JOIN usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@ReporterAccountID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPerReporter ON itsmFolPerReporter.FolderTreeID = itsmFolPer.FolderTreeID
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel3Ident
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCategoryLevel3Ident
+						WHERE
+							fot.Ident = @ITSMCategoryLevel4Ident
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="4" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
 
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
 			<!-- @Ignore unknown-form-ident -->
@@ -918,6 +1078,7 @@
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Dependencies>
 					<string>ITSMCategoryLevel4Ident</string>
+					<string>ReporterAccountID</string>
 				</Dependencies>
 				<Columns>
 					<Column Ident="Ident" DataBindType="Value" />
@@ -925,30 +1086,140 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
-					SELECT
-						itsmFolPer.FolderTreeIdent AS Ident
-						, itsmFolPer.FolderName AS [Name]
-					FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs) as itsmFolPer
-					WHERE
-						itsmFolPer.FolderLevel = @Level
-						AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel4Ident
+					DECLARE @OperatorOnlyPermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @OperatorOnlyPermissionIDs VALUES ('ITSMOperator');
+
+					IF(@ReporterAccountID IS NULL OR @ReporterAccountID = @UserID)
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPer
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel4Ident
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCategoryLevel4Ident
+						WHERE
+							fot.Ident = @ITSMCategoryLevel5Ident
+
+					ELSE
+
+						SELECT
+							itsmFolPer.FolderTreeIdent AS Ident
+							,itsmFolPer.FolderName AS [Name]
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@OperatorOnlyPermissionIDs) as itsmFolPer
+						INNER JOIN usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@ReporterAccountID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs) as itsmFolPerReporter ON itsmFolPerReporter.FolderTreeID = itsmFolPer.FolderTreeID
+						WHERE
+							itsmFolPer.FolderLevel = @Level
+							AND itsmFolPer.ParentFolderTreeIdent = @ITSMCategoryLevel4Ident
+							AND itsmFolPer.FolderState = @FolderActiveState
+
+						UNION
+
+						SELECT fot.Ident, fol.[Name]
+						FROM dbo.FolderTree AS fot
+						INNER JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+						INNER JOIN dbo.FolderTree AS fotP ON fotP.ID = fot.ParentFolderTreeID AND fotP.Ident = @ITSMCategoryLevel4Ident
+						WHERE
+							fot.Ident = @ITSMCategoryLevel5Ident
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="5" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderActiveState" DataType="Number" Value="1" />
 
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
 			<!-- @Ignore unknown-form-ident -->
 			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSM_FolderTreeView" KeyColumnIdent="FolderTreeIdent" KeyColumnDataType="VARCHAR(900)" TitleColumnIdent="FolderName" TitleColumnDataType="VARCHAR(MAX)" />
 		</Control>
 
-		<Control xsi:type="TextBoxControl" Ident="IsShowCategoryLevel5" DataType="Number" TitleResourceKey="IsShowCategoryLevel5_ITSM" IsCreateColumn="false" IsFakeReadOnly="true">
+		<Control xsi:type="TextBoxControl" Ident="IsShowCategoryLevel3" DataType="Number" TitleResourceKey="IsShowCategoryLevel3_ITSM" IsCreateColumn="false" IsFakeReadOnly="true" IsServerDataHackValidation="true">
+			<DataBind>
+				<Dependencies>
+					<string>ITSMCategoryLevel2Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsShowCategoryLevel3" DataBindType="Value" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
+
+					SELECT
+						IIF(
+							EXISTS(
+								SELECT NULL
+								FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs)
+								WHERE
+									FolderLevel = @Level
+									AND ParentFolderTreeIdent = @ITSMCategoryLevel2Ident
+							)
+							, 1
+							, 0
+						) AS IsShowCategoryLevel3
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="3" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</DataBind>
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="IsShowCategoryLevel4" DataType="Number" TitleResourceKey="IsShowCategoryLevel4_ITSM" IsCreateColumn="false" IsFakeReadOnly="true" IsServerDataHackValidation="true">
+			<DataBind>
+				<Dependencies>
+					<string>ITSMCategoryLevel3Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsShowCategoryLevel4" DataBindType="Value" />
+				</Columns>
+				<SQL><![CDATA[
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
+
+					SELECT
+						IIF(
+							EXISTS(
+								SELECT NULL
+								FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs)
+								WHERE
+									FolderLevel = @Level
+									AND ParentFolderTreeIdent = @ITSMCategoryLevel3Ident
+							)
+							, 1
+							, 0
+						) AS IsShowCategoryLevel4
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="AccountID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Level" DataType="Number" Value="4" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</DataBind>
+		</Control>
+		<Control xsi:type="TextBoxControl" Ident="IsShowCategoryLevel5" DataType="Number" TitleResourceKey="IsShowCategoryLevel5_ITSM" IsCreateColumn="false" IsFakeReadOnly="true" IsServerDataHackValidation="true">
 			<DataBind>
 				<Dependencies>
 					<string>ITSMCategoryLevel4Ident</string>
@@ -958,13 +1229,13 @@
 				</Columns>
 				<SQL><![CDATA[
 					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor');
+					INSERT INTO @PermissionIDs VALUES ('ITSMAuthor'), ('ITSMOperator');
 
 					SELECT
 						IIF(
 							EXISTS(
 								SELECT NULL
-								FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(ISNULL(@AccountID,@UserID),@FolderGroupSegmentIdent,@PermissionIDs)
+								FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs)
 								WHERE
 									FolderLevel = @Level
 									AND ParentFolderTreeIdent = @ITSMCategoryLevel4Ident
@@ -980,6 +1251,71 @@
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
 
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="TextBoxControl" Ident="IsElevatedPermissionOrNotFirstState" DataType="Number" TitleResourceKey="IsElevatedPermissionOrNotFirstState_ITSM" IsCreateColumn="false" IsFakeReadOnly="true" IsRefresh="true" IsServerDataHackValidation="true">
+			<DataBind>
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+					<string>ITSMCategoryLevel2Ident</string>
+					<string>ITSMCategoryLevel3Ident</string>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+					<string>IsShowCategoryLevel5</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="IsElevatedPermissionOrNotFirstState" DataBindType="Value" />
+				</Columns>
+				<SQL><![CDATA[
+							  DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							  INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+							  /*DECLARE @LastITSMCategoryIdent VARCHAR(900) = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)*/
+							  DECLARE @LastITSMCategoryIdent VARCHAR(900) = @ITSMCategoryLevel2Ident;
+					IF @IsShowCategoryLevel3 = 1
+					  SET @LastITSMCategoryIdent = @ITSMCategoryLevel3Ident
+					IF @IsShowCategoryLevel4 = 1
+					  SET @LastITSMCategoryIdent = @ITSMCategoryLevel4Ident
+					IF @IsShowCategoryLevel5 = 1
+					  SET @LastITSMCategoryIdent = @ITSMCategoryLevel5Ident
+
+							  IF @IsElevatedPermissionOrNotFirstState IS NULL
+								  SET @LastITSMCategoryIdent = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+
+							  IF @LastITSMCategoryIdent IS NULL
+
+								  SELECT @IsElevatedPermissionOrNotFirstState AS IsElevatedPermissionOrNotFirstState
+
+							  ELSE
+
+								  SELECT
+									  IIF(
+										  EXISTS(
+											  SELECT NULL
+											  FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs)
+											  WHERE
+												  FolderTreeIdent = @LastITSMCategoryIdent
+										  )
+										  OR ISNULL(@ID, 0) != 0
+									  , 1, 0) AS IsElevatedPermissionOrNotFirstState
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel3" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel4" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsElevatedPermissionOrNotFirstState" DataType="Number" SetDataType="SelectedValueData" />
 				</Parameters>
 			</DataBind>
 		</Control>
@@ -1025,7 +1361,7 @@
 			</TimeLineDataBind>-->
 			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSMGeneralResolutionMethodType" KeyColumnIdent="Guid" KeyColumnDataType="UNIQUEIDENTIFIER" TitleColumnIdent="TextValue" TitleColumnDataType="VARCHAR(255)" LanguageIDColumnIdent="LanguageID" />
 		</Control>
-		<Control xsi:type="DropDownListControl" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="DialogITSMGeneralResolutionMethodTypeGuid_ITSM">
+		<Control xsi:type="DropDownListControl" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="DialogITSMGeneralResolutionMethodTypeGuid_ITSM" IsShowRequired="true">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Columns>
 					<Column Ident="Guid" DataBindType="Value" />
@@ -1056,7 +1392,7 @@
 		<Control xsi:type="TextAreaControl" Ident="SolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsReadOnly="true">
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
-		<Control xsi:type="TextAreaControl" Ident="DialogSolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsCreateColumn="false">
+		<Control xsi:type="TextAreaControl" Ident="DialogSolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsCreateColumn="false" IsShowRequired="true">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Columns>
 					<Column Ident="SolutionDescription" DataBindType="Value" />
@@ -1089,6 +1425,112 @@
 
 		<Control xsi:type="PlaceHolderControl" Ident="GeneralResolutionCardPlaceHolder" IsVisible="false" />
 
+		<Control xsi:type="DropDownListControl" Ident="ITSMSolutionSuspendReasonGuid" DataType="Guid" TitleResourceKey="ITSMSolutionSuspendReasonGuid_ITSM" IsFakeReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSolutionSuspendReason AS dial
+					INNER JOIN usr.ITSMSolutionSuspendReasonSetting AS dialsetting
+						ON dialsetting.Guid = dial.Guid
+					WHERE
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSMSolutionSuspendReason" KeyColumnIdent="Guid" KeyColumnDataType="UNIQUEIDENTIFIER" TitleColumnIdent="TextValue" TitleColumnDataType="VARCHAR(255)" LanguageIDColumnIdent="LanguageID" />
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="DialogITSMSolutionSuspendReasonGuid" DataType="Guid" TitleResourceKey="DialogITSMSolutionSuspendReasonGuid_ITSM" IsShowRequired="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+					<Column Ident="Selected" DataBindType="Selected" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						dialsetting.Guid
+						,dial.TextValue
+						,IIF(dialsetting.Guid = @ITSMSolutionSuspendReasonGuid, 1, 0) AS Selected
+					FROM usr.ITSMSolutionSuspendReason AS dial
+					INNER JOIN usr.ITSMSolutionSuspendReasonSetting AS dialsetting
+						ON dialsetting.Guid = dial.Guid
+					WHERE
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMSolutionSuspendReasonGuid" DataType="Guid" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMApprovalSuspendReasonGuid" DataType="Guid" TitleResourceKey="ITSMApprovalSuspendReasonGuid_ITSM" IsFakeReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMApprovalSuspendReason AS dial
+					INNER JOIN usr.ITSMApprovalSuspendReasonSetting AS dialsetting
+						ON dialsetting.Guid = dial.Guid
+					WHERE
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSMApprovalSuspendReason" KeyColumnIdent="Guid" KeyColumnDataType="UNIQUEIDENTIFIER" TitleColumnIdent="TextValue" TitleColumnDataType="VARCHAR(255)" LanguageIDColumnIdent="LanguageID" />
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="DialogITSMApprovalSuspendReasonGuid" DataType="Guid" TitleResourceKey="DialogITSMApprovalSuspendReasonGuid_ITSM" IsShowRequired="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+					<Column Ident="Selected" DataBindType="Selected" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						dialsetting.Guid
+						,dial.TextValue
+						,IIF(dialsetting.Guid = @ITSMApprovalSuspendReasonGuid, 1, 0) AS Selected
+					FROM usr.ITSMApprovalSuspendReason AS dial
+					INNER JOIN usr.ITSMApprovalSuspendReasonSetting AS dialsetting
+						ON dialsetting.Guid = dial.Guid
+					WHERE
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMApprovalSuspendReasonGuid" DataType="Guid" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
 		<Control xsi:type="HiddenControl" Ident="ThisFormIdent" DataType="String" IsCreateColumn="false" Default="ITSMProblem" />
 
 		<Control xsi:type="HTMLContentViewControl" Ident="MainInfoHTMLContentView" IsRazorEngine="true">
@@ -1096,7 +1538,7 @@
 				<DataSource Ident="Main">
 					<Columns>
 						<!-- @Ignore unknown-form-ident -->
-						<Column xsi:type="WorkFlowStateColumn" Ident="State" IsColor="true" FormIdent="ITSMProblem" />
+						<Column Ident="State" />
 						<Column Ident="ITSMGeneralResolutionMethodTypeGuid" />
 						<Column Ident="Header" />
 						<Column Ident="AccountID" />
@@ -1107,9 +1549,12 @@
 						<Column Ident="AssignedAccountID" />
 					</Columns>
 					<SQL><![CDATA[
+
 						SELECT
-							ISNULL(itsReq.[State], 1) AS [State]
+							CONCAT('<span class="badge badge-', itsGwfs.ColorCssClass, '">', usr.GetResourceText(itsGwfs.TitleResourceKey, @UserLanguageID), '</span>') AS [State]
 							,itsGrmt.[TextValue] AS ITSMGeneralResolutionMethodTypeGuid
+							,itsSsr.[TextValue] AS ITSMSolutionSuspendReasonGuid
+							,itsAsr.[TextValue] AS ITSMApprovalSuspendReasonGuid
 
 							,itsReq.ID
 							,itsReq.ITSMKey
@@ -1130,12 +1575,16 @@
 
 						FROM (VALUES (0)) AS dual(zero)
 						LEFT JOIN usr.ITSMProblem AS itsReq ON itsReq.ID = @ID
+						LEFT JOIN usr.ITSM_GetWorkFlowState ('ITSMProblemWorkFlow') AS itsGwfs ON itsGwfs.[Value] = ISNULL(itsReq.[State], 1)
 						LEFT JOIN usr.ITSMProblem AS itsReqParent ON itsReqParent.ID = itsReq.ParentTableID
 						LEFT JOIN dbo.[Group] AS groAssigned ON groAssigned.ID = itsReq.AssignedGroupID
 						LEFT JOIN dbo.Account AS accAssigned ON accAssigned.ID = itsReq.AssignedAccountID
 						LEFT JOIN dbo.Account AS accCreator ON accCreator.ID = ISNULL(itsReq.AccountID, @UserID)
 						LEFT JOIN dbo.Account AS accLastUpdate ON accLastUpdate.ID = itsReq.LastUpdateAccountID
 						LEFT JOIN usr.ITSMGeneralResolutionMethodType AS itsGrmt ON itsGrmt.Guid = itsReq.ITSMGeneralResolutionMethodTypeGuid AND itsGrmt.LanguageID = @UserLanguageID
+						LEFT JOIN usr.ITSMSolutionSuspendReason AS itsSsr ON itsSsr.Guid = itsReq.ITSMSolutionSuspendReasonGuid AND itsSsr.LanguageID = @UserLanguageID
+						LEFT JOIN usr.ITSMApprovalSuspendReason AS itsAsr ON itsAsr.Guid = itsReq.ITSMApprovalSuspendReasonGuid AND itsAsr.LanguageID = @UserLanguageID
+
 					]]></SQL>
 					<Parameters>
 						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
@@ -1145,8 +1594,8 @@
 				</DataSource>
 				<DataSource Ident="SLAs">
 					<Columns>
-						<Column Ident="SLAType" />
-						<Column Ident="SLAStatus" />
+						<Column Ident="SLAType" IsTranslate="true" />
+						<Column Ident="SLAStatus" IsTranslate="true" />
 						<Column Ident="SLADate" />
 						<Column Ident="SLASpentTime" />
 						<Column Ident="SLASpentPercent" />
@@ -1156,9 +1605,20 @@
 						<Column Ident="SLAStatusColorCssClass" />
 					</Columns>
 					<SQL><![CDATA[
+						/*
+							[#TTR_SLAType_ITSM#]
+							[#TTO_SLAType_ITSM#]
+							[#Other_SLAType_ITSM#]
+
+							[#Exceeded_SLAStatus_ITSM#]
+							[#Ended_SLAStatus_ITSM#]
+							[#Running_SLAStatus_ITSM#]
+							[#Paused_SLAStatus_ITSM#]
+						*/
+
 						SELECT
 							CONCAT(itsGsc.SLAType, '_SLAType_ITSM') AS SLAType
-							,CONCAT(itsGsc.SLAStatus, '_SLAType_ITSM') AS SLAStatus
+							,CONCAT(itsGsc.SLAStatus, '_SLAStatus_ITSM') AS SLAStatus
 							,itsGsc.FinishTime AS SLADate
 							,itsGsc.TimeSpent AS SLASpentTime
 							,itsGsc.PercentSpent AS SLASpentPercent
@@ -1174,17 +1634,173 @@
 					]]></SQL>
 					<Parameters>
 						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="ApproverList">
+					<Columns>
+						<Column Ident="BadgeColor" />
+						<Column Ident="Color" />
+						<Column Ident="Title" />
+					</Columns>
+					<SQL><![CDATA[
+
+						DECLARE @ApprovedColor varchar(7) = '#4CAF50';
+						DECLARE @NotApprovedColor varchar(7) = '#ff7043';
+
+						SELECT
+							CASE
+								ISNULL(itsApp.IsApproved,0)
+								WHEN 0 THEN @NotApprovedColor
+								WHEN 1 THEN @ApprovedColor
+							END AS BackgroundColor
+							,'#FFF' AS Color
+							,CASE
+								WHEN itsApp.ApproverType = 'Group' THEN ISNULL(approverGro.[Name], '')
+								WHEN itsApp.ApproverType = 'Account' THEN ISNULL(approverAcc.FullName, '')
+								ELSE ''
+							END AS Title
+						FROM usr.ITSMApproval AS itsApp
+						LEFT JOIN dbo.[Group] AS approverGro on approverGro.ID = itsApp.ApproverGroupID
+						LEFT JOIN dbo.[Account] AS approverAcc on approverAcc.ID = itsApp.ApproverAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.ApproveRoundGUID = @ActualApproveRoundGuid
+							AND itsApp.ApproveRoundStartDateTime IS NOT NULL
+						ORDER BY ApproveOrder ASC
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="ApproverAggregation">
+					<Columns>
+						<Column Ident="Approved" />
+						<Column Ident="Total" />
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT
+							SUM(IIF(ISNULL(itsApp.IsApproved,0) = 0, 0, 1)) AS Approved
+							,COUNT(*) AS Total
+						FROM usr.ITSMApproval AS itsApp
+						LEFT JOIN dbo.[Group] AS approverGro on approverGro.ID = itsApp.ApproverGroupID
+						LEFT JOIN dbo.[Account] AS approverAcc on approverAcc.ID = itsApp.ApproverAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.ApproveRoundGUID = @ActualApproveRoundGuid
+							AND itsApp.ApproveRoundStartDateTime IS NOT NULL
+						HAVING COUNT(*) > 0
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="AssessmentList">
+					<Columns>
+						<Column Ident="BadgeColor" />
+						<Column Ident="Color" />
+						<Column Ident="Title" />
+					</Columns>
+					<SQL><![CDATA[
+
+						DECLARE @ApprovedColor varchar(7) = '#4CAF50';
+						DECLARE @NotApprovedColor varchar(7) = '#ff7043';
+
+						SELECT
+							CASE
+								ISNULL(itsApp.IsApproved,0)
+								WHEN 0 THEN @NotApprovedColor
+								WHEN 1 THEN @ApprovedColor
+							END AS BackgroundColor
+							,'#FFF' AS Color
+							,CASE
+								WHEN itsApp.AssessmentType = 'Group' THEN ISNULL(AssessmentGro.[Name], '')
+								WHEN itsApp.AssessmentType = 'Account' THEN ISNULL(AssessmentAcc.FullName, '')
+								ELSE ''
+							END AS Title
+						FROM usr.ITSMAssessment AS itsApp
+						LEFT JOIN dbo.[Group] AS AssessmentGro on AssessmentGro.ID = itsApp.AssessmentGroupID
+						LEFT JOIN dbo.[Account] AS AssessmentAcc on AssessmentAcc.ID = itsApp.AssessmentAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.AssessmentRoundGUID = @ActualAssessmentRoundGuid
+							AND itsApp.AssessmentRoundStartDateTime IS NOT NULL
+						ORDER BY AssessmentOrder ASC
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="AssessmentAggregation">
+					<Columns>
+						<Column Ident="Approved" />
+						<Column Ident="Total" />
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT
+							SUM(IIF(ISNULL(itsApp.IsApproved,0) = 0, 0, 1)) AS Approved
+							,COUNT(*) AS Total
+						FROM usr.ITSMAssessment AS itsApp
+						LEFT JOIN dbo.[Group] AS AssessmentGro on AssessmentGro.ID = itsApp.AssessmentGroupID
+						LEFT JOIN dbo.[Account] AS AssessmentAcc on AssessmentAcc.ID = itsApp.AssessmentAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.AssessmentRoundGUID = @ActualAssessmentRoundGuid
+							AND itsApp.AssessmentRoundStartDateTime IS NOT NULL
+						HAVING COUNT(*) > 0
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
 					</Parameters>
 				</DataSource>
 			</Sources>
 			<HTMLTemplate><![CDATA[
 				@{
 					var mainData = Model.Data.Main[0];
+					int? approverApproved = null;
+					int? approverTotal = null;
+					if(Model.Data.ApproverAggregation != null && Model.Data.ApproverAggregation.Count > 0){
+						approverApproved = Model.Data.ApproverAggregation[0].Approved;
+						approverTotal = Model.Data.ApproverAggregation[0].Total;
+					}
+					int? AssessmentapproverApproved = null;
+					int? AssessmentapproverTotal = null;
+					if(Model.Data.AssessmentAggregation != null && Model.Data.AssessmentAggregation.Count > 0){
+						AssessmentapproverApproved = Model.Data.AssessmentAggregation[0].Approved;
+						AssessmentapproverTotal = Model.Data.AssessmentAggregation[0].Total;
+					}
+
 				}
 
-				<div class="d-flex flex-wrap">
+				<div class="d-flex flex-wrap" style="gap: 0.25rem;">
 					<div class="d-flex flex-wrap justify-content-between" style="flex: 999 1 min(100%, 650px);">
-						<div style="flex: 999 1 min(100%, 450px); font-size: 16px;">
+						<div style="flex: 999 1 min(100%, 450px); font-size: 16px; display: flex; flex-direction: column; gap: 0.25rem;">
 							@if(!(mainData.ParentTableID is System.DBNull)){
 								<div class="font-size-sm">[#ParentTableID_Information_ITSM#]: <a href="~/Form/Detail/ITSMProblem/@mainData.ParentTableID">@mainData.ParentITSMKey</a> | @mainData.ParentSubject</div>
 							}
@@ -1192,13 +1808,23 @@
 								@if(!(mainData.ID is System.DBNull)){
 									<text><a href="~/Form/Detail/ITSMProblem/@mainData.ID">@mainData.ITSMKey</a> | @mainData.Subject</text>
 								} else {
-									<text>[#CreatingNewITSMRequest_Information_ITSM#]</text>
+									<text>[#CreatingNewITSMProblem_Information_ITSM#]</text>
 								}
 							</div>
 							<small class="d-block text-muted ml-0 font-size-sm">
 								[#Created_ITSM#]: @mainData.AccountID @if(!(mainData.CreateDate is System.DBNull)){@mainData.CreateDate}
 								@if(!(mainData.LastUpdate is System.DBNull)){<text>, [#Updated_ITSM#]: @mainData.LastUpdateAccountID @mainData.LastUpdate</text>}
 							</small>
+							<div class="approver-list">
+								@foreach(var item in Model.Data.ApproverList)
+								{
+									<div class="approver-list_item" style="background-color: @item.BackgroundColor; color: @item.Color;">@item.Title</div>
+								}
+								@foreach(var ass in Model.Data.AssessmentList)
+								{
+									<div class="approver-list_item" style="background-color: @ass.BackgroundColor; color: @ass.Color;">@ass.Title</div>
+								}
+							</div>
 						</div>
 						<div style="flex: 1 1 auto;">
 							<ul class="list-group list-group-flush m-0">
@@ -1206,6 +1832,18 @@
 									<span class="font-weight-semibold mr-2">[#State_ITSM#]:</span>
 									<div class="ml-auto">@mainData.State</div>
 								</li>
+								@if(!(@approverApproved is null)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#ApprovalStatus_ITSM#]:</span>
+									<div class="ml-auto">@approverApproved / @approverTotal</div>
+								</li>
+								}
+								@if(!(@AssessmentapproverApproved is null)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#AssessmentApprovalStatus_ITSM#]:</span>
+									<div class="ml-auto">@AssessmentapproverApproved / @AssessmentapproverTotal</div>
+								</li>
+								}
 								@if(!(mainData.ITSMGeneralResolutionMethodTypeGuid is System.DBNull)){
 								<li class="list-group-item" style="padding: .3rem .5rem;">
 									<span class="font-weight-semibold mr-2">[#ITSMGeneralResolutionMethodTypeGuid_ITSM#]:</span>
@@ -1224,42 +1862,360 @@
 									<div class="ml-auto">@mainData.AssignedAccountID</div>
 								</li>
 								}
+								@if(!(mainData.ITSMSolutionSuspendReasonGuid is System.DBNull)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#ITSMSolutionSuspendReasonGuid_ITSM#]:</span>
+									<div class="ml-auto">@mainData.ITSMSolutionSuspendReasonGuid</div>
+								</li>
+								}
+								@if(!(mainData.ITSMApprovalSuspendReasonGuid is System.DBNull)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#ITSMApprovalSuspendReasonGuid_ITSM#]:</span>
+									<div class="ml-auto">@mainData.ITSMApprovalSuspendReasonGuid</div>
+								</li>
+								}
 							</ul>
 						</div>
 					</div>
 					<div class="d-flex flex-wrap align-items-start gap-1-lmtl4" style="flex: 1 1 auto;">
 						@foreach(var item in Model.Data.SLAs){
-						<div class="d-flex flex-column" style="flex: 1 1 auto;">
-							<div class="card-body @item.SLAStatusColorCssClass m-0">
-								<div class="d-flex">
-									<h3 class="font-weight-semibold mb-0 font-size-lg">@item.SLAType</h3>
-									<div class="list-icons ml-auto">
-										@item.SLADate
-										<!--<a class="list-icons-item ml-1" data-action="reload"></a>-->
+							<div class="d-flex flex-column" style="flex: 1 1 auto;">
+								<div class="card-body @item.SLAStatusColorCssClass m-0">
+									<div class="d-flex">
+										<h3 class="font-weight-semibold mb-0 font-size-lg">@item.SLAType</h3>
+										<div class="list-icons ml-auto">
+											@item.SLADate
+											<!--<a class="list-icons-item ml-1" data-action="reload"></a>-->
+										</div>
+									</div>
+									<div>
+										<div class="d-flex line-height-sm">
+											<span class="mr-2">[#SLASpent_ITSM#]:</span><span class="ml-auto">@item.SLASpentTime &bull; @(item.SLASpentPercent)%</span>
+										</div>
+										<div class="d-flex line-height-sm">
+											<span class="mr-2">[#SLARemaining_ITSM#]:</span><span class="ml-auto">@item.SLARemainingTime &bull; @(item.SLARemainingPercent)%</span>
+										</div>
+										<div class="d-flex line-height-sm">
+											<span class="mr-2">[#Calendar_ITSM#]:</span><span class="ml-auto">@item.CalendarName</span>
+										</div>
+										<div class="d-flex line-height-sm">
+											<span class="mr-2">[#SLAStatus_ITSM#]:</span><span class="ml-auto">@item.SLAStatus</span>
+										</div>
 									</div>
 								</div>
-								<div>
-									<div class="d-flex line-height-sm">
-										<span class="mr-2">[#SLASpent_ITSM#]:</span><span class="ml-auto">@item.SLASpentTime &bull; @(item.SLASpentPercent)%</span>
-									</div>
-									<div class="d-flex line-height-sm">
-										<span class="mr-2">[#SLARemaining_ITSM#]:</span><span class="ml-auto">@item.SLARemainingTime &bull; @(item.SLARemainingPercent)%</span>
-									</div>
-									<div class="d-flex line-height-sm">
-										<span class="mr-2">[#Calendar_ITSM#]:</span><span class="ml-auto">@item.CalendarName</span>
-									</div>
-									<div class="d-flex line-height-sm">
-										<span class="mr-2">[#SLAStatus_ITSM#]:</span><span class="ml-auto">@item.SLAStatus</span>
+								<div class="progress bg-white" style="height: 0.375rem; border-radius: 0;">
+									<div class="progress-bar bg-success" style="width: @(item.SLASpentPercent)%">
+										<span class="sr-only">@(item.SLASpentPercent)% To end</span>
 									</div>
 								</div>
 							</div>
-							<div class="progress bg-white" style="height: 0.375rem; border-radius: 0;">
-								<div class="progress-bar bg-success" style="width: @(item.SLASpentPercent)%">
-									<span class="sr-only">@(item.SLASpentPercent)% To end</span>
-								</div>
+						}
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Control>
+		<Control xsi:type="HTMLContentViewControl" Ident="SimpleModeMainInfoHTMLContentView" IsRazorEngine="true" IsVisible="false">
+			<Sources>
+				<DataSource Ident="Main">
+					<Columns>
+						<!-- @Ignore unknown-form-ident -->
+						<Column Ident="State" />
+						<Column Ident="ITSMGeneralResolutionMethodTypeGuid" />
+						<Column Ident="Header" />
+						<Column Ident="AccountID" />
+						<Column Ident="CreateDate" DataType="DateTime" />
+						<Column Ident="LastUpdateAccountID" />
+						<Column Ident="LastUpdate" DataType="DateTime" />
+						<Column Ident="AssignedGroupID" />
+						<Column Ident="AssignedAccountID" />
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT
+							CONCAT('<span class="badge badge-', itsGwfs.SimpleModeColorCssClass, '">', usr.GetResourceText(itsGwfs.SimpleModeTitleResourceKey, @UserLanguageID), '</span>') AS [State]
+							,itsGrmt.[TextValue] AS ITSMGeneralResolutionMethodTypeGuid
+							,itsSsr.[TextValue] AS ITSMSolutionSuspendReasonGuid
+							,itsAsr.[TextValue] AS ITSMApprovalSuspendReasonGuid
+
+							,itsReq.ID
+							,itsReq.ITSMKey
+							,itsReq.Subject
+
+							,itsReqParent.ID AS ParentTableID
+							,itsReqParent.ITSMKey AS ParentITSMKey
+							,itsReqParent.Subject AS ParentSubject
+
+							,accCreator.FullName AS AccountID
+							,itsReq.CreateDate
+
+							,accLastUpdate.FullName AS LastUpdateAccountID
+							,itsReq.LastUpdate
+
+							,groAssigned.[Name] AS AssignedGroupID
+							,accAssigned.[FullName] AS AssignedAccountID
+
+						FROM (VALUES (0)) AS dual(zero)
+						LEFT JOIN usr.ITSMProblem AS itsReq ON itsReq.ID = @ID
+						LEFT JOIN usr.ITSM_GetWorkFlowState ('ITSMProblemWorkFlow') AS itsGwfs ON itsGwfs.[Value] = ISNULL(itsReq.[State], 1)
+						LEFT JOIN usr.ITSMProblem AS itsReqParent ON itsReqParent.ID = itsReq.ParentTableID
+						LEFT JOIN dbo.[Group] AS groAssigned ON groAssigned.ID = itsReq.AssignedGroupID
+						LEFT JOIN dbo.Account AS accAssigned ON accAssigned.ID = itsReq.AssignedAccountID
+						LEFT JOIN dbo.Account AS accCreator ON accCreator.ID = ISNULL(itsReq.AccountID, @UserID)
+						LEFT JOIN dbo.Account AS accLastUpdate ON accLastUpdate.ID = itsReq.LastUpdateAccountID
+						LEFT JOIN usr.ITSMGeneralResolutionMethodType AS itsGrmt ON itsGrmt.Guid = itsReq.ITSMGeneralResolutionMethodTypeGuid AND itsGrmt.LanguageID = @UserLanguageID
+						LEFT JOIN usr.ITSMSolutionSuspendReason AS itsSsr ON itsSsr.Guid = itsReq.ITSMSolutionSuspendReasonGuid AND itsSsr.LanguageID = @UserLanguageID
+						LEFT JOIN usr.ITSMApprovalSuspendReason AS itsAsr ON itsAsr.Guid = itsReq.ITSMApprovalSuspendReasonGuid AND itsAsr.LanguageID = @UserLanguageID
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					</Parameters>
+				</DataSource>
+				<!-- <DataSource Ident="SLAs">
+					<Columns>
+						<Column Ident="SLAType" IsTranslate="true" />
+						<Column Ident="SLAStatus" IsTranslate="true" />
+						<Column Ident="SLADate" />
+						<Column Ident="SLASpentTime" />
+						<Column Ident="SLASpentPercent" />
+						<Column Ident="SLARemainingTime" />
+						<Column Ident="SLARemainingPercent" />
+						<Column Ident="CalendarName" />
+						<Column Ident="SLAStatusColorCssClass" />
+					</Columns>
+					<SQL><![CDATA[
+						/*
+							[#TTR_SLAType_ITSM#]
+							[#TTO_SLAType_ITSM#]
+							[#Other_SLAType_ITSM#]
+
+							[#Exceeded_SLAStatus_ITSM#]
+							[#Ended_SLAStatus_ITSM#]
+							[#Running_SLAStatus_ITSM#]
+							[#Paused_SLAStatus_ITSM#]
+						*/
+
+						SELECT
+							CONCAT(itsGsc.SLAType, '_SLAType_ITSM') AS SLAType
+							,CONCAT(itsGsc.SLAStatus, '_SLAStatus_ITSM') AS SLAStatus
+							,itsGsc.FinishTime AS SLADate
+							,itsGsc.TimeSpent AS SLASpentTime
+							,itsGsc.PercentSpent AS SLASpentPercent
+							,itsGsc.TimeRemain AS SLARemainingTime
+							,itsGsc.PercentRemain AS SLARemainingPercent
+							,itsGsc.SLAName AS CalendarName
+							,CONCAT('bg-', itsGsc.SLAStatusColorCssClass) AS SLAStatusColorCssClass
+						FROM usr.ITSMProblem AS itsReq
+						CROSS APPLY usr.ITSM_GetSLAComputes (itsReq.ID, 'ITSMProblem', NULL) AS itsGsc
+						WHERE
+							itsReq.ID = @ID
+						ORDER BY itsGsc.SLATypePriority
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					</Parameters>
+				</DataSource> -->
+				<!-- <DataSource Ident="ApproverList">
+					<Columns>
+						<Column Ident="BadgeColor" />
+						<Column Ident="Color" />
+						<Column Ident="Title" />
+					</Columns>
+					<SQL><![CDATA[
+
+						DECLARE @ApprovedColor varchar(7) = '#4CAF50';
+						DECLARE @NotApprovedColor varchar(7) = '#ff7043';
+
+						SELECT
+							CASE
+								ISNULL(itsApp.IsApproved,0)
+								WHEN 0 THEN @NotApprovedColor
+								WHEN 1 THEN @ApprovedColor
+							END AS BackgroundColor
+							,'#FFF' AS Color
+							,CASE
+								WHEN itsApp.ApproverType = 'Group' THEN ISNULL(approverGro.[Name], '')
+								WHEN itsApp.ApproverType = 'Account' THEN ISNULL(approverAcc.FullName, '')
+								ELSE ''
+							END AS Title
+						FROM usr.ITSMApproval AS itsApp
+						LEFT JOIN dbo.[Group] AS approverGro on approverGro.ID = itsApp.ApproverGroupID
+						LEFT JOIN dbo.[Account] AS approverAcc on approverAcc.ID = itsApp.ApproverAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.ApproveRoundGUID = @ActualApproveRoundGuid
+							AND itsApp.ApproveRoundStartDateTime IS NOT NULL
+						ORDER BY ApproveOrder ASC
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource> -->
+				<!-- <DataSource Ident="ApproverAggregation">
+					<Columns>
+						<Column Ident="Approved" />
+						<Column Ident="Total" />
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT
+							SUM(IIF(ISNULL(itsApp.IsApproved,0) = 0, 0, 1)) AS Approved
+							,COUNT(*) AS Total
+						FROM usr.ITSMApproval AS itsApp
+						LEFT JOIN dbo.[Group] AS approverGro on approverGro.ID = itsApp.ApproverGroupID
+						LEFT JOIN dbo.[Account] AS approverAcc on approverAcc.ID = itsApp.ApproverAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.ApproveRoundGUID = @ActualApproveRoundGuid
+							AND itsApp.ApproveRoundStartDateTime IS NOT NULL
+						HAVING COUNT(*) > 0
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource> -->
+				<!-- <DataSource Ident="AssessmentList">
+					<Columns>
+						<Column Ident="BadgeColor" />
+						<Column Ident="Color" />
+						<Column Ident="Title" />
+					</Columns>
+					<SQL><![CDATA[
+
+						DECLARE @ApprovedColor varchar(7) = '#4CAF50';
+						DECLARE @NotApprovedColor varchar(7) = '#ff7043';
+
+						SELECT
+							CASE
+								ISNULL(itsApp.IsApproved,0)
+								WHEN 0 THEN @NotApprovedColor
+								WHEN 1 THEN @ApprovedColor
+							END AS BackgroundColor
+							,'#FFF' AS Color
+							,CASE
+								WHEN itsApp.AssessmentType = 'Group' THEN ISNULL(AssessmentGro.[Name], '')
+								WHEN itsApp.AssessmentType = 'Account' THEN ISNULL(AssessmentAcc.FullName, '')
+								ELSE ''
+							END AS Title
+						FROM usr.ITSMAssessment AS itsApp
+						LEFT JOIN dbo.[Group] AS AssessmentGro on AssessmentGro.ID = itsApp.AssessmentGroupID
+						LEFT JOIN dbo.[Account] AS AssessmentAcc on AssessmentAcc.ID = itsApp.AssessmentAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.AssessmentRoundGUID = @ActualAssessmentRoundGuid
+							AND itsApp.AssessmentRoundStartDateTime IS NOT NULL
+						ORDER BY AssessmentOrder ASC
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource> -->
+				<!-- <DataSource Ident="AssessmentAggregation">
+					<Columns>
+						<Column Ident="Approved" />
+						<Column Ident="Total" />
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT
+							SUM(IIF(ISNULL(itsApp.IsApproved,0) = 0, 0, 1)) AS Approved
+							,COUNT(*) AS Total
+						FROM usr.ITSMAssessment AS itsApp
+						LEFT JOIN dbo.[Group] AS AssessmentGro on AssessmentGro.ID = itsApp.AssessmentGroupID
+						LEFT JOIN dbo.[Account] AS AssessmentAcc on AssessmentAcc.ID = itsApp.AssessmentAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @FormIdent
+							AND itsApp.[State] != @DeletedState
+							AND itsApp.AssessmentRoundGUID = @ActualAssessmentRoundGuid
+							AND itsApp.AssessmentRoundStartDateTime IS NOT NULL
+						HAVING COUNT(*) > 0
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMProblem" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					</Parameters>
+				</DataSource> -->
+			</Sources>
+			<HTMLTemplate><![CDATA[
+				@{
+					var mainData = Model.Data.Main[0];
+					/*int? approverApproved = null;
+					int? approverTotal = null;
+					if(Model.Data.ApproverAggregation != null && Model.Data.ApproverAggregation.Count > 0){
+						approverApproved = Model.Data.ApproverAggregation[0].Approved;
+						approverTotal = Model.Data.ApproverAggregation[0].Total;
+					}
+					int? AssessmentapproverApproved = null;
+					int? AssessmentapproverTotal = null;
+					if(Model.Data.AssessmentAggregation != null && Model.Data.AssessmentAggregation.Count > 0){
+						AssessmentapproverApproved = Model.Data.AssessmentAggregation[0].Approved;
+						AssessmentapproverTotal = Model.Data.AssessmentAggregation[0].Total;
+					}*/
+
+				}
+
+				<div class="d-flex flex-wrap" style="gap: 0.25rem;">
+					<div class="d-flex flex-wrap justify-content-between" style="flex: 999 1 min(100%, 650px);">
+						<div style="flex: 999 1 min(100%, 450px); font-size: 16px; display: flex; flex-direction: column; gap: 0.25rem;">
+							@if(!(mainData.ParentTableID is System.DBNull)){
+								<div class="font-size-sm">[#ParentTableID_Information_ITSM#]: <a href="~/Form/Detail/ITSMProblem/@mainData.ParentTableID">@mainData.ParentITSMKey</a> | @mainData.ParentSubject</div>
+							}
+							<div>
+								@if(!(mainData.ID is System.DBNull)){
+									<text><a href="~/Form/Detail/ITSMProblem/@mainData.ID">@mainData.ITSMKey</a> | @mainData.Subject</text>
+								} else {
+									<text>[#CreatingNewITSMProblem_Information_ITSM#]</text>
+								}
+							</div>
+							<small class="d-block text-muted ml-0 font-size-sm">
+								[#Created_ITSM#]: @mainData.AccountID @if(!(mainData.CreateDate is System.DBNull)){@mainData.CreateDate}
+								@if(!(mainData.LastUpdate is System.DBNull)){<text>, [#Updated_ITSM#]: @mainData.LastUpdateAccountID @mainData.LastUpdate</text>}
+							</small>
+							<div class="approver-list">
 							</div>
 						</div>
-						}
+						<div style="flex: 1 1 auto;">
+							<ul class="list-group list-group-flush m-0">
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#State_ITSM#]:</span>
+									<div class="ml-auto">@mainData.State</div>
+								</li>
+								@if(!(mainData.ITSMGeneralResolutionMethodTypeGuid is System.DBNull)){
+								<li class="list-group-item" style="padding: .3rem .5rem;">
+									<span class="font-weight-semibold mr-2">[#ITSMGeneralResolutionMethodTypeGuid_ITSM#]:</span>
+									<div class="ml-auto">@mainData.ITSMGeneralResolutionMethodTypeGuid</div>
+								</li>
+								}
+							</ul>
+						</div>
+					</div>
+					<div class="d-flex flex-wrap align-items-start gap-1-lmtl4" style="flex: 1 1 auto;">
 					</div>
 				</div>
 
@@ -1396,62 +2352,207 @@
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
-		<Control xsi:type="AutoCompleteControl" Ident="ReporterAccountID" DataType="Number" TitleResourceKey="ReporterAccountID_ITSM" IsVisible="false" IsReadOnly="true">
-			<DataBind DefaultTitleResourceKey="SelectValue">
+		<Control xsi:type="AutoCompleteControl" Ident="ReporterAccountID" DataType="Number" TitleResourceKey="ReporterAccountID_ITSM" IsVisible="false" IsReadOnly="true" IsShowRequired="true">
+			<EmptyDataBind Ident="ReporterAccountID_EmptyDataBind">
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+					<string>ITSMCategoryLevel2Ident</string>
+					<string>ITSMCategoryLevel3Ident</string>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
-					SELECT
-						ID,
-						FullName
-					FROM
-						dbo.Account
-					WHERE
-						FullName LIKE @ReporterAccountID
-						AND [State] = @ActiveState
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @LastFolderTreeIdent VARCHAR(900) = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+
+					IF EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs)
+						WHERE FolderTreeIdent = @LastFolderTreeIdent
+					) BEGIN
+
+						INSERT INTO @PermissionIDs VALUES ('ITSMAuthor')
+
+						SELECT TOP(20) itsGaabftap.AccountID AS ID, itsGaabftap.AccountFullName AS FullName
+						FROM usr.ITSM_GetAllowedAccountByFolderTreeAndPermission (@LastFolderTreeIdent, @PermissionIDs) AS itsGaabftap
+
+					END ELSE BEGIN
+
+						SELECT acc.ID, acc.FullName
+						FROM dbo.Account AS acc
+						WHERE acc.ID = @UserID
+
+					END
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsElevatedPermissionOrNotFirstState" DataType="Number" />
+				</Parameters>
+			</EmptyDataBind>
+			<DataBind Ident="ReporterAccountID_DataBind" DefaultTitleResourceKey="SelectValue">
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+					<string>ITSMCategoryLevel2Ident</string>
+					<string>ITSMCategoryLevel3Ident</string>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @LastFolderTreeIdent VARCHAR(900) = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+
+					IF EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs)
+						WHERE FolderTreeIdent = @LastFolderTreeIdent
+					) BEGIN
+
+						INSERT INTO @PermissionIDs VALUES ('ITSMAuthor')
+
+						SELECT itsGaabftap.AccountID AS ID, itsGaabftap.AccountFullName AS FullName
+						FROM usr.ITSM_GetAllowedAccountByFolderTreeAndPermission (@LastFolderTreeIdent, @PermissionIDs) AS itsGaabftap
+						WHERE itsGaabftap.AccountFullName LIKE @ReporterAccountID
+
+					END ELSE BEGIN
+
+						SELECT acc.ID, acc.FullName
+						FROM dbo.Account AS acc
+						WHERE acc.ID = @UserID
+
+					END
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="String" LikeType="Both" />
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
 
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</DataBind>
-			<SelectedDataBind>
+			<SelectedDataBind Ident="ReporterAccountID_SelectedDataBind">
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="FullName" DataBindType="Title" />
 				</Columns>
 				<SQL><![CDATA[
-					SELECT
-						ID,
-						FullName
-					FROM
-						dbo.Account
-					WHERE
-						ID = @ReporterAccountID
+
+					SELECT acc.ID, acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.ID = @ReporterAccountID
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
+
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</SelectedDataBind>
-			<DefaultDataSource>
+			<DefaultDataSource Ident="ReporterAccountID_DefaultDataSource">
 				<Columns>
 					<Column Ident="ReporterAccountID" />
 				</Columns>
 				<SQL><![CDATA[
+
 					SELECT @UserID AS ReporterAccountID
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 				</Parameters>
 			</DefaultDataSource>
+			<DefaultDependencyDataBind Ident="ReporterAccountID_DefaultDependencyDataBind">
+				<Dependencies>
+					<string>ITSMCompanyIdent</string>
+					<string>ITSMCategoryLevel2Ident</string>
+					<string>ITSMCategoryLevel3Ident</string>
+					<string>ITSMCategoryLevel4Ident</string>
+					<string>ITSMCategoryLevel5Ident</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="FullName" DataBindType="Title" />
+					<!-- <Column Ident="Selected" DataBindType="Selected" /> -->
+				</Columns>
+				<SQL><![CDATA[
+
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+					INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+					DECLARE @NewReporterAccountID INT
+
+					DECLARE @LastFolderTreeIdent VARCHAR(900) = COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent)
+
+					IF EXISTS(
+						SELECT NULL
+						FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMProblemSegment',@PermissionIDs)
+						WHERE FolderTreeIdent = @LastFolderTreeIdent
+					) BEGIN
+
+						INSERT INTO @PermissionIDs VALUES ('ITSMAuthor')
+
+						SELECT @NewReporterAccountID = itsGaabftap.AccountID
+						FROM usr.ITSM_GetAllowedAccountByFolderTreeAndPermission (@LastFolderTreeIdent, @PermissionIDs) AS itsGaabftap
+						WHERE itsGaabftap.AccountID = @ReporterAccountID
+
+					END
+
+					IF @NewReporterAccountID IS  NULL
+						SELECT @NewReporterAccountID = @UserID
+
+					SELECT acc.ID, acc.FullName
+					FROM dbo.Account AS acc
+					WHERE acc.ID = @NewReporterAccountID
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" SetDataType="SelectedValueData" />
+
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDependencyDataBind>
 			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="dbo" FormIdent="Account" KeyColumnIdent="ID" KeyColumnDataType="INT" TitleColumnIdent="FullName" TitleColumnDataType="VARCHAR(MAX)" />
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="ReporterEmail" DataType="String" TitleResourceKey="ReporterEmail_ITSM" IsVisible="false" IsReadOnly="true">
-			<DataBind>
+			<DataBind Ident="ReporterEmail_DataBind">
 				<Dependencies>
 					<string>ReporterAccountID</string>
 				</Dependencies>
@@ -1459,14 +2560,33 @@
 					<Column Ident="ReporterEmail" DataBindType="Value" />
 				</Columns>
 				<SQL><![CDATA[
+
 					SELECT Email AS ReporterEmail
 					FROM dbo.Account
 					WHERE ID = @ReporterAccountID
+
+					INSERT INTO ##TmpTbl ([Message]) SELECT CONCAT('ReporterEmail - ReporterAccountID: ', @ReporterAccountID)
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource Ident="ReporterEmail_DefaultDataSource">
+				<Columns>
+					<Column Ident="ReporterEmail" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT Email AS ReporterEmail
+					FROM dbo.Account
+					WHERE ID = @UserID
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDataSource>
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
@@ -1479,6 +2599,7 @@
 					<Column Ident="IsReporterEmailDifferent" DataBindType="Value" />
 				</Columns>
 				<SQL><![CDATA[
+
 					SELECT IIF(
 						ISNULL((
 							SELECT Email
@@ -1486,12 +2607,23 @@
 							WHERE ID = @ReporterAccountID
 						), '') != ISNULL(@ReporterEmail, '')
 					,1,0) AS IsReporterEmailDifferent
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterEmail" DataType="String" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="IsReporterEmailDifferent" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT 0 AS IsReporterEmailDifferent
+
+				]]></SQL>
+			</DefaultDataSource>
 		</Control>
 
 		<Control xsi:type="TextBoxControl" Ident="ReporterPhone" DataType="String" TitleResourceKey="ReporterPhone_ITSM" IsVisible="false" IsReadOnly="true">
@@ -1511,10 +2643,26 @@
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource>
+				<Dependencies>
+					<string>ReporterAccountID</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="ReporterPhone" DataBindType="Value" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT Phone AS ReporterPhone
+					FROM dbo.Account
+					WHERE ID = @UserID
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+				</Parameters>
+			</DefaultDataSource>
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
-		<Control xsi:type="TextBoxControl" Ident="IsReporterPhoneDifferent" DataType="Number" TitleResourceKey="IsReporterPhoneDifferent_ITSM" IsVisible="false" IsReadOnly="true" IsCreateColumn="false">
+		<Control xsi:type="TextBoxControl" Ident="IsReporterPhoneDifferent" DataType="Number" TitleResourceKey="IsReporterPhoneDifferent_ITSM" IsVisible="false" IsReadOnly="true" IsCreateColumn="false" IsRefresh="true">
 			<DataBind>
 				<Dependencies>
 					<string>ReporterPhone</string>
@@ -1530,16 +2678,27 @@
 							WHERE ID = @ReporterAccountID
 						), '') != ISNULL(@ReporterPhone, '')
 					,1,0) AS IsReporterPhoneDifferent
+
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterAccountID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ReporterPhone" DataType="String" />
 				</Parameters>
 			</DataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="IsReporterPhoneDifferent" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT 0 AS IsReporterPhoneDifferent
+
+				]]></SQL>
+			</DefaultDataSource>
 		</Control>
 
 		<!-- @Ignore ident-convention-lookup-control -->
-		<Control xsi:type="DropDownListControl" Ident="ITSMEntryMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMEntryMethodTypeGuid_ITSM" IsFakeReadOnly="true">
+		<Control xsi:type="DropDownListControl" Ident="ITSMEntryMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMEntryMethodTypeGuid_ITSM" IsReadOnly="true" IsShowRequired="true">
 			<DataBind>
 				<Columns>
 					<Column Ident="Guid" DataBindType="Value" />
@@ -1597,29 +2756,46 @@
 
 		<Control xsi:type="CommunicationControl" Ident="Communication" Height="400" DataType="String" IsVisible="false" IsReadOnly="true" TitleResourceKey="Communication_ITSM">
 			<SettingPermissions>
-				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="Zadavatel" IconCssClass="icon-user" ColorCssClass="blue-600">
+				<SettingPermission Ident="InternalMessage" IsChecked="true" TitleResourceKey="InternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="primary">
 					<VisiblePermissions>
-						<string>Creator</string>
+						<string>ITSMAuthor</string>
+						<string>ITSMSpecialist</string>
+						<string>ITSMOperator</string>
+					</VisiblePermissions>
+				</SettingPermission>
+				<SettingPermission Ident="ExternalMessage" IsChecked="false" TitleResourceKey="ExternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="danger">
+					<VisiblePermissions>
+						<string>ITSMIncidentReporter</string>
+						<string>ITSMIncidentSharedReporter</string>
 					</VisiblePermissions>
 				</SettingPermission>
 			</SettingPermissions>
 			<Settings>
-				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="ITSMIncidentReporter" />
 			</Settings>
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
 		<Control xsi:type="CommunicationControl" Ident="DialogCommunication" Height="400" DataType="String" TitleResourceKey="Communication_ITSM">
-			<SettingPermissions>
-				<SettingPermission Ident="Creator" IsChecked="true" TitleResourceKey="ITSMAuthor_ITSM" IconCssClass="icon-user" ColorCssClass="blue-600">
+			<!-- <SettingPermissions>
+				<SettingPermission Ident="InternalMessage" IsChecked="true" TitleResourceKey="InternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="primary">
 					<VisiblePermissions>
-						<string>Creator</string>
+						<string>ITSMAuthor</string>
+						<string>ITSMSpecialist</string>
+						<string>ITSMOperator</string>
 					</VisiblePermissions>
 				</SettingPermission>
-			</SettingPermissions>
+				<SettingPermission Ident="ExternalMessage" IsChecked="false" TitleResourceKey="ExternalMessage_ITSM" IconCssClass="icon-user" ColorCssClass="danger">
+					<VisiblePermissions>
+						<string>ITSMIncidentReporter</string>
+						<string>ITSMIncidentSharedReporter</string>
+					</VisiblePermissions>
+				</SettingPermission>
+			</SettingPermissions> -->
 			<Settings>
-				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="Creator" />
+				<fcs:Setting xsi:type="fcs:PlacementPermissionSetting" PlacementType="Left" Permission="ITSMIncidentReporter" />
 			</Settings>
+			<TimeLineDataBind TransformType="Copy" />
 		</Control>
 
 		<Control xsi:type="CommunicationListControl" Ident="CommunicationList" TitleResourceKey="CommunicationList_ITSM" CommunicationControlIdent="Communication" IsVisible="false">
@@ -1638,6 +2814,7 @@
 		</Control>
 
 		<Control xsi:type="PlaceHolderControl" Ident="CommunicationCardPlaceHolder" IsVisible="false" />
+		<Control xsi:type="PlaceHolderControl" Ident="DialogCommunicationRequiredPlaceHolder" IsVisible="false" />
 
 		<!-- @Ignore ident-convention-lookup-control -->
 		<Control xsi:type="AutoCompleteControl" Ident="ParentTableID" DataType="Number" TitleResourceKey="ParentTableID_ITSM" IsReadOnly="true">
@@ -1752,6 +2929,8 @@
 					<string>ITSMSpecialist</string>
 					<string>ITSMAssigned</string>
 					<string>Creator</string>
+					<string>ITSMProblemReporter</string>
+					<string>ITSMProblemSharedReporter</string>
 				</DataPermissions>
 				<Columns>
 					<Column Ident="SourceID" TitleResourceKey="ID" IsPrimaryKey="true" IsVisible="false" />
@@ -1784,13 +2963,42 @@
 			</DataSource>
 		</Control>
 
+		<Control xsi:type="HiddenControl" Ident="Var_ButtonIdent" DataType="String" MaxLength="255" IsCreateColumn="false" />
 	</Controls>
 	<Components>
+
+		<Component ComponentIdent="ITSMKnowledgeBaseComponent" Ident="ITSMKnowledgeBase">
+			<Setting>
+				<KnowledgeBaseTree CountSectionIdent="KnowledgeBaseSection" Type="ArticleOnly">
+					<DynamicFolderTreeIdent>
+						<string>ITSMCompanyIdent</string>
+						<string>ITSMCategoryLevel2Ident</string>
+						<string>ITSMCategoryLevel3Ident</string>
+						<string>ITSMCategoryLevel4Ident</string>
+						<string>ITSMCategoryLevel5Ident</string>
+					</DynamicFolderTreeIdent>
+				</KnowledgeBaseTree>
+			</Setting>
+		</Component>
+
+		<Component ComponentIdent="ITSMKnowledgeBaseComponent" Ident="ITSMKnowledgeBaseSuggest">
+			<Setting>
+				<KnowledgeBaseTree Type="ArticleSuggest" SubjectControlIdent="Subject" DescriptionControlIdent="Description">
+					<DynamicFolderTreeIdent>
+						<string>ITSMCompanyIdent</string>
+						<string>ITSMCategoryLevel2Ident</string>
+						<string>ITSMCategoryLevel3Ident</string>
+						<string>ITSMCategoryLevel4Ident</string>
+						<string>ITSMCategoryLevel5Ident</string>
+					</DynamicFolderTreeIdent>
+				</KnowledgeBaseTree>
+			</Setting>
+		</Component>
 
 		<Component ComponentIdent="TimeLineComponent" Ident="TimeLine" />
 	</Components>
 	<Sections>
-	<Section Root="Form" xsi:type="HeaderSection" Ident="HeaderSection">
+		<Section xsi:type="HeaderSection" Root="Form" Ident="HeaderSection" IsVisible="true">
 			<HTMLTemplate><![CDATA[
 				<style>
 					#MainInfoHTMLContentView {
@@ -1805,298 +3013,316 @@
 				<Control ID="MainInfoHTMLContentView" />
 			]]></HTMLTemplate>
 		</Section>
+		<Section xsi:type="HeaderSection" Root="Form" Ident="SimpleModeHeaderSection" IsVisible="false">
+			<HTMLTemplate><![CDATA[
+				<style>
+					#SimpleModeMainInfoHTMLContentView {
+						width: 100%;
+					}
+
+					#sfpFormMainHeader {
+						padding-left: 0 !important;
+						padding-right: 0 !important;
+					}
+				</style>
+				<Control ID="SimpleModeMainInfoHTMLContentView" />
+			]]></HTMLTemplate>
+		</Section>
 
 		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
 			<HTMLTemplate><![CDATA[
-				<style>
-					.no-label > label{
-						display:none !important;
-					}
-				</style>
-				<div class="row">
-
-					<div class="col-md-9"><!-- Levý sloupec -->
-
+						<style>
+							.no-label > label{
+								display:none !important;
+							}
+						</style>
 						<div class="row">
-							<div class="col-md-12">
-								<div class="card">
-									<div class="card-header bg-white header-elements-inline">
-										<h6 class="card-title">[#BasicInformation_ITSM#]</h6>
-										<div class="header-elements">
-											<div class="list-icons">
-												<a class="list-icons-item" data-action="collapse"></a>
+
+							<div class="col-md-9"><!-- Levý sloupec -->
+
+								<div class="row">
+									<div class="col-md-12">
+										<div class="card">
+											<div class="card-header bg-white header-elements-inline">
+												<h6 class="card-title">[#BasicInformation_ITSM#]</h6>
+												<div class="header-elements">
+													<div class="list-icons">
+														<a class="list-icons-item" data-action="collapse"></a>
+													</div>
+												</div>
+											</div>
+											<div class="card-body">
+
+				<div class="row">
+					<div class="col-md-3">
+						<div class="form-group">
+							<ControlLabel ControlID="ITSMCompanyIdent" />
+							<Control ID="ITSMCompanyIdent" />
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="form-group">
+							<ControlLabel ControlID="ITSMCategoryLevel2Ident" />
+							<Control ID="ITSMCategoryLevel2Ident" />
+						</div>
+					</div>
+					<div class="col-md-3 js-howHideCategoryLevel3" style="display:none;">
+						<div class="form-group">
+							<ControlLabel ControlID="ITSMCategoryLevel3Ident" />
+							<Control ID="ITSMCategoryLevel3Ident" />
+						</div>
+					</div>
+					<div class="col-md-3 js-howHideCategoryLevel4" style="display:none;">
+						<div class="form-group">
+							<ControlLabel ControlID="ITSMCategoryLevel4Ident" />
+							<Control ID="ITSMCategoryLevel4Ident" />
+						</div>
+					</div>
+					<div class="col-md-3 js-howHideCategoryLevel5" style="display:none;">
+						<div class="form-group">
+							<ControlLabel ControlID="ITSMCategoryLevel5Ident" />
+							<Control ID="ITSMCategoryLevel5Ident" />
+						</div>
+					</div>
+				</div>
+
+				<div class="d-none">
+					<Control ID="IsShowCategoryLevel3" />
+					<Control ID="IsShowCategoryLevel4" />
+					<Control ID="IsShowCategoryLevel5" />
+					<Control ID="IsElevatedPermissionOrNotFirstState" />
+				</div>
+
+												<div class="row">
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="Subject" />
+															<Control ID="Subject" />
+														</div>
+													</div>
+												</div>
+												<div class="row">
+													<div class="col-md-12">
+														<div class="form-group">
+															<ControlLabel ControlID="Description" />
+															<Control ID="Description" />
+														</div>
+													</div>
+												</div>
 											</div>
 										</div>
 									</div>
-									<div class="card-body">
+								</div>
 
-		<div class="row">
-			<div class="col-md-3">
-				<div class="form-group">
-					<ControlLabel ControlID="ITSMCompanyIdent" />
-					<Control ID="ITSMCompanyIdent" />
-				</div>
-			</div>
-			<div class="col-md-3">
-				<div class="form-group">
-					<ControlLabel ControlID="ITSMCategoryLevel2Ident" />
-					<Control ID="ITSMCategoryLevel2Ident" />
-				</div>
-			</div>
-			<div class="col-md-3">
-				<div class="form-group">
-					<ControlLabel ControlID="ITSMCategoryLevel3Ident" />
-					<Control ID="ITSMCategoryLevel3Ident" />
-				</div>
-			</div>
-			<div class="col-md-3">
-				<div class="form-group">
-					<ControlLabel ControlID="ITSMCategoryLevel4Ident" />
-					<Control ID="ITSMCategoryLevel4Ident" />
-				</div>
-			</div>
-			<div class="col-md-3 js-howHideCategoryLevel5" style="display:none;">
-				<div class="form-group">
-					<ControlLabel ControlID="ITSMCategoryLevel5Ident" />
-					<Control ID="ITSMCategoryLevel5Ident" />
-				</div>
-			</div>
-		</div>
+				<Control ID="CommunicationCardPlaceHolder">
+					<div class="row">
+						<div class="col-md-12">
+							<div class="card">
+								<div class="card-header bg-white header-elements-inline">
+									<h6 class="card-title">[#Communication_ITSM#]</h6>
+									<div class="header-elements">
+										<div class="list-icons">
+											<a class="list-icons-item" data-action="collapse" />
+										</div>
+									</div>
+								</div>
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<Control ID="Communication" />
+											</div>
+										</div>
+										<div class="col-md-12">
+											<div class="form-group">
+												<Control ID="CommunicationList" />
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</Control>
 
-		<div class="d-none">
-			<Control ID="IsShowCategoryLevel5" />
-		</div>
+							</div><!-- //Levý sloupec -->
 
-										<div class="row">
+							<div class="col-md-3"><!-- Pravý sloupec -->
+
+				<Control ID="ReporterInformationCardPlaceHolder">
+					<div class="row">
+						<div class="col-md-12">
+							<div class="card">
+								<div class="card-header bg-white header-elements-inline">
+									<h6 class="card-title">[#ReporterInformation_ITSM#]</h6>
+									<div class="header-elements">
+										<div class="list-icons">
+											<a class="list-icons-item" data-action="collapse" />
+										</div>
+									</div>
+								</div>
+								<div class="card-body">
+									<div class="row js-showIfElevatedPermissionOrNotFirstState" style="display: none;">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="ReporterAccountID" />
+												<Control ID="ReporterAccountID" />
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="ReporterEmail" />
+												<Control ID="ReporterEmail" />
+											</div>
+										</div>
+									</div>
+									<Control ID="ReporterEmailDifferentPlaceHolder">
+										<div class="row d-none">
 											<div class="col-md-12">
 												<div class="form-group">
-													<ControlLabel ControlID="Subject" />
-													<Control ID="Subject" />
+													<ControlLabel ControlID="IsReporterEmailDifferent" />
+													<Control ID="IsReporterEmailDifferent" />
 												</div>
 											</div>
 										</div>
-										<div class="row">
+										<div class="row js-showIfReporterEmailDifferent" style="display: none;">
+											<div class="col-md-12">
+												<div class="alert-lmtl4 alert-info-lmtl4">
+													[#ReporterEmailDifferent_Information_ITSM#]
+													<i class="ph-info float-end-lmtl4 ms-2-lmtl4"></i>
+												</div>
+											</div>
+										</div>
+									</Control>
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="ReporterPhone" />
+												<Control ID="ReporterPhone" />
+											</div>
+										</div>
+									</div>
+									<Control ID="ReporterPhoneDifferentPlaceHolder">
+										<div class="row d-none">
 											<div class="col-md-12">
 												<div class="form-group">
-													<ControlLabel ControlID="Description" />
-													<Control ID="Description" />
+													<ControlLabel ControlID="IsReporterPhoneDifferent" />
+													<Control ID="IsReporterPhoneDifferent" />
 												</div>
 											</div>
 										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-
-		<Control ID="CommunicationCardPlaceHolder">
-			<div class="row">
-				<div class="col-md-12">
-					<div class="card">
-						<div class="card-header bg-white header-elements-inline">
-							<h6 class="card-title">[#Communication_ITSM#]</h6>
-							<div class="header-elements">
-								<div class="list-icons">
-									<a class="list-icons-item" data-action="collapse" />
-								</div>
-							</div>
-						</div>
-						<div class="card-body">
-							<div class="row">
-								<div class="col-md-12">
-									<div class="form-group">
-										<Control ID="Communication" />
-									</div>
-								</div>
-								<div class="col-md-12">
-									<div class="form-group">
-										<Control ID="CommunicationList" />
+										<div class="row js-showIfReporterPhoneDifferent" style="display: none;">
+											<div class="col-md-12">
+												<div class="alert-lmtl4 alert-info-lmtl4">
+													[#ReporterPhoneDifferent_Information_ITSM#]
+													<i class="ph-info float-end-lmtl4 ms-2-lmtl4"></i>
+												</div>
+											</div>
+										</div>
+									</Control>
+									<div class="row js-showIfElevatedPermissionOrNotFirstState" style="display: none;">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="ITSMEntryMethodTypeGuid" />
+												<Control ID="ITSMEntryMethodTypeGuid" />
+											</div>
+										</div>
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-			</div>
-		</Control>
+				</Control><!-- Karta kontaktnÃ­ch ÃºdajÅ¯ -->
 
-					</div><!-- //Levý sloupec -->
-
-					<div class="col-md-3"><!-- Pravý sloupec -->
-
-		<Control ID="ReporterInformationCardPlaceHolder">
-			<div class="row">
-				<div class="col-md-12">
-					<div class="card">
-						<div class="card-header bg-white header-elements-inline">
-							<h6 class="card-title">[#ReporterInformation_ITSM#]</h6>
-							<div class="header-elements">
-								<div class="list-icons">
-									<a class="list-icons-item" data-action="collapse" />
-								</div>
-							</div>
-						</div>
-						<div class="card-body">
-							<div class="row">
-								<div class="col-md-12">
-									<div class="form-group">
-										<ControlLabel ControlID="ReporterAccountID" />
-										<Control ID="ReporterAccountID" />
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-md-12">
-									<div class="form-group">
-										<ControlLabel ControlID="ReporterEmail" />
-										<Control ID="ReporterEmail" />
-									</div>
-								</div>
-							</div>
-							<Control ID="ReporterEmailDifferentPlaceHolder">
-								<div class="row d-none">
-									<div class="col-md-12">
-										<div class="form-group">
-											<ControlLabel ControlID="IsReporterEmailDifferent" />
-											<Control ID="IsReporterEmailDifferent" />
+				<Control ID="AssignedCardPlaceHolder">
+					<div class="row">
+						<div class="col-md-12">
+							<div class="card">
+								<div class="card-header bg-white header-elements-inline">
+									<h6 class="card-title">[#RequestControl_ITSM#]</h6>
+									<div class="header-elements">
+										<div class="list-icons">
+											<a class="list-icons-item" data-action="collapse" />
 										</div>
 									</div>
 								</div>
-								<div class="row js-showIfReporterEmailDifferent" style="display: none;">
-									<div class="col-md-12">
-										<div class="alert-lmtl4 alert-info-lmtl4">
-											[#ReporterEmailDifferent_Information_ITSM#]
-											<i class="ph-info float-end-lmtl4 ms-2-lmtl4"></i>
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="AssignedGroupID" />
+												<Control ID="AssignedGroupID" />
+											</div>
 										</div>
-									</div>
-								</div>
-							</Control>
-							<div class="row">
-								<div class="col-md-12">
-									<div class="form-group">
-										<ControlLabel ControlID="ReporterPhone" />
-										<Control ID="ReporterPhone" />
-									</div>
-								</div>
-							</div>
-							<Control ID="ReporterPhoneDifferentPlaceHolder">
-								<div class="row d-none">
-									<div class="col-md-12">
-										<div class="form-group">
-											<ControlLabel ControlID="IsReporterPhoneDifferent" />
-											<Control ID="IsReporterPhoneDifferent" />
+										<div class="col-md-12">
+											<div class="form-group">
+												<ControlLabel ControlID="AssignedAccountID" />
+												<Control ID="AssignedAccountID" />
+											</div>
 										</div>
-									</div>
-								</div>
-								<div class="row js-showIfReporterPhoneDifferent" style="display: none;">
-									<div class="col-md-12">
-										<div class="alert-lmtl4 alert-info-lmtl4">
-											[#ReporterPhoneDifferent_Information_ITSM#]
-											<i class="ph-info float-end-lmtl4 ms-2-lmtl4"></i>
-										</div>
-									</div>
-								</div>
-							</Control>
-							<div class="row">
-								<div class="col-md-12">
-									<div class="form-group">
-										<ControlLabel ControlID="ITSMEntryMethodTypeGuid" />
-										<Control ID="ITSMEntryMethodTypeGuid" />
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-			</div>
-		</Control><!-- Karta kontaktnÃ­ch ÃºdajÅ¯ -->
+				</Control><!-- Karta Å˜Ã­zenÃ­ poÅ¾adavku -->
 
-		<Control ID="AssignedCardPlaceHolder">
-			<div class="row">
-				<div class="col-md-12">
-					<div class="card">
-						<div class="card-header bg-white header-elements-inline">
-							<h6 class="card-title">[#RequestControl_ITSM#]</h6>
-							<div class="header-elements">
-								<div class="list-icons">
-									<a class="list-icons-item" data-action="collapse" />
-								</div>
-							</div>
-						</div>
-						<div class="card-body">
-							<div class="row">
-								<div class="col-md-12">
-									<div class="form-group">
-										<ControlLabel ControlID="AssignedGroupID" />
-										<Control ID="AssignedGroupID" />
-									</div>
-								</div>
-								<div class="col-md-12">
-									<div class="form-group">
-										<ControlLabel ControlID="AssignedAccountID" />
-										<Control ID="AssignedAccountID" />
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</Control><!-- Karta Å˜Ã­zenÃ­ poÅ¾adavku -->
-
-						<Control ID="PHDocumentationCard">
-							<div class="row">
-								<div class="col-md-12">
-									<div class="card">
-										<div class="card-header bg-white header-elements-inline">
-											<h6 class="card-title">[#Documentation_ITSM#]</h6>
-											<div class="header-elements">
-												<div class="list-icons">
-													<a class="list-icons-item" data-action="collapse" />
-												</div>
-											</div>
-										</div>
-										<div class="card-body">
-											<div class="row">
-												<div class="col-md-12">
-													<div class="form-group">
-														<ControlLabel ControlID="ITSMGeneralResolutionMethodTypeGuid" />
-														<Control ID="ITSMGeneralResolutionMethodTypeGuid" />
+								<Control ID="PHDocumentationCard">
+									<div class="row">
+										<div class="col-md-12">
+											<div class="card">
+												<div class="card-header bg-white header-elements-inline">
+													<h6 class="card-title">[#Documentation_ITSM#]</h6>
+													<div class="header-elements">
+														<div class="list-icons">
+															<a class="list-icons-item" data-action="collapse" />
+														</div>
 													</div>
 												</div>
-											</div>
-											<div class="row">
-												<div class="col-md-12">
-													<div class="form-group">
-														<ControlLabel ControlID="ProblemCause" />
-														<Control ID="ProblemCause" />
+												<div class="card-body">
+													<div class="row">
+														<div class="col-md-12">
+															<div class="form-group">
+																<ControlLabel ControlID="ITSMGeneralResolutionMethodTypeGuid" />
+																<Control ID="ITSMGeneralResolutionMethodTypeGuid" />
+															</div>
+														</div>
 													</div>
-												</div>
-											</div>
-											<div class="row">
-												<div class="col-md-12">
-													<div class="form-group">
-														<ControlLabel ControlID="SolutionDescription" />
-														<Control ID="SolutionDescription" />
+													<div class="row">
+														<div class="col-md-12">
+															<div class="form-group">
+																<ControlLabel ControlID="ProblemCause" />
+																<Control ID="ProblemCause" />
+															</div>
+														</div>
 													</div>
-												</div>
-											</div>
-											<div class="row">
-												<div class="col-md-12">
-													<div class="form-group">
-														<ControlLabel ControlID="SolutionAditionalInformation" />
-														<Control ID="SolutionAditionalInformation" />
+													<div class="row">
+														<div class="col-md-12">
+															<div class="form-group">
+																<ControlLabel ControlID="SolutionDescription" />
+																<Control ID="SolutionDescription" />
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														<div class="col-md-12">
+															<div class="form-group">
+																<ControlLabel ControlID="SolutionAditionalInformation" />
+																<Control ID="SolutionAditionalInformation" />
+															</div>
+														</div>
 													</div>
 												</div>
 											</div>
 										</div>
 									</div>
-								</div>
-							</div>
-						</Control><!-- Karta Vyřešení -->
+								</Control><!-- Karta Vyřešení -->
 
-					</div><!-- //Pravý sloupec -->
+							</div><!-- //Pravý sloupec -->
 
-				</div>
+						</div>
 
 			]]></HTMLTemplate>
 		</Section>
@@ -2105,7 +3331,49 @@
 			<Control ID="ITSMKey" />
 		</div>
 
-		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignToGroupConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignToGroupConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignToGroupConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignToGroupConfirmFormDialogSectionTitle_ITSM">
+		<Section xsi:type="GlobalChangeSection" Ident="ParentITSMGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="ParentITSMGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMProblem AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] IN (
+									@ClosedState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList" />
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Buttons>
+				<Button xsi:type="FormButton" Ident="SaveButton" />
+			</Buttons>
+			<Controls>
+				<wffc:FormControl Ident="ParentTableID" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ParentTableID" />
+							<Control ID="ParentTableID" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="AssignToGroupConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignToGroupConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignToGroupConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignToGroupConfirmFormDialogSectionTitle_ITSM">
 			<HTMLTemplate><![CDATA[
 
 				<div class="row">
@@ -2119,6 +3387,7 @@
 				<div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
 							<Control ID="DialogCommunication" />
 						</div>
 					</div>
@@ -2127,7 +3396,7 @@
 			]]></HTMLTemplate>
 		</Section>
 
-		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignConfirmFormDialogSectionTitle_ITSM">
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="AssignConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignConfirmFormDialogSectionTitle_ITSM">
 			<HTMLTemplate><![CDATA[
 
 				<div class="row">
@@ -2158,7 +3427,7 @@
 			]]></HTMLTemplate>
 		</Section>
 
-		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="AssignToMeConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignToMeConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignToMeConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignToMeConfirmFormDialogSectionTitle_ITSM">
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="AssignToMeConfirmFormDialogSection" CloseButtonTitleResourceKey="AssignToMeConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="AssignToMeConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="AssignToMeConfirmFormDialogSectionTitle_ITSM">
 			<HTMLTemplate><![CDATA[
 
 				<div class="row">
@@ -2173,7 +3442,7 @@
 			]]></HTMLTemplate>
 		</Section>
 
-		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="ResolveConfirmFormDialogSection" CloseButtonTitleResourceKey="ResolveConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="ResolveConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ResolveConfirmFormDialogSectionTitle_ITSM">
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="ResolveConfirmFormDialogSection" CloseButtonTitleResourceKey="ResolveConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="ResolveConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ResolveConfirmFormDialogSectionTitle_ITSM">
 			<HTMLTemplate><![CDATA[
 
 				<div class="row">
@@ -2206,7 +3475,79 @@
 			]]></HTMLTemplate>
 		</Section>
 
-		<Section Root="Form" xsi:type="ContentSection" Ident="ITSMLinkSection" TitleResourceKey="ITSMLink_ITSM" IconCssClass="icon-link">
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="InternallySuspendSolutionConfirmFormDialogSection" CloseButtonTitleResourceKey="InternallySuspendSolutionConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="InternallySuspendSolutionConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="InternallySuspendSolutionConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMSolutionSuspendReasonGuid" />
+							<Control ID="DialogITSMSolutionSuspendReasonGuid" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="SuspendSolutionConfirmFormDialogSection" CloseButtonTitleResourceKey="SuspendSolutionConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="SuspendSolutionConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SuspendSolutionConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMSolutionSuspendReasonGuid" />
+							<Control ID="DialogITSMSolutionSuspendReasonGuid" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="ApprovalSuspendConfirmFormDialogSection" CloseButtonTitleResourceKey="ApprovalSuspendConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="ApprovalSuspendConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ApprovalSuspendConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMApprovalSuspendReasonGuid" />
+							<Control ID="DialogITSMApprovalSuspendReasonGuid" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ContentSection" Root="Form" Ident="ITSMLinkSection" TitleResourceKey="ITSMLink_ITSM" IconCssClass="icon-link">
 			<HTMLTemplate><![CDATA[
 				<style>
 					.no-label > label {
@@ -2282,16 +3623,44 @@
 			]]></HTMLTemplate>
 		</Section>
 
-		<Section Root="Form" xsi:type="ContentSection" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM" IconCssClass="icon-history">
+		<Section xsi:type="ContentSection" Root="Form" Ident="KnowledgeBaseSection" TitleResourceKey="KnowledgeBaseSection_ITSM" IconCssClass="icon-book">
 			<HTMLTemplate><![CDATA[
 				<fieldset>
 					<div class="row">
 						<div class="col-md-12">
-							<Component ID="TimeLine"/>
+							<Component ID="ITSMKnowledgeBase" />
 						</div>
 					</div>
 				</fieldset>
 			]]></HTMLTemplate>
 		</Section>
+
+		<Section xsi:type="ContentSection" Root="Form" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM" IconCssClass="icon-history" IsVisible="true">
+			<HTMLTemplate><![CDATA[
+				<fieldset>
+					<div class="row">
+						<div class="col-md-12">
+							<Component ID="TimeLine" />
+						</div>
+					</div>
+				</fieldset>
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ConfirmFormDialogSection" Root="Form" Ident="CancelConfirmFormDialogSection" CloseButtonTitleResourceKey="CancelConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="CancelConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="CancelConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
 	</Sections>
 </Form>

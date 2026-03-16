@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="EmailReceiver">
+	<Sections>
+		<Section xsi:type="EmailReciverSection">
+			<Connections>
+				<!-- GAPPEX TEST -->
+				<EmailConnection xsi:type="ExchangeEmailConnection" ServerUrl="https://outlook.office365.com/EWS/Exchange.asmx" UserName="system@gappex.cz" Password="gappex.123" ShareBoxEmail="testmail@gappex.cz" ExchangeVersionType="Exchange2016">
+					<Azure ClientID="3ee26b26-876e-4651-9122-f7278ddb16eb" TenantID="3967fe06-ccf9-4fcb-ad0e-a40d9e2eeab2" />
+				</EmailConnection>
+			</Connections>
+			<Rules>
+
+				<Rule Ident="NewITSMRequest" ActionType="New File" FormIdent="ITSMRequest" ButtonIdent="SendToCategorizationButton" IsBreakAfter="true" FileControlIdent="Attachments">
+					<Conditions>
+						<Condition xsi:type="SubjectCondition" Expression="(?i)^(Request\:)" />
+					</Conditions>
+					<Mappings>
+						<Mapping xsi:type="SubjectMapping" Ident="Subject" IsRequired="true" />
+						<Mapping xsi:type="BodyMapping" Ident="Description" IsRequired="true" />
+						<Mapping xsi:type="SenderMapping" Ident="ReporterEmail" IsRequired="true" />
+						<Mapping xsi:type="EmailAccountMapping" Ident="ReporterAccountID" IsRequired="true" />
+						<Mapping xsi:type="ValueMapping" Ident="AccountID" Value="32" IsRequired="true" />
+						<Mapping xsi:type="ValueMapping" Ident="ITSMCompanyIdent" Value="0000038" IsRequired="true" />
+					</Mappings>
+				</Rule>
+
+				<Rule Ident="NewITSMIncident" ActionType="New" FormIdent="ITSMIncident" ButtonIdent="SendToCategorizationButton" IsBreakAfter="true">
+					<Conditions>
+						<Condition xsi:type="SubjectCondition" Expression="(?i)^(Incident\:)" />
+					</Conditions>
+					<Mappings>
+						<Mapping xsi:type="SubjectMapping" Ident="Subject" IsRequired="true" />
+						<Mapping xsi:type="BodyMapping" Ident="Description" IsRequired="true" />
+						<Mapping xsi:type="SenderMapping" Ident="ReporterEmail" IsRequired="true" />
+						<Mapping xsi:type="EmailAccountMapping" Ident="ReporterAccountID" IsRequired="true" />
+						<Mapping xsi:type="ValueMapping" Ident="AccountID" Value="32" IsRequired="true" />
+						<Mapping xsi:type="ValueMapping" Ident="ITSMCompanyIdent" Value="0000038" IsRequired="true" />
+					</Mappings>
+				</Rule>
+
+				<Rule Ident="NewITSMSecurityIncident" ActionType="New" FormIdent="ITSMSecurityIncident" ButtonIdent="SendToCategorizationButton" IsBreakAfter="true">
+					<Conditions>
+						<Condition xsi:type="SubjectCondition" Expression="(?i)^(SecurityIncident\:)" />
+					</Conditions>
+					<Mappings>
+						<Mapping xsi:type="SubjectMapping" Ident="Subject" IsRequired="true" />
+						<Mapping xsi:type="BodyMapping" Ident="Description" IsRequired="true" />
+						<Mapping xsi:type="SenderMapping" Ident="ReporterEmail" IsRequired="true" />
+						<Mapping xsi:type="EmailAccountMapping" Ident="ReporterAccountID" IsRequired="true" />
+						<Mapping xsi:type="ValueMapping" Ident="AccountID" Value="32" IsRequired="true" />
+						<Mapping xsi:type="ValueMapping" Ident="ITSMCompanyIdent" Value="0000038" IsRequired="true" />
+					</Mappings>
+				</Rule>
+
+			</Rules>
+		</Section>
+	</Sections>
+</Configuration>

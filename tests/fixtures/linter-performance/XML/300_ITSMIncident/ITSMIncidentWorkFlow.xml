@@ -1,57 +1,1329 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMIncidentWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMIncident" PackageIdent="ITSMPackage">
-
   <Definition>
     <States>
       <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger" />
       <State Value="1" TitleResourceKey="New_ITSM" ColorCssClass="warning" />
       <State Value="10" TitleResourceKey="Categorization_ITSM" ColorCssClass="warning" />
-      <State Value="20" TitleResourceKey="InputControlByOperator_ITSM" ColorCssClass="warning" />
+      <State Value="20" TitleResourceKey="InputControlByOperator_ITSM" ColorCssClass="warning" SimpleModeTitleResourceKey="InProgress_ITSM" SimpleModeColorCssClass="primary" />
       <State Value="30" TitleResourceKey="ReturnedForMoreInfo_ITSM" ColorCssClass="secondary" />
-      <State Value="40" TitleResourceKey="AssignedToMyTeam_ITSM" ColorCssClass="success" />
-      <State Value="50" TitleResourceKey="InProgress_ITSM" ColorCssClass="success" />
-      <State Value="60" TitleResourceKey="SuspendedSLARunning_ITSM" ColorCssClass="success" />
-      <State Value="70" TitleResourceKey="SuspendedForReview_ITSM" ColorCssClass="warning" />
-      <State Value="80" TitleResourceKey="SuspendedSLAStopped_ITSM" ColorCssClass="danger" />
-      <State Value="90" TitleResourceKey="ToSolutionCheck_ITSM" ColorCssClass="primary" />
-      <State Value="100" TitleResourceKey="SolutionCheck_ITSM" ColorCssClass="primary" />
-      <State Value="110" TitleResourceKey="SolutionRejected_ITSM" ColorCssClass="warning" />
-      <State Value="120" TitleResourceKey="IncidentEvaluation_ITSM" ColorCssClass="warning" />
+      <State Value="40" TitleResourceKey="SolutionAssignedToTeam_ITSM" ColorCssClass="success" SimpleModeTitleResourceKey="InProgress_ITSM" SimpleModeColorCssClass="primary" />
+      <State Value="50" TitleResourceKey="SolutionAssigned_ITSM" ColorCssClass="primary" SimpleModeTitleResourceKey="InProgress_ITSM" SimpleModeColorCssClass="primary" />
+      <State Value="60" TitleResourceKey="SolutionInternallySuspended_ITSM" ColorCssClass="warning" SimpleModeTitleResourceKey="InProgress_ITSM" SimpleModeColorCssClass="primary" />
+      <State Value="70" TitleResourceKey="SolutionSuspendedForReview_ITSM" ColorCssClass="warning" SimpleModeTitleResourceKey="InProgress_ITSM" SimpleModeColorCssClass="primary" />
+      <State Value="80" TitleResourceKey="SolutionSuspended_ITSM" ColorCssClass="warning" />
+      <State Value="90" TitleResourceKey="ResolvedForReview_ITSM" ColorCssClass="primary" SimpleModeTitleResourceKey="InProgress_ITSM" SimpleModeColorCssClass="primary" />
+      <State Value="100" TitleResourceKey="Resolved_ITSM" ColorCssClass="success" />
+      <State Value="110" TitleResourceKey="SolutionRejected_ITSM" ColorCssClass="warning" SimpleModeTitleResourceKey="InProgress_ITSM" SimpleModeColorCssClass="primary" />
+      <State Value="120" TitleResourceKey="IncidentEvaluation_ITSM" ColorCssClass="warning" SimpleModeTitleResourceKey="Closed_ITSM" SimpleModeColorCssClass="dark" />
       <State Value="200" TitleResourceKey="Closed_ITSM" ColorCssClass="dark" IsOutOfSLA="true" />
 
-      <State Value="130" TitleResourceKey="OperatorSolutionCheck_ITSM" ColorCssClass="primary" />
+      <State Value="130" TitleResourceKey="Resolved_ITSM" ColorCssClass="success" />
     </States>
   </Definition>
 
   <GlobalJavaScripts>
 
-		<JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5">
-			<Selectors>
-				<string>.js-howHideCategoryLevel5</string>
-			</Selectors>
-			<ShowValues>
-				<string>1</string>
-			</ShowValues>
-		</JavaScript>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel3" ControlIdent="IsShowCategoryLevel3">
+      <Selectors>
+        <string>.js-howHideCategoryLevel3</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
 
-		<JavaScript xsi:type="ShowHide" Ident="ShowIfReporterEmailDifferent" ControlIdent="IsReporterEmailDifferent">
-			<Selectors>
-				<string>.js-showIfReporterEmailDifferent</string>
-			</Selectors>
-			<ShowValues>
-				<string>1</string>
-			</ShowValues>
-		</JavaScript>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel4" ControlIdent="IsShowCategoryLevel4">
+      <Selectors>
+        <string>.js-howHideCategoryLevel4</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
 
-		<JavaScript xsi:type="ShowHide" Ident="ShowIfReporterPhoneDifferent" ControlIdent="IsReporterPhoneDifferent">
-			<Selectors>
-				<string>.js-showIfReporterPhoneDifferent</string>
-			</Selectors>
-			<ShowValues>
-				<string>1</string>
-			</ShowValues>
-		</JavaScript>
-	</GlobalJavaScripts>
+    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5">
+      <Selectors>
+        <string>.js-howHideCategoryLevel5</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+
+    <JavaScript xsi:type="ShowHide" Ident="ShowIfElevatedPermissionOrNotFirstState" ControlIdent="IsElevatedPermissionOrNotFirstState">
+      <Selectors>
+        <string>.js-showIfElevatedPermissionOrNotFirstState</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+
+    <JavaScript xsi:type="ShowHide" Ident="ShowIfReporterEmailDifferent" ControlIdent="IsReporterEmailDifferent">
+      <Selectors>
+        <string>.js-showIfReporterEmailDifferent</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+
+    <JavaScript xsi:type="ShowHide" Ident="ShowIfReporterPhoneDifferent" ControlIdent="IsReporterPhoneDifferent">
+      <Selectors>
+        <string>.js-showIfReporterPhoneDifferent</string>
+      </Selectors>
+      <ShowValues>
+        <string>1</string>
+      </ShowValues>
+    </JavaScript>
+  </GlobalJavaScripts>
+
+  <ActionShareCodes>
+
+    <ActionShareCode Ident="BasicRequiredActionShare">
+      <Actions>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>Subject</string>
+            <string>Description</string>
+          </Idents>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="BasicRequiredActionShare" /> -->
+
+    <ActionShareCode Ident="InProcessRequiredActionShare">
+      <Actions>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>Subject</string>
+            <string>Description</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>ITSMCategoryLevel2Ident</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL><![CDATA[
+              SELECT IIF(
+                @IsShowCategoryLevel3 = 1
+              ,1,0)
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel3" DataType="Number" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>ITSMCategoryLevel3Ident</string>
+              </Idents>
+            </Action>
+          </TrueActions>
+        </Action>
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL><![CDATA[
+              SELECT IIF(
+                @IsShowCategoryLevel4 = 1
+              ,1,0)
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel4" DataType="Number" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>ITSMCategoryLevel4Ident</string>
+              </Idents>
+            </Action>
+          </TrueActions>
+        </Action>
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL><![CDATA[
+              SELECT IIF(
+                @IsShowCategoryLevel5 = 1
+              ,1,0)
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>ITSMCategoryLevel5Ident</string>
+              </Idents>
+            </Action>
+          </TrueActions>
+        </Action>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>ReporterAccountID</string>
+            <string>ITSMEntryMethodTypeGuid</string>
+          </Idents>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="InProcessRequiredActionShare" /> -->
+
+    <!-- Assignee controls updates-->
+    <ActionShareCode Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare">
+      <Actions>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                ISNULL(@Communication, '') = ''
+                AND NOT EXISTS(
+                  SELECT NULL
+                  FROM usr.ITSMIncident AS tic
+                  OUTER APPLY (
+                    SELECT TOP(1) his.*
+                    FROM dbo.History AS his
+                    WHERE
+                      his.TableID = tic.ID
+                      AND his.FormIdent = 'ITSMIncident'
+                      AND his.HistoryTypeID = 'ChangeState'
+                    ORDER BY his.CreateDate DESC
+                  ) AS hisLast
+                  INNER JOIN dbo.Communication AS com
+                    ON com.TableID = tic.ID
+                    AND com.FormIdent = 'ITSMIncident'
+                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+                    AND com.AccountID = @UserID
+                    AND com.CommunicationTypeID = 'Comment_ITSM'
+                  WHERE tic.ID = @ID
+                )
+              , 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>DialogCommunication</string>
+              </Idents>
+            </Action>
+          </TrueActions>
+          <FalseActions>
+          </FalseActions>
+        </Action>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogAssignedGroupID</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_GroupOnlyFromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogAssignedGroupID
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare" /> -->
+    <ActionShareCode Ident="Assignee_Update_FromDialog_ActionShare">
+      <Actions>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                ISNULL(@Communication, '') = ''
+                AND NOT EXISTS(
+                  SELECT NULL
+                  FROM usr.ITSMIncident AS tic
+                  OUTER APPLY (
+                    SELECT TOP(1) his.*
+                    FROM dbo.History AS his
+                    WHERE
+                      his.TableID = tic.ID
+                      AND his.FormIdent = 'ITSMIncident'
+                      AND his.HistoryTypeID = 'ChangeState'
+                    ORDER BY his.CreateDate DESC
+                  ) AS hisLast
+                  INNER JOIN dbo.Communication AS com
+                    ON com.TableID = tic.ID
+                    AND com.FormIdent = 'ITSMIncident'
+                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+                    AND com.AccountID = @UserID
+                    AND com.CommunicationTypeID = 'Comment_ITSM'
+                  WHERE tic.ID = @ID
+                )
+              , 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>DialogCommunication</string>
+              </Idents>
+            </Action>
+          </TrueActions>
+          <FalseActions>
+          </FalseActions>
+        </Action>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogAssignedGroupID</string>
+            <string>DialogAssignedAccountID</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_FromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogAssignedGroupID
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="ActionValue" Ident="AssignedAccountID_FromDialog_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogAssignedAccountID
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedAccountID" DataType="Number" />
+            </Parameters>
+          </DataSource>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" /> -->
+    <ActionShareCode Ident="Assignee_Clear_ActionShare">
+      <Actions>
+        <Action xsi:type="SetValue" Ident="AssignedGroupID" Value="" ActionStart="AfterValidation" />
+        <Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Clear_ActionShare" /> -->
+    <ActionShareCode Ident="Assignee_Update_ToMe_ActionShare">
+      <Actions>
+
+        <Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMe_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+              INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+
+              SELECT TOP(1)
+                  itsGagvftap.GroupID
+              FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+                  COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+                  @PermissionIDs
+              ) AS itsGagvftap
+              INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMe_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @UserID
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" /> -->
+    <ActionShareCode Ident="Assignee_Update_ToMeMultipleGroup_ActionShare">
+      <Actions>
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogAssignedToMyGroupID</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogAssignedToMyGroupID
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedToMyGroupID" DataType="Number" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @UserID
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMeMultipleGroup_ActionShare" /> -->
+
+    <ActionShareCode Ident="SuspendSolution_Update_FromDialog_ActionShare">
+      <Actions>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogITSMSolutionSuspendReasonGuid</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="ActionValue" Ident="SolutionSuspendReasonGuid_Update_FromDialog_Action" ControlIdent="ITSMSolutionSuspendReasonGuid" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogITSMSolutionSuspendReasonGuid
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMSolutionSuspendReasonGuid" DataType="Guid" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="SetValue" Ident="DialogITSMSolutionSuspendReasonGuid" Value="" ActionStart="AfterValidation" />
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SuspendSolution_Update_FromDialog_ActionShare" /> -->
+
+    <ActionShareCode Ident="SuspendApproval_Update_FromDialog_ActionShare">
+      <Actions>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogITSMApprovalSuspendReasonGuid</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="ActionValue" Ident="ApprovalSuspendReasonGuid_Update_FromDialog_Action" ControlIdent="ITSMApprovalSuspendReasonGuid" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogITSMApprovalSuspendReasonGuid
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMApprovalSuspendReasonGuid" DataType="Guid" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="SetValue" Ident="DialogITSMApprovalSuspendReasonGuid" Value="" ActionStart="AfterValidation" />
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SuspendApproval_Update_FromDialog_ActionShare" /> -->
+
+    <!-- Resolution controls updates-->
+    <ActionShareCode Ident="Resolution_Update_FromDialog_ActionShare">
+      <Actions>
+
+        <Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogITSMGeneralResolutionMethodTypeGuid</string>
+            <string>DialogSolutionDescription</string>
+          </Idents>
+        </Action>
+
+        <Action xsi:type="ActionValue" Ident="ITSMGeneralResolutionMethodTypeGuid_Update_FromDialog_Action" ControlIdent="ITSMGeneralResolutionMethodTypeGuid" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogITSMGeneralResolutionMethodTypeGuid
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="ActionValue" Ident="SolutionDescription_Update_FromDialog_Action" ControlIdent="SolutionDescription" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogSolutionDescription
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogSolutionDescription" DataType="String" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="ActionValue" Ident="SolutionAditionalInformation_Update_FromDialog_Action" ControlIdent="SolutionAditionalInformation" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT @DialogSolutionAditionalInformation
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogSolutionAditionalInformation" DataType="String" />
+            </Parameters>
+          </DataSource>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Update_FromDialog_ActionShare" /> -->
+    <ActionShareCode Ident="Resolution_Clear_ActionShare">
+      <Actions>
+        <Action xsi:type="SetValue" Ident="ITSMGeneralResolutionMethodTypeGuid" Value="" ActionStart="AfterValidation" />
+        <Action xsi:type="SetValue" Ident="SolutionDescription" Value="" ActionStart="AfterValidation" />
+        <Action xsi:type="SetValue" Ident="SolutionAditionalInformation" Value="" ActionStart="AfterValidation" />
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Clear_ActionShare" /> -->
+    <ActionShareCode Ident="Resolution_Update_ToCanceled_ActionShare">
+      <Actions>
+
+        <Action xsi:type="ActionValue" Ident="ITSMGeneralResolutionMethodTypeGuid_Update_ToCanceled_Action" ControlIdent="ITSMGeneralResolutionMethodTypeGuid" ActionStart="AfterValidation">
+          <DataSource>
+            <SQL><![CDATA[
+              SELECT TOP(1) Guid
+              FROM usr.ITSMGeneralResolutionMethodTypeSetting
+              WHERE FunctionalKey = 'Canceled'
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" />
+            </Parameters>
+          </DataSource>
+        </Action>
+        <Action xsi:type="SetValue" Ident="SolutionDescription" Value="" ActionStart="AfterValidation" />
+        <Action xsi:type="SetValue" Ident="SolutionAditionalInformation" Value="" ActionStart="AfterValidation" />
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Update_ToCanceled_ActionShare" /> -->
+
+    <ActionShareCode Ident="DialogCommunicationRequiredActionShare">
+      <Actions>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL>
+              SELECT IIF(
+                ISNULL(@Communication, '') = ''
+                AND NOT EXISTS(
+                  SELECT NULL
+                  FROM usr.ITSMIncident AS tic
+                  OUTER APPLY (
+                    SELECT TOP(1) his.*
+                    FROM dbo.History AS his
+                    WHERE
+                      his.TableID = tic.ID
+                      AND his.FormIdent = 'ITSMIncident'
+                      AND his.HistoryTypeID = 'ChangeState'
+                    ORDER BY his.CreateDate DESC
+                  ) AS hisLast
+                  INNER JOIN dbo.Communication AS com
+                    ON com.TableID = tic.ID
+                    AND com.FormIdent = 'ITSMIncident'
+                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+                    AND com.AccountID = @UserID
+                    AND com.CommunicationTypeID = 'Comment_ITSM'
+                  WHERE tic.ID = @ID
+                )
+              , 1, 0)
+            </SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+            <Action xsi:type="Required" ActionStart="BeforeValidation">
+              <Idents>
+                <string>DialogCommunication</string>
+              </Idents>
+            </Action>
+          </TrueActions>
+          <FalseActions>
+          </FalseActions>
+        </Action>
+
+      </Actions>
+    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="DialogCommunicationRequiredActionShare" /> -->
+
+
+    <ActionShareCode Ident="SendToProcessButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="SendToProcessCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'true' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="ResendToProcessButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="SendToProcessCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'true' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="ReturnToReporterButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="ReturnToReporterCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'true' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="InternallySuspendSolutionButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="InternallySuspendSolutionCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="SuspendSolutionButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="SuspendSolutionCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="AssignToGroupButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToGroupCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="AssignButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="AssignToMeButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToMeCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="AssignToMeMultipleGroupButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToMeMultipleGroupCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="ResolveButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="ResolveCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="CloseButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="CloseCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'false' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="ClaimSolutionButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="ClaimSolutionCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'true' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+
+    <ActionShareCode Ident="AnswerSolutionButton_SaveDialogCommunicationAction_ActionShare">
+      <Actions>
+        <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AnswerSolutionCommunication_ITSM" ActionStart="AfterSave" />
+
+        <Action xsi:type="ActionTrigger" Ident="SaveDialogCommunicationAction" ActionStart="AfterSave">
+          <DataSource>
+            <SQL><![CDATA[
+
+              DECLARE @CommunicationID INT
+
+              SELECT @CommunicationID = com.ID
+              FROM dbo.Communication AS com
+              WHERE
+                com.FormIdent = 'ITSMIncident'
+                AND com.ControlIdent = 'DialogCommunication'
+                AND com.TableID = @ID
+                AND com.AccountID = @UserID
+
+              IF @CommunicationID IS NOT NULL BEGIN
+
+                UPDATE com
+                SET ControlIdent = 'Communication'
+                FROM dbo.Communication AS com
+                WHERE com.ID = @CommunicationID
+
+                DELETE FROM dbo.CommunicationPermission
+                WHERE CommunicationID = @CommunicationID
+
+                INSERT INTO dbo.CommunicationPermission (
+                  [CommunicationID]
+                  ,[SettingIdent]
+                )
+                SELECT
+                  [CommunicationID] = @CommunicationID
+                  ,[SettingIdent] = 'InternalMessage'
+
+                IF 'true' = 'true'
+                  INSERT INTO dbo.CommunicationPermission (
+                    [CommunicationID]
+                    ,[SettingIdent]
+                  )
+                  SELECT
+                    [CommunicationID] = @CommunicationID
+                    ,[SettingIdent] = 'ExternalMessage'
+
+              END
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+      </Actions>
+    </ActionShareCode>
+  </ActionShareCodes>
 
   <ControlShareCodes>
     <ControlShareCode Ident="EnableBasicControlShare">
@@ -60,410 +1332,358 @@
         <FormControl Ident="ITSMIncidentClassificationTypeGuid" IsVisible="true" IsReadOnly="false" />
         <FormControl Ident="Subject" IsReadOnly="false" />
         <FormControl Ident="Description" IsReadOnly="false" />
+
+        <FormControl Ident="UserName" IsReadOnly="false" />
+        <FormControl Ident="CertificateType" IsReadOnly="false" />
+        <FormControl Ident="RequestType" IsReadOnly="false" />
+        <FormControl Ident="ConsumerName" IsReadOnly="false" />
+        <FormControl Ident="ValidityPeriod" IsReadOnly="false" />
+        <FormControl Ident="OriginalHWIMNumber" IsReadOnly="false" />
+        <FormControl Ident="Justification" IsReadOnly="false" />
+        <FormControl Ident="RequestCategory" IsReadOnly="false" />
+        <FormControl Ident="Renewal" IsReadOnly="false" />
+        <FormControl Ident="Failure" IsReadOnly="false" />
+        <FormControl Ident="Employee" IsReadOnly="false" />
+        <FormControl Ident="Requirement" IsReadOnly="false" />
+        <FormControl Ident="CompletionDate" IsReadOnly="false" />
+        <FormControl Ident="Attachment" IsReadOnly="false" />
+        <FormControl Ident="Login" IsReadOnly="false" />
+        <FormControl Ident="Permission" IsReadOnly="false" />
+        <FormControl Ident="SerialNumber" IsReadOnly="false" />
+        <FormControl Ident="ExpirationDate" IsReadOnly="false" />
+        <FormControl Ident="Environment" IsReadOnly="false" />
+        <FormControl Ident="CommonName" IsReadOnly="false" />
+        <FormControl Ident="Email" IsReadOnly="false" />
+        <FormControl Ident="Organization" IsReadOnly="false" />
+        <FormControl Ident="SecondOrganization" IsReadOnly="false" />
+        <FormControl Ident="Locality" IsReadOnly="false" />
+        <FormControl Ident="StateField" IsReadOnly="false" />
+        <FormControl Ident="Country" IsReadOnly="false" />
+        <FormControl Ident="SANAttribute" IsReadOnly="false" />
+        <FormControl Ident="ServerName" IsReadOnly="false" />
+        <FormControl Ident="IPAddress" IsReadOnly="false" />
+        <FormControl Ident="Zone" IsReadOnly="false" />
+        <FormControl Ident="vdom" IsReadOnly="false" />
+        <FormControl Ident="Transport" IsReadOnly="false" />
+        <FormControl Ident="Port" IsReadOnly="false" />
+        <FormControl Ident="RevocationRequestDescription" IsReadOnly="false" />
       </Controls>
     </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" /> -->
 
     <ControlShareCode Ident="EnableVerificationControlShare">
       <Controls>
+        <FormControl Ident="PHVerificationCard" IsVisible="true" />
         <FormControl Ident="ReporterResponseDeadlineDateTime" IsVisible="true" IsReadOnly="false" />
         <FormControl Ident="UserResponse" IsVisible="true" IsReadOnly="false" />
         <FormControl Ident="SolutionAssessment" IsVisible="true" IsReadOnly="false" />
       </Controls>
     </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" /> -->
 
-		<ControlShareCode Ident="ShowAssigneeControlShare">
-			<Controls>
-				<FormControl Ident="AssignedGroupID" IsVisible="true" />
-				<FormControl Ident="AssignedAccountID" IsVisible="true" />
-				<FormControl Ident="AssignedCardPlaceHolder" IsVisible="true" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowAssigneeControlShare" /> -->
+    <ControlShareCode Ident="ShowVerificationControlShare">
+      <Controls>
+        <FormControl Ident="PHVerificationCard" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" /> -->
 
-		<ControlShareCode Ident="EnableCategoryControlShare">
-			<Controls>
-				<FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
-				<FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
-				<FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
-				<FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
-				<FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" /> -->
+    <ControlShareCode Ident="ShowAssigneeControlShare">
+      <Controls>
+        <FormControl Ident="AssignedGroupID" IsVisible="true" />
+        <FormControl Ident="AssignedAccountID" IsVisible="true" />
+        <FormControl Ident="AssignedCardPlaceHolder" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowAssigneeControlShare" /> -->
 
-		<ControlShareCode Ident="ShowResolutionControlShare">
-			<Controls>
-				<FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" />
-				<FormControl Ident="SolutionDescription" IsVisible="true" />
-				<FormControl Ident="SolutionAditionalInformation" IsVisible="true" />
-				<FormControl Ident="GeneralResolutionCardPlaceHolder" IsVisible="true" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" /> -->
+    <ControlShareCode Ident="EnableCategoryControlShare">
+      <Controls>
+        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
+        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" /> -->
 
-		<ControlShareCode Ident="EnableResolutionControlShare">
-			<Controls>
-				<FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="SolutionDescription" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="SolutionAditionalInformation" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="GeneralResolutionCardPlaceHolder" IsVisible="true" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" /> -->
+    <ControlShareCode Ident="ShowResolutionControlShare">
+      <Controls>
+        <FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" />
+        <FormControl Ident="SolutionDescription" IsVisible="true" />
+        <FormControl Ident="SolutionAditionalInformation" IsVisible="true" />
+        <FormControl Ident="GeneralResolutionCardPlaceHolder" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" /> -->
 
-		<ControlShareCode Ident="ShowReporterContanctInfoDiffControlShare">
-			<Controls>
-				<FormControl Ident="IsReporterEmailDifferent" IsVisible="true" />
-				<FormControl Ident="IsReporterPhoneDifferent" IsVisible="true" />
-				<FormControl Ident="ReporterEmailDifferentPlaceHolder" IsVisible="true" />
-				<FormControl Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="true" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" /> -->
+    <ControlShareCode Ident="EnableResolutionControlShare">
+      <Controls>
+        <FormControl Ident="ITSMGeneralResolutionMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="SolutionDescription" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="SolutionAditionalInformation" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="GeneralResolutionCardPlaceHolder" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableResolutionControlShare" /> -->
 
-		<ControlShareCode Ident="ShowReporterInformationControlShare">
-			<Controls>
-				<FormControl Ident="ReporterAccountID" IsVisible="true" />
-				<FormControl Ident="ReporterEmail" IsVisible="true" />
-				<FormControl Ident="ReporterPhone" IsVisible="true" />
-				<FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" />
-				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" /> -->
+    <ControlShareCode Ident="ShowReporterContanctInfoDiffControlShare">
+      <Controls>
+        <FormControl Ident="IsReporterEmailDifferent" IsVisible="true" />
+        <FormControl Ident="IsReporterPhoneDifferent" IsVisible="true" />
+        <FormControl Ident="ReporterEmailDifferentPlaceHolder" IsVisible="true" />
+        <FormControl Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" /> -->
 
-		<ControlShareCode Ident="EnableReporterInformationControlShare">
-			<Controls>
-				<FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" />
-				<FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" /> -->
+    <ControlShareCode Ident="ShowReporterInformationControlShare">
+      <Controls>
+        <FormControl Ident="ReporterAccountID" IsVisible="true" />
+        <FormControl Ident="ReporterEmail" IsVisible="true" />
+        <FormControl Ident="ReporterPhone" IsVisible="true" />
+        <FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" />
+        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" /> -->
 
-		<ControlShareCode Ident="ShowCommunicationControlShare">
-			<Controls>
+    <ControlShareCode Ident="EnableReporterInformationControlShare">
+      <Controls>
+        <FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" /> -->
 
-				<FormControl Ident="CommunicationList" IsVisible="true" />
-				<FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
+    <ControlShareCode Ident="EnableAdvancedReporterInformationControlShare">
+      <Controls>
 
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
+        <FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
 
-		<ControlShareCode Ident="EnableCommunicationControlShare">
-			<Controls>
+        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAdvancedReporterInformationControlShare" /> -->
 
-				<FormControl Ident="Communication" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="CommunicationList" IsVisible="true" />
-				<FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
+    <ControlShareCode Ident="ShowCommunicationControlShare">
+      <Controls>
 
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
+        <FormControl Ident="CommunicationList" IsVisible="true" />
+        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
 
-		<ControlShareCode Ident="ShowLinkControlShare">
-			<Controls>
-				<FormControl Ident="ParentTableID" IsVisible="true" />
-				<FormControl Ident="SubITSMDataGrid" IsVisible="true" />
-				<FormControl Ident="ITSMLinkSubForm" IsVisible="true" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> -->
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
 
-		<ControlShareCode Ident="EnableLinkControlShare">
-			<Controls>
-				<FormControl Ident="ParentTableID" IsVisible="true" IsReadOnly="false" />
-				<FormControl Ident="SubITSMDataGrid" IsVisible="true" />
-				<FormControl Ident="ITSMLinkSubForm" IsVisible="true" IsReadOnly="false" />
-			</Controls>
-		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> -->
+    <ControlShareCode Ident="EnableCommunicationControlShare">
+      <Controls>
 
-	</ControlShareCodes>
+        <FormControl Ident="Communication" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="CommunicationList" IsVisible="true" />
+        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
 
-  <ActionShareCodes>
-    <!-- <ActionShareCode Ident="BasicRequiredActionShare">
-      <Actions>
-        <Action xsi:type="Required" ActionStart="BeforeValidation">
-          <Idents>
-            <string></string>
-          </Idents>
-        </Action>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
 
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
+    <ControlShareCode Ident="EnableRequiredDialogCommunicationControlShare">
+      <Controls>
+        <FormControl xsi:type="IFControl">
           <Condition>
-            <SQL><![CDATA[
+            <SQL>
               SELECT IIF(
-                @PaymentTermsIdent = 'Other'
+                ISNULL(@Communication, '') = ''
+                AND NOT EXISTS(
+                  SELECT NULL
+                  FROM usr.ITSMIncident AS tic
+                  OUTER APPLY (
+                    SELECT TOP(1) his.*
+                    FROM dbo.History AS his
+                    WHERE
+                      his.TableID = tic.ID
+                      AND his.FormIdent = 'ITSMIncident'
+                      AND his.HistoryTypeID = 'ChangeState'
+                    ORDER BY his.CreateDate DESC
+                  ) AS hisLast
+                  INNER JOIN dbo.Communication AS com
+                    ON com.TableID = tic.ID
+                    AND com.FormIdent = 'ITSMIncident'
+                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+                    AND com.AccountID = @UserID
+                    AND com.CommunicationTypeID = 'Comment_ITSM'
+                  WHERE tic.ID = @ID
+                )
               , 1, 0)
-            ]]></SQL>
+            </SQL>
             <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="PaymentTermsIdent" DataType="String"  />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
             </Parameters>
           </Condition>
-          <TrueActions><Action xsi:type="Required" ActionStart="BeforeValidation">
-            <Idents>
-              <string>PaymentTermsOther</string>
-            </Idents>
-          </Action>
-          </TrueActions>
-        </Action>
-      </Actions>
+          <TrueControls>
+            <FormControl Ident="DialogCommunicationRequiredPlaceHolder" IsVisible="true" />
+          </TrueControls>
+        </FormControl>
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" /> -->
 
-    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="BasicRequiredActionShare" /> -->
+    <ControlShareCode Ident="ShowLinkControlShare">
+      <Controls>
+        <FormControl Ident="ParentTableID" IsVisible="true" />
+        <FormControl Ident="SubITSMDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubForm" IsVisible="true" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> -->
 
-    <!-- Email Actions -->
-    <!-- <ActionShareCode Ident="*EmailActionShare">
-      <Actions>
+    <ControlShareCode Ident="EnableLinkControlShare">
+      <Controls>
+        <FormControl Ident="ParentTableID" IsVisible="true" IsReadOnly="false" />
+        <FormControl Ident="SubITSMDataGrid" IsVisible="true" />
+        <FormControl Ident="ITSMLinkSubForm" IsVisible="true" IsReadOnly="false" />
+      </Controls>
+    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> -->
 
-        <Action xsi:type="Email" SubjectResourceKey="*_Email_ITSM" BodyResourceKey="*_Email_ITSM" EmailIdent="*_Email_ITSM" ActionStart="AfterPermission" Ident="*_Email_ITSM">
-          <Recipients>
-            <Recipient RecipientType="To" SourceType="Permission" Value="*"/>
-          </Recipients>
-        </Action>
-
-      </Actions>
-    </ActionShareCode> --> <!-- <Action xsi:type="ShareCode" Ident="SubmitEmailActionShare" /> -->
-
-		<!-- Assignee controls updates-->
-		<ActionShareCode Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare">
-			<Actions>
-
-				<Action xsi:type="Required" ActionStart="BeforeValidation">
-          <Idents>
-            <string>DialogAssignedGroupID</string>
-          </Idents>
-        </Action>
-
-				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_GroupOnlyFromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @DialogAssignedGroupID
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
-						</Parameters>
-					</DataSource>
-				</Action>
-				<Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
-
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare" /> -->
-		<ActionShareCode Ident="Assignee_Update_FromDialog_ActionShare">
-			<Actions>
-
-				<Action xsi:type="Required" ActionStart="BeforeValidation">
-          <Idents>
-            <string>DialogAssignedGroupID</string>
-            <string>DialogAssignedAccountID</string>
-          </Idents>
-        </Action>
-
-				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_FromDialog_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @DialogAssignedGroupID
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedGroupID" DataType="Number" />
-						</Parameters>
-					</DataSource>
-				</Action>
-				<Action xsi:type="ActionValue" Ident="AssignedAccountID_FromDialog_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @DialogAssignedAccountID
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedAccountID" DataType="Number" />
-						</Parameters>
-					</DataSource>
-				</Action>
-
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" /> -->
-		<ActionShareCode Ident="Assignee_Clear_ActionShare">
-			<Actions>
-				<Action xsi:type="SetValue" Ident="AssignedGroupID" Value="" ActionStart="AfterValidation" />
-				<Action xsi:type="SetValue" Ident="AssignedAccountID" Value="" ActionStart="AfterValidation" />
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Clear_ActionShare" /> -->
-		<ActionShareCode Ident="Assignee_Update_ToMe_ActionShare">
-			<Actions>
-
-				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMe_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
-
-							SELECT TOP(1)
-									itsGagvftap.GroupID
-							FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
-									COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
-									@PermissionIDs
-							) AS itsGagvftap
-							INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-						</Parameters>
-					</DataSource>
-				</Action>
-				<Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMe_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @UserID
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-						</Parameters>
-					</DataSource>
-				</Action>
-
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" /> -->
-		<ActionShareCode Ident="Assignee_Update_ToMeMultipleGroup_ActionShare">
-			<Actions>
-
-				<Action xsi:type="Required" ActionStart="BeforeValidation">
-          <Idents>
-            <string>DialogAssignedToMyGroupID</string>
-          </Idents>
-        </Action>
-
-				<Action xsi:type="ActionValue" Ident="AssignedGroupID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedGroupID" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @DialogAssignedToMyGroupID
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogAssignedToMyGroupID" DataType="Number" />
-						</Parameters>
-					</DataSource>
-				</Action>
-				<Action xsi:type="ActionValue" Ident="AssignedAccountID_Update_ToMeMultipleGroup_Action" ControlIdent="AssignedAccountID" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @UserID
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-						</Parameters>
-					</DataSource>
-				</Action>
-
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMeMultipleGroup_ActionShare" /> -->
-
-		<!-- Resolution controls updates-->
-		<ActionShareCode Ident="Resolution_Update_FromDialog_ActionShare">
-			<Actions>
-
-				<Action xsi:type="Required" ActionStart="BeforeValidation">
-          <Idents>
-            <string>DialogITSMGeneralResolutionMethodTypeGuid</string>
-            <string>DialogSolutionDescription</string>
-          </Idents>
-        </Action>
-
-				<Action xsi:type="ActionValue" Ident="ITSMGeneralResolutionMethodTypeGuid_Update_FromDialog_Action" ControlIdent="ITSMGeneralResolutionMethodTypeGuid" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @DialogITSMGeneralResolutionMethodTypeGuid
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" />
-						</Parameters>
-					</DataSource>
-				</Action>
-				<Action xsi:type="ActionValue" Ident="SolutionDescription_Update_FromDialog_Action" ControlIdent="SolutionDescription" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @DialogSolutionDescription
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogSolutionDescription" DataType="String" />
-						</Parameters>
-					</DataSource>
-				</Action>
-				<Action xsi:type="ActionValue" Ident="SolutionAditionalInformation_Update_FromDialog_Action" ControlIdent="SolutionAditionalInformation" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT @DialogSolutionAditionalInformation
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogSolutionAditionalInformation" DataType="String" />
-						</Parameters>
-					</DataSource>
-				</Action>
-
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Update_FromDialog_ActionShare" /> -->
-		<ActionShareCode Ident="Resolution_Clear_ActionShare">
-			<Actions>
-				<Action xsi:type="SetValue" Ident="ITSMGeneralResolutionMethodTypeGuid" Value="" ActionStart="AfterValidation" />
-				<Action xsi:type="SetValue" Ident="SolutionDescription" Value="" ActionStart="AfterValidation" />
-				<Action xsi:type="SetValue" Ident="SolutionAditionalInformation" Value="" ActionStart="AfterValidation" />
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Clear_ActionShare" /> -->
-		<ActionShareCode Ident="Resolution_Update_ToCanceled_ActionShare">
-			<Actions>
-
-				<Action xsi:type="ActionValue" Ident="ITSMGeneralResolutionMethodTypeGuid_Update_ToCanceled_Action" ControlIdent="ITSMGeneralResolutionMethodTypeGuid" ActionStart="AfterValidation">
-					<DataSource>
-						<SQL><![CDATA[
-							SELECT TOP(1) Guid
-							FROM usr.ITSMGeneralResolutionMethodTypeSetting
-							WHERE FunctionalKey = 'Canceled'
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" />
-						</Parameters>
-					</DataSource>
-				</Action>
-				<Action xsi:type="SetValue" Ident="SolutionDescription" Value="" ActionStart="AfterValidation" />
-				<Action xsi:type="SetValue" Ident="SolutionAditionalInformation" Value="" ActionStart="AfterValidation" />
-
-			</Actions>
-		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="Resolution_Update_ToCanceled_ActionShare" /> -->
-
-	</ActionShareCodes>
+  </ControlShareCodes>
 
   <ButtonShareCodes>
 
-		<ButtonShareCode Ident="SendToProcessButtonShare">
-			<Buttons>
-				<Button Ident="SendToProcessButton" IsVisible="true">
-					<Actions>
-						<Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" />
-					</Actions>
-				</Button>
-			</Buttons>
-		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToProcessButtonShare" /> -->
-
-    <ButtonShareCode Ident="RejectButtonShare">
+    <ButtonShareCode Ident="SendToProcessButtonShare">
       <Buttons>
-        <Button Ident="RejectButton" IsVisible="true">
+        <Button Ident="SendToProcessButton" IsVisible="true">
           <Actions>
-            <Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" />
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="SendToProcessButton" ActionStart="AfterValidation" />
+            <Action xsi:type="ShareCode" Ident="InProcessRequiredActionShare" />
+            <!-- <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="20" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="SendToProcessCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="SendToProcessCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="SendToProcessButton_SaveDialogCommunicationAction_ActionShare" />
+
           </Actions>
         </Button>
       </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="RejectButtonShare" />  -->
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToProcessButtonShare" /> -->
 
-    <ButtonShareCode Ident="WaitingForButtonShare">
+    <ButtonShareCode Ident="SendToCategorizationButtonShare">
       <Buttons>
-        <Button Ident="WaitingForButton" IsVisible="true">
+        <Button Ident="SendToCategorizationButton" IsVisible="true">
           <Actions>
-            <Action xsi:type="ChangeState" State="60" ActionStart="AfterSave" />
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="SendToCategorizationButton" ActionStart="AfterValidation" />
+            <Action xsi:type="ChangeState" State="10" ActionStart="AfterSave" />
+            <Action xsi:type="ActionValue" Ident="ITSMEntryMethodTypeGuid_Update_Action" ControlIdent="ITSMEntryMethodTypeGuid" ActionStart="AfterValidation">
+              <DataSource>
+                <SQL><![CDATA[
+                  SELECT CAST([GUID] AS VARCHAR(MAX)) AS ITSMEntryMethodTypeGuid
+                  FROM usr.ITSMEntryMethodTypeSetting
+                  WHERE FunctionalKey = 'monitoring' AND [State] != @DeletedState
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+                </Parameters>
+              </DataSource>
+            </Action>
           </Actions>
         </Button>
       </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="WaitingForButtonShare" />  -->
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToCategorizationButtonShare" /> -->
 
-    <ButtonShareCode Ident="SuspendButtonShare">
+    <ButtonShareCode Ident="ResendToProcessButtonShare">
       <Buttons>
-        <Button Ident="SuspendButton" IsVisible="true">
-					<VisibleCondition>
-						<SQL><![CDATA[
+        <Button Ident="ResendToProcessButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="ResendToProcessButton" ActionStart="AfterValidation" />
+            <Action xsi:type="ShareCode" Ident="InProcessRequiredActionShare" />
+            <!-- <Action xsi:type="ChangeState" State="20" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="20" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="SendToProcessCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="SendToProcessCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="ResendToProcessButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ResendToProcessButtonShare" /> -->
+
+    <ButtonShareCode Ident="ReturnToReporterButtonShare">
+      <Buttons>
+        <Button Ident="ReturnToReporterButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="ReturnToReporterButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="30" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="30" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="ReturnToReporterCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="ReturnToReporterCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="ReturnToReporterButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ReturnToReporterButtonShare" />  -->
+
+    <ButtonShareCode Ident="InternallySuspendSolutionButtonShare">
+      <Buttons>
+        <Button Ident="InternallySuspendSolutionButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="InternallySuspendSolutionButton" ActionStart="AfterValidation" />
+            <Action xsi:type="ShareCode" Ident="SuspendSolution_Update_FromDialog_ActionShare" />
+            <!-- <Action xsi:type="ChangeState" State="60" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="60" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="InternallySuspendSolutionCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="InternallySuspendSolutionCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="InternallySuspendSolutionButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="InternallySuspendSolutionButtonShare" />  -->
+
+    <ButtonShareCode Ident="SuspendSolutionButtonShare">
+      <Buttons>
+        <Button Ident="SuspendSolutionButton" IsVisible="true">
+          <VisibleCondition>
+            <SQL><![CDATA[
               SELECT IIF(
                 FunctionalKey != 'monitoring'
                 ,1
@@ -471,24 +1691,90 @@
               )
               FROM usr.ITSMEntryMethodTypeSetting
               WHERE [GUID] = @ITSMEntryMethodTypeGuid
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMEntryMethodTypeGuid" DataType="Guid" />
-						</Parameters>
-					</VisibleCondition>
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMEntryMethodTypeGuid" DataType="Guid" />
+            </Parameters>
+          </VisibleCondition>
           <Actions>
-            <Action xsi:type="ChangeState" State="70" ActionStart="AfterSave" />
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="SuspendSolutionButton" ActionStart="AfterValidation" />
+            <Action xsi:type="ShareCode" Ident="SuspendSolution_Update_FromDialog_ActionShare" />
+            <!-- <Action xsi:type="ChangeState" State="70" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="70" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="SuspendSolutionCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="SuspendSolutionCommunication_ITSM" ActionStart="AfterSave" /> -->
+            <Action xsi:type="SwitchCase" Ident="SaveDialogCommunicationSwitchAction" ActionStart="AfterSave">
+              <Condition>
+                <SQL><![CDATA[
+                  SELECT @State
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
+                </Parameters>
+              </Condition>
+              <Cases>
+                <CaseAction>
+                  <Values>
+                    <string>70</string>
+                  </Values>
+                  <Actions>
+
+                    <Action xsi:type="ShareCode" Ident="SuspendSolutionButton_SaveDialogCommunicationAction_ActionShare" />
+
+                  </Actions>
+                </CaseAction>
+                <CaseAction>
+                  <Values>
+                    <string>80</string>
+                  </Values>
+                  <Actions>
+
+                    <Action xsi:type="ShareCode" Ident="SuspendSolutionButton_SaveDialogCommunicationAction_ActionShare" />
+
+                  </Actions>
+                </CaseAction>
+              </Cases>
+            </Action>
           </Actions>
         </Button>
       </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SuspendButtonShare" />  -->
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SuspendSolutionButtonShare" />  -->
 
     <ButtonShareCode Ident="AssignToGroupButtonShare">
       <Buttons>
         <Button Ident="AssignToGroupButton" IsVisible="true">
           <Actions>
-            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
-						<Action xsi:type="ShareCode" Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare" />
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignToGroupButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="40" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="ShareCode" Ident="Assignee_Update_GroupOnlyFromDialog_ActionShare" />
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignToGroupCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToGroupCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="AssignToGroupButton_SaveDialogCommunicationAction_ActionShare" />
+
           </Actions>
         </Button>
       </Buttons>
@@ -498,8 +1784,26 @@
       <Buttons>
         <Button Ident="AssignButton" IsVisible="true">
           <Actions>
-            <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="50" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
             <Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" />
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="AssignButton_SaveDialogCommunicationAction_ActionShare" />
+
           </Actions>
         </Button>
       </Buttons>
@@ -508,76 +1812,113 @@
     <ButtonShareCode Ident="AssignToMeButtonShare">
       <Buttons>
         <Button Ident="AssignToMeButton" IsVisible="true">
-					<VisibleCondition>
-						<SQL><![CDATA[
-							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+          <VisibleCondition>
+            <SQL><![CDATA[
+              DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+              INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
 
-							DECLARE @AllowedGroupNumber INT = 0;
+              DECLARE @AllowedGroupNumber INT = 0;
 
-							SELECT @AllowedGroupNumber = COUNT(*)
-							FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
-									COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
-									@PermissionIDs
-							) AS itsGagvftap
-							INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
+              SELECT @AllowedGroupNumber = COUNT(*)
+              FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+                  COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+                  @PermissionIDs
+              ) AS itsGagvftap
+              INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
 
-							SELECT IIF(@AllowedGroupNumber = 1, 1, 0)
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-						</Parameters>
-					</VisibleCondition>
+              SELECT IIF(@AllowedGroupNumber = 1, 1, 0)
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </VisibleCondition>
           <Actions>
-            <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
-						<Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" />
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignToMeButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="50" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMe_ActionShare" />
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignToMeCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToMeCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="AssignToMeButton_SaveDialogCommunicationAction_ActionShare" />
+
           </Actions>
         </Button>
 
-				<Button Ident="AssignToMeMultipleGroupButton" IsVisible="true">
-					<VisibleCondition>
-						<SQL><![CDATA[
-							DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-							INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
+        <Button Ident="AssignToMeMultipleGroupButton" IsVisible="true">
+          <VisibleCondition>
+            <SQL><![CDATA[
+              DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+              INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
 
-							DECLARE @AllowedGroupNumber INT = 0;
+              DECLARE @AllowedGroupNumber INT = 0;
 
-							SELECT @AllowedGroupNumber = COUNT(*)
-							FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
-									COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
-									@PermissionIDs
-							) AS itsGagvftap
-							INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
+              SELECT @AllowedGroupNumber = COUNT(*)
+              FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission(
+                  COALESCE(@ITSMCategoryLevel5Ident, @ITSMCategoryLevel4Ident, @ITSMCategoryLevel3Ident, @ITSMCategoryLevel2Ident, @ITSMCompanyIdent),
+                  @PermissionIDs
+              ) AS itsGagvftap
+              INNER JOIN dbo.GroupAccount AS gra ON gra.GroupID = itsGagvftap.GroupID AND gra.AccountID = @UserID
 
-							SELECT IIF(@AllowedGroupNumber > 1, 1, 0)
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-						</Parameters>
-					</VisibleCondition>
-					<Actions>
-            <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" />
-						<Action xsi:type="ShareCode" Ident="Assignee_Update_ToMeMultipleGroup_ActionShare" />
-					</Actions>
-				</Button>
+              SELECT IIF(@AllowedGroupNumber > 1, 1, 0)
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </VisibleCondition>
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AssignToMeMultipleGroupButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="50" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="50" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="ShareCode" Ident="Assignee_Update_ToMeMultipleGroup_ActionShare" />
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="AssignToMeMultipleGroupCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AssignToMeMultipleGroupCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="AssignToMeMultipleGroupButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
       </Buttons>
     </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />  -->
 
-    <ButtonShareCode Ident="SolvedButtonShare">
+    <ButtonShareCode Ident="ResolveButtonShare">
       <Buttons>
-        <Button Ident="SolvedButton" IsVisible="true">
+        <Button Ident="ResolveButton" IsVisible="true">
           <Actions>
-            <Action xsi:type="IF" ActionStart="AfterSave">
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="ResolveButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="IF" ActionStart="AfterSave">
               <Condition>
                 <SQL><![CDATA[
                   SELECT IIF(
@@ -598,133 +1939,223 @@
               <FalseActions>
                 <Action xsi:type="ChangeState" State="130" ActionStart="AfterSave" />
               </FalseActions>
-            </Action>
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolvedButtonShare" />  -->
-
-    <ButtonShareCode Ident="ApproveButtonShare">
-      <Buttons>
-        <Button Ident="ApproveButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="80" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ApproveButtonShare" />  -->
-
-		<ButtonShareCode Ident="CloseButtonShare">
-			<Buttons>
-				<Button Ident="CloseButton" IsVisible="true">
-					<Actions>
-						<Action xsi:type="ChangeState" State="200" ActionStart="AfterSave" />
-					</Actions>
-				</Button>
-			</Buttons>
-		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" /> -->
-
-		<ButtonShareCode Ident="EvaluationCloseButtonShare">
-			<Buttons>
-				<Button Ident="CloseButton" IsVisible="true">
-					<Actions>
-						<Action xsi:type="ChangeState" State="120" ActionStart="AfterSave" />
-					</Actions>
-				</Button>
-			</Buttons>
-		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="EvaluationCloseButtonShare" /> -->
-
-    <ButtonShareCode Ident="SolutionRejectButtonShare">
-      <Buttons>
-        <Button Ident="RejectButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="110" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolutionRejectButtonShare" />  -->
-
-    <ButtonShareCode Ident="AnswerButtonShare">
-      <Buttons>
-        <Button Ident="AnswerButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AnswerButtonShare" />  -->
-
-    <ButtonShareCode Ident="SolutionApproveButtonShare">
-      <Buttons>
-        <Button Ident="ApproveButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="ChangeState" State="100" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SolutionApproveButtonShare" />  -->
-
-		<ButtonShareCode Ident="SendToCategorizationButtonShare">
-			<Buttons>
-				<Button Ident="SendToCategorizationButton" IsVisible="true">
-					<Actions>
-						<Action xsi:type="ChangeState" State="10" ActionStart="AfterSave" />
-            <Action xsi:type="ActionValue" Ident="ITSMEntryMethodTypeGuid_Update_Action" ControlIdent="ITSMEntryMethodTypeGuid" ActionStart="AfterValidation">
-              <DataSource>
+            </Action> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
                 <SQL><![CDATA[
-                  SELECT CAST([GUID] AS VARCHAR(MAX)) AS ITSMEntryMethodTypeGuid
-                  FROM usr.ITSMEntryMethodTypeSetting
-                  WHERE FunctionalKey = 'monitoring' AND [State] != @DeletedState
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
                 ]]></SQL>
                 <Parameters>
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="90" />
                 </Parameters>
-              </DataSource>
+              </StateDataSource>
             </Action>
-					</Actions>
-				</Button>
-			</Buttons>
-		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToCategorizationButtonShare" /> -->
+            <Action xsi:type="ShareCode" Ident="Resolution_Update_FromDialog_ActionShare" />
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="ResolveCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="ResolveCommunication_ITSM" ActionStart="AfterSave" /> -->
 
-		<ButtonShareCode Ident="SaveButtonShare">
-			<Buttons>
-				<Button Ident="SaveButton" IsVisible="true">
-					<Actions>
-					</Actions>
-				</Button>
-				<Button Ident="SaveAndExitButton" IsVisible="true">
-					<Actions>
-					</Actions>
-				</Button>
-			</Buttons>
-		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" /> -->
-	</ButtonShareCodes>
+            <Action xsi:type="SwitchCase" Ident="SaveDialogCommunicationSwitchAction" ActionStart="AfterSave">
+              <Condition>
+                <SQL><![CDATA[
+                  SELECT @State
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
+                </Parameters>
+              </Condition>
+              <Cases>
+                <CaseAction>
+                  <Values>
+                    <string>90</string>
+                  </Values>
+                  <Actions>
+
+                    <Action xsi:type="ShareCode" Ident="ResolveButton_SaveDialogCommunicationAction_ActionShare" />
+
+                  </Actions>
+                </CaseAction>
+                <CaseAction>
+                  <Values>
+                    <string>100</string>
+                  </Values>
+                  <Actions>
+
+                    <Action xsi:type="ShareCode" Ident="ResolveButton_SaveDialogCommunicationAction_ActionShare" />
+
+                  </Actions>
+                </CaseAction>
+                <CaseAction>
+                  <Values>
+                    <string>130</string>
+                  </Values>
+                  <Actions>
+
+                    <Action xsi:type="ShareCode" Ident="ResolveButton_SaveDialogCommunicationAction_ActionShare" />
+
+                  </Actions>
+                </CaseAction>
+              </Cases>
+            </Action>
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />  -->
+
+    <ButtonShareCode Ident="CloseButtonShare">
+      <Buttons>
+        <Button Ident="CloseButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="CloseButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="200" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="200" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="CloseCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="CloseCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="CloseButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" /> -->
+
+    <ButtonShareCode Ident="AuthorCloseButtonShare">
+      <Buttons>
+        <Button Ident="CloseButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="CloseButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="120" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="120" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="AuthorCloseCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AuthorCloseCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="CloseButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AuthorCloseButtonShare" /> -->
+
+    <ButtonShareCode Ident="ClaimSolutionButtonShare">
+      <Buttons>
+        <Button Ident="ClaimSolutionButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="ClaimSolutionButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="110" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="110" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="ClaimSolutionCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="ClaimSolutionCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="ClaimSolutionButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="ClaimSolutionButtonShare" />  -->
+
+    <ButtonShareCode Ident="AnswerSolutionButtonShare">
+      <Buttons>
+        <Button Ident="AnswerSolutionButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="SetValue" Ident="Var_ButtonIdent" Value="AnswerSolutionButton" ActionStart="AfterValidation" />
+            <!-- <Action xsi:type="ChangeState" State="40" ActionStart="AfterSave" /> -->
+            <Action xsi:type="ChangeState" ActionStart="AfterSave">
+              <StateDataSource>
+                <SQL><![CDATA[
+                  SELECT usr.ITSM_IncidentGetNextState(@RequestedState, @ID, @UserID)
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="RequestedState" DataType="Number" Value="40" />
+                </Parameters>
+              </StateDataSource>
+            </Action>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="AnswerSolutionCommunication_ITSM" ActionStart="AfterSave" />
+            <!-- <Action xsi:type="Communication" ControlIdent="DialogCommunication" Type="AnswerSolutionCommunication_ITSM" ActionStart="AfterSave" /> -->
+
+            <Action xsi:type="ShareCode" Ident="AnswerSolutionButton_SaveDialogCommunicationAction_ActionShare" />
+
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AnswerSolutionButtonShare" />  -->
+
+    <ButtonShareCode Ident="SaveButtonShare">
+      <Buttons>
+        <Button Ident="SaveButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+        <Button Ident="SaveAndExitButton" IsVisible="true">
+          <Actions>
+            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" /> -->
+  </ButtonShareCodes>
 
   <GlobalActions>
 
-	<Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
-			<DataSource>
-				<SQL><![CDATA[
-					IF @ITSMKey IS NULL
-					BEGIN
-						DECLARE
-							@CounterIdent VARCHAR(100) = 'ITSM_I',
-							@NextNumber INT
+    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
+      <DataSource>
+        <SQL><![CDATA[
+          IF @ITSMKey IS NULL
+          BEGIN
+            DECLARE
+              @CounterIdent VARCHAR(100) = 'ITSM_I',
+              @NextNumber INT
 
-						EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+            EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
 
-						UPDATE usr.[ITSMIncident]
-						SET ITSMKey = CONCAT('I-', RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
-						WHERE ID = @ID
-					END
-				]]></SQL>
-				<Parameters>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
-				</Parameters>
-			</DataSource>
-		</Action>
+            UPDATE usr.[ITSMIncident]
+            SET ITSMKey = CONCAT('I-', RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
+            WHERE ID = @ID
+          END
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
+        </Parameters>
+      </DataSource>
+    </Action>
 
     <!-- <Action xsi:type="ActionTrigger" Ident="*" ActionStart="AfterSave">
       <DataSource>
@@ -732,14 +2163,198 @@
 
         ]]></SQL>
         <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"  />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
         </Parameters>
       </DataSource>
     </Action> -->
 
-		<Action xsi:type="Communication" ControlIdent="Communication" Type="Comment" ActionStart="AfterSave" />
+    <Action xsi:type="ActionTrigger" Ident="AssignedGroupID_Update_GroupFromCategory_Action" ActionStart="AfterSave">
+      <DataSource>
+        <SQL><![CDATA[
 
-	</GlobalActions>
+          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+          INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+          DECLARE @UpdateOutput TABLE (OldAssignedGroupID INT, NewAssignedGroupID INT)
+
+          UPDATE itsReq
+            SET AssignedGroupID = ISNULL(itsCat.DefaultAssignedGroupID, itsGagbttap.GroupID)
+          OUTPUT DELETED.AssignedGroupID AS OldAssignedGroupID, INSERTED.AssignedGroupID AS NewAssignedGroupID
+          INTO @UpdateOutput (OldAssignedGroupID, NewAssignedGroupID)
+          FROM usr.ITSMIncident AS itsReq
+          LEFT JOIN dbo.FolderTree AS fot ON fot.Ident = COALESCE(itsReq.ITSMCategoryLevel5Ident, itsReq.ITSMCategoryLevel4Ident, itsReq.ITSMCategoryLevel3Ident, itsReq.ITSMCategoryLevel2Ident)
+          LEFT JOIN dbo.Folder AS fol ON fol.ID = fot.FolderID
+          LEFT JOIN usr.ITSMCategory AS itsCat ON itsCat.ID = fol.TableID AND fol.FormIdent = 'ITSMCategory'
+          OUTER APPLY (
+            SELECT TOP(1) *
+            FROM usr.ITSM_GetAllowedGroupByFolderTreeAndPermission (COALESCE(itsReq.ITSMCategoryLevel5Ident, itsReq.ITSMCategoryLevel4Ident, itsReq.ITSMCategoryLevel3Ident, itsReq.ITSMCategoryLevel2Ident),@PermissionIDs)
+          ) AS itsGagbttap
+          WHERE
+            itsReq.ID = @ID
+            AND itsReq.[State] = 110
+            AND itsReq.AssignedGroupID IS NULL
+
+          IF EXISTS(
+            SELECT NULL
+            FROM @UpdateOutput
+            WHERE ISNULL(OldAssignedGroupID, -1) != ISNULL(NewAssignedGroupID, -1)
+          ) BEGIN
+
+            DECLARE @LastHistoryID INT = usr.ITSM_GetLastHistoryID_ByFormIdentTableIDHistoryTypeIDAccountID('ITSMIncident', @ID, 'Save', @UserID)
+
+            IF @LastHistoryID IS NOT NULL BEGIN
+
+              DECLARE
+                @OldAssignedGroupID VARCHAR(MAX)
+                ,@NewAssignedGroupID VARCHAR(MAX)
+
+              SELECT
+                @OldAssignedGroupID = ISNULL(CAST(OldAssignedGroupID AS VARCHAR(MAX)), '')
+                ,@NewAssignedGroupID = ISNULL(CAST(NewAssignedGroupID AS VARCHAR(MAX)), '')
+              FROM @UpdateOutput
+
+              EXEC usr.ITSM_HistoryDataInsert @LastHistoryID, 'AssignedGroupID', @OldAssignedGroupID, @NewAssignedGroupID
+
+            END
+
+          END
+
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+        </Parameters>
+      </DataSource>
+    </Action>
+
+    <Action xsi:type="SetValue" Ident="IsElevatedPermissionOrNotFirstState" Value="" ActionStart="BeforeValidation" />
+
+    <Action xsi:type="IF" ActionStart="AfterValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            ISNULL(@Var_ButtonIdent, '') NOT IN ('SuspendSolutionButton','InternallySuspendSolutionButton')
+            ,1,0
+          )
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Var_ButtonIdent" DataType="String" MaxLength="255" />
+        </Parameters>
+      </Condition>
+      <TrueActions>
+        <Action xsi:type="SetValue" Ident="ITSMSolutionSuspendReasonGuid" Value="" ActionStart="AfterValidation" />
+      </TrueActions>
+    </Action>
+
+    <Action xsi:type="IF" ActionStart="AfterValidation">
+      <Condition>
+        <SQL>
+          SELECT IIF(
+            ISNULL(@Var_ButtonIdent, '') NOT IN ('SuspendApprovalButton','InternallySuspendApprovalButton')
+            ,1,0
+          )
+        </SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Var_ButtonIdent" DataType="String" MaxLength="255" />
+        </Parameters>
+      </Condition>
+      <TrueActions>
+        <Action xsi:type="SetValue" Ident="ITSMApprovalSuspendReasonGuid" Value="" ActionStart="AfterValidation" />
+      </TrueActions>
+    </Action>
+
+    <Action xsi:type="IF" ActionStart="BeforeValidation">
+      <Condition>
+        <SQL><![CDATA[
+
+          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+          INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
+
+          DECLARE @LastITSMCategoryIdent VARCHAR(900) = @ITSMCategoryLevel2Ident;
+          IF @IsShowCategoryLevel3 = 1
+            SET @LastITSMCategoryIdent = @ITSMCategoryLevel3Ident
+          IF @IsShowCategoryLevel4 = 1
+            SET @LastITSMCategoryIdent = @ITSMCategoryLevel4Ident
+          IF @IsShowCategoryLevel5 = 1
+            SET @LastITSMCategoryIdent = @ITSMCategoryLevel5Ident
+
+          SELECT IIF(
+            EXISTS(
+              SELECT NULL
+              FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMIncidentSegment',@PermissionIDs)
+              WHERE
+                FolderTreeIdent = @LastITSMCategoryIdent
+            )
+            OR ISNULL(@ID, 0) != 0
+          , 0, 1)
+
+        ]]></SQL>
+        <Parameters>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel3" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel4" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
+        </Parameters>
+      </Condition>
+      <TrueActions>
+
+        <Action xsi:type="IF" ActionStart="BeforeValidation">
+          <Condition>
+            <SQL><![CDATA[
+
+              SELECT IIF(
+                ISNULL(@Var_ButtonIdent, '') != 'SendToCategorizationButton'
+              , 1, 0)
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Var_ButtonIdent" DataType="String" />
+            </Parameters>
+          </Condition>
+          <TrueActions>
+
+            <Action xsi:type="ActionValue" Ident="ITSMEntryMethodTypeGuid_Update_Action" ControlIdent="ITSMEntryMethodTypeGuid" ActionStart="BeforeValidation">
+              <DataSource>
+                <SQL><![CDATA[
+
+                  SELECT CAST([GUID] AS VARCHAR(MAX)) AS ITSMEntryMethodTypeGuid
+                  FROM usr.ITSMEntryMethodTypeSetting
+                  WHERE FunctionalKey = 'itsm' AND [State] != @DeletedState
+
+                ]]></SQL>
+                <Parameters>
+                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+                </Parameters>
+              </DataSource>
+            </Action>
+
+          </TrueActions>
+        </Action>
+
+        <Action xsi:type="ActionValue" Ident="ReporterAccountID_Update_Action" ControlIdent="ReporterAccountID" ActionStart="BeforeValidation">
+          <DataSource>
+            <SQL><![CDATA[
+
+              SELECT @UserID AS ReporterAccountID
+
+            ]]></SQL>
+            <Parameters>
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+            </Parameters>
+          </DataSource>
+        </Action>
+
+      </TrueActions>
+    </Action>
+
+  </GlobalActions>
 
   <Steps>
     <Step State="1">
@@ -758,19 +2373,43 @@
           </Sections>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAdvancedReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
+
+          <Sections>
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
         </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- New_ITSM -->
     <Step State="10">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
@@ -778,244 +2417,789 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableAdvancedReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- Categorization_ITSM -->
     <Step State="20">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="RejectButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ReturnToReporterButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- InputControlByOperator_ITSM -->
     <Step State="30">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SendToProcessButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResendToProcessButtonShare" />
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResendToProcessButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- ReturnedForMoreInfo_ITSM -->
     <Step State="40">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSpecialist</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SuspendButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="WaitingForButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="InternallySuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- ForMyTeamApproval_ITSM -->
     <Step State="50">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSpecialist</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SuspendButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="WaitingForButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SolvedButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="InternallySuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- InProgress_ITSM -->
     <Step State="60">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
+            <string>ITSMSpecialist</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SuspendButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="InternallySuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- SuspendedSLARunning_ITSM -->
     <Step State="70">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="ApproveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="InternallySuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SuspendSolutionButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- SuspendedForReview_ITSM -->
     <Step State="80">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="AnswerButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AnswerSolutionButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AnswerSolutionButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- SuspendedSLAStopped_ITSM -->
     <Step State="90">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SolutionApproveButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="InternallySuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- ToSolutionCheck_ITSM -->
     <Step State="100">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="EvaluationCloseButtonShare" />
-            <Button xsi:type="ShareCodeButton" Ident="SolutionRejectButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AuthorCloseButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ClaimSolutionButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- SolutionCheck_ITSM -->
     <Step State="110">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="AssignToGroupButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="AssignToMeButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="SuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="InternallySuspendSolutionButtonShare" />
+            <Button xsi:type="ShareCodeButton" Ident="ResolveButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- SolutionRejected_ITSM -->
     <Step State="120">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
             <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- IncidentEvaluation_ITSM -->
     <Step State="130">
       <Groups>
         <Group>
           <Permissions>
-            <string>ITSMIncident</string>
+            <string>ITSMOperator</string>
           </Permissions>
           <Buttons>
             <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
@@ -1023,12 +3207,55 @@
             <Button xsi:type="ShareCodeButton" Ident="CloseButtonShare" />
           </Buttons>
           <Controls>
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableVerificationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+        <Group>
+          <Permissions>
+            <string>ITSMSpecialist</string>
+            <string>ITSMIncidentReporter</string>
+            <string>ITSMIncidentSharedReporter</string>
+            <string>ITSMSupplier</string>
+          </Permissions>
+          <Buttons>
+            <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" />
+          </Buttons>
+          <Controls>
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
+          </Controls>
+        </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- OperatorSolutionCheck_ITSM -->
     <Step State="200">
@@ -1037,13 +3264,35 @@
           <Permissions>
             <string>ITSMIncident</string>
           </Permissions>
-          <Buttons>
-          </Buttons>
+          <Buttons />
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowResolutionControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" />
+            <FormControl xsi:type="ShareCodeControl" Ident="ShowVerificationControlShare" />
+
+            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
+
           </Controls>
         </Group>
+
+        <Group>
+          <Permissions>
+            <string>ITSMIncidentSimpleMode</string>
+          </Permissions>
+          <Controls>
+            <FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+            <FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+          </Controls>
+          <Sections>
+            <Section Ident="HeaderSection" IsVisible="false" />
+            <Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+            <Section Ident="TimeLineSection" IsVisible="false" />
+          </Sections>
+        </Group>
+
       </Groups>
     </Step> <!-- Closed_ITSM -->
 

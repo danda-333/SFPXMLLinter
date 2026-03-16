@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="WorkFlow" Name="Group" TargetXPath="//WorkFlow/Steps/Step/Groups" Insert="append" AllowMultipleInserts="true">
+
+		<Group>
+			<Permissions>
+				<string>ITSMRequestSimpleMode</string>
+			</Permissions>
+			<Controls>
+				<FormControl Ident="MainInfoHTMLContentView" IsVisible="false" />
+				<FormControl Ident="SimpleModeMainInfoHTMLContentView" IsVisible="true" />
+			</Controls>
+			<Sections>
+				<Section Ident="HeaderSection" IsVisible="false" />
+				<Section Ident="SimpleModeHeaderSection" IsVisible="true" />
+				<Section Ident="TimeLineSection" IsVisible="false" />
+			</Sections>
+		</Group>
+		
+	</Section>
+	
+</Component>

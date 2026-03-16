@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_FolderTreeSegmentType_RebuildByFolderTreeID" LibraryType="StoredProcedure" PackageIdent="ITSMPackage">
+	<Description><![CDATA[
+		
+	]]></Description>
+	<Command><![CDATA[
+
+    SET ANSI_NULLS ON
+    GO
+    SET QUOTED_IDENTIFIER ON
+    GO
+
+    -- =============================================
+    -- Author:		  Daniel Šašek
+    -- Create date: 2029-03-02
+    -- Description:	
+    -- =============================================
+    #MODIFIER# PROCEDURE #NAME# (
+        @FolderTreeID INT
+    ) AS
+    BEGIN
+        SET NOCOUNT ON;
+        SET XACT_ABORT ON;
+
+        BEGIN TRY
+            BEGIN TRAN;
+
+            ---------------------------------------------------------------------
+            -- 1) Najdi root pro zadaný uzel
+            ---------------------------------------------------------------------
+            DECLARE @RootID INT;
+
+            ;WITH Ancestors AS
+            (
+                SELECT
+                    ft.ID,
+                    ft.ParentFolderTreeID
+                FROM dbo.FolderTree ft
+                WHERE ft.ID = @FolderTreeID
+
+                UNION ALL
+
+                SELECT
+                    p.ID,
+                    p.ParentFolderTreeID
+                FROM dbo.FolderTree p
+                JOIN Ancestors a
+                    ON a.ParentFolderTreeID = p.ID
+            )
+            SELECT TOP (1) @RootID = a.ID
+            FROM Ancestors a
+            WHERE a.ParentFolderTreeID IS NULL
+            ORDER BY a.ID -- deterministicky, i když by "root" měl být jen jeden
+            OPTION (MAXRECURSION 0);
+
+            -- Kdyby root nebyl NULL (např. nekonzistentní data), ber posledního předka
+            IF @RootID IS NULL
+                SET @RootID = @FolderTreeID;
+
+            ---------------------------------------------------------------------
+            -- 2) Scope = celý podstrom od rootu
+            ---------------------------------------------------------------------
+            ;WITH Scope AS
+            (
+                SELECT ft.ID
+                FROM dbo.FolderTree ft
+                WHERE ft.ID = @RootID
+
+                UNION ALL
+
+                SELECT c.ID
+                FROM dbo.FolderTree c
+                JOIN Scope s
+                    ON c.ParentFolderTreeID = s.ID
+            )
+            -- smaž existující mapování jen pro tento podstrom
+            DELETE t
+            FROM usr.ITSMFolderTreeSegmentType t
+            JOIN Scope s
+                ON s.ID = t.FolderTreeID
+            OPTION (MAXRECURSION 0);
+
+            ---------------------------------------------------------------------
+            -- 3) Znovu napočítej jen pro Scope
+            ---------------------------------------------------------------------
+            ;WITH Scope AS
+            (
+                SELECT ft.ID
+                FROM dbo.FolderTree ft
+                WHERE ft.ID = @RootID
+
+                UNION ALL
+
+                SELECT c.ID
+                FROM dbo.FolderTree c
+                JOIN Scope s
+                    ON c.ParentFolderTreeID = s.ID
+            ),
+            Configured AS
+            (
+                SELECT DISTINCT
+                    ft.ID AS SourceFolderTreeID,
+                    cat.SegmentTypeID
+                FROM dbo.FolderTree ft
+                JOIN Scope sc
+                    ON sc.ID = ft.ID
+                JOIN dbo.Folder f
+                    ON f.ID = ft.FolderID
+                JOIN usr.ITSMCategory cat
+                    ON cat.ID = f.TableID
+                WHERE cat.SegmentTypeID IS NOT NULL
+            ),
+            Propagate AS
+            (
+                -- start: jen uzly ze Scope, které mají SegmentTypeID
+                SELECT
+                    c.SourceFolderTreeID,
+                    c.SourceFolderTreeID AS FolderTreeID,
+                    c.SegmentTypeID
+                FROM Configured c
+
+                UNION ALL
+
+                -- šíření nahoru, ale zastav se na rootu daného stromu
+                SELECT
+                    p.SourceFolderTreeID,
+                    parent.ID AS FolderTreeID,
+                    p.SegmentTypeID
+                FROM Propagate p
+                JOIN dbo.FolderTree cur
+                    ON cur.ID = p.FolderTreeID
+                JOIN dbo.FolderTree parent
+                    ON parent.ID = cur.ParentFolderTreeID
+                WHERE parent.ID IS NOT NULL
+                AND parent.ID IN (SELECT ID FROM Scope) -- drž se jen v daném stromu
+            )
+            INSERT INTO usr.ITSMFolderTreeSegmentType (AccountID, [State], FolderTreeID, SegmentTypeID)
+            SELECT DISTINCT
+                0,
+                2,
+                p.FolderTreeID,
+                p.SegmentTypeID
+            FROM Propagate p
+            OPTION (MAXRECURSION 0);
+
+            COMMIT;
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0 ROLLBACK;
+            THROW;
+        END CATCH
+    END;
+
+	]]></Command>
+</Library>

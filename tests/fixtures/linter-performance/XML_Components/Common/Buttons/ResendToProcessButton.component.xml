@@ -2,7 +2,30 @@
 <Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
 
 	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
-		<Button xsi:type="FormButton" Ident="ResendToProcessButton" TitleResourceKey="ResendToProcessButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="ResendToProcessButton" TitleResourceKey="ResendToProcessButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" >
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="ResendToProcessConfirmFormDialog" ConfirmFormDialogSectionIdent="ResendToProcessConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
+	</Section>
+
+	<Section Root="Form" Name="Sections" TargetXPath="//Form/Sections" Insert="append">
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="ResendToProcessConfirmFormDialogSection" CloseButtonTitleResourceKey="ResendToProcessConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="ResendToProcessConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ResendToProcessConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
 	</Section>
 	
 </Component>

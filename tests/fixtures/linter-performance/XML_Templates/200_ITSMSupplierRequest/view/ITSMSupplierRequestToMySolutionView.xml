@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataView xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMSupplierRequestToMySolutionView" SegmentType="ITSMSupplierRequestSegment" TitleResourceKey="ITSMSupplierRequestToMySolutionView_ITSM" GroupTitleResourceKey="ITSMSupplierRequestAllGroup_ITSM" Priority="130" IsManualPaging="true" IsGeneratePaging="false" DefaultFilterIdent="ITSMSupplierRequestFilter" ShareFilterIdent="ITSMSupplierRequestFilter" CountColorCssClass="warning" PackageIdent="ITSMPackage">
+  <Usings>
+		<Using Component="Common/Shared/BaseView"/>
+		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMSupplierRequest"/>
+		<Using Component="Common/Shared/Resolve"/>
+
+		<Using Component="Common/Controls/ReporterControls"/>
+  </Usings>
+  <AccessPermissions>
+    <string>ITSMSupplierRequest</string>
+  </AccessPermissions>
+	<Settings>
+		<dvs:Setting xsi:type="dvs:DataTableSetting" IsResponsive="false" IsClassicPaging="true"/>
+	</Settings>
+  <Buttons>
+    <Button xsi:type="LinkButton" Ident="NewITSMSupplierRequestButton" FormIdent="ITSMSupplierRequest" TitleResourceKey="NewITSMSupplierRequestButton_ITSM" />
+  </Buttons>
+  <DataSource FormIdent="ITSMSupplierRequest">
+    <DataPermissions>
+      <string>ITSMSupplierRequestReporter</string>
+
+      <string>ITSMOperator</string>
+      <string>ITSMSupplier</string>
+    </DataPermissions>
+		<Columns>
+      <Include Component="Common/Shared/BaseView" Section="Columns"/>
+      <Include Component="Common/Shared/ITSMKey" Section="Columns"/>
+      <Column Ident="Subject" TitleResourceKey="Subject_ITSM" Width="20" TableAlterIdent="tbl">
+        <SQL><![CDATA[
+          itsm.[Subject]
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/FolderGroupSegment" Section="Columns"/>
+      <Include Component="Common/Shared/BaseView" Section="WorkFlowStateColumn" FormIdent="ITSMSupplierRequest"/>
+      <Include Component="Common/Controls/ReporterControls" Section="Columns"/>
+      <Column Ident="Description" TitleResourceKey="Description_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsm.[Description]
+        ]]></SQL>
+      </Column>
+      <Include Component="Common/Shared/Resolve" Section="Columns"/>
+      <Column Ident="ITSMSupplierRequestClassificationTypeGuid" TitleResourceKey="ITSMSupplierRequestClassificationTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsSupReqClaTyp.[TextValue] AS ITSMSupplierRequestClassificationTypeGuid
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMIncidentClassificationTypeGuid" TitleResourceKey="ITSMIncidentClassificationTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsIncClaTyp.[TextValue] AS ITSMIncidentClassificationTypeGuid
+        ]]></SQL>
+      </Column>
+      <Column Ident="ITSMOperationalEnvironmentTypeGuid" TitleResourceKey="ITSMOperationalEnvironmentTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+        <SQL><![CDATA[
+          itsOpeEnvTyp.[TextValue] AS ITSMOperationalEnvironmentTypeGuid
+        ]]></SQL>
+      </Column>
+		</Columns>
+    <Froms>
+      <dsf:From Ident="itsSupReqClaTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMSupplierRequestClassificationTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMSupplierRequestClassificationType AS itsSupReqClaTyp ON itsSupReqClaTyp.Guid = itsm.ITSMSupplierRequestClassificationTypeGuid AND itsSupReqClaTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="itsIncClaTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMIncidentClassificationTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMIncidentClassificationType AS itsIncClaTyp ON itsIncClaTyp.Guid = itsm.ITSMIncidentClassificationTypeGuid AND itsIncClaTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+      <dsf:From Ident="itsOpeEnvTyp">
+        <dsf:Columns>
+          <dsf:string>ITSMOperationalEnvironmentTypeGuid</dsf:string>
+        </dsf:Columns>
+        <dsf:SQL>
+          LEFT JOIN usr.ITSMOperationalEnvironmentType AS itsOpeEnvTyp ON itsOpeEnvTyp.Guid = itsm.ITSMOperationalEnvironmentTypeGuid AND itsOpeEnvTyp.LanguageID = @UserLanguageID
+        </dsf:SQL>
+      </dsf:From>
+    </Froms>
+		<SQL><![CDATA[
+      SELECT *
+      FROM (
+        SELECT *, #ROWNUM#
+        FROM (
+          SELECT 
+            itsm.ID
+            #ADDCOLUMN#
+          FROM usr.ITSMSupplierRequest AS itsm
+          INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+          #ADDFROM#
+          WHERE
+            itsm.[State] NOT IN (@DeletedState,@ClosedState)
+            AND 
+            (
+              (itsm.State IN (@SentToSupplier,@SolutionAssigned) AND #PERMISSION[ITSMSupplierRequest(itsm)|ITSMSupplier|]#)
+              OR 
+              (
+                itsm.State IN (@ReturnedForMoreInfo,@Suspended,@Resolved) 
+                AND 
+                (
+                  ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMSupplierRequest(itsm)|ITSMSupplierRequestReporter|]#
+                )
+                OR
+                (
+                  ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMSupplierRequest(itsm)|ITSMSupplierRequestReporter,ITSMAuthor|]#
+                )
+              )
+            ) #FILTER#
+        ) AS tbl
+      ) AS tbl
+      WHERE RowNum BETWEEN @StartPage AND @EndPage
+    ]]></SQL>
+		<Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SentToSupplier" DataType="Number" Value="10" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ReturnedForMoreInfo" DataType="Number" Value="20" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssigned" DataType="Number" Value="30" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Suspended" DataType="Number" Value="40" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Resolved" DataType="Number" Value="50" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="60" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="StartPage" ConstantType="StartPage" DataType="Number" />
+      <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="EndPage" ConstantType="EndPage" DataType="Number" /> 
+		</Parameters>
+	</DataSource>
+
+  <CountDataSource>
+    <SQL><![CDATA[
+      SELECT COUNT(itsm.ID)
+      FROM usr.ITSMSupplierRequest AS itsm
+      INNER JOIN usr.ITSM_FolderTreeView AS ftvCom ON ftvCom.FolderTreeIdent = itsm.ITSMCompanyIdent
+      WHERE
+        itsm.[State] NOT IN (@DeletedState,@ClosedState)
+        AND 
+        (
+          (itsm.State IN (@SentToSupplier,@SolutionAssigned) AND #PERMISSION[ITSMRelease(itsm)|ITSMSupplier|]#)
+          OR 
+          (
+            itsm.State IN (@ReturnedForMoreInfo,@Suspended,@Resolved) 
+            AND 
+            (
+              ftvCom.IsShareAmongAuthors = 0 AND #PERMISSION[ITSMSupplierRequest(itsm)|ITSMSupplierRequestReporter|]#
+            )
+            OR
+            (
+              ftvCom.IsShareAmongAuthors = 1 AND #PERMISSION[ITSMSupplierRequest(itsm)|ITSMSupplierRequestReporter,ITSMAuthor|]#
+            )
+          )
+        ) #FILTER#
+    ]]></SQL>
+    <Parameters>
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SentToSupplier" DataType="Number" Value="10" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ReturnedForMoreInfo" DataType="Number" Value="20" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssigned" DataType="Number" Value="30" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Suspended" DataType="Number" Value="40" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Resolved" DataType="Number" Value="50" />
+			<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="60" />
+    </Parameters>
+  </CountDataSource>
+
+  <Sections>
+    <Section xsi:type="ExportSection" Ident="BasicExportSection" TitleResourceKey="BasicExportSection_ITSM">
+      <DataSource>
+        <GeneratorSnippet UseGenerator="Common/XML/CopyXPathContent" SourceXPath="/DataView/DataSource" CopyMode="inner" />
+      </DataSource>
+    </Section>
+  </Sections>
+
+</DataView>

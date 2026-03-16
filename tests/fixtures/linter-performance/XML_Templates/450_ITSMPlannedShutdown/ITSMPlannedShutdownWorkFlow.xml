@@ -1,24 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMPlannedShutdownWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMPlannedShutdown" PackageIdent="ITSMPackage">
-  <Usings>
-		<Using Component="Common/FolderTreeSetting" />
-		<Using Component="Common/PageSetting" FormIdent="ITSMPlannedShutdown" />
-
-		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMPlannedShutdown" />
-		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMPlannedShutdown" KeyPrefix="PS"/>
-
-		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMPlannedShutdown" />
-		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMPlannedShutdown" />
-		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMPlannedShutdown" />
-		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMPlannedShutdown" />
-		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMPlannedShutdown" />
-		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMPlannedShutdown" />
-		
-		<Using Component="Common/Buttons/DeleteButton" />
-		<Using Component="Common/Buttons/BackButton" />
-		<Using Component="Common/Buttons/SaveGroupButton" />
-
-	</Usings>
   <Definition>
     <States>
       <State Value="0" TitleResourceKey="Deleted_ITSM" ColorCssClass="danger"/> <!--Deleted-->

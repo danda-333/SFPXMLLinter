@@ -6,7 +6,7 @@
 	</Section>
 	
 	<Section Root="Form" Name="Section" TargetXPath="//Form/Sections" Insert="append">
-		<Section Root="Form" xsi:type="ContentSection" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM" IconCssClass="icon-history">
+		<Section Root="Form" xsi:type="ContentSection" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM" IconCssClass="icon-history" IsVisible="true">
 			<HTMLTemplate><![CDATA[
 				<fieldset>
 					<div class="row">
@@ -17,6 +17,12 @@
 				</fieldset>
 			]]></HTMLTemplate>
 		</Section>
+	</Section>
+	
+	<Section Root="WorkFlow" Name="SectionVisibility" TargetXPath="//WorkFlow/Steps/Step[@State='1']/Groups/Group" AllowMultipleInserts="true" Insert="append">
+		<Sections>
+			<Section Ident="TimeLineSection" IsVisible="false" />
+		</Sections>
 	</Section>
 
 </Component>

@@ -106,8 +106,36 @@
 						itsApp.FormIdent = 'ITSMRequest'
 						AND itsApp.TableID = @ITSMRequestID
 						AND itsApp.[State] != 0
+						AND ApproveRoundStartDateTime IS NULL
 				) BEGIN
-					RETURN @ITSMState_ApprovalAssignedToTeam
+					IF ((
+						SELECT itsApp.ApproverType
+						FROM usr.ITSMApproval AS itsApp
+						INNER JOIN usr.ITSMRequest AS itsReq ON itsApp.FormIdent = 'ITSMRequest' AND itsApp.TableID = itsReq.ID AND itsApp.ApproveRoundGUID = itsReq.ActualApproveRoundGuid
+						WHERE
+							itsReq.ID = @ITSMRequestID
+							AND itsApp.[State] != 0
+							AND itsApp.IsApproved IS NULL
+							AND itsApp.ApproveOrder = (
+								SELECT MIN(sub.ApproveOrder)
+								FROM usr.ITSMApproval sub
+								WHERE sub.FormIdent = 'ITSMRequest'
+									AND sub.TableID = @ITSMRequestID
+									AND sub.ApproveRoundGUID = itsReq.ActualApproveRoundGuid
+									AND sub.State != 0
+									AND sub.IsApproved IS NULL
+							)
+					)
+					=
+					'Account'
+					)
+					BEGIN
+						RETURN @ITSMState_ApproverAssigned
+					END
+					ELSE
+					BEGIN
+						RETURN @ITSMState_ApprovalAssignedToTeam
+					END
 				END ELSE BEGIN
 					RETURN @ITSMState_SolutionAssignedToTeam
 				END
@@ -215,6 +243,7 @@
 						itsReq.ID = @ITSMRequestID
 						AND itsApp.[State] != 0
 						AND itsApp.IsApproved IS NULL
+						AND itsApp.ApproveRoundStartDateTime IS NOT NULL
 				) BEGIN
 					IF ((
 						SELECT itsApp.ApproverType 

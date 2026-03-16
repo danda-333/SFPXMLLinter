@@ -2,9 +2,23 @@
 <Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
 
 	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
-		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="ApproveConfirmFormDialog" ConfirmFormDialogSectionIdent="ApproveConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 
-		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="RejectConfirmFormDialog" ConfirmFormDialogSectionIdent="RejectConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
+
+		<Button xsi:type="FormButton" Ident="SendToApprovalButton" TitleResourceKey="SendToApprovalButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-users4" IsVisible="false" IsStopRedirect="true" IsRenderTemplate="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SendToApprovalConfirmFormDialog" ConfirmFormDialogSectionIdent="SendToApprovalConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 	</Section>
 
 	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
@@ -14,30 +28,356 @@
 				<Columns>
 					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
 					<Column xsi:type="SortableColumn" Ident="AssessmentOrder" Width="10" IsDefaultSort="true" SortType="ASC"/>
-					<Column Ident="AssessmentAccountID" TitleResourceKey="AssessmentAccountID_ITSM" Width="80"/>
+					<Column xsi:type="ToolBarColumn" Ident="Assessment" TitleResourceKey="Assessment_ITSM" Width="80" IsClickable="true">
+						<HTMLTemplate><![CDATA[
+							[IF('Group'=='[%AssessmentTypeValue%]')]
+								[%AssessmentGroupID%]
+							[/IF]
+							[IF('Account'=='[%AssessmentTypeValue%]')]
+								[%AssessmentAccountID%]
+							[/IF]
+						]]></HTMLTemplate>
+					</Column>
 					<Column xsi:type="DeleteColumn" Ident="ID" Width="10"/>
+
+					<Column Ident="AssessmentTypeValue" IsVisible="false"/>
+					<Column Ident="AssessmentGroupID" IsVisible="false"/>
+					<Column Ident="AssessmentAccountID" IsVisible="false"/>
 				</Columns>
 				<SQL><![CDATA[
 					SELECT
 						itsAss.ID
 						,itsAss.AssessmentOrder
-						,approverAcc.FullName AS AssessmentAccountID
+						,itsAss.AssessmentType AS AssessmentTypeValue
+						,AssessmentGro.[Name] AS AssessmentGroupID
+						,AssessmentAcc.FullName AS AssessmentAccountID
 					FROM usr.ITSMAssessment AS itsAss
-					LEFT JOIN dbo.[Account] AS approverAcc on approverAcc.ID = itsAss.AssessmentAccountID
+					LEFT JOIN dbo.[Group] AS AssessmentGro on AssessmentGro.ID = itsAss.AssessmentGroupID
+					LEFT JOIN dbo.[Account] AS AssessmentAcc on AssessmentAcc.ID = itsAss.AssessmentAccountID
 					WHERE
 						itsAss.TableID = @ID
 						AND itsAss.FormIdent = @ThisFormIdent
 						AND itsAss.[State] != @DeletedState
+						AND itsAss.AssessmentRoundGUID = @ActualAssessmentRoundGuid
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" />
 				</Parameters>
 			</DataSource>
 		</Control>
 
 		<Control xsi:type="PlaceHolderControl" Ident="ITSMAssessmentSubFormCardPlaceHolder" IsVisible="false"/>
+		<Control xsi:type="TextBoxControl" Ident="ActualAssessmentRoundGuid" DataType="Guid" Default="NEWID()"/>
+		<Control xsi:type="TextBoxControl" Ident="LastAssessmentOrder" DataType="Number" >
+			<DataBind>
+				<Dependencies>
+					<string>ITSMAssessment{{ITSMType}}FakeSubForm</string>
+				</Dependencies>
+				<Columns>
+					<Column Ident="AssessmentOrder" DataBindType="Value"/>
+				</Columns>
+				<SQL><![CDATA[
+					SELECT MAX(AssessmentOrder) AS AssessmentOrder
+					FROM @ITSMAssessment{{ITSMType}}FakeSubForm
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:TableParameter" Ident="ITSMAssessment{{ITSMType}}FakeSubForm"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="PlaceHolderControl" Ident="PHMultiAssessment" IsVisible="false"/>
+
+		<Control xsi:type="HTMLContentViewControl" Ident="AssessmentHistory" IsRazorEngine="true">
+			<Sources>
+				<DataSource Ident="AssessmentInfo">
+					<Columns>
+						<Column Ident="AssessmentName" />
+						<Column Ident="ITSMKey" />
+						<Column Ident="ApprovedName" />
+						<Column Ident="IsApproved" IsTranslate="true"/>
+						<Column Ident="ApproveDateTime" />
+						<Column Ident="AssessmentComment" />
+					</Columns>
+					<SQL>
+						SELECT
+							CASE itsApp.AssessmentType
+								WHEN 'Account' THEN AssessmentAcc.FullName
+								WHEN 'Group' THEN AssessmentGro.[Name]
+							END AS AssessmentName,
+							ITSMKey,
+							approvedAcc.FullName AS ApprovedName,
+							CASE itsApp.IsApproved
+								WHEN 0 THEN 'NotApproved_ITSM'
+								WHEN 1 THEN 'Approved_ITSM'
+								ELSE 'WithoutReaction_ITSM'
+							END AS IsApproved,
+							itsApp.ApproveDateTime,
+							itsApp.AssessmentComment
+						FROM usr.ITSMAssessment AS itsApp
+						LEFT JOIN dbo.[Group] AS AssessmentGro on AssessmentGro.ID = itsApp.AssessmentGroupID
+						LEFT JOIN dbo.[Account] AS AssessmentAcc on AssessmentAcc.ID = itsApp.AssessmentAccountID
+						LEFT JOIN dbo.[Account] AS approvedAcc ON approvedAcc.ID = itsApp.ApprovedAccountID
+						WHERE
+							itsApp.TableID = @ID
+							AND itsApp.FormIdent = @ThisFormIdent
+							AND itsApp.[State] != @DeletedState
+							AND AssessmentRoundStartDateTime IS NOT NULL
+						ORDER BY AssessmentRoundStartDateTime ASC, AssessmentOrder ASC
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="ITSMKeyGroup">
+					<Columns>
+						<Column Ident="ITSMKey" />
+					</Columns>
+					<SQL>
+						SELECT
+							ITSMKey
+						FROM (
+							SELECT
+								CASE itsApp.AssessmentType
+									WHEN 'Account' THEN AssessmentAcc.FullName
+									WHEN 'Group' THEN AssessmentGro.[Name]
+								END AS AssessmentName,
+								ITSMKey,
+								approvedAcc.FullName AS ApprovedName,
+								CASE itsApp.IsApproved
+									WHEN 0 THEN 'NotApproved_ITSM'
+									WHEN 1 THEN 'Approved_ITSM'
+									ELSE 'WithoutReaction_ITSM'
+								END AS IsApproved,
+								itsApp.ApproveDateTime,
+								itsApp.AssessmentComment,
+								itsApp.AssessmentRoundStartDateTime,
+								itsApp.AssessmentOrder,
+								ROW_NUMBER() OVER (PARTITION BY ITSMKey ORDER BY AssessmentRoundStartDateTime ASC, AssessmentOrder ASC) AS rn
+							FROM usr.ITSMAssessment AS itsApp
+							LEFT JOIN dbo.[Group] AS AssessmentGro ON AssessmentGro.ID = itsApp.AssessmentGroupID
+							LEFT JOIN dbo.[Account] AS AssessmentAcc ON AssessmentAcc.ID = itsApp.AssessmentAccountID
+							LEFT JOIN dbo.[Account] AS approvedAcc ON approvedAcc.ID = itsApp.ApprovedAccountID
+							WHERE
+								itsApp.TableID = @ID
+								AND itsApp.FormIdent = @ThisFormIdent
+								AND itsApp.[State] != @DeletedState
+								AND AssessmentRoundStartDateTime IS NOT NULL
+						) AS sub
+						WHERE rn = 1
+						ORDER BY AssessmentRoundStartDateTime ASC, AssessmentOrder ASC
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+					</Parameters>
+				</DataSource>
+			</Sources>
+			<HTMLTemplate>
+				<style>
+					.approval-container {
+						max-width: 1200px;
+						margin: 0 auto;
+						background: white;
+						padding: 20px;
+						border-radius: 4px;
+						box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+					}
+					
+					.approval-header {
+						background: #ffffff;
+						color: black;
+						padding: 12px 15px;
+						margin: -20px -20px 20px -20px;
+						border-radius: 4px 4px 0 0;
+						font-weight: bold;
+						font-size: 16px;
+						text-transform: uppercase;
+					}
+					
+					.itsm-group {
+						margin-bottom: 30px;
+					}
+					
+					.itsm-group-header {    
+						background: #f8f9fa;
+						padding: 12px;
+						text-align: left;
+						font-weight: bold;
+						border: 1px solid #dee2e6;
+						font-size: 13px;
+						color: #495057;
+					}
+					
+					.itsm-key-badge {
+						font-family: 'Courier New', monospace;
+						background: rgba(255,255,255,0.2);
+						padding: 4px 8px;
+						border-radius: 3px;
+						font-size: 13px;
+					}
+					
+					.approval-table {
+						width: 100%;
+						border-collapse: collapse;
+						margin-top: 0;
+					}
+					
+					.approval-table thead th {
+						background: #f8f9fa;
+						padding: 12px;
+						text-align: left;
+						font-weight: bold;
+						border: 1px solid #dee2e6;
+						font-size: 13px;
+						color: #495057;
+					}
+					
+					.approval-table tbody td {
+						padding: 12px;
+						border: 1px solid #dee2e6;
+						font-size: 13px;
+						color: #212529;
+					}
+					
+					.approval-table tbody tr:hover {
+						background: #f8f9fa;
+					}
+					
+					.status-approved {
+						color: #28a745;
+						font-weight: bold;
+					}
+					
+					.status-not-approved {
+						color: #dc3545;
+						font-weight: bold;
+					}
+					
+					.comment-cell {
+						max-width: 300px;
+						word-wrap: break-word;
+					}
+
+					.approval-container {
+						box-shadow: none;
+						max-width: 100%;
+					}
+					
+					.approval-table tbody tr:hover {
+						background: transparent;
+					}
+				</style>
+
+				<div class="approval-container">
+					<div class="approval-header">
+						[#AssessmentProcess_ITSM#]
+					</div>
+					@foreach(var group in Model.Data.ITSMKeyGroup)
+					{
+						<div class="itsm-group">
+							<div class="itsm-group-header">
+								[#ITSMKey_ITSM#]: <span class="itsm-key-badge">@group.ITSMKey</span>
+							</div>
+							
+							<table class="approval-table">
+								<thead>
+									<tr>
+										<th>[#AssessmentName_ITSM#]</th>
+										<th>[#ApprovedName_ITSM#]</th>
+										<th>[#IsApproved_ITSM#]</th>
+										<th>[#ApproveDateTime_ITSM#]</th>
+										<th>[#AssessmentComment_ITSM#]</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach(var item in Model.Data.AssessmentInfo)
+									{
+										if(item.ITSMKey == group.ITSMKey){
+											<tr>
+												<td>@item.AssessmentName</td>
+												<td>@item.ApprovedName</td>
+												<td class="@item.IsApproved">@item.IsApproved</td>
+												<td>@item.ApproveDateTime</td>
+												<td class="comment-cell">@Html.Raw(item.AssessmentComment)</td>
+											</tr>
+										}
+									}
+								</tbody>
+							</table>
+						</div>
+					}
+				</div>
+			</HTMLTemplate>
+		</Control>
+
+		<Control xsi:type="HTMLContentViewControl" Ident="CurrentApprovalListContentView" IsRazorEngine="true">
+			<Sources>
+				<DataSource Ident="CurrentApprovalList">
+					<Columns>
+						<Column Ident="RowNum" />
+						<Column Ident="AssessmentTypeValue" IsTranslate="true"/>
+						<Column Ident="AssessmentType" />
+						<Column Ident="AssessmentGroupID" />
+						<Column Ident="AssessmentAccountID" />
+					</Columns>
+					<SQL><![CDATA[
+
+						SELECT
+							ROW_NUMBER() OVER (ORDER BY itsApp.AssessmentOrder ASC) AS RowNum
+							,CONCAT(itsApp.AssessmentType, '_ITSM') AS AssessmentTypeValue
+							,itsApp.AssessmentType
+							,AssessmentGro.[Name] AS AssessmentGroupID
+							,AssessmentAcc.FullName AS AssessmentAccountID
+						FROM @ITSMAssessment{{ITSMType}}FakeSubForm AS itsApp
+						LEFT JOIN dbo.[Group] AS AssessmentGro on AssessmentGro.ID = itsApp.AssessmentGroupID
+						LEFT JOIN dbo.[Account] AS AssessmentAcc on AssessmentAcc.ID = itsApp.AssessmentAccountID
+						ORDER BY itsApp.AssessmentOrder ASC
+
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" />
+						<dsp:Parameter xsi:type="dsp:TableParameter" Ident="ITSMAssessment{{ITSMType}}FakeSubForm" />
+					</Parameters>
+				</DataSource>
+			</Sources>
+			<HTMLTemplate>
+				<table class="table">
+					<thead>
+						<tr>
+							<th>[#ApproveOrder_ITSM#]</th>
+							<th>[#ApproverType_ITSM#]</th>
+							<th>[#Approver_ITSM#]</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach(var item in Model.Data.CurrentApprovalList)
+						{
+							<tr>
+								<td>@item.RowNum</td>
+								<td>@item.ApproverTypeValue</td>
+								<td>
+									@if(item.ApproverType == "Group"){
+										@item.ApproverGroupID
+									} else if (item.ApproverType == "Account"){
+										@item.ApproverAccountID
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</HTMLTemplate>
+		</Control>
 	</Section>
 
 	<Section Root="Form" Name="Html" Insert="placeholder">
@@ -66,7 +406,97 @@
 					</div>
 				</div>
 			</div>
+			<div class="row d-none">
+				<div class="col-md-12">
+					<div class="form-group">
+						<Control ID="ActualAssessmentRoundGuid" />
+						<Control ID="LastAssessmentOrder" />
+					</div>
+				</div> 
+			</div>
 		</Control>
+	</Section>
+	<Section Root="Form" Name="Sections" TargetXPath="//Form/Sections" Insert="append">
+		<Section Root="Form" xsi:type="ContentSection" Ident="AssessmentHistorySection" TitleResourceKey="AssessmentHistorySection_ITSM" IconCssClass="icon-clipboard2">
+			<VisibleCondition>
+				<SQL>
+					SELECT IIF(
+						EXISTS(
+							SELECT NULL 
+							FROM dbo.History 
+							WHERE 
+								TableID = @ID 
+								AND FormIdent = @FormIdent
+								AND HistoryTypeID = @HistoryTypeID
+								AND State = ({{AssessmentState}})
+						)
+						,1,0
+					)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" Value="{{FormIdent}}"/>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="HistoryTypeID" DataType="String" Value="ChangeState" />
+				</Parameters>
+			</VisibleCondition>
+			<HTMLTemplate><![CDATA[
+				<fieldset>
+					<div class="row">
+						<div class="col-md-12">
+							<Control ID="AssessmentHistory"/>
+						</div>
+					</div>
+				</fieldset>
+			]]></HTMLTemplate>
+		</Section>
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="ApproveConfirmFormDialogSection" CloseButtonTitleResourceKey="ApproveConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="ApproveConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ApproveConfirmFormDialogSectionTitle_ITSM" >
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<h6>[#Reasoning_ITSM#] <Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control></h6>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="RejectConfirmFormDialogSection" CloseButtonTitleResourceKey="RejectConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="RejectConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="RejectConfirmFormDialogSectionTitle_ITSM" >
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<h6>[#Reasoning_ITSM#] <Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control></h6>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SendToApprovalConfirmFormDialogSection" CloseButtonTitleResourceKey="SendToApprovalConfirmFormDialogSectionCloseButton_ITSM" ConfirmButtonTitleResourceKey="SendToApprovalConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SendToApprovalConfirmFormDialogSectionTitle_ITSM" >
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="CurrentApprovalListContentView" />
+							<Control ID="CurrentApprovalListContentView" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
 	</Section>
 
 	<Section Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
@@ -77,219 +507,321 @@
 				<FormControl Ident="ITSMAssessment{{ITSMType}}FakeSubForm" IsVisible="true" IsReadOnly="false" />
 			</Controls>
 		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAssessmentControlShare" /> -->
+
+		<ControlShareCode Ident="ShowAssessmentControlShare">
+			<Controls>
+				<FormControl Ident="ITSMAssessmentSubFormCardPlaceHolder" IsVisible="true" />
+				<FormControl Ident="ITSMAssessment{{ITSMType}}FakeSubForm" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowAssessmentControlShare" /> -->
+
+    <ControlShareCode Ident="ShowAssessmentDataGridControlShare">
+			<Controls>
+				<FormControl Ident="PHMultiAssessment" IsVisible="true" />
+			</Controls>
+		</ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowAssessmentDataGridControlShare"/> -->
 		
 	</Section>
-
+	
 	<Section Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
 
-		<ActionShareCode Ident="ApproveAssessmentActionShare">
-      <Actions>
-
-        <Action xsi:type="ActionTrigger" Ident="UpdateApproveAssessment" ActionStart="AfterSave">
-					<DataSource>
-						<SQL><![CDATA[
-							UPDATE usr.ITSMAssessment
-							SET IsApproved = 1
-							, IsUserAction = 1
-							, LastUpdate = GETDATE()
-							, LastUpdateAccountID = @UserID
-							WHERE
-								FormIdent = @ThisFormIdent
-								AND TableID = @ID
-								AND [State] != @DeletedState
-								AND AssessmentAccountID = @UserID
-						]]></SQL>
+		<ActionShareCode Ident="ApproveActionShareCode">
+			<Actions>
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
 						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String"  />
 							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
 							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="Required" ActionStart="BeforeValidation">
+							<Idents>
+								<string>DialogCommunication</string>
+							</Idents>
+						</Action>
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
+
+				<Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterSave">
+					<DataSource>
+						<SQL>
+
+							UPDATE usr.ITSMAssessment
+							SET IsApproved = @ApprovedState
+							, ApproveDateTime = GETDATE()
+							, ApprovedAccountID = @UserID
+							, AssessmentComment = @DialogCommunication
+							WHERE 
+								TableID = @ID
+								AND FormIdent = @FormIdent
+								AND AssessmentRoundGUID = @ActualAssessmentRoundGuid
+								AND AssessmentOrder = (
+									SELECT MIN(sub.AssessmentOrder)
+									FROM usr.ITSMAssessment sub
+									WHERE sub.FormIdent = @FormIdent
+										AND sub.TableID = @ID
+										AND sub.AssessmentRoundGUID = @ActualAssessmentRoundGuid
+										AND sub.State != 0
+										AND sub.IsApproved IS NULL
+								)
+								AND IsApproved IS NULL
+								AND State != 0
+
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ApprovedState" DataType="Number" Value="1"/>
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" DataType="String" />
 						</Parameters>
 					</DataSource>
 				</Action>
 
-				<Action xsi:type="IF" ActionStart="AfterSave">
-          <Condition>
-            <SQL><![CDATA[
-              SELECT IIF(
-                NOT EXISTS(
+        <!-- <Action xsi:type="History" Ident="HistoryActionApproved" HistoryType="Approve_ITSM" ActionStart="AfterSave"/> -->
+
+				<Action xsi:type="IF" ActionStart="AfterPermission">
+					<Condition>
+						<SQL>
+							SELECT IIF(
+								NOT EXISTS(
 									SELECT NULL
 									FROM usr.ITSMAssessment
-									WHERE
-										FormIdent = @ThisFormIdent
-										AND TableID = @ID
-										AND [State] != @DeletedState
-										AND	ISNULL(IsUserAction,0) = 0
+									WHERE 
+										TableID = @ID
+										AND FormIdent = @FormIdent
+										AND AssessmentRoundGUID = @ActualAssessmentRoundGuid
+										AND IsApproved IS NULL
+										AND State != 0
 								)
-                ,1
-                ,0
-              )
-            ]]></SQL>
-            <Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="ChangeState" State="{{ApprovedState}}" ActionStart="AfterSave" />
-          </TrueActions>
-        </Action>
-
-      </Actions>
-    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ApproveAssessmentActionShare" /> -->
-
-		<ActionShareCode Ident="RejectAssessmentActionShare">
-      <Actions>
-
-        <Action xsi:type="ActionTrigger" Ident="UpdateRejectAssessment" ActionStart="AfterSave">
-					<DataSource>
-						<SQL><![CDATA[
-							UPDATE usr.ITSMAssessment
-							SET IsApproved = 0
-							, IsUserAction = 1
-							, LastUpdate = GETDATE()
-							, LastUpdateAccountID = @UserID
-							WHERE
-								FormIdent = @ThisFormIdent
-								AND TableID = @ID
-								AND [State] != @DeletedState
-								AND AssessmentAccountID = @UserID
-						]]></SQL>
+								,1,0
+							)
+						</SQL>
 						<Parameters>
 							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterPermission">
+							<DataSource>
+								<SQL>
+
+									UPDATE usr.{{FormIdent}}
+									SET ActualAssessmentRoundGuid = NEWID()
+									WHERE ID = @ID
+
+								</SQL>
+								<Parameters>
+									<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+								</Parameters>
+							</DataSource>
+						</Action>
+						<Action xsi:type="ChangeState" State="80" ActionStart="AfterSave" />
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
+
+			</Actions>
+
+		</ActionShareCode><!-- <Action xsi:type="ShareCode" Ident="ApproveActionShareCode" /> -->
+
+    <ActionShareCode Ident="RejectActionShareCode">
+			<Actions>
+				<Action xsi:type="IF" ActionStart="BeforeValidation">
+					<Condition>
+						<SQL>
+							SELECT IIF( 
+								ISNULL(@Communication, '') = ''
+								AND NOT EXISTS(
+									SELECT NULL
+									FROM usr.{{FormIdent}} AS tic
+									OUTER APPLY (
+										SELECT TOP(1) his.*
+										FROM dbo.History AS his
+										WHERE  
+											his.TableID = tic.ID
+											AND his.FormIdent = '{{FormIdent}}'
+											AND his.HistoryTypeID = 'ChangeState'
+										ORDER BY his.CreateDate DESC
+									) AS hisLast
+									INNER JOIN dbo.Communication AS com 
+										ON com.TableID = tic.ID
+										AND com.FormIdent = '{{FormIdent}}'
+										AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
+										AND com.AccountID = @UserID
+										AND com.CommunicationTypeID = 'Comment_ITSM'
+									WHERE tic.ID = @ID
+								)
+							, 1, 0)
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String"  />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
 							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+						</Parameters>
+					</Condition>
+					<TrueActions>
+						<Action xsi:type="Required" ActionStart="BeforeValidation">
+							<Idents>
+								<string>DialogCommunication</string>
+							</Idents>
+						</Action>
+					</TrueActions>
+					<FalseActions>
+					</FalseActions>
+				</Action>
+
+				<Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterSave">
+					<DataSource>
+						<SQL>
+
+							UPDATE usr.ITSMAssessment
+							SET IsApproved = @ApprovedState
+							, ApproveDateTime = GETDATE()
+							, ApprovedAccountID = @UserID
+							, AssessmentComment = @DialogCommunication
+							WHERE 
+								TableID = @ID
+								AND FormIdent = @FormIdent
+								AND AssessmentRoundGUID = @ActualAssessmentRoundGuid
+								AND AssessmentOrder = (
+									SELECT MIN(sub.AssessmentOrder)
+									FROM usr.ITSMAssessment sub
+									WHERE sub.FormIdent = @FormIdent
+										AND sub.TableID = @ID
+										AND sub.AssessmentRoundGUID = @ActualAssessmentRoundGuid
+										AND sub.State != 0
+										AND sub.IsApproved IS NULL
+								)
+								AND IsApproved IS NULL
+								AND State != 0
+
+						</SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ApprovedState" DataType="Number" Value="0"/>
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="{{FormIdent}}"/>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" />
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" DataType="String" />
 						</Parameters>
 					</DataSource>
 				</Action>
 
-				<Action xsi:type="ChangeState" State="{{RejectedState}}" ActionStart="AfterSave" />
-
-      </Actions>
-    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="RejectAssessmentActionShare" /> -->
-
-		<ActionShareCode Ident="ClearAssessmentActionShare">
-      <Actions>
-
-        <Action xsi:type="ActionTrigger" Ident="UpdateClearAssessment" ActionStart="AfterSave">
+				<Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterPermission">
 					<DataSource>
-						<SQL><![CDATA[
-							UPDATE usr.ITSMAssessment
-							SET [State] = @DeletedState
-							WHERE
-								FormIdent = @ThisFormIdent
-								AND TableID = @ID
-						]]></SQL>
+						<SQL>
+
+							UPDATE usr.{{FormIdent}}
+							SET ActualAssessmentRoundGuid = NEWID()
+							WHERE ID = @ID
+
+						</SQL>
 						<Parameters>
 							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
 						</Parameters>
 					</DataSource>
 				</Action>
 
-				<Action xsi:type="ChangeState" State="{{RejectedState}}" ActionStart="AfterSave" />
+        <Action xsi:type="ChangeState" State="70" ActionStart="AfterSave" />
+			</Actions>
+		</ActionShareCode><!-- <Action xsi:type="ShareCode" Ident="RejectActionShareCode" /> -->
 
-      </Actions>
-    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ClearAssessmentActionShare" /> -->
-		
 	</Section>
-
-	<Section Root="WorkFlow" Name="ButtonShareCodes" TargetXPath="//WorkFlow/ButtonShareCodes" Insert="append">
-
-		<ButtonShareCode Ident="AssessmentApprovalButtonShare">
-      <Buttons>
-
-        <Button Ident="ApproveButton" IsVisible="true">
-					<VisibleCondition>
+	
+	<Section Root="WorkFlow" Name="GlobalActions" TargetXPath="//WorkFlow/GlobalActions" Insert="append">
+		<Action xsi:type="IF" ActionStart="AfterPermission">
+			<Condition>
+				<SQL>
+					SELECT IIF(
+						EXISTS(
+							SELECT NULL
+							FROM usr.ITSMAssessment
+							WHERE 
+								AssessmentRoundGUID = @ActualAssessmentRoundGuid
+								AND AssessmentRoundStartDateTime IS NULL
+								AND State != 0
+						)
+						AND 
+						EXISTS(
+							SELECT NULL 
+							FROM usr.{{FormIdent}}
+							WHERE 
+								ID = @ID
+								AND State = ({{AssessmentState}})
+						)
+						,1,0
+					)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+				</Parameters>
+			</Condition>
+			<TrueActions>
+				<Action xsi:type="ActionTrigger" Ident="UpdateStartState" ActionStart="AfterPermission">
+					<DataSource>
 						<SQL><![CDATA[
-							DECLARE @NextOrder INT = ISNULL((
-								SELECT TOP 1 AssessmentOrder
-								FROM usr.ITSMAssessment
-								WHERE
-									FormIdent = @ThisFormIdent
-									AND TableID = @ID
-									AND [State] != @DeletedState
-									AND IsUserAction = 1
-								ORDER BY AssessmentOrder DESC
-							),0) + 1;
-
-							SELECT IIF(
-								EXISTS(
-									SELECT NULL
-									FROM usr.ITSMAssessment
-									WHERE
-										FormIdent = @ThisFormIdent
-										AND TableID = @ID
-										AND [State] != @DeletedState
-										AND AssessmentOrder = @NextOrder
-										AND AssessmentAccountID = @UserID
-										AND ISNULL(IsUserAction,0) = 0
+								DECLARE @ITSMKey VARCHAR(100) = (
+									SELECT ITSMKey
+									FROM usr.{{FormIdent}}
+									WHERE ID = @ID
 								)
-								,1
-								,0
-							)
+								DECLARE 
+									@CounterIdent VARCHAR(100) = CONCAT(@ITSMKey, '_P'),
+									@NextNumber INT
+
+								EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
+
+								UPDATE usr.ITSMAssessment
+								SET AssessmentRoundStartDateTime = GETDATE(),ITSMKey = CONCAT(@ITSMKey, '_P:', @NextNumber)
+								WHERE AssessmentRoundGUID = @ActualAssessmentRoundGuid
 						]]></SQL>
 						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualAssessmentRoundGuid" DataType="Guid" />
 							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
 							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
 						</Parameters>
-					</VisibleCondition>
-          <Actions>
-						<Action xsi:type="ShareCode" Ident="ApproveAssessmentActionShare" />
-          </Actions>
-        </Button>
-
-        <Button Ident="RejectButton" IsVisible="true">
-					<VisibleCondition>
-						<SQL><![CDATA[
-							DECLARE @NextOrder INT = ISNULL((
-								SELECT TOP 1 AssessmentOrder
-								FROM usr.ITSMAssessment
-								WHERE
-									FormIdent = @ThisFormIdent
-									AND TableID = @ID
-									AND [State] != @DeletedState
-									AND IsUserAction = 1
-								ORDER BY AssessmentOrder DESC
-							),0) + 1;
-
-							SELECT IIF(
-								EXISTS(
-									SELECT NULL
-									FROM usr.ITSMAssessment
-									WHERE
-										FormIdent = @ThisFormIdent
-										AND TableID = @ID
-										AND [State] != @DeletedState
-										AND AssessmentOrder = @NextOrder
-										AND AssessmentAccountID = @UserID
-										AND ISNULL(IsUserAction,0) = 0
-								)
-								,1
-								,0
-							)
-						]]></SQL>
-						<Parameters>
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" Value="{{FormIdent}}" />
-							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-						</Parameters>
-					</VisibleCondition>
-          <Actions>
-						<Action xsi:type="ShareCode" Ident="RejectAssessmentActionShare" />
-          </Actions>
-        </Button>
-
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="AssessmentApprovalButtonShare" />  -->
-		
+					</DataSource>
+				</Action>
+			</TrueActions>
+		</Action>
 	</Section>
 	
 </Component>

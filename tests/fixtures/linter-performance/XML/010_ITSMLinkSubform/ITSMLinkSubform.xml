@@ -42,8 +42,8 @@
 			</DataBind>
 		</Control>
 
-    <!-- @Ignore ident-convention-lookup-control -->
-    <Control xsi:type="AutoCompleteControl" Ident="SourceUniqueIdent" DataType="String" IsRequired="true" TitleResourceKey="SourceUniqueIdent_ITSM">
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="AutoCompleteControl" Ident="SourceUniqueIdent" DataType="String" IsRequired="true" TitleResourceKey="SourceUniqueIdent_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
 				<Columns>
 					<Column Ident="UniqueSourceIdent" DataBindType="Value" />
@@ -51,40 +51,40 @@
 				</Columns>
 				<SQL><![CDATA[
 
-          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
-
-          SELECT
-            CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
-            ,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
-
-          UNION ALL
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							  INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
 
 					SELECT
-            itsm.UniqueSourceIdent
-            ,CONCAT(itsm.[ITSMKey],' - ', itsm.[Subject]) AS [ITSMTitle]
-					FROM usr.ITSM_FormFullView AS itsm
-					WHERE
-            (
-							itsm.[ITSMKey] LIKE @SourceUniqueIdent
-							OR
-							itsm.[Subject] LIKE @SourceUniqueIdent
-						)
-            AND itsm.UniqueSourceIdent != CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent)
-						AND itsm.LastFolderTreeIdent IN (
-							SELECT
-								FolderTreeIdent
-							FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs)
-						)
+					  CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
+					  ,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
+
+					UNION ALL
+
+							  SELECT
+					  itsm.UniqueSourceIdent
+					  ,CONCAT(itsm.[ITSMKey],' - ', itsm.[Subject]) AS [ITSMTitle]
+							  FROM usr.ITSM_FormFullView AS itsm
+							  WHERE
+					  (
+									  itsm.[ITSMKey] LIKE @SourceUniqueIdent
+									  OR
+									  itsm.[Subject] LIKE @SourceUniqueIdent
+								  )
+					  AND itsm.UniqueSourceIdent != CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent)
+								  AND itsm.LastFolderTreeIdent IN (
+									  SELECT
+										  FolderTreeIdent
+									  FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs)
+								  )
 
 				]]></SQL>
 				<Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceUniqueIdent" DataType="String" LikeType="Both" MaxLength="200" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ThisFormIdent" DataType="String" MaxLength="100" SetDataType="ParentData" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
 				</Parameters>
 			</DataBind>
 			<SelectedDataBind>
@@ -124,7 +124,7 @@
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceUniqueIdent" DataType="String" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ThisFormIdent" DataType="String" MaxLength="100" SetDataType="ParentData" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
 				</Parameters>
@@ -153,15 +153,15 @@
 
 				]]></SQL>
 				<Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ThisFormIdent" DataType="String" MaxLength="100" SetDataType="ParentData" />
 				</Parameters>
 			</DefaultDataSource>
 		</Control>
 
-    <!-- @Ignore ident-convention-lookup-control -->
-    <Control xsi:type="AutoCompleteControl" Ident="TargetUniqueIdent" DataType="String" IsRequired="true" TitleResourceKey="TargetUniqueIdent_ITSM">
+		<!-- @Ignore ident-convention-lookup-control -->
+		<Control xsi:type="AutoCompleteControl" Ident="TargetUniqueIdent" DataType="String" IsRequired="true" TitleResourceKey="TargetUniqueIdent_ITSM">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM">
 				<Columns>
 					<Column Ident="UniqueSourceIdent" DataBindType="Value" />
@@ -169,40 +169,40 @@
 				</Columns>
 				<SQL><![CDATA[
 
-          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-					INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
-
-          SELECT
-            CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
-            ,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
-
-          UNION ALL
+					DECLARE @PermissionIDs dbo.ListNVarchar100Type;
+							  INSERT INTO @PermissionIDs VALUES ('ITSMSpecialist'), ('ITSMOperator');
 
 					SELECT
-            itsm.UniqueSourceIdent
-            ,CONCAT(itsm.[ITSMKey],' - ', itsm.[Subject]) AS [ITSMTitle]
-					FROM usr.ITSM_FormFullView AS itsm
-					WHERE
-            (
-							itsm.[ITSMKey] LIKE @TargetUniqueIdent
-							OR
-							itsm.[Subject] LIKE @TargetUniqueIdent
-						)
-            AND itsm.UniqueSourceIdent != CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent)
-						AND itsm.LastFolderTreeIdent IN (
-							SELECT
-								FolderTreeIdent
-							FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs)
-						)
+					  CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
+					  ,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
+
+					UNION ALL
+
+							  SELECT
+					  itsm.UniqueSourceIdent
+					  ,CONCAT(itsm.[ITSMKey],' - ', itsm.[Subject]) AS [ITSMTitle]
+							  FROM usr.ITSM_FormFullView AS itsm
+							  WHERE
+					  (
+									  itsm.[ITSMKey] LIKE @TargetUniqueIdent
+									  OR
+									  itsm.[Subject] LIKE @TargetUniqueIdent
+								  )
+					  AND itsm.UniqueSourceIdent != CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent)
+								  AND itsm.LastFolderTreeIdent IN (
+									  SELECT
+										  FolderTreeIdent
+									  FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermission(@UserID,@FolderGroupSegmentIdent,@PermissionIDs)
+								  )
 
 				]]></SQL>
 				<Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
 					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetUniqueIdent" DataType="String" LikeType="Both" MaxLength="200" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ThisFormIdent" DataType="String" MaxLength="100" SetDataType="ParentData" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
 				</Parameters>
 			</DataBind>
 			<SelectedDataBind>
@@ -212,24 +212,24 @@
 				</Columns>
 				<SQL><![CDATA[
 
-          SELECT
-            CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
-            ,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
-          WHERE CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) = @TargetUniqueIdent
-
-          UNION ALL
-
 					SELECT
-            itsm.UniqueSourceIdent
-            ,CONCAT(itsm.[ITSMKey],' - ', itsm.[Subject]) AS [ITSMTitle]
-					FROM usr.ITSM_FormFullView AS itsm
-					WHERE
-						itsm.UniqueSourceIdent = @TargetUniqueIdent
+					  CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
+					  ,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
+					WHERE CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) = @TargetUniqueIdent
+
+					UNION ALL
+
+							  SELECT
+					  itsm.UniqueSourceIdent
+					  ,CONCAT(itsm.[ITSMKey],' - ', itsm.[Subject]) AS [ITSMTitle]
+							  FROM usr.ITSM_FormFullView AS itsm
+							  WHERE
+								  itsm.UniqueSourceIdent = @TargetUniqueIdent
 
 				]]></SQL>
 				<Parameters>
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetUniqueIdent" DataType="String" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ThisFormIdent" DataType="String" MaxLength="100" SetDataType="ParentData" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
 				</Parameters>
@@ -241,14 +241,14 @@
 				</Columns>
 				<SQL><![CDATA[
 
-					SELECT
-            CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
-            ,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
+							SELECT
+					CONCAT(ISNULL(@ID, -1), '#', @ThisFormIdent) AS UniqueSourceIdent
+					,usr.GetResourceText('ThisRecord_ITSM', @UserLanguageID) AS [ITSMTitle]
 
 				]]></SQL>
 				<Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" SetDataType="ParentData" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
 					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ThisFormIdent" DataType="String" MaxLength="100" SetDataType="ParentData" />
 				</Parameters>
 			</DefaultDataSource>
@@ -264,26 +264,26 @@
 		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
 			<HTMLTemplate><![CDATA[
 
-				<div class="row">
-          <div class="col-md-4">
-						<div class="form-group">
-							<ControlLabel ControlID="SourceUniqueIdent" />
-							<Control ID="SourceUniqueIdent" />
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="form-group">
-							<ControlLabel ControlID="ITSMLinkTypeGuid" />
-							<Control ID="ITSMLinkTypeGuid" />
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="form-group">
-							<ControlLabel ControlID="TargetUniqueIdent" />
-							<Control ID="TargetUniqueIdent" />
-						</div>
-					</div>
-				</div>
+					  <div class="row">
+				<div class="col-md-4">
+							  <div class="form-group">
+								  <ControlLabel ControlID="SourceUniqueIdent" />
+								  <Control ID="SourceUniqueIdent" />
+							  </div>
+						  </div>
+						  <div class="col-md-4">
+							  <div class="form-group">
+								  <ControlLabel ControlID="ITSMLinkTypeGuid" />
+								  <Control ID="ITSMLinkTypeGuid" />
+							  </div>
+						  </div>
+						  <div class="col-md-4">
+							  <div class="form-group">
+								  <ControlLabel ControlID="TargetUniqueIdent" />
+								  <Control ID="TargetUniqueIdent" />
+							  </div>
+						  </div>
+					  </div>
 
 			]]></HTMLTemplate>
 		</Section>

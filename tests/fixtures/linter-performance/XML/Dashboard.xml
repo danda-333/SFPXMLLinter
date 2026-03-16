@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dashboard xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="Dashboard" SegmentType="Dashboard">
+	<AccessPermissions>
+		<string>Dashboard</string>
+	</AccessPermissions>
+	<Components>
+
+		<Component Ident="ITSMKnowledgeBaseComponent" ComponentIdent="ITSMKnowledgeBaseComponent" />
+
+	</Components>
+	<HTMLTemplate>
+
+		<div class="row">
+			<div class="col-md-12">
+
+				<div class="card-lmtl4">
+					<div class="card-header-lmtl4">
+						<h5 class="mb-0-lmtl4">Vítejte v katalogu služeb ITSM Ministerstva zemědělství</h5>
+					</div>
+
+					<div class="card-body-lmtl4">
+						<p>Tato úvodní obrazovka slouží jako přehledný rozcestník katalogu služeb ITSM Ministerstva zemědělství, ve kterém můžete podle jednotlivých oblastí a kategorií snadno najít správné téma.<br />
+						Po otevření konkrétní větve se zobrazí související články a návody, které vám pomohou s řešením nejčastějších situací a požadavků.<br />
+						Před založením nového požadavku doporučujeme nejdříve projít dostupné články v dané kategorii. Často v nich najdete rychlé vysvětlení nebo přesný postup bez nutnosti zadávat nový požadavek.<br />
+						Pokud v článcích nenajdete odpověď, můžete z vybrané části katalogu služeb jednoduše pokračovat k založení nového požadavku.</p>
+					</div>
+				</div>
+
+				<Component ID="ITSMKnowledgeBaseComponent" />
+			</div>
+		</div>
+	</HTMLTemplate>
+</Dashboard>

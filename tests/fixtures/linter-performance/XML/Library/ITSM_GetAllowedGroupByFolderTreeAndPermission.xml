@@ -3,10 +3,12 @@
 	<XMLDescription><![CDATA[
 		Funkce: Funkce pro vrácení skupin dle oprávnění a FolderTreeIdentu
 	]]></XMLDescription>
-	<Description><![CDATA[
-
-	]]></Description>
-	<Command><![CDATA[
+	<Description>
+		<![CDATA[
+		
+		]]>
+	</Description>
+<Command><![CDATA[
 
 		SET ANSI_NULLS ON
 		GO
@@ -21,7 +23,7 @@
 		#MODIFIER# FUNCTION #NAME#
 		(
 			@FolderTreeIdent VARCHAR(900),
-  		@PermissionIDs dbo.ListNVarchar100Type READONLY
+		@PermissionIDs dbo.ListNVarchar100Type READONLY
 		)
 		RETURNS TABLE
 		AS
@@ -36,7 +38,7 @@
 				gro.ID AS GroupID
 				,gro.[Name] AS GroupName
 			FROM SearchFolderTree AS sft
-			INNER JOIN dbo.FolderTree AS fot ON fot.ID = ISNULL(sft.InheritFromFolderTreeID, fot.ID)
+			INNER JOIN dbo.FolderTree AS fot ON fot.ID = ISNULL(sft.InheritFromFolderTreeID, sft.ID)
 			INNER JOIN dbo.GroupFolderTree AS gft ON gft.FolderTreeID = fot.ID
 			INNER JOIN dbo.GroupFolderTreePermission AS gftp ON gftp.GroupFolderTreeID = gft.ID
 			INNER JOIN @PermissionIDs AS pIDs ON pIDs.Id = gftp.PermissionID

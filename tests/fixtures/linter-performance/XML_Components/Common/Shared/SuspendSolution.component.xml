@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+
+	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
+		<Button xsi:type="GroupButton" Ident="SuspendSolutionGroupButton" TitleResourceKey="SuspendSolutionGroupButton_ITSM" IsStopRedirect="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-pause">
+			<Buttons>
+
+				<Button xsi:type="FormButton" Ident="InternallySuspendSolutionButton" TitleResourceKey="InternallySuspendSolutionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-pause" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="InternallySuspendSolutionConfirmFormDialog" ConfirmFormDialogSectionIdent="InternallySuspendSolutionConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<Button xsi:type="FormButton" Ident="SuspendSolutionButton" TitleResourceKey="SuspendSolutionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-stop" IsVisible="false" IsStopRedirect="true">
+					<Extensions>
+						<Extension xsi:type="ConfirmFormDialogExtension" Ident="SuspendSolutionConfirmFormDialog" ConfirmFormDialogSectionIdent="SuspendSolutionConfirmFormDialogSection" />
+					</Extensions>
+				</Button>
+
+				<!--<Button xsi:type="FormButton" Ident="SuspendToReporterSolutionButton" TitleResourceKey="SuspendToReporterSolutionButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true" />-->
+
+			</Buttons>
+		</Button>
+	</Section>
+
+	<Section Root="Form" Name="Controls" TargetXPath="//Form/Controls" Insert="append">
+		<Control xsi:type="DropDownListControl" Ident="ITSMSolutionSuspendReasonGuid" DataType="Guid" TitleResourceKey="ITSMSolutionSuspendReasonGuid_ITSM" IsFakeReadOnly="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMSolutionSuspendReason AS dial
+					INNER JOIN usr.ITSMSolutionSuspendReasonSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSMSolutionSuspendReason" KeyColumnIdent="Guid" KeyColumnDataType="UNIQUEIDENTIFIER" TitleColumnIdent="TextValue" TitleColumnDataType="VARCHAR(255)" LanguageIDColumnIdent="LanguageID"/>
+		</Control>
+		<Control xsi:type="DropDownListControl" Ident="DialogITSMSolutionSuspendReasonGuid" DataType="Guid" TitleResourceKey="DialogITSMSolutionSuspendReasonGuid_ITSM" IsShowRequired="true">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+					<Column Ident="Selected" DataBindType="Selected" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid
+						,dial.TextValue
+						,IIF(dialsetting.Guid = @ITSMSolutionSuspendReasonGuid, 1, 0) AS Selected
+					FROM usr.ITSMSolutionSuspendReason AS dial
+					INNER JOIN usr.ITSMSolutionSuspendReasonSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMSolutionSuspendReasonGuid" DataType="Guid"/>
+				</Parameters>
+			</DataBind>
+		</Control>
+	</Section>
+
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="ITSMSolutionSuspendReasonGuid" TitleResourceKey="ITSMSolutionSuspendReasonGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				solSusRea.[TextValue] AS ITSMSolutionSuspendReasonGuid
+			]]></SQL>
+		</Column>
+	</Section>
+	<Section Root="DataView" Name="Froms" TargetXPath="//DataView/DataSource/Froms | //DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms" AllowMultipleInserts="true" Insert="append">
+		<dsf:From Ident="solSusRea">
+			<dsf:Columns>
+				<dsf:string>ITSMSolutionSuspendReasonGuid</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN usr.ITSMSolutionSuspendReason as solSusRea on solSusRea.Guid = itsm.ITSMSolutionSuspendReasonGuid AND solSusRea.LanguageID = @UserLanguageID
+			</dsf:SQL>
+		</dsf:From>
+	</Section>
+
+	<Section Root="Form" Name="Sections" TargetXPath="//Form/Sections" Insert="append">
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="InternallySuspendSolutionConfirmFormDialogSection" CloseButtonTitleResourceKey="InternallySuspendSolutionConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="InternallySuspendSolutionConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="InternallySuspendSolutionConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMSolutionSuspendReasonGuid" />
+							<Control ID="DialogITSMSolutionSuspendReasonGuid" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+		
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SuspendSolutionConfirmFormDialogSection" CloseButtonTitleResourceKey="SuspendSolutionConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="SuspendSolutionConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SuspendSolutionConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMSolutionSuspendReasonGuid" />
+							<Control ID="DialogITSMSolutionSuspendReasonGuid" />
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+	</Section>
+
+	<Section Root="Form" Name="Html" Insert="placeholder">
+		<div class="row d-none">
+			<Control ID="ITSMSolutionSuspendReasonGuid"/>
+		</div>
+	</Section>
+
+	<Section Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+		
+		<ActionShareCode Ident="SuspendSolution_Update_FromDialog_ActionShare">
+			<Actions>
+
+				<Action xsi:type="Required" ActionStart="BeforeValidation">
+          <Idents>
+            <string>DialogITSMSolutionSuspendReasonGuid</string>
+          </Idents>
+        </Action>
+
+				<Action xsi:type="ActionValue" Ident="SolutionSuspendReasonGuid_Update_FromDialog_Action" ControlIdent="ITSMSolutionSuspendReasonGuid" ActionStart="AfterValidation">
+					<DataSource>
+						<SQL><![CDATA[
+							SELECT @DialogITSMSolutionSuspendReasonGuid
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogITSMSolutionSuspendReasonGuid" DataType="Guid" />
+						</Parameters>
+					</DataSource>
+				</Action>
+				<Action xsi:type="SetValue" Ident="DialogITSMSolutionSuspendReasonGuid" Value="" ActionStart="AfterValidation" />
+
+			</Actions>
+		</ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="SuspendSolution_Update_FromDialog_ActionShare" /> -->
+		
+	</Section>
+
+	<Section Root="WorkFlow" Name="GlobalActions" TargetXPath="//WorkFlow/GlobalActions" Insert="append">
+
+		<Action xsi:type="IF" ActionStart="AfterValidation">
+			<Condition>
+				<SQL>
+					SELECT IIF(
+						ISNULL(@Var_ButtonIdent, '') NOT IN ('SuspendSolutionButton','InternallySuspendSolutionButton')
+						,1,0
+					)
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Var_ButtonIdent" DataType="String" MaxLength="255"/>
+				</Parameters>
+			</Condition>
+			<TrueActions>
+				<Action xsi:type="SetValue" Ident="ITSMSolutionSuspendReasonGuid" Value="" ActionStart="AfterValidation" />
+			</TrueActions>
+		</Action>
+		
+	</Section>
+
+</Component>

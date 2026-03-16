@@ -1,5 +1,0 @@
-<Primitive>
-  <Template Name="Default">
-    <Control xsi:type="TextBoxControl" Ident="{{Ident}}" TitleResourceKey="{{TitleResourceKey}}" />
-  </Template>
-</Primitive>

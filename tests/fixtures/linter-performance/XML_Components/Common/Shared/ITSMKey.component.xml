@@ -5,6 +5,14 @@
 		<Control xsi:type="HiddenControl" Ident="ITSMKey" DataType="String" MaxLength="255"/>
 	</Section>
 
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="ITSMKey" TitleResourceKey="ITSMKey_ITSM" Width="10" TableAlterIdent="tbl">
+			<SQL><![CDATA[
+				itsm.ITSMKey
+			]]></SQL>
+		</Column>
+	</Section>
+
 	<Section Root="Form" Name="Html" Insert="placeholder">
 		<div class="row d-none">
 			<Control ID="ITSMKey"/>

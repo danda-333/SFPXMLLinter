@@ -49,7 +49,7 @@
 			</TimeLineDataBind>-->
 			<TimeLineDataBind TransformType="AutoQuery" DatabaseScheme="usr" FormIdent="ITSMGeneralResolutionMethodType" KeyColumnIdent="Guid" KeyColumnDataType="UNIQUEIDENTIFIER" TitleColumnIdent="TextValue" TitleColumnDataType="VARCHAR(255)" LanguageIDColumnIdent="LanguageID"/>
 		</Control>
-		<Control xsi:type="DropDownListControl" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="DialogITSMGeneralResolutionMethodTypeGuid_ITSM" >
+		<Control xsi:type="DropDownListControl" Ident="DialogITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="DialogITSMGeneralResolutionMethodTypeGuid_ITSM" IsShowRequired="true">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Columns>
 					<Column Ident="Guid" DataBindType="Value" />
@@ -80,7 +80,7 @@
 		<Control xsi:type="TextAreaControl" Ident="SolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsReadOnly="true">
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
-		<Control xsi:type="TextAreaControl" Ident="DialogSolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsCreateColumn="false">
+		<Control xsi:type="TextAreaControl" Ident="DialogSolutionDescription" DataType="String" Rows="3" TitleResourceKey="SolutionDescription_ITSM" IsCreateColumn="false" IsShowRequired="true">
 			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
 				<Columns>
 					<Column Ident="SolutionDescription" DataBindType="Value" />
@@ -112,6 +112,69 @@
 		</Control>
 
 		<Control xsi:type="PlaceHolderControl" Ident="GeneralResolutionCardPlaceHolder" IsVisible="false"/>
+	</Section>
+
+	<Section Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="ITSMGeneralResolutionMethodTypeGuid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				genResMetTyp.[TextValue] AS ITSMGeneralResolutionMethodTypeGuid
+			]]></SQL>
+		</Column>
+		<Column Ident="SolutionDescription" TitleResourceKey="SolutionDescription_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				itsm.[SolutionDescription]
+			]]></SQL>
+		</Column>
+		<Column Ident="SolutionAditionalInformation" TitleResourceKey="SolutionAditionalInformation_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				itsm.[SolutionAditionalInformation]
+			]]></SQL>
+		</Column>
+	</Section>
+	<Section Root="DataView" Name="Froms" TargetXPath="//DataView/DataSource/Froms | //DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms" AllowMultipleInserts="true" Insert="append">
+		<dsf:From Ident="genResMetTyp">
+			<dsf:Columns>
+				<dsf:string>ITSMGeneralResolutionMethodTypeGuid</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN usr.ITSMGeneralResolutionMethodType as genResMetTyp on genResMetTyp.Guid = itsm.ITSMGeneralResolutionMethodTypeGuid AND genResMetTyp.LanguageID = @UserLanguageID
+			</dsf:SQL>
+		</dsf:From>
+	</Section>
+
+	<Section Root="Filter" Name="Filter" Insert="placeholder">
+		<!-- @Ignore duplicate-control-ident -->
+		<Control xsi:type="DropDownListControl" Ident="ITSMGeneralResolutionMethodTypeGuid" DataType="Guid" TitleResourceKey="ITSMGeneralResolutionMethodTypeGuid_ITSM">
+			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT 
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMGeneralResolutionMethodType AS dial
+					INNER JOIN usr.ITSMGeneralResolutionMethodTypeSetting AS dialsetting 
+						ON dialsetting.Guid = dial.Guid
+					WHERE 
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
+				</Parameters>
+			</DataBind>
+      <FilterConditions>
+        <DataSource>
+          <SQL><![CDATA[
+            itsm.[ITSMGeneralResolutionMethodTypeGuid] = @ITSMGeneralResolutionMethodTypeGuid
+          ]]></SQL>
+        </DataSource>
+      </FilterConditions>
+		</Control>
 	</Section>
 
 	<Section Root="Form" Name="Sections" TargetXPath="//Form/Sections" Insert="append">

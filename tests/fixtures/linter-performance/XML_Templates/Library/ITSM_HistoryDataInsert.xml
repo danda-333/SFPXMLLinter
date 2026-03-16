@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_HistoryDataInsert" LibraryType="StoredProcedure" PackageIdent="UtilityPackage">
+	<Description>
+
+	</Description>
+	<Command>
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+#MODIFIER# PROCEDURE #NAME#
+(
+	@HistoryID INT
+    ,@ControlIdent NVARCHAR(255)
+    ,@OldValue NVARCHAR(MAX)
+    ,@NewValue NVARCHAR(MAX)
+)
+AS
+BEGIN
+
+    INSERT INTO dbo.HistoryData (
+        [HistoryID]
+        ,[ControlIdent]
+        ,[OldValue]
+        ,[NewValue]
+    )
+    SELECT 
+        @HistoryID
+        ,@ControlIdent
+        ,@OldValue
+        ,@NewValue
+
+    RETURN 1;
+   
+END
+
+
+	</Command>
+</Library>

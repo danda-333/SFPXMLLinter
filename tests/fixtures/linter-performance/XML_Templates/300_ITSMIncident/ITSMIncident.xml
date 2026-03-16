@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMIncident" SegmentType="ITSMIncidentSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" Ident="ITSMIncident" SegmentType="ITSMIncidentSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
 	<Usings>
 		<Using Component="Common/FolderTreeSetting" />
 		<Using Component="Common/PageSetting" FormIdent="ITSMIncident" />
 		<Using Component="Common/SLACriteriaControls" />
 
-		<Using Component="Common/Shared/Assign" FormIdent="ITSMIncident" />
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMIncident" AssignedToTeamState="40" />
 		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMIncident" />
 		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMIncident" KeyPrefix="I"/>
+		<Using Component="Common/Shared/SuspendSolution"/>
+		<Using Component="Common/Shared/SuspendApproval"/>
 		<Using Component="Common/Shared/Resolve" FormIdent="ITSMIncident" />
 
 		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMIncident" />
@@ -16,30 +18,40 @@
 		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMIncident" />
 		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMIncident" />
 		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMIncident" />
+		<Using Component="Common/Controls/ITSMKnowledgeBase" FormIdent="ITSMIncident" />
 		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMIncident" />
+		<Using Component="Common/Controls/Var_ButtonIdentControl"/>
 
 		<Using Component="Common/Buttons/SendToCategorizationButton" />
+		<Using Component="Common/Buttons/ReturnToReporterButton" />
+		<Using Component="Common/Buttons/ResendToProcessButton" />
 		<Using Component="Common/Buttons/ResolveToReporterButton" />
 		<Using Component="Common/Buttons/SendToProcessButton" />
+		<Using Component="Common/Buttons/AnswerSolutionButton" />
+		<Using Component="Common/Buttons/ClaimSolutionButton" />
 		<Using Component="Common/Buttons/CloseButton" />
 		<Using Component="Common/Buttons/CancelButton" />
 		<Using Component="Common/Buttons/SaveGroupButton" />
 		<Using Component="Common/Buttons/DeleteButton" />
 		<Using Component="Common/Buttons/BackButton" />
+
+    <!-- @Ignore unused-using -->
+    <Using Component="ITSMIncident/Shared/SimpleMode" />
 	</Usings>
 	<ExternalJavaScriptRelativePaths>
 	</ExternalJavaScriptRelativePaths>
 	<DataPermissions>
 		<string>ITSMIncident</string>
+    <string>ITSMIncidentSimpleMode</string>
 		<string>ITSMIncidentReporter</string>
 		<string>ITSMIncidentSharedReporter</string>
 		<string>ITSMAuthor</string>
 		<string>ITSMSpecialist</string>
 		<string>ITSMOperator</string>
-		<string>ITSMSupplier</string>
 	</DataPermissions>
 	<CreatePermissions>
-		<string>ITSMIncident</string>
+		<string>ITSMAuthor</string>
+		<string>ITSMOperator</string>
 	</CreatePermissions>
 	<DynamicPermission>
 		<Columns>
@@ -70,23 +82,8 @@
 	</DynamicPermission>
 	<Settings>
 	</Settings>
-	<Buttons>
-		<Button xsi:type="FormButton" Ident="SolvedButton" TitleResourceKey="SolvedButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true" />
-
-		<Button xsi:type="FormButton" Ident="AnswerButton" TitleResourceKey="AnswerButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
-
-		<Button xsi:type="FormButton" Ident="WaitingForButton" TitleResourceKey="WaitingForButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-stop" IsVisible="false" IsStopRedirect="true" />
-
-		<Button xsi:type="FormButton" Ident="SuspendButton" TitleResourceKey="SuspendButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-stop" IsVisible="false" IsStopRedirect="true" />
-
-		<Button xsi:type="FormButton" Ident="ApproveButton" TitleResourceKey="ApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true" />
-
-		<Button xsi:type="FormButton" Ident="RejectButton" TitleResourceKey="RejectButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Danger" IconCssClass="icon-cross" IsVisible="false" IsStopRedirect="true"/>
-
-		<Button xsi:type="FormButton" Ident="SendToSuperiorApproveButton" TitleResourceKey="SendToSuperiorApproveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-hammer-wrench" IsVisible="false" IsStopRedirect="true"/>
-
+	<Buttons>		
 	</Buttons>
-		<Using Component="Common/SLACriteriaControls" />
 	<Controls>
 
 		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true" IsFullText="true">
@@ -178,10 +175,11 @@
     <Control xsi:type="PlaceHolderControl" Ident="PHCommunicationCard"  IsVisible="false"/>
     <Control xsi:type="PlaceHolderControl" Ident="PHSolutionCard"  IsVisible="false"/>
     <Control xsi:type="PlaceHolderControl" Ident="PHRequestControlCard"  IsVisible="false"/>
+    <Control xsi:type="PlaceHolderControl" Ident="PHVerificationCard"  IsVisible="false"/>
 		<!-- PHs -->
 
 
-		<Control xsi:type="TextBoxControl" Ident="ThisFormIdent" TitleResourceKey="ThisFormIdent_ITSM" DataType="String" MaxLength="100" Default="ITSMIncident"/>
+		<!-- <Control xsi:type="TextBoxControl" Ident="ThisFormIdent" TitleResourceKey="ThisFormIdent_ITSM" DataType="String" MaxLength="100" Default="ITSMIncident"/> -->
 
 		<!--/HelpControls-->
 
@@ -215,7 +213,7 @@
 										</div>
 									</div>
 									<div class="card-body">
-										{{Component:Common/Shared/FolderGroupSegment,Contribution:Html}}
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
 										
 										<div class="row">
 											<div class="col-md-3">
@@ -252,61 +250,202 @@
 							</div>
 						</div>
 
-						<div class="row">
-							<div class="col-md-12">
-								<div class="card">
-									<div class="card-header bg-white header-elements-inline">
-										<h6 class="card-title">[#Verification_ITSM#]</h6>
-										<div class="header-elements">
-											<div class="list-icons">
-												<a class="list-icons-item" data-action="collapse"></a>
-											</div>
-										</div>
-									</div>
-									<div class="card-body">
-										<div class="row">
-											<div class="col-md-3">
-												<div class="form-group">
-													<ControlLabel ControlID="ReporterResponseDeadlineDateTime" />
-													<Control ID="ReporterResponseDeadlineDateTime" />
+						<Control ID="PHVerificationCard">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="card">
+										<div class="card-header bg-white header-elements-inline">
+											<h6 class="card-title">[#Verification_ITSM#]</h6>
+											<div class="header-elements">
+												<div class="list-icons">
+													<a class="list-icons-item" data-action="collapse"></a>
 												</div>
 											</div>
 										</div>
-										<div class="row">
-											<div class="col-md-6">
-												<div class="form-group">
-													<ControlLabel ControlID="UserResponse" />
-													<Control ID="UserResponse" />
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-3">
+													<div class="form-group">
+														<ControlLabel ControlID="ReporterResponseDeadlineDateTime" />
+														<Control ID="ReporterResponseDeadlineDateTime" />
+													</div>
 												</div>
 											</div>
-											<div class="col-md-6">
-												<div class="form-group">
-													<ControlLabel ControlID="SolutionAssessment" />
-													<Control ID="SolutionAssessment" />
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="UserResponse" />
+														<Control ID="UserResponse" />
+													</div>
+												</div>
+												<div class="col-md-6">
+													<div class="form-group">
+														<ControlLabel ControlID="SolutionAssessment" />
+														<Control ID="SolutionAssessment" />
+													</div>
 												</div>
 											</div>
 										</div>
 									</div>
 								</div>
 							</div>
-						</div>
+						</Control>
 
-						{{Component:Common/Controls/CommunicationControls,Contribution:Html}}
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
 
 					</div><!-- //Levý sloupec -->
 
 					<div class="col-md-3"><!-- Pravý sloupec -->
 
-						{{Component:Common/Controls/ReporterControls,Contribution:Html}}
-						{{Component:Common/Shared/Assign,Contribution:Html}}
-						{{Component:Common/Shared/Resolve,Contribution:Html}}
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Assign,Section:Html}}
+						{{Component:Common/Shared/Resolve,Section:Html}}
 
 					</div><!-- //Pravý sloupec -->
 
 				</div>
+				{{Component:Common/Shared/ITSMKey,Section:Html}}
 			]]></HTMLTemplate>
 		</Section>
-		{{Component:Common/Shared/ITSMKey,Contribution:Html}}
 
+		<Section xsi:type="GlobalChangeSection" Ident="SuspendSolutionGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="SuspendSolutionGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMIncident AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] NOT IN (
+									@SolutionAssignedToTeamState
+									,@SolutionAssignedState
+									,@SolutionInternallySuspendedState
+									,@SolutionSuspendedForReviewState
+									,@ResolvedForReviewState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssignedToTeamState" DataType="Number" Value="40" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionAssignedState" DataType="Number" Value="50" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionInternallySuspendedState" DataType="Number" Value="60" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="SolutionSuspendedForReviewState" DataType="Number" Value="70" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedForReviewState" DataType="Number" Value="90" />
+
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Controls>
+				<wffc:FormControl Ident="DialogITSMSolutionSuspendReasonGuid" IsRequired="true" IsVisible="true" IsReadOnly="false" />
+				<wffc:FormControl Ident="DialogCommunication" IsRequired="true" IsVisible="true" IsReadOnly="false" />
+			</Controls>
+			<Controls>
+				<wffc:FormControl Ident="DialogITSMSolutionSuspendReasonGuid" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-6">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogITSMSolutionSuspendReasonGuid" />
+							<Control ID="DialogITSMSolutionSuspendReasonGuid" />
+						</div>
+					</div>	
+				</div>
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" />
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>	
+				</div>
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="GlobalChangeSection" Ident="CloseGlobalChangeSection" ConfirmButtonTitleResourceKey="ConfirmGlobalChangeButton_ITSM">
+			<ValidationBeforeOpen ErrorMessageResourceKey="CloseGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMIncident AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] NOT IN (
+									@IncidentEvaluationState
+									,@ResolvedState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="IncidentEvaluationState" DataType="Number" Value="120" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ResolvedState" DataType="Number" Value="130" />
+
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Controls>
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-12">
+						<p>[#CloseGlobalChangeSection_Description_ITSM#]</p>
+					</div>	
+				</div>
+			</HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="GlobalChangeSection" Ident="ParentITSMGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="ParentITSMGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMIncident AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] IN (
+									@ClosedState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Buttons>
+				<Button xsi:type="FormButton" Ident="SaveButton" />
+			</Buttons>
+			<Controls>
+				<wffc:FormControl Ident="ParentTableID" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ParentTableID" />
+							<Control ID="ParentTableID" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
 	</Sections>
 </Form>

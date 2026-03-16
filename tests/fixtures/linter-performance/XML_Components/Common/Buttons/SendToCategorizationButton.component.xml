@@ -4,29 +4,5 @@
 	<Section Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
 		<Button xsi:type="FormButton" Ident="SendToCategorizationButton" TitleResourceKey="SendToCategorizationButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
 	</Section>
-
-	<Section Root="WorkFlow" Name="ButtonShareCodes" TargetXPath="//WorkFlow/ButtonShareCodes" Insert="append">
-		<ButtonShareCode Ident="SendToCategorizationButtonShare">
-			<Buttons>
-				<Button Ident="SendToCategorizationButton" IsVisible="true">
-					<Actions>
-						<Action xsi:type="ChangeState" State="{{State}}" ActionStart="AfterSave" />
-            <Action xsi:type="ActionValue" Ident="ITSMEntryMethodTypeGuid_Update_Action" ControlIdent="ITSMEntryMethodTypeGuid" ActionStart="AfterValidation">
-              <DataSource>
-                <SQL><![CDATA[
-                  SELECT CAST([GUID] AS VARCHAR(MAX)) AS ITSMEntryMethodTypeGuid
-                  FROM usr.ITSMEntryMethodTypeSetting
-                  WHERE FunctionalKey = '{{FunctionalKey}}' AND [State] != @DeletedState
-                ]]></SQL>
-                <Parameters>
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-                </Parameters>
-              </DataSource>
-            </Action>
-					</Actions>
-				</Button>
-			</Buttons>
-		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SendToCategorizationButtonShare" /> -->
-	</Section>
 	
 </Component>

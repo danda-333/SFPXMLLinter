@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMSupplierRequest" SegmentType="ITSMSupplierRequestSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMSupplierRequest" SegmentType="ITSMSupplierRequestSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" IsDebug="true">
 	<Usings>
 		<Using Component="Common/FolderTreeSetting" />
 		<Using Component="Common/PageSetting" FormIdent="ITSMSupplierRequest" />
@@ -8,17 +8,25 @@
 		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMSupplierRequest" />
 		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMSupplierRequest" KeyPrefix="SR"/>
 		<Using Component="Common/Shared/Resolve" FormIdent="ITSMSupplierRequest" />
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMSupplierRequest" AssignedToTeamState="110" />
+		<Using Component="Common/Shared/SuspendApproval" FormIdent="ITSMSupplierRequest" />
+		<Using Component="Common/Shared/SuspendSolution" FormIdent="ITSMSupplierRequest" />
 
 		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMSupplierRequest" />
 		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMSupplierRequest" />
 		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMSupplierRequest" />
 		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMSupplierRequest" />
+		<Using Component="Common/Controls/ITSMKnowledgeBase" FormIdent="ITSMSupplierRequest" />
 		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMSupplierRequest" />
 		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMSupplierRequest" />
+		<Using Component="Common/Controls/Var_ButtonIdentControl"/>
 
+		<Using Component="Common/Buttons/ReturnToReporterButton" />
+		<Using Component="Common/Buttons/SendToProcessButton" />
 		<Using Component="Common/Buttons/ClaimSolutionButton" />
 		<Using Component="Common/Buttons/SaveGroupButton" />
 		<Using Component="Common/Buttons/DeleteButton" />
+		<Using Component="Common/Buttons/CloseButton" />
 		<Using Component="Common/Buttons/BackButton" />
 
 	</Usings>
@@ -63,35 +71,21 @@
 	</Settings>
 	<Buttons>
 
-		<!-- <Button xsi:type="GroupButton" Ident="AssignGroupButton" TitleResourceKey="AssignGroupButton_ITSM" IsVisible="false" PlacementType="Top Bottom" Color="rgb(80, 60, 10); color: rgb(248, 246, 199)" IconCssClass="icon-hammer-wrench">
-			<Buttons>
-
-				<Button xsi:type="FormButton" Ident="AssignToGroupButton" TitleResourceKey="AssignToGroupButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-hammer-wrench" IsVisible="false" IsStopRedirect="true" >
-					<Extensions>
-						<Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignToGroupConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignToGroupConfirmFormDialogSection" />
-					</Extensions>
-				</Button>
-				<Button xsi:type="FormButton" Ident="AssignButton" TitleResourceKey="AssignButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-hammer" IsVisible="false" IsStopRedirect="true" >
-					<Extensions>
-						<Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignConfirmFormDialogSection" />
-					</Extensions>
-				</Button>
-				<Button xsi:type="FormButton" Ident="AssignMyselfButton" TitleResourceKey="AssignMyselfButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-share2" IsVisible="false" IsStopRedirect="true">
-					<Extensions>
-						<Extension xsi:type="ConfirmFormDialogExtension" Ident="AssignMySelfConfirmFormDialog" ConfirmFormDialogSectionIdent="AssignMySelfConfirmFormDialogSection" />
-					</Extensions>
-				</Button>
-				<Button xsi:type="FormButton" Ident="AssignMyselfOneGroupButton" TitleResourceKey="AssignMyselfOneGroupButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-share2"  IsVisible="false" IsStopRedirect="true"/>
-
-			</Buttons>
-		</Button> -->
-
-		<Button xsi:type="FormButton" Ident="SubmitButton" TitleResourceKey="SubmitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-enter" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SupplierAcceptButton" TitleResourceKey="SupplierAcceptButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="BackToReporterButton" TitleResourceKey="BackToReporterButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-backward2" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="ReplyButton" TitleResourceKey="ReplyButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-reply" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="SuspendButton" TitleResourceKey="SuspendSupplierButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-stop" IsVisible="false" IsStopRedirect="true" />
-		<Button xsi:type="FormButton" Ident="CloseButton" TitleResourceKey="CloseButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-lock" IsVisible="false" IsStopRedirect="true" />
+		<Button xsi:type="FormButton" Ident="SupplierAcceptButton" TitleResourceKey="SupplierAcceptButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Success" IconCssClass="icon-checkmark" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SupplierAcceptConfirmFormDialog" ConfirmFormDialogSectionIdent="SupplierAcceptConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="FormButton" Ident="ReplyButton" TitleResourceKey="ReplyButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-reply" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="ReplyConfirmFormDialog" ConfirmFormDialogSectionIdent="ReplyConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
+		<Button xsi:type="FormButton" Ident="SuspendButton" TitleResourceKey="SuspendSupplierButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Warning" IconCssClass="icon-stop" IsVisible="false" IsStopRedirect="true">
+			<Extensions>
+				<Extension xsi:type="ConfirmFormDialogExtension" Ident="SuspendConfirmFormDialog" ConfirmFormDialogSectionIdent="SuspendConfirmFormDialogSection" />
+			</Extensions>
+		</Button>
 
 	</Buttons>
 	<Controls>
@@ -265,7 +259,7 @@
 										</div>
 									</div>
 									<div class="card-body">
-										{{Component:Common/Shared/FolderGroupSegment,Contribution:Html}}
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
 										<div class="row">
 											<div class="col-md-3">
 												<div class="form-group">
@@ -307,14 +301,14 @@
 							</div>
 						</div>
 
-						{{Component:Common/Controls/CommunicationControls,Contribution:Html}}
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
 
 					</div><!-- //Levý sloupec -->
 
 					<div class="col-md-3"><!-- Pravý sloupec -->
 
-						{{Component:Common/Controls/ReporterControls,Contribution:Html}}
-						{{Component:Common/Shared/Resolve,Contribution:Html}}
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Resolve,Section:Html}}
 
 					</div><!-- //Pravý sloupec -->
 
@@ -326,8 +320,53 @@
 				</div>
 				<!--HelpControls-->
 
-				{{Component:Common/Shared/ITSMKey,Contribution:Html}}
-				{{Component:Common/Controls/ThisFormIdent,Contribution:Html}}
+				{{Component:Common/Shared/ITSMKey,Section:Html}}
+				{{Component:Common/Controls/ThisFormIdent,Section:Html}}
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SupplierAcceptConfirmFormDialogSection" CloseButtonTitleResourceKey="SupplierAcceptConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="SupplierAcceptConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SupplierAcceptConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="ReplyConfirmFormDialogSection" CloseButtonTitleResourceKey="ReplyConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="ReplyConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="ReplyConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="SuspendConfirmFormDialogSection" CloseButtonTitleResourceKey="SuspendConfirmFormDialogCloseButton_ITSM" ConfirmButtonTitleResourceKey="SuspendConfirmFormDialogSectionConfirmButton_ITSM" TitleResourceKey="SuspendConfirmFormDialogSectionTitle_ITSM">
+			<HTMLTemplate><![CDATA[
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<ControlLabel ControlID="DialogCommunication" /><Control ID="DialogCommunicationRequiredPlaceHolder"><span class="text-danger-600">*</span></Control>
+							<Control ID="DialogCommunication" />
+						</div>
+					</div>
+				</div>
+
 			]]></HTMLTemplate>
 		</Section>
 

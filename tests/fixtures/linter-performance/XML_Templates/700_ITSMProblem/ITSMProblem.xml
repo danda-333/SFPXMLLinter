@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" Ident="ITSMProblem" SegmentType="ITSMProblemSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" Ident="ITSMProblem" SegmentType="ITSMProblemSegment" PackageIdent="ITSMPackage" IsFolderTreePermission="true" xIsDebug="true">
 	<Usings>
 		<Using Component="Common/FolderTreeSetting" />
 		<Using Component="Common/PageSetting" FormIdent="ITSMProblem" />
 		<Using Component="Common/SLACriteriaControls" />
 
-		<Using Component="Common/Shared/Assign" FormIdent="ITSMProblem" />
+		<Using Component="Common/Shared/Assign" FormIdent="ITSMProblem" AssignedToTeamState="30" />
 		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMProblem" />
 		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMProblem" KeyPrefix="P"/>
 		<Using Component="Common/Shared/Resolve" FormIdent="ITSMProblem" />
+		<Using Component="Common/Shared/SuspendSolution"/>
+		<Using Component="Common/Shared/SuspendApproval"/>
 
 		<Using Component="Common/Controls/ThisFormIdent" FormIdent="ITSMProblem" />
 		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMProblem" />
@@ -16,9 +18,10 @@
 		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMProblem" />
 		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMProblem" />
 		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMProblem" />
+		<Using Component="Common/Controls/ITSMKnowledgeBase" FormIdent="ITSMProblem" />
 		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMProblem" />
+		<Using Component="Common/Controls/Var_ButtonIdentControl"/>
 
-		<Using Component="Common/Buttons/SendToCategorizationButton" />
 		<Using Component="Common/Buttons/SendToProcessButton" />
 		<Using Component="Common/Buttons/CloseButton" />
 		<Using Component="Common/Buttons/CancelButton" />
@@ -35,10 +38,10 @@
 		<string>ITSMAuthor</string>
 		<string>ITSMSpecialist</string>
 		<string>ITSMOperator</string>
-		<string>ITSMSupplier</string>
 	</DataPermissions>
 	<CreatePermissions>
-		<string>ITSMProblem</string>
+		<string>ITSMAuthor</string>
+		<string>ITSMOperator</string>
 	</CreatePermissions>
 	<DynamicPermission>
 		<Columns>
@@ -78,94 +81,16 @@
 	</Buttons>
 	<Controls>
 
-		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true" IsFullText="true">
+		<Control xsi:type="TextBoxControl" Ident="Subject" DataType="String" TitleResourceKey="Subject_ITSM" IsReadOnly="true" IsFullText="true" IsShowRequired="true">
 			<TimeLineDataBind TransformType="Copy" />
 		</Control>
-		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsReadOnly="true" IsFullText="true"/>
+		<Control xsi:type="TextAreaControl" Ident="Description" DataType="String" Rows="5" TitleResourceKey="Description_ITSM" IsReadOnly="true" IsFullText="true" IsShowRequired="true"/>
 
 		<Control xsi:type="TextAreaControl" Ident="ProblemCause" DataType="String" Rows="3" TitleResourceKey="ProblemCause_ITSM" IsReadOnly="true"/>
-		
-		<Control xsi:type="DropDownListControl" Ident="ITSMIncidentClassificationTypeGuid" DataType="Guid" TitleResourceKey="ITSMIncidentClassificationTypeGuid_ITSM" IsReadOnly="true">
-			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-				<Columns>
-					<Column Ident="Guid" DataBindType="Value" />
-					<Column Ident="TextValue" DataBindType="Title" />
-				</Columns>
-				<SQL>
-					SELECT 
-						dialsetting.Guid,
-						dial.TextValue
-					FROM usr.ITSMIncidentClassificationType AS dial
-					INNER JOIN usr.ITSMIncidentClassificationTypeSetting AS dialsetting 
-						ON dialsetting.Guid = dial.Guid
-					WHERE 
-						dial.LanguageID = @UserLanguageID
-						AND dial.[State] != @DeletedState
-					ORDER BY dial.OrderValue ASC
-				</SQL>
-				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
-				</Parameters>
-			</DataBind>
-			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
-				<SQL>
-					SET @Result = (
-						SELECT dial.TextValue
-						FROM usr.ITSMIncidentClassificationType AS dial
-							INNER JOIN usr.ITSMIncidentClassificationTypeSetting AS dialsetting 
-								ON dialsetting.Guid = dial.Guid
-							WHERE 
-								dial.LanguageID = @UserLanguageID
-								AND dial.[State] != 0
-								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
-					)
-				</SQL>
-			</TimeLineDataBind>
-		</Control>
 
-		<Control xsi:type="DropDownListControl" Ident="ITSMOperationalEnvironmentTypeGuid" DataType="Guid" TitleResourceKey="ITSMOperationalEnvironmentTypeGuid_ITSM" IsReadOnly="true">
-			<DataBind DefaultTitleResourceKey="SelectValue_ITSM" DefaultValue="">
-				<Columns>
-					<Column Ident="Guid" DataBindType="Value" />
-					<Column Ident="TextValue" DataBindType="Title" />
-				</Columns>
-				<SQL>
-					SELECT 
-						dialsetting.Guid,
-						dial.TextValue
-					FROM usr.ITSMOperationalEnvironmentType AS dial
-					INNER JOIN usr.ITSMOperationalEnvironmentTypeSetting AS dialsetting 
-						ON dialsetting.Guid = dial.Guid
-					WHERE 
-						dial.LanguageID = @UserLanguageID
-						AND dial.[State] != @DeletedState
-					ORDER BY dial.OrderValue ASC
-				</SQL>
-				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
-				</Parameters>
-			</DataBind>
-			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
-				<SQL>
-					SET @Result = (
-						SELECT dial.TextValue
-						FROM usr.ITSMOperationalEnvironmentType AS dial
-							INNER JOIN usr.ITSMOperationalEnvironmentTypeSetting AS dialsetting 
-								ON dialsetting.Guid = dial.Guid
-							WHERE 
-								dial.LanguageID = @UserLanguageID
-								AND dial.[State] != 0
-								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
-					)
-				</SQL>
-			</TimeLineDataBind>
-		</Control>
+		<!-- <Control xsi:type="SwitchControl" Ident="IsProblemSolved" DataType="Bool" TitleResourceKey="IsProblemSolved_ITSM" LabelPlacementType="Right" IsReadOnly="true"/>
 
-		<Control xsi:type="SwitchControl" Ident="IsProblemSolved" DataType="Bool" TitleResourceKey="IsProblemSolved_ITSM" LabelPlacementType="Right" IsReadOnly="true"/>
-
-		<Control xsi:type="TextAreaControl" Ident="ProblemSolutionJustification" DataType="String" Rows="3" TitleResourceKey="ProblemSolutionJustification_ITSM" IsReadOnly="true"/>
+		<Control xsi:type="TextAreaControl" Ident="ProblemSolutionJustification" DataType="String" Rows="3" TitleResourceKey="ProblemSolutionJustification_ITSM" IsReadOnly="true"/> -->
 
 		<!-- PHs -->
     <Control xsi:type="PlaceHolderControl" Ident="PHContactInformationCard"  IsVisible="false"/>
@@ -203,7 +128,7 @@
 										</div>
 									</div>
 									<div class="card-body">
-										{{Component:Common/Shared/FolderGroupSegment,Contribution:Html}}
+										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
 
 										<div class="row">
 											<div class="col-md-12">
@@ -226,13 +151,13 @@
 							</div>
 						</div>
 
-						{{Component:Common/Controls/CommunicationControls,Contribution:Html}}
+						{{Component:Common/Controls/CommunicationControls,Section:Html}}
 
 					</div><!-- //Levý sloupec -->
 
 					<div class="col-md-3"><!-- Pravý sloupec -->
-						{{Component:Common/Controls/ReporterControls,Contribution:Html}}
-						{{Component:Common/Shared/Assign,Contribution:Html}}
+						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Shared/Assign,Section:Html}}
 
 						<Control ID="PHDocumentationCard">
 							<div class="row">
@@ -291,7 +216,49 @@
 				
 			]]></HTMLTemplate>
 		</Section>
-		{{Component:Common/Shared/ITSMKey,Contribution:Html}}
+		{{Component:Common/Shared/ITSMKey,Section:Html}}
+
+		<Section xsi:type="GlobalChangeSection" Ident="ParentITSMGlobalChangeSection">
+			<ValidationBeforeOpen ErrorMessageResourceKey="ParentITSMGlobalChangeSection_Error_ITSM">
+				<Condition>
+					<SQL>
+						
+						SELECT 1 AS ID
+						WHERE
+							(
+								SELECT COUNT(itsReq.ID)
+								FROM @SelectedIDs AS selIDs
+								INNER JOIN usr.ITSMProblem AS itsReq ON itsReq.ID = selIDs.ID
+								WHERE itsReq.[State] IN (
+									@ClosedState
+								)
+							) > 0
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SelectedIDs" ConstantType="SelectedRow" DataType="NumberList"/>
+
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ClosedState" DataType="Number" Value="200" />
+					</Parameters>
+				</Condition>
+			</ValidationBeforeOpen>
+			<Buttons>
+				<Button xsi:type="FormButton" Ident="SaveButton" />
+			</Buttons>
+			<Controls>
+				<wffc:FormControl Ident="ParentTableID" />
+			</Controls>
+			<HTMLTemplate>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="ParentTableID" />
+							<Control ID="ParentTableID" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
 
 	</Sections>
 </Form>

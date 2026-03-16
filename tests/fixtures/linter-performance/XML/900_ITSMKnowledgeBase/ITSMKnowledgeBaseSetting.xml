@@ -1,0 +1,803 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" Ident="ITSMKnowledgeBaseSetting" SegmentType="ITSMKnowledgeBaseSegment" PackageIdent="ITSMPackage" IsDebug="true">
+
+	<ExternalCssRelativePaths>
+		<string>~/AppAsset/Packages/ITSM/Styles/ITSMLabel.css</string>
+	</ExternalCssRelativePaths>
+	<XMLDescription><![CDATA[
+		Formulář: Znalostní báze
+	]]></XMLDescription>
+	<DataPermissions>
+		<string>ITSMSettingAdmin</string> <!-- Static -->
+	</DataPermissions>
+
+	<CreatePermissions>
+		<string>ITSMSettingAdmin</string>
+	</CreatePermissions>
+
+	<Buttons>
+
+		<Button xsi:type="GroupButton" Ident="SaveGroupButton" TitleResourceKey="SaveGroupButton_ITSM" IsStopRedirect="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk">
+			<Buttons>
+
+				<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" IsStopRedirect="true" />
+
+				<Button xsi:type="FormButton" Ident="SaveAndExitButton" TitleResourceKey="SaveAndExitButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" />
+
+			</Buttons>
+		</Button>
+
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<Extensions>
+				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
+			</Extensions>
+		</Button>
+
+		<Button xsi:type="BackButton" Ident="BackButton" TitleResourceKey="BackButton_ITSM" IconCssClass="icon-undo2" />
+	</Buttons>
+
+	<Controls>
+		<Control xsi:type="HiddenControl" Ident="ExternalKey" DataType="String" MaxLength="255" />
+		<Control xsi:type="HiddenControl" Ident="Guid" DataType="Guid" />
+
+		<Control xsi:type="DropDownListControl" Ident="ITSMKnowledgeBaseTypeGuid" DataType="Guid" TitleResourceKey="ITSMKnowledgeBaseTypeGuid_ITSM" IsReadOnly="true">
+			<DataBind>
+				<Columns>
+					<Column Ident="Guid" DataBindType="Value" />
+					<Column Ident="TextValue" DataBindType="Title" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						dialsetting.Guid,
+						dial.TextValue
+					FROM usr.ITSMKnowledgeBaseType AS dial
+					INNER JOIN usr.ITSMKnowledgeBaseTypeSetting AS dialsetting
+						ON dialsetting.Guid = dial.Guid
+					WHERE
+						dial.LanguageID = @UserLanguageID
+						AND dial.[State] != @DeletedState
+					ORDER BY dial.OrderValue ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<DefaultDataSource>
+				<Columns>
+					<Column Ident="ITSMKnowledgeBaseTypeGuid" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT [GUID] AS ITSMKnowledgeBaseTypeGuid
+					FROM usr.ITSMKnowledgeBaseTypeSetting
+					WHERE FunctionalKey = 'user' AND [State] != @DeletedState
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+				</Parameters>
+			</DefaultDataSource>
+			<TimeLineDataBind TransformType="SQL" KeyColumnDataType="VARCHAR(MAX)" TitleColumnDataType="VARCHAR(MAX)">
+				<SQL><![CDATA[
+					SET @Result = (
+						SELECT dial.TextValue
+						FROM usr.ITSMKnowledgeBaseType AS dial
+							INNER JOIN usr.ITSMKnowledgeBaseTypeSetting AS dialsetting
+								ON dialsetting.Guid = dial.Guid
+							WHERE
+								dial.LanguageID = @UserLanguageID
+								AND dial.[State] != 0
+								AND CAST(dialsetting.Guid AS VARCHAR(MAX)) = @Value
+					)
+				]]></SQL>
+			</TimeLineDataBind>
+		</Control>
+
+		<Control xsi:type="TagControl" Ident="ITSMLabelIDs" DataType="StringList" TitleResourceKey="ITSMLabelIDs_ITSM" IsReadOnly="true">
+			<DataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Title" DataBindType="Title" />
+				</Columns>
+				<SQL>
+
+					DECLARE @CreateNewTag_ITSM NVARCHAR(MAX) = usr.GetResourceText('CreateNewTagITSMLabelIDs_ITSM', @UserLanguageID)
+
+					SELECT CONCAT('##%%' ,@ITSMLabelIDs, '%%##') AS ID, CONCAT('<span class="select2-results-only">', @CreateNewTag_ITSM, ': </span>', @ITSMLabelIDs) AS Title
+					WHERE
+						@ITSMLabelIDs IS NOT NULL
+						AND NOT EXISTS (
+							SELECT NULL
+							FROM usr.ITSMLabel AS ticLab
+							WHERE
+								ticLab.[State] != @DeletedState
+								AND ticLab.[TextValue] = @ITSMLabelIDs
+						)
+
+					UNION ALL
+
+					SELECT
+						CAST(ticLab.[ID] AS VARCHAR(255)) AS ID
+						,ticLab.[TextValue] AS Title
+					FROM usr.ITSMLabel AS ticLab
+					WHERE
+						ticLab.[State] != @DeletedState
+						AND ticLab.[TextValue] LIKE '%' + @ITSMLabelIDs + '%'
+
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMLabelIDs" DataType="String" MaxLength="200" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+				</Parameters>
+			</DataBind>
+			<SelectedDataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Title" DataBindType="Title" />
+				</Columns>
+				<SQL>
+					SELECT
+						ticLab.[ID] AS [ID]
+						,ticLab.[TextValue] AS Title
+					FROM usr.ITSMLabel AS ticLab
+					INNER JOIN @ITSMLabelIDs AS ticLabIDs ON ticLabIDs.ID = ticLab.ID
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMLabelIDs" DataType="StringList" />
+				</Parameters>
+			</SelectedDataBind>
+		</Control>
+
+		<Control xsi:type="FileControl" Ident="Attachments" TitleResourceKey="Attachments_ITSM" RenderType="FormExtension" FormExtensionIdent="ITSMKnowledgeBaseFileExtension" IsShowDeleteButton="true" IsReadOnly="true" />
+
+		<Control xsi:type="InlineSubFormControl" Ident="ITSMKnowledgeBase" TextResourceKey="ITSMKnowledgeBase_ITSM" FormIdent="ITSMKnowledgeBase" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true" IsHeader="false" IsCreateButton="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column Ident="LanguageID" TitleResourceKey="LanguageID_ITSM" Width="20" />
+					<Column Ident="Title" TitleResourceKey="Title_ITSM" Width="40" />
+					<Column Ident="Content" TitleResourceKey="Content_ITSM" Width="40" />
+				</Columns>
+				<SQL><![CDATA[
+					SELECT
+						ISNULL(dial.ID, (ROW_NUMBER() OVER (ORDER BY dial.ID ASC)) * -1) AS ID
+						,dial.Title
+						,dial.Content
+						,lan.ID AS LanguageID
+					FROM dbo.[Language] AS lan
+					LEFT JOIN (
+						SELECT
+							dial.ID,
+							dial.Title,
+							dial.Content,
+							dial.LanguageID
+						FROM usr.ITSMKnowledgeBaseSetting AS dialSetting
+						LEFT JOIN usr.ITSMKnowledgeBase AS dial
+							ON dial.[State] != @DeletedState
+							AND dial.Guid = dialSetting.Guid
+						WHERE dialSetting.ID = @ID
+					) AS dial
+						ON dial.LanguageID = lan.ID
+					ORDER BY lan.ID ASC
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+				</Parameters>
+			</DataSource>
+		</Control>
+
+		<Control xsi:type="FormDialogControl" Ident="ITSMKnowledgeBaseCommonFolderSubFormOpen" CreateButtonTitleResourceKey="AddITSMKnowledgeBaseCommonFolderButton_ITSM" FormIdent="ITSMITSMKnowledgeBaseFolderTreeFormDialog">
+			<Actions>
+				<Action xsi:type="GenerateSubForm" ControlIdent="ITSMKnowledgeBaseCommonFolderSubForm" ActionStart="BeforeValidation">
+					<DataSource>
+						<Columns>
+							<Column Ident="CommonFolderTreeIdent" DataBindType="Value" />
+							<Column Ident="CommonFolderTreeIdentName" DataBindType="Title" ParentColumnIdent="CommonFolderTreeIdent" />
+						</Columns>
+						<SQL><![CDATA[
+							SELECT
+								fot.Ident AS CommonFolderTreeIdent
+								,fotAgg.FolderNames AS CommonFolderTreeIdentName
+							FROM dbo.FolderTree as fot
+							INNER JOIN dbo.Folder as fol on fol.ID = fot.FolderID AND fol.[State] = @StateOne
+							OUTER APPLY (
+								SELECT STRING_AGG(folP.[Name], ' → ') WITHIN GROUP (ORDER BY fotP.Level ASC) AS FolderNames
+								FROM dbo.FolderTree AS fotP
+								INNER JOIN dbo.Folder AS folP ON folP.ID = fotP.FolderID
+								WHERE fot.Ident LIKE fotP.Ident + '%'
+							) AS fotAgg
+							WHERE
+								fol.FolderGroupSegmentIdent = @FolderGroupSegmentIdent
+								AND fot.[Ident] IN (SELECT ID FROM @CommonFolderTreeIdent)
+						]]></SQL>
+						<Parameters>
+							<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CommonFolderTreeIdent" DataType="VarCharList" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateOne" DataType="Number" Value="1" />
+							<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
+						</Parameters>
+					</DataSource>
+				</Action>
+			</Actions>
+		</Control>
+
+		<Control xsi:type="SubFormControl" Ident="ITSMKnowledgeBaseCommonFolderSubForm" TextResourceKey="ITSMKnowledgeBaseCommonFolderSubForm_ITSM" FormIdent="ITSMKnowledgeBaseCommonFolderSubForm" IsSortable="true" SortableControlIdent="ApproveOrder" InsertButtonIdent="SaveButton" DeleteButtonIdent="DeleteButton" UpdateButtonIdent="SaveButton" IsReadOnly="true">
+			<DataSource>
+				<Columns>
+					<Column Ident="ID" TitleResourceKey="ID_ITSM" IsPrimaryKey="true" IsVisible="false" />
+					<Column Ident="CommonFolderTreeIdent" TitleResourceKey="CommonFolderTreeIdent_ITSM" Width="70" />
+					<Column xsi:type="DeleteColumn" Ident="ID" Width="10" />
+				</Columns>
+				<SQL><![CDATA[
+
+					SELECT
+						itsKbcfsf.ID
+						,fotAgg.FolderNames AS CommonFolderTreeIdent
+					FROM usr.ITSMKnowledgeBaseCommonFolderSubForm as itsKbcfsf
+					OUTER APPLY (
+						SELECT STRING_AGG(folP.[Name], ' → ') WITHIN GROUP (ORDER BY fotP.Level ASC) AS FolderNames
+						FROM dbo.FolderTree AS fotP
+						INNER JOIN dbo.Folder AS folP ON folP.ID = fotP.FolderID
+						WHERE itsKbcfsf.CommonFolderTreeIdent LIKE fotP.Ident + '%'
+					) AS fotAgg
+					WHERE
+						itsKbcfsf.TableID = @ID
+						AND itsKbcfsf.FormIdent = @ThisFormIdent
+						AND itsKbcfsf.[State] != @DeletedState
+
+				]]></SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" Value="0" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ThisFormIdent" DataType="String" MaxLength="50" Value="ITSMKnowledgeBaseSetting" />
+				</Parameters>
+			</DataSource>
+		</Control>
+
+		<!-- Dependenci Třeba opravit v rámci SFP verze Ticket: https://helpdesk.gappex.cz/Form/Detail/FastTask/13581 -->
+		<Control xsi:type="RadioButtonListControl" Ident="ShowInLanguageID" DataType="Number" TitleResourceKey="ShowInLanguageID_ITSM" DisplayType="Inline" IsCreateColumn="false">
+			<DataBind>
+				<Columns>
+					<Column Ident="ID" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Title" />
+					<Column Ident="Selected" DataBindType="Selected" />
+				</Columns>
+				<SQL>
+					SELECT
+						lan.ID
+						,lan.[Name]
+						,IIF(lan.ID = @UserLanguageID, 1, 0) AS Selected
+					FROM dbo.Language AS lan
+				</SQL>
+				<Parameters>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+				</Parameters>
+			</DataBind>
+		</Control>
+
+		<Control xsi:type="HTMLContentViewControl" Ident="ContentContentView" IsRazorEngine="true">
+			<Dependencies>
+				<string>ShowInLanguageID</string>
+			</Dependencies>
+			<Sources>
+				<DataSource Ident="LanguageControlData">
+					<Columns>
+						<Column Ident="Value" />
+						<Column Ident="Title" />
+						<Column Ident="Selected" />
+					</Columns>
+					<SQL><![CDATA[
+						IF @ShowInLanguageID IS NOT NULL BEGIN
+							SELECT
+								lan.ID AS [Value]
+								,lan.[Name] AS Title
+								,IIF(lan.ID = @ShowInLanguageID, 1, 0) AS Selected
+							FROM dbo.Language AS lan
+						END ELSE BEGIN
+							SELECT
+								lan.ID AS [Value]
+								,lan.[Name] AS Title
+								,IIF(lan.ID = @UserLanguageID, 1, 0) AS Selected
+							FROM dbo.Language AS lan
+						END
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ShowInLanguageID" DataType="String" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UICultureCode" DataType="String" ConstantType="UICultureCode" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="Main">
+					<Columns>
+						<Column Ident="Title" />
+						<Column Ident="Content" />
+						<Column Ident="ITSMLabelIDs" />
+						<Column Ident="ITSMKnowledgeBaseTypeGuid" />
+						<Column Ident="CreateDate" />
+						<Column Ident="AccountID" />
+						<Column Ident="UpdateDate" />
+						<Column Ident="LastUpdateAccountID" />
+					</Columns>
+					<SQL><![CDATA[
+						SELECT
+							itsKnb.Title
+							,itsKnb.Content
+							,itsLabAgg.TextValues AS ITSMLabelIDs
+							,itsKbt.TextValue AS ITSMKnowledgeBaseTypeGuid
+							,creatorAcc.[FullName] AS AccountID
+							,FORMAT(itsKnbSetting.[CreateDate], 'dd. MM. yyyy', @UICultureCode) AS CreateDate
+							,lastUpdateAcc.[FullName] AS LastUpdateAccountID
+							,FORMAT(itsKnbSetting.[LastUpdate], 'dd. MM. yyyy', @UICultureCode) AS UpdateDate
+						FROM usr.ITSMKnowledgeBaseSetting AS itsKnbSetting
+						INNER JOIN usr.ITSMKnowledgeBase AS itsKnb ON itsKnb.Guid = itsKnbSetting.Guid AND itsKnb.LanguageID = ISNULL(@ShowInLanguageID, @UserLanguageID)
+						INNER JOIN usr.ITSMKnowledgeBaseType AS itsKbt ON itsKbt.Guid = itsKnbSetting.ITSMKnowledgeBaseTypeGuid AND itsKbt.LanguageID = ISNULL(@ShowInLanguageID, @UserLanguageID)
+						OUTER APPLY (
+							SELECT STRING_AGG(itsLab.TextValue, ', ') AS TextValues
+							FROM dbo.MultiSelect AS mus
+							INNER JOIN usr.ITSMLabel AS itsLab ON itsLab.ID = TRY_CAST(mus.[Value] AS INT)
+							WHERE
+								mus.TableID = itsKnbSetting.ID
+								AND mus.FormIdent = 'ITSMKnowledgeBaseSetting'
+								AND mus.ControlIdent = 'ITSMLabelIDs'
+						) AS itsLabAgg
+						LEFT JOIN dbo.Account AS creatorAcc ON creatorAcc.ID = itsKnbSetting.AccountID
+						LEFT JOIN dbo.Account AS lastUpdateAcc ON lastUpdateAcc.ID = itsKnbSetting.LastUpdateAccountID
+						WHERE itsKnbSetting.[ID] = @ID
+					]]></SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ShowInLanguageID" DataType="String" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UICultureCode" DataType="String" ConstantType="UICultureCode" />
+					</Parameters>
+				</DataSource>
+				<DataSource Ident="Attachments">
+					<Columns>
+						<Column Ident="ID" />
+						<Column Ident="TableID" />
+						<Column Ident="FormIdent" />
+						<Column Ident="Name" />
+						<Column Ident="Extension" />
+						<Column Ident="DataGuid" />
+						<Column Ident="Size" />
+						<Column Ident="FileType" />
+					</Columns>
+					<SQL>
+						SELECT
+							fil.ID
+							,fil.TableID
+							,fil.FormIdent
+							,fil.[Name]
+							,fil.[Extension]
+							,fil.[DataGuid]
+							,fil.[Size]
+							,CASE UPPER(fil.[Extension])
+								WHEN 'CSS' THEN 'ph-file-css'
+								WHEN 'CSV' THEN 'ph-file-csv'
+
+								WHEN 'DOC' THEN 'ph-file-doc'
+								WHEN 'DOCX' THEN 'ph-file-doc'
+
+								WHEN 'HTML' THEN 'ph-file-html'
+
+								WHEN 'APNG' THEN 'ph-file-image'
+								WHEN 'PNG' THEN 'ph-file-image'
+								WHEN 'AVIF' THEN 'ph-file-image'
+								WHEN 'GIF' THEN 'ph-file-image'
+								WHEN 'JPEG' THEN 'ph-file-jpg'
+								WHEN 'JPG' THEN 'ph-file-jpg'
+								WHEN 'JFIF' THEN 'ph-file-jpg'
+								WHEN 'PJPEG' THEN 'ph-file-jpg'
+								WHEN 'PJP' THEN 'ph-file-jpg'
+								WHEN 'PNG' THEN 'ph-file-png'
+								WHEN 'WEBP' THEN 'ph-file-image'
+
+								WHEN 'PDF' THEN 'ph-file-pdf'
+
+								WHEN 'PPT' THEN 'ph-file-ppt'
+								WHEN 'RS' THEN 'ph-file-rs'
+								WHEN 'TS' THEN 'ph-file-ts'
+								WHEN 'TSX' THEN 'ph-file-tsx'
+								WHEN 'VUE' THEN 'ph-file-vue'
+
+								WHEN 'XLS' THEN 'ph-file-xls'
+								WHEN 'XLSX' THEN 'ph-file-xls'
+
+								WHEN 'ZIP' THEN 'ph-file-zip'
+
+								WHEN 'MP3' THEN 'ph-file-audio'
+								WHEN 'OGG' THEN 'ph-file-audio'
+								WHEN 'WAV' THEN 'ph-file-audio'
+
+								WHEN 'MP4' THEN	'ph-file-video'
+								WHEN 'WEBM' THEN 'ph-file-video'
+								WHEN 'AVI' THEN 'ph-file-video'
+								WHEN 'FLV' THEN 'ph-file-video'
+								WHEN 'MOV' THEN 'ph-file-video'
+								WHEN 'WMV' THEN 'ph-file-video'
+
+								WHEN 'XML' THEN 'ph-file-text'
+								WHEN 'MD' THEN 'ph-file-text'
+								WHEN 'TXT' THEN 'ph-file-text'
+								WHEN 'SQL' THEN 'ph-file-text'
+
+								ELSE 'ph-file'
+							END AS [IconCssClass]
+							,CASE UPPER(fil.[Extension])
+								WHEN 'CSS' THEN '#214ce5'
+								WHEN 'CSV' THEN '#088e32'
+
+								WHEN 'DOC' THEN '#325b9d'
+								WHEN 'DOCX' THEN '#325b9d'
+
+								WHEN 'HTML' THEN '#e5532d'
+
+								WHEN 'APNG' THEN '#ff417b'
+								WHEN 'PNG' THEN '#ff417b'
+								WHEN 'AVIF' THEN '#bd2c61'
+								WHEN 'GIF' THEN '#3e8bcb'
+								WHEN 'JPEG' THEN '#ee7e86'
+								WHEN 'JPG' THEN '#ee7e86'
+								WHEN 'JFIF' THEN '#ee7e86'
+								WHEN 'PJPEG' THEN '#ee7e86'
+								WHEN 'PJP' THEN '#ee7e86'
+								WHEN 'PNG' THEN '#ff417b'
+								WHEN 'WEBP' THEN '#6cbc2b'
+
+								WHEN 'PDF' THEN '#b61308'
+
+								WHEN 'PPT' THEN '#d24a2b'
+								WHEN 'RS' THEN '#080808'
+								WHEN 'TS' THEN '#087670'
+								WHEN 'TSX' THEN '#087670'
+								WHEN 'VUE' THEN '#08bb7c'
+
+								WHEN 'XLS' THEN '#15763e'
+								WHEN 'XLSX' THEN '#15763e'
+
+								WHEN 'ZIP' THEN '#febf08'
+
+								WHEN 'MP3' THEN '#6fb9ef'
+								WHEN 'OGG' THEN '#1f7eb0'
+								WHEN 'WAV' THEN '#c0257f'
+
+								WHEN 'MP4' THEN	'#0a88c4'
+								WHEN 'WEBM' THEN '#6dbc21'
+								WHEN 'AVI' THEN '#3998d2'
+								WHEN 'FLV' THEN '#af1209'
+								WHEN 'MOV' THEN '#238dc2'
+								WHEN 'WMV' THEN '#429ad0'
+
+								WHEN 'XML' THEN '#f4b400'
+								WHEN 'MD' THEN '#f4b400'
+								WHEN 'TXT' THEN '#f4b400'
+								WHEN 'SQL' THEN '#f4b400'
+
+								ELSE '#000000'
+							END AS [IconColor]
+							,CASE UPPER(fil.[Extension])
+								WHEN 'PNG' THEN 'Image'
+								WHEN 'JPG' THEN 'Image'
+								WHEN 'GIF' THEN 'Image'
+								WHEN 'JPEG' THEN 'Image'
+								WHEN 'BMP' THEN 'Image'
+								WHEN 'PDF' THEN 'Pdf'
+								WHEN 'XLS' THEN 'MSOffice'
+								WHEN 'XLSX' THEN 'MSOffice'
+								WHEN 'DOCX' THEN 'MSOffice'
+								WHEN 'DOC' THEN 'MSOffice'
+								WHEN 'PPT' THEN 'MSOffice'
+								WHEN 'PPTX' THEN 'MSOffice'
+								ELSE ''
+							END AS FileType
+
+						/*FROM dbo.[File] AS fil*/
+						FROM usr.ITSMKnowledgeBaseSetting AS itsKnbSetting
+						INNER JOIN dbo.[File] AS fil
+							ON fil.TableID = itsKnbSetting.ID
+							AND fil.FormIdent = 'ITSMKnowledgeBaseSetting'
+							AND fil.ControlIdent = 'Attachments'
+							AND fil.[State] = @FileActiveState
+						INNER JOIN usr.ITSMKnowledgeBaseFileExtension AS itsKbfe ON itsKbfe.ID = fil.ID
+						INNER JOIN dbo.MultiSelect AS mus
+							ON mus.TableID = itsKbfe.ID
+							AND mus.FormIdent = 'ITSMKnowledgeBaseFileExtension'
+							AND mus.ControlIdent = 'LanguageIDs'
+							AND TRY_CAST(mus.[Value] AS INT) = ISNULL(@ShowInLanguageID, @UserLanguageID)
+						WHERE
+							itsKnbSetting.ID = @ID
+
+					</SQL>
+					<Parameters>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ShowInLanguageID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" DataType="Number" ConstantType="UserLanguageID" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FileActiveState" DataType="Number" Value="1" />
+					</Parameters>
+				</DataSource>
+			</Sources>
+			<HTMLTemplate><![CDATA[
+				@{
+					var mainData = Model.Data.Main[0];
+				}
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="card">
+							<div class="card-header">
+
+								<div class="d-flex flex-wrap">
+									<h4 class="font-weight-semibold mb-1" style="flex: 1 1 auto">@mainData.Title</h4>
+									@if(Model.Data.LanguageControlData is not null && Model.Data.LanguageControlData.Count > 1) {
+										<div id="ShowInLanguageID" class="js-radiobuttonlist" data-dependence="" data-isinitjsdependency="1" data-cleardepedencitype="Append" data-cssclassinline="d-inline mr-3">
+											@foreach(var option in Model.Data.LanguageControlData) {
+												@if(option.Selected == 1) {
+													<div class="form-check js-radiobuttonlist-item d-inline mr-3">
+														<label class="form-check-label">
+															<input type="radio" name="ShowInLanguageID" class="form-check-input-styled" data-controltype="RadioButtonListControl" value="@option.Value" data-fouc="" checked="checked" />@option.Title
+														</label>
+													</div>
+												} else {
+													<div class="form-check js-radiobuttonlist-item d-inline mr-3">
+														<label class="form-check-label">
+															<input type="radio" name="ShowInLanguageID" class="form-check-input-styled" data-controltype="RadioButtonListControl" value="@option.Value" data-fouc="" />@option.Title
+														</label>
+													</div>
+												}
+											}
+											<input type="radio" class="hide js-radiobuttonlist-empty" name="ShowInLanguageID" value="">
+										</div>
+									}
+								</div>
+								<ul class="list-inline list-inline-dotted text-muted mb-3">
+									<li class="list-inline-item">[#PublishedOn_ITSM#]
+										<b>@mainData.CreateDate</b>
+									</li>
+									<li class="list-inline-item">[#PublishedBy#]
+										<b>@mainData.AccountID</b>
+									</li>
+									<li class="list-inline-item">[#UpdatedOn_ITSM#]
+										<b>@mainData.UpdateDate</b>
+									</li>
+									<li class="list-inline-item">[#UpdatedBy_ITSM#]
+										<b>@mainData.LastUpdateAccountID</b>
+									</li>
+									<li class="list-inline-item">[#ITSMLabelIDs_ITSM#]
+										<b>@mainData.ITSMLabelIDs</b>
+									</li>
+								</ul>
+
+							</div>
+							<div class="card-body">
+								<div class="row">
+										@if (Model.Data.Attachments.Count > 0) {
+											<div class="col-md-8">
+												@mainData.Content
+											</div>
+											<div class="col-md-4">
+												@foreach (var attachment in Model.Data.Attachments) {
+													<div class="col-12-lmtl4 col-lg-12-lmtl4">
+														<div class="bg-light-lmtl4 rounded-lmtl4 p-2-lmtl4 my-2-lmtl4">
+															<div class="d-flex-lmtl4 align-items-center-lmtl4">
+																<div class="me-2-lmtl4">
+																	<i class="@attachment.IconCssClass ph-2x text-primary-lmtl4" style="color: @attachment.IconColor !important;"></i>
+																</div>
+																<div class="flex-fill-lmtl4" style="color: #333;">
+																	<div class="fw-semibold-lmtl4 word-break-word">@attachment.Name</div>
+																	<div class="fs-sm-lmtl4 text-muted-lmtl4">@attachment.Size MB</div>
+																</div>
+																<div class="ms-2-lmtl4">
+																	@if(attachment.FileType=="Image") {
+																		<a href="~/FileControl/File?id=@attachment.ID&formIdent=@attachment.FormIdent&tableID=@attachment.TableID&Name=@attachment.Name" type="button" data-caption="@attachment.Name" data-fancybox="gallery2" data-thumb="~/FileControl/File?id=@attachment.ID&formIdent=@attachment.FormIdent&tableID=@attachment.TableID&Name=@attachment.Name&isResize=True&width=120&height=42&percent=0&resizeType=Max" rel="group" class="btn-lmtl4 btn-flat-dark-lmtl4 text-body-lmtl4 btn-icon-lmtl4 btn-sm-lmtl4 border-transparent-lmtl4 rounded-pill-lmtl4">
+																			<i class="ph-eye link-black-lmtl4"></i>
+																		</a>
+																	} else if(attachment.FileType=="Pdf"){
+																		<a href="~/PDF?id=@attachment.ID&formIdent=@attachment.FormIdent&tableID=@attachment.TableID" target="_blank" type="button" class="btn-lmtl4 btn-flat-dark-lmtl4 text-body-lmtl4 btn-icon-lmtl4 btn-sm-lmtl4 border-transparent-lmtl4 rounded-pill-lmtl4">
+																			<i class="ph-eye link-black-lmtl4"></i>
+																		</a>
+																	}
+																	<a href="~/FileControl/File?id=@attachment.ID&formIdent=@attachment.FormIdent&tableID=@attachment.TableID&Name=@attachment.Name" type="button" class="btn-lmtl4 btn-flat-dark-lmtl4 text-body-lmtl4 btn-icon-lmtl4 btn-sm-lmtl4 border-transparent-lmtl4 rounded-pill-lmtl4">
+																		<i class="ph-arrow-down link-black-lmtl4"></i>
+																	</a>
+																</div>
+															</div>
+														</div>
+													</div>
+												}
+											</div>
+										} else {
+											<div class="col-md-12">
+												@mainData.Content
+											</div>
+										}
+									</div>
+								</div>
+
+							</div>
+						</div>
+					</div>
+				</div>
+			]]></HTMLTemplate>
+		</Control>
+
+	</Controls>
+	<Components>
+
+		<Component ComponentIdent="TimeLineComponent" Ident="TimeLine" />
+	</Components>
+	<Sections>
+		<!-- <Section xsi:type="HeaderSection" Ident="HeaderSection">
+			<HTMLTemplate><![CDATA[
+				<div class="row">
+					<div class="col-md-12">
+						<h3>ID: [%ACTUALFORM.ID%] | [%ACTUALFORM.AccountID%] | GUID: [%ACTUALFORM.Guid%] </h3>
+					</div>
+				</div>
+			]]></HTMLTemplate>
+		</Section> -->
+		<Section xsi:type="ContentSection" Ident="ContentSection" TitleResourceKey="ContentSection_ITSM" IconCssClass="icon-bookmark" IsRazorEngine="true">
+			<HTMLTemplate>
+
+				<script nonce="[@SCRIPTTOKENNONCE@]">
+					window.addEventListener("DOMContentLoaded", ()=> {
+						$('.form-check-input-styled').uniform();
+						nameSpaceHTMLContentViewComponent.InitChange("#mainForm");
+						setObserver();
+					});
+
+					function setObserver(){
+						new MutationObserver((mutationList, observer) => {
+							for (const mutation of mutationList) {
+								$('.form-check-input-styled').uniform();
+								nameSpaceHTMLContentViewComponent.InitChange("#mainForm");
+							}
+						}).observe(document.getElementById("ContentContentView"), { attributes: false, childList: true, subtree: false });
+					}
+				</script>
+
+				<div class="row">
+					<div class="col-md-12">
+						<div class="form-group">
+							<Control ID="ContentContentView" />
+						</div>
+					</div>
+				</div>
+			</HTMLTemplate>
+		</Section>
+		<Section xsi:type="ContentSection" Ident="EditSection" TitleResourceKey="EditSection_ITSM" IconCssClass="icon-pencil5">
+			<HTMLTemplate><![CDATA[
+
+				<style>
+					.no-label > label {
+						display: none !important;
+					}
+
+					a.js-subFormAdd[data-formident="ITSMKnowledgeBaseCommonFolderSubForm"] {
+						display: none !important;
+					}
+				</style>
+
+				<div class="row">
+					<div class="col-md-9">
+
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#Categorization_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<Control ID="ITSMKnowledgeBaseCommonFolderSubForm" />
+												</div>
+											</div>
+										</div>
+
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<Control ID="ITSMKnowledgeBaseCommonFolderSubFormOpen" />
+												</div>
+											</div>
+										</div>
+
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#LanguageMutations_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+
+										<div class="form-group custom-table">
+											<Control ID="ITSMKnowledgeBase" />
+										</div>
+
+									</div>
+								</div>
+							</div>
+						</div>
+
+					</div>
+					<div class="col-md-3">
+
+						<div class="card">
+							<div class="card-header bg-white header-elements-inline">
+								<h6 class="card-title">[#Setting_ITSM#]</h6>
+								<div class="header-elements">
+									<div class="list-icons">
+										<a class="list-icons-item" data-action="collapse" />
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="ITSMKnowledgeBaseTypeGuid" />
+											<Control ID="ITSMKnowledgeBaseTypeGuid" />
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<ControlLabel ControlID="ITSMLabelIDs" />
+											<Control ID="ITSMLabelIDs" />
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group word-break-word">
+											<ControlLabel ControlID="Attachments" />
+											<Control ID="Attachments" />
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+					</div>
+				</div>
+
+				<div class="row d-none">
+					<div class="col-md-4">
+						<div class="form-group">
+							<ControlLabel ControlID="Guid" />
+							<Control ID="Guid" />
+						</div>
+					</div>
+				</div>
+
+			]]></HTMLTemplate>
+		</Section>
+
+		<Section xsi:type="ContentSection" Root="Form" Ident="TimeLineSection" TitleResourceKey="TimeLineSection_ITSM" IconCssClass="icon-history" IsVisible="true">
+			<HTMLTemplate><![CDATA[
+				<fieldset>
+					<div class="row">
+						<div class="col-md-12">
+							<Component ID="TimeLine" />
+						</div>
+					</div>
+				</fieldset>
+			]]></HTMLTemplate>
+		</Section>
+	</Sections>
+</Form>

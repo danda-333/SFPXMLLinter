@@ -8,11 +8,32 @@
     </States>
   </Definition>
 
+	<GlobalJavaScripts>
+		<JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeGroup" ControlIdent="AssessmentType" >
+			<Selectors>
+				<string>.js-showIfApprovaTypeGroup</string>
+			</Selectors>
+			<ShowValues>
+				<string>Group</string>
+			</ShowValues>
+		</JavaScript>
+		<JavaScript xsi:type="ShowHide" Ident="ShowIfApprovaTypeAccount" ControlIdent="AssessmentType" >
+			<Selectors>
+				<string>.js-showIfApprovaTypeAccount</string>
+			</Selectors>
+			<ShowValues>
+				<string>Account</string>
+			</ShowValues>
+		</JavaScript>
+	</GlobalJavaScripts>
+
   <ControlShareCodes>
     <ControlShareCode Ident="EnableAllControlShareCode">
       <Controls>
         <FormControl Ident="AssessmentOrder" IsReadOnly="false" />
         <FormControl Ident="AssessmentAccountID" IsReadOnly="false" />
+        <FormControl Ident="AssessmentGroupID" IsReadOnly="false" />
+        <FormControl Ident="AssessmentType" IsReadOnly="false" />
       </Controls>
     </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShareCode" /> -->
   </ControlShareCodes>

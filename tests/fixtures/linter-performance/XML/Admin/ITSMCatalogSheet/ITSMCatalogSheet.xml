@@ -8,7 +8,8 @@
 	</CreatePermissions>
 	<Buttons>
 		<Button xsi:type="FormButton" Ident="SaveButton" TitleResourceKey="SaveButton_ITSM" IsSave="true" PlacementType="Top Bottom" ColorType="Primary" IconCssClass="icon-floppy-disk" IsVisible="false" /><!-- Uložit -->
-		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2"><!-- Smazat -->
+		<Button xsi:type="FormButton" Ident="DeleteButton" TitleResourceKey="DeleteButton_ITSM" IsSave="false" ColorType="Danger" PlacementType="Top Bottom" IsVisible="false" IconCssClass="icon-bin2">
+			<!-- Smazat -->
 			<Extensions>
 				<Extension xsi:type="ConfirmDialogExtension" TitleResourceKey="DeleteDialogTitle_ITSM" DescriptionResourceKey="DeleteDialogDescription_ITSM" />
 			</Extensions>
@@ -23,19 +24,19 @@
 	<Sections>
 		<Section xsi:type="ContentSection" Ident="BasicInformationSection" TitleResourceKey="BasicInformationSection_ITSM" IconCssClass="icon-bookmark">
 			<HTMLTemplate><![CDATA[
-				<div class="row">
-					<div class="col-md-6">
-						<div class="form-group">
-							<ControlLabel ControlID="Name"/>
-							<Control ID="Name"/>
-						</div>
-					</div>
-          <div class="col-md-6">
-						<div class="form-group">
-							<Control ID="Active"/>
-						</div>
-					</div>
-				</div>
+					  <div class="row">
+						  <div class="col-md-6">
+							  <div class="form-group">
+								  <ControlLabel ControlID="Name" />
+								  <Control ID="Name" />
+							  </div>
+						  </div>
+				<div class="col-md-6">
+							  <div class="form-group">
+								  <Control ID="Active" />
+							  </div>
+						  </div>
+					  </div>
 			]]></HTMLTemplate>
 		</Section>
 		<Section xsi:type="ContentSection" Ident="PermissionSection" TitleResourceKey="PermissionSection_ITSM" IconCssClass="icon-bookmark">
@@ -43,7 +44,7 @@
 				 <div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="FolderPermission"/>
+							<Control ID="FolderPermission" />
 						</div>
 					</div>
 				</div>
@@ -54,11 +55,11 @@
 				 <div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="ShareMainFolder"/>
+							<Control ID="ShareMainFolder" />
 						</div>
 					</div>
 				</div>
-      ]]></HTMLTemplate>
+			]]></HTMLTemplate>
 		</Section>
 	</Sections>
 	<!-- <Indexes>

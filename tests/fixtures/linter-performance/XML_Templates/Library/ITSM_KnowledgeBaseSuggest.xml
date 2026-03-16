@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSM_KnowledgeBaseSuggest" LibraryType="StoredProcedure" PackageIdent="ITSMPackage">
+	<Description><![CDATA[
+		
+	]]></Description>
+	<Command><![CDATA[
+
+    SET ANSI_NULLS ON
+    GO
+    SET QUOTED_IDENTIFIER ON
+    GO
+
+    -- =============================================
+    -- Author:		  Daniel Šašek
+    -- Create date: 2029-03-02
+    -- Description:	
+    -- =============================================
+    #MODIFIER# PROCEDURE #NAME#
+    (
+        @UserLanguageID      INT,
+        @FolderTreeIdent     VARCHAR(900),
+        @UserText            NVARCHAR(4000) = NULL,
+        @Top                 INT = 5,
+
+        @IncludeCatalogOnly  BIT = 1,
+        @PreferCatalog       BIT = 0,
+
+        @MinFtsRank          INT = 10,
+        @DeletedState        INT = 0,
+        @UICultureCode       NVARCHAR(20) = N'cs-CZ'
+    )
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        -------------------------------------------------------------------
+        -- 1) Fulltext query
+        -------------------------------------------------------------------
+        DECLARE @FtQuery NVARCHAR(4000) = usr.ITSM_KnowledgeBaseBuildFullTextQuery(@UserText);
+        DECLARE @UseFts BIT = CASE WHEN @FtQuery IS NULL THEN 0 ELSE 1 END;
+
+        -------------------------------------------------------------------
+        -- 2) Dataset
+        -------------------------------------------------------------------
+        ;WITH fts AS
+        (
+            SELECT
+                KEY_TBL.[KEY] AS knowledgeBaseTextID,
+                KEY_TBL.RANK  AS ftsRank
+            FROM CONTAINSTABLE(usr.ITSMKnowledgeBase, (Title, Content), @FtQuery) AS KEY_TBL
+        ),
+        base AS
+        (
+            SELECT
+                -- základní identifikátory
+                itsKnbSetting.ID AS knowledgeBaseSettingID,
+                itsKnbSetting.Guid AS knowledgeBaseGuid,            -- GUID článku (stejný jako itsKnb.Guid)
+                itsKnb.ID        AS knowledgeBaseTextID,            -- jazyková řádka
+                itsKnb.Guid      AS knowledgeBaseTextGuid,          -- pro debug
+
+                -- UI / obsah
+                itsKnb.Title     AS kbTitle,
+                itsKnb.Content,
+                itsKnb.LanguageID,
+                itsKnb.CreateDate,
+                itsKnb.LastUpdate,
+                itsKnb.AccountID,
+
+                -- typ / vizuál
+                itsKbt.TextValue AS typeText,
+                itsKbtSetting.FunctionalKey AS typeFunctionalKey,
+                ISNULL(itsKbtSetting.IconCssClass, 'ph-file') AS iconCssClass,
+                ISNULL(itsKbtSetting.ColorCssClass, 'primary') AS colorCssClass,
+
+                -- katalog match (koncová položka)
+                hasFolderMatch =
+                    CASE WHEN itsKbcfsf.TableID IS NULL THEN 0 ELSE 1 END,
+
+                -- scoring složky
+                folderBoost =
+                    CASE WHEN itsKbcfsf.TableID IS NULL THEN 0 ELSE 500 END,
+
+                typeBoost =
+                    CASE WHEN itsKbtSetting.FunctionalKey = 'KnownError' THEN 200 ELSE 0 END,
+
+                preferCatalogBoost =
+                    CASE
+                        WHEN @PreferCatalog = 1 AND itsKbcfsf.TableID IS NOT NULL THEN 150
+                        ELSE 0
+                    END
+
+            FROM dbo.FolderTree AS fot
+            INNER JOIN usr.ITSMKnowledgeBaseCommonFolderSubForm AS itsKbcfsf
+                ON itsKbcfsf.CommonFolderTreeIdent = fot.Ident
+              AND itsKbcfsf.[State] <> @DeletedState
+              AND itsKbcfsf.FormIdent = 'ITSMKnowledgeBaseSetting'
+
+            INNER JOIN usr.ITSMKnowledgeBaseSetting AS itsKnbSetting
+                ON itsKnbSetting.ID = itsKbcfsf.TableID
+              AND itsKnbSetting.[State] <> @DeletedState
+
+            INNER JOIN usr.ITSMKnowledgeBase AS itsKnb
+                ON itsKnb.Guid = itsKnbSetting.Guid
+              AND itsKnb.LanguageID = @UserLanguageID
+              AND itsKnb.[State] <> @DeletedState
+
+            LEFT JOIN usr.ITSMKnowledgeBaseTypeSetting AS itsKbtSetting
+                ON itsKbtSetting.Guid = itsKnbSetting.ITSMKnowledgeBaseTypeGuid
+              AND itsKbtSetting.[State] <> @DeletedState
+
+            LEFT JOIN usr.ITSMKnowledgeBaseType AS itsKbt
+                ON itsKbt.Guid = itsKbtSetting.Guid
+              AND itsKbt.LanguageID = @UserLanguageID
+              AND itsKbt.[State] <> @DeletedState
+
+            WHERE 
+                fot.Ident = @FolderTreeIdent
+                AND 1 = 0
+        ),
+        scored AS
+        (
+            SELECT
+                base.*,
+
+                -- FTS
+                ftsRank =
+                    CASE WHEN @UseFts = 1 THEN ISNULL(fts.ftsRank, 0) ELSE 0 END,
+
+                isFtsMatch =
+                    CASE WHEN @UseFts = 1 AND fts.knowledgeBaseTextID IS NOT NULL THEN 1 ELSE 0 END,
+
+                isCatalogMatch =
+                    base.hasFolderMatch,
+
+                -- UI group
+                resultGroup =
+                    CASE
+                        WHEN @UseFts = 1 AND fts.knowledgeBaseTextID IS NOT NULL AND ISNULL(fts.ftsRank,0) >= @MinFtsRank THEN 1
+                        WHEN base.hasFolderMatch = 1 THEN 2
+                        ELSE 9
+                    END,
+
+                -- celkové score
+                score =
+                    base.folderBoost +
+                    base.typeBoost +
+                    base.preferCatalogBoost +
+                    (CASE WHEN @UseFts = 1 THEN ISNULL(fts.ftsRank, 0) ELSE 0 END)
+
+            FROM base
+            LEFT JOIN fts
+                ON fts.knowledgeBaseTextID = base.knowledgeBaseTextID
+        )
+        SELECT TOP (@Top)
+            -------------------------------------------------------------------
+            -- UI sloupce: stejné jako tvůj SELECT (jen pojmenování sjednocené)
+            -------------------------------------------------------------------
+            ID = scored.knowledgeBaseSettingID,
+            Title = CONCAT(scored.typeText + ' - ', scored.kbTitle),
+            CreateDate = FORMAT(scored.CreateDate, 'dd.MM.yyyy', @UICultureCode),
+            AccountID = creatorAcc.FullName,
+            IconCssClass = scored.iconCssClass,
+            ColorCssClass = scored.colorCssClass,
+            FolderTreeIdent = @FolderTreeIdent,
+
+            -------------------------------------------------------------------
+            -- Debug sloupce navíc (původní + nové)
+            -------------------------------------------------------------------
+            ResultGroup = scored.resultGroup,             -- 1=FTS, 2=Catalog
+            Score = scored.score,
+            FtsRank = scored.ftsRank,
+            UseFts = @UseFts,
+
+            IsFtsMatch = scored.isFtsMatch,
+            IsCatalogMatch = scored.isCatalogMatch,
+
+            TypeText = scored.typeText,
+            TypeFunctionalKey = scored.typeFunctionalKey,
+
+            HasFolderMatch = scored.hasFolderMatch,
+            FolderBoost = scored.folderBoost,
+            TypeBoost = scored.typeBoost,
+            PreferCatalogBoost = scored.preferCatalogBoost,
+
+            KnowledgeBaseGuid = scored.knowledgeBaseGuid,
+            KnowledgeBaseTextID = scored.knowledgeBaseTextID,
+            KnowledgeBaseTextGuid = scored.knowledgeBaseTextGuid,
+
+            LanguageID = scored.LanguageID,
+            LastUpdate = scored.LastUpdate,
+
+            FtQuery = @FtQuery,
+            UserText = @UserText
+
+        FROM scored
+        LEFT JOIN dbo.Account AS creatorAcc
+            ON creatorAcc.ID = scored.AccountID
+        WHERE
+            (
+                -- FTS výsledky nad prahem
+                (scored.resultGroup = 1)
+
+                -- katalogové výsledky jen pokud povoleno
+                OR (scored.resultGroup = 2 AND @IncludeCatalogOnly = 1)
+            )
+        ORDER BY
+            -- 1) sekce
+            scored.resultGroup ASC,
+
+            -- 2) KnownError dopředu v rámci sekce
+            CASE WHEN scored.typeFunctionalKey = 'KnownError' THEN 0 ELSE 1 END,
+
+            -- 3) relevance
+            scored.score DESC,
+
+            -- 4) fallback: novější
+            scored.CreateDate DESC;
+    END
+
+	]]></Command>
+</Library>

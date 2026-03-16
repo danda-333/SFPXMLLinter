@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.1.11
+
+- Provenance tracing and TreeView origin improvements:
+  - added build mutation tracing (`using/include/placeholder/primitive`) and symbol provenance provider mapping for final runtime symbols.
+  - introduced async provenance hydration worker to avoid blocking reindex/startup; prioritizes active document, then hydrates workspace in background.
+  - normalized provenance URI keys (stable file-path keys) and case-insensitive symbol keys for reliable lookup on Windows.
+  - added new TreeView origin `resolved` for final symbols with known provenance; `final` now remains only for unresolved origin.
+- Build service:
+  - added mutation telemetry collection API for template outputs, reused by reindex hydration and build flows.
+
 ## 0.1.10
 
 - TreeView and effective model integration:

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow FormIdent="ValidForm" Ident="ErrSuppressionConflictWorkFlow">
+  <Usings>
+    <Using Feature="Shared/Sample" SuppressInheritance="true" />
+    <Using Feature="Shared/Sample" />
+  </Usings>
+
+  <ControlShareCodes>
+  </ControlShareCodes>
+
+  <ButtonShareCodes>
+  </ButtonShareCodes>
+</WorkFlow>

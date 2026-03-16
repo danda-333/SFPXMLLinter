@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Contribution Root="Form" Name="Buttons" TargetXPath="//Form/Buttons" Insert="append">
+    <Button xsi:type="FormButton" Ident="InjectedDuplicateButton" TitleResourceKey="InjectedDuplicateButton_Package" IsSave="false" IsVisible="true" />
+  </Contribution>
+</Feature>

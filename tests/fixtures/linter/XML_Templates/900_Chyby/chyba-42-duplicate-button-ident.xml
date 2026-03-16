@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ErrDupInjectedButtonForm">
+  <Using Feature="Shared/DuplicateButton" />
+  <Buttons>
+    <Button xsi:type="FormButton" Ident="InjectedDuplicateButton" TitleResourceKey="InjectedDuplicateButton_Package" IsSave="false" IsVisible="true" />
+  </Buttons>
+</Form>

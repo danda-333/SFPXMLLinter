@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="PerfPrimitiveForm">
+  <Controls>
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl1" TitleResourceKey="PerfPrimitiveControl1_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl2" TitleResourceKey="PerfPrimitiveControl2_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl3" TitleResourceKey="PerfPrimitiveControl3_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl4" TitleResourceKey="PerfPrimitiveControl4_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl5" TitleResourceKey="PerfPrimitiveControl5_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl6" TitleResourceKey="PerfPrimitiveControl6_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl7" TitleResourceKey="PerfPrimitiveControl7_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl8" TitleResourceKey="PerfPrimitiveControl8_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl9" TitleResourceKey="PerfPrimitiveControl9_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl10" TitleResourceKey="PerfPrimitiveControl10_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl11" TitleResourceKey="PerfPrimitiveControl11_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl12" TitleResourceKey="PerfPrimitiveControl12_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl13" TitleResourceKey="PerfPrimitiveControl13_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl14" TitleResourceKey="PerfPrimitiveControl14_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl15" TitleResourceKey="PerfPrimitiveControl15_Title" />
+    <UsePrimitive Name="Common/Perf/PerfTextBox" Ident="PerfPrimitiveControl16" TitleResourceKey="PerfPrimitiveControl16_Title" />
+  </Controls>
+  <Sections>
+    <UsePrimitive Name="Common/Perf/PerfDialog" DialogIdent="PerfDialog1">
+      <Slot Name="Buttons">
+        <Button xsi:type="FormButton" Ident="PerfDialog1OkButton" TitleResourceKey="PerfDialog1OkButton_Title" />
+      </Slot>
+    </UsePrimitive>
+    <UsePrimitive Name="Common/Perf/PerfDialog" DialogIdent="PerfDialog2">
+      <Slot Name="Buttons">
+        <Button xsi:type="FormButton" Ident="PerfDialog2OkButton" TitleResourceKey="PerfDialog2OkButton_Title" />
+      </Slot>
+    </UsePrimitive>
+    <UsePrimitive Name="Common/Perf/PerfDialog" DialogIdent="PerfDialog3">
+      <Slot Name="Buttons">
+        <Button xsi:type="FormButton" Ident="PerfDialog3OkButton" TitleResourceKey="PerfDialog3OkButton_Title" />
+      </Slot>
+    </UsePrimitive>
+    <UsePrimitive Name="Common/Perf/PerfDialog" DialogIdent="PerfDialog4">
+      <Slot Name="Buttons">
+        <Button xsi:type="FormButton" Ident="PerfDialog4OkButton" TitleResourceKey="PerfDialog4OkButton_Title" />
+      </Slot>
+    </UsePrimitive>
+    <UsePrimitive Name="Common/Perf/PerfDialog" DialogIdent="PerfDialog5">
+      <Slot Name="Buttons">
+        <Button xsi:type="FormButton" Ident="PerfDialog5OkButton" TitleResourceKey="PerfDialog5OkButton_Title" />
+      </Slot>
+    </UsePrimitive>
+  </Sections>
+</Form>

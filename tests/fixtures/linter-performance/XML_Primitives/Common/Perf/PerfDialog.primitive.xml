@@ -1,0 +1,8 @@
+<Primitive>
+  <Param Name="DialogIdent" Required="true" />
+  <Template Name="Default">
+    <Section xsi:type="ConfirmFormDialogSection" Ident="{{DialogIdent}}">
+      {{Slot:Buttons}}
+    </Section>
+  </Template>
+</Primitive>

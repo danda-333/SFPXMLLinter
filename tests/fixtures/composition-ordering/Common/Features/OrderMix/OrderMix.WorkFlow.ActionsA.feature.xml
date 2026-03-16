@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature>
+  <Contribution Root="WorkFlow" Name="ActionsA" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+    <ActionShareCode Ident="OrderActionA" />
+  </Contribution>
+</Feature>

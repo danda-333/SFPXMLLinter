@@ -16,7 +16,7 @@ type VscodeMockState = {
 const state: VscodeMockState = {
   workspaceRoot,
   config: {
-    workspaceRoots: ["XML", "XML_Templates", "XML_Components"],
+    workspaceRoots: ["XML", "XML_Templates", "XML_Components", "XML_Primitives"],
     resourcesRoots: ["Resources"],
     hoverDocsFiles: [],
     rules: {},
@@ -294,6 +294,7 @@ function collectAllLinterUris(): Uri[] {
   return [
     ...collectXmlFiles(path.join(workspaceRoot, "XML_Templates")),
     ...collectXmlFiles(path.join(workspaceRoot, "XML_Components")),
+    ...collectXmlFiles(path.join(workspaceRoot, "XML_Primitives")),
     ...collectXmlFiles(path.join(workspaceRoot, "XML"))
   ];
 }

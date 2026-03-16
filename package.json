@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.0.16",
+  "version": "0.1.6",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -27,8 +27,17 @@
     "onStartupFinished",
     "onCommand:sfpXmlLinter.buildXmlTemplates",
     "onCommand:sfpXmlLinter.buildXmlTemplatesAll",
+    "onCommand:sfpXmlLinter.createDocumentGeneratorTemplate",
+    "onCommand:sfpXmlLinter.createSnippetGeneratorTemplate",
     "onCommand:sfpXmlLinter.showBuildQueueLog",
     "onCommand:sfpXmlLinter.showIndexLog",
+    "onCommand:sfpXmlLinter.showCompositionLog",
+    "onCommand:sfpXmlLinter.generateFeatureManifestBootstrap",
+    "onCommand:sfpXmlLinter.refreshCompositionView",
+    "onCommand:sfpXmlLinter.compositionOpenSource",
+    "onCommand:sfpXmlLinter.compositionOpenSourceBeside",
+    "onCommand:sfpXmlLinter.compositionOpenSourceSidePreview",
+    "onCommand:sfpXmlLinter.compositionShowUsages",
     "onCommand:sfpXmlLinter.rebuildIndex",
     "onCommand:sfpXmlLinter.revalidateWorkspace",
     "onCommand:sfpXmlLinter.revalidateProject",
@@ -87,12 +96,52 @@
         "title": "SFP XML Linter: Build XML Templates (All)"
       },
       {
+        "command": "sfpXmlLinter.createDocumentGeneratorTemplate",
+        "title": "SFP XML Linter: Create Generator Template (Document)"
+      },
+      {
+        "command": "sfpXmlLinter.createSnippetGeneratorTemplate",
+        "title": "SFP XML Linter: Create Generator Template (Snippet)"
+      },
+      {
         "command": "sfpXmlLinter.showBuildQueueLog",
         "title": "SFP XML Linter: Show Build Queue Log"
       },
       {
         "command": "sfpXmlLinter.showIndexLog",
         "title": "SFP XML Linter: Show Index Log"
+      },
+      {
+        "command": "sfpXmlLinter.showCompositionLog",
+        "title": "SFP XML Linter: Show Composition Log"
+      },
+      {
+        "command": "sfpXmlLinter.generateFeatureManifestBootstrap",
+        "title": "SFP XML Linter: Generate Feature Manifest Bootstrap"
+      },
+      {
+        "command": "sfpXmlLinter.refreshCompositionView",
+        "title": "SFP XML Linter: Refresh Composition View"
+      },
+      {
+        "command": "sfpXmlLinter.compositionOpenSource",
+        "title": "SFP XML Linter: Composition Open Source",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "sfpXmlLinter.compositionOpenSourceBeside",
+        "title": "SFP XML Linter: Composition Open Source To Side",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "sfpXmlLinter.compositionOpenSourceSidePreview",
+        "title": "SFP XML Linter: Composition Open Source Side Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "sfpXmlLinter.compositionShowUsages",
+        "title": "SFP XML Linter: Composition Show Usages",
+        "icon": "$(references)"
       },
       {
         "command": "sfpXmlLinter.workspaceDiagnosticsReport",
@@ -123,6 +172,40 @@
         "title": "SFP XML Linter: Format Selection (Tolerant)"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "sfpXmlLinter.compositionView",
+          "name": "SFP Composition"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "sfpXmlLinter.refreshCompositionView",
+          "when": "view == sfpXmlLinter.compositionView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "sfpXmlLinter.compositionOpenSource",
+          "when": "view == sfpXmlLinter.compositionView && viewItem =~ /^composition(Feature|FeaturePart|Contribution|Using|Symbol)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "sfpXmlLinter.compositionOpenSourceSidePreview",
+          "when": "view == sfpXmlLinter.compositionView && viewItem =~ /^composition(Feature|FeaturePart|Contribution|Using|Symbol)$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "sfpXmlLinter.compositionShowUsages",
+          "when": "view == sfpXmlLinter.compositionView && viewItem =~ /^composition(Feature|FeaturePart|Contribution|Using)$/",
+          "group": "inline@3"
+        }
+      ]
+    },
     "configuration": {
       "title": "SFP XML Linter",
       "properties": {
@@ -131,12 +214,13 @@
           "default": [
             "XML",
             "XML_Templates",
-            "XML_Components"
+            "XML_Components",
+            "XML_Primitives"
           ],
           "items": {
             "type": "string"
           },
-          "description": "Folders to scan for XML symbols and validations."
+          "description": "Folders to scan for XML symbols and validations (including template components/primitives)."
         },
         "sfpXmlLinter.resourcesRoots": {
           "type": "array",
@@ -176,17 +260,40 @@
             "duplicate-control-ident": "warning",
             "duplicate-button-ident": "warning",
             "duplicate-section-ident": "warning",
-            "unknown-using-component": "error",
-            "unknown-using-section": "warning",
+            "unknown-using-feature": "error",
+            "unknown-using-contribution": "warning",
+            "contribution-mismatch": "warning",
+            "missing-using-param": "warning",
+            "unused-using": "information",
+            "partial-using": "information",
+            "unknown-primitive": "warning",
+            "primitive-missing-slot": "warning",
+            "primitive-missing-param": "warning",
+            "primitive-cycle": "warning",
+            "workflow-redundant-feature-using": "warning",
+            "dataview-redundant-feature-using": "warning",
+            "feature-inheritance-override": "information",
+            "suppression-conflict": "warning",
+            "suppression-noop": "information",
             "typo-maxlenght-attribute": "warning",
             "sql-convention-equals-spacing": "warning",
             "ident-convention-button-postfix": "warning",
             "ident-convention-group-button-postfix": "warning",
             "ident-convention-workflow-postfix": "warning",
             "ident-convention-view-postfix": "warning",
-            "ident-convention-lookup-control": "warning"
+            "ident-convention-lookup-control": "warning",
+            "unknown-feature-requirement": "warning",
+            "missing-feature-dependency": "warning",
+            "missing-feature-expectation": "warning",
+            "missing-feature-expected-xpath": "warning",
+            "duplicate-feature-provider": "warning",
+            "ordering-conflict": "warning",
+            "orphan-feature-part": "warning",
+            "incomplete-feature": "warning",
+            "unused-feature-contribution": "information",
+            "partial-feature-contribution": "information"
           },
-          "description": "Per-rule severity mapping. Allowed values: off, warning, error."
+          "description": "Per-rule severity mapping. Allowed values: off, information, warning, error."
         },
         "sfpXmlLinter.incompleteMode": {
           "type": "boolean",
@@ -202,7 +309,7 @@
         "sfpXmlLinter.templateBuilder.autoBuildOnSave": {
           "type": "boolean",
           "default": true,
-          "description": "When enabled, saving XML_Templates/XML_Components files automatically triggers BuildXmlTemplates."
+          "description": "When enabled, saving XML_Templates/XML_Components/XML_Primitives files automatically triggers BuildXmlTemplates."
         },
         "sfpXmlLinter.templateBuilder.componentSaveBuildScope": {
           "type": "string",
@@ -211,7 +318,69 @@
             "full"
           ],
           "default": "dependents",
-          "description": "On XML_Components save, build only dependent templates when possible (dependents) or rebuild all templates (full)."
+          "description": "On XML_Components/XML_Primitives save, build only dependent templates when possible (dependents) or rebuild all templates (full)."
+        },
+        "sfpXmlLinter.templateBuilder.mode": {
+          "type": "string",
+          "enum": [
+            "fast",
+            "debug",
+            "release"
+          ],
+          "default": "debug",
+          "description": "Template builder logging/detail mode. fast minimizes overhead, debug prints detailed composition diagnostics, release keeps only high-level output."
+        },
+        "sfpXmlLinter.templateBuilder.postBuildFormat": {
+          "type": "boolean",
+          "default": true,
+          "description": "When enabled, final built XML is passed through internal tolerant formatter before write."
+        },
+        "sfpXmlLinter.templateBuilder.provenanceMode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "fileComment"
+          ],
+          "default": "off",
+          "description": "Adds optional provenance marker to final built XML output."
+        },
+        "sfpXmlLinter.templateBuilder.generators.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable build-time XML generators pipeline (deterministic transform stage after rendering)."
+        },
+        "sfpXmlLinter.templateBuilder.generators.timeoutMs": {
+          "type": "number",
+          "default": 150,
+          "minimum": 50,
+          "description": "Soft timeout budget for template generators per file in milliseconds."
+        },
+        "sfpXmlLinter.templateBuilder.generators.enableUserScripts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable user-defined JS/TS generators loaded from workspace roots."
+        },
+        "sfpXmlLinter.templateBuilder.generators.userScriptsRoots": {
+          "type": "array",
+          "default": [
+            "XML_Generators"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Workspace-relative folders scanned for user-defined template generators (*.js, *.cjs, *.mjs, *.ts)."
+        },
+        "sfpXmlLinter.composition.openMode": {
+          "type": "string",
+          "enum": [
+            "peek",
+            "side",
+            "sidePreview",
+            "newTab",
+            "current"
+          ],
+          "default": "newTab",
+          "description": "How Composition Open Source navigates: peek inline preview, open to side editor, open as new tab, or reuse current editor tab."
         }
       }
     },
@@ -257,22 +426,26 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test:formatter": "npm run compile && node out/tests/formatter/runFormatterFixtures.js && node out/tests/formatter/runSelectionFormatterTests.js",
-    "test:linter": "npm run compile && node out/tests/linter/runLinterFixtures.js",
-    "test:linter:perf": "npm run compile && node out/tests/linter/runLinterPerformance.js",
-    "test:templates:core": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js",
-    "test:templates:service": "npm run compile && node out/tests/template/runBuildTemplateServiceTests.js",
-    "test:templates": "npm run compile && node out/tests/template/runBuildTemplateCoreTests.js && node out/tests/template/runBuildTemplateServiceTests.js && node out/tests/template/runBuildTemplateFixtures.js",
+    "test:formatter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runFormatterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runSelectionFormatterTests.js",
+    "test:linter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runIgnoreCodeActionProviderTests.js",
+    "test:providers": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/providers/runCompletionProviderTests.js",
+    "test:all": "npm run test:providers && npm run test:linter && npm run test:composition && npm run test:templates",
+    "test:linter:perf": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterPerformance.js",
+    "test:composition": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionWorkspaceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionDiagnosticsTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionBootstrapTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runDocumentCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionOrderingFixtureTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runPrimitiveQuickFixCommandTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runTreeQuickFixPayloadTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runWorkspaceIndexerUsageTests.js",
+    "test:templates:core": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateCoreTests.js && node -r ./out/tests/testConsoleColors.js out/tests/template/runTemplateGeneratorsTests.js",
+    "test:templates:perf": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runTemplateGeneratorsPerformanceCheckpoint.js",
+    "test:templates:service": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateServiceTests.js",
+    "test:templates": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateCoreTests.js && node -r ./out/tests/testConsoleColors.js out/tests/template/runTemplateGeneratorsTests.js && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplatePrimitiveTests.js && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateServiceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateFixtures.js",
     "schemas:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/GenerateSchemaCatalog.ps1",
     "package:vsix": "npx @vscode/vsce package"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "@types/vscode": "^1.90.0",
-    "typescript": "^5.5.4"
+    "@types/vscode": "^1.90.0"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.8.11",
-    "xpath": "^0.0.34"
+    "xpath": "^0.0.34",
+    "typescript": "^5.5.4"
   }
 }

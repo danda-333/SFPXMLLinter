@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Contribution Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+    <ActionShareCode Ident="ChainedActionShareCode" />
+  </Contribution>
+
+  <Contribution Root="WorkFlow" Name="ButtonShareCodes" TargetXPath="//WorkFlow/ButtonShareCodes" Insert="append">
+    <ButtonShareCode Ident="ChainedButtonShareCode">
+      <Buttons>
+        <Button Ident="LocalButton">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ChainedActionShareCode" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode>
+  </Contribution>
+</Feature>

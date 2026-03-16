@@ -4,12 +4,13 @@ import { ParsedDocumentFacts } from "../indexer/xmlFacts";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { collectTemplateAvailableControlIdents } from "./templateControls";
 import { getSystemMetadata, SystemMetadata } from "../config/systemMetadata";
+import { DocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
 
 export function collectResolvableControlIdents(
   document: vscode.TextDocument,
   facts: ParsedDocumentFacts,
   index: WorkspaceIndex,
-  options?: { metadata?: SystemMetadata; maskedText?: string }
+  options?: { metadata?: SystemMetadata; maskedText?: string; compositionModel?: DocumentCompositionModel }
 ): Set<string> {
   const metadata = options?.metadata ?? getSystemMetadata();
   const root = facts.rootTag?.toLowerCase();
@@ -29,14 +30,22 @@ export function collectResolvableControlIdents(
       }
     }
 
-    for (const usingRef of facts.usingReferences) {
-      const component = resolveComponentByKey(index, usingRef.componentKey);
-      if (!component) {
-        continue;
+    if (options?.compositionModel) {
+      for (const contributionRef of collectSelectedDocumentContributions(options.compositionModel)) {
+        for (const ident of contributionRef.contribution.formControlIdents) {
+          out.add(ident);
+        }
       }
+    } else {
+      for (const usingRef of facts.usingReferences) {
+        const component = resolveComponentByKey(index, usingRef.componentKey);
+        if (!component) {
+          continue;
+        }
 
-      for (const ident of component.formControlDefinitions.keys()) {
-        out.add(ident);
+        for (const ident of component.formControlDefinitions.keys()) {
+          out.add(ident);
+        }
       }
     }
 

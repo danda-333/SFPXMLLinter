@@ -1,0 +1,5 @@
+<Form Ident="Chyba36UnknownPrimitive">
+  <Controls>
+    <UsePrimitive Name="Common/Dialogs/DoesNotExist" />
+  </Controls>
+</Form>

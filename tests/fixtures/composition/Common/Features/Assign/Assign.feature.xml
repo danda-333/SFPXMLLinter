@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Manifest Description="Entrypoint composition file for Assign feature." Tags="itsm, assign">
+    <ContributionContracts>
+      <ContributionContract For="AssignEntrypoint" Kind="other" Summary="Feature entrypoint used only for composition discovery." />
+    </ContributionContracts>
+  </Manifest>
+</Feature>

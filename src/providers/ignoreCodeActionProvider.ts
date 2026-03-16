@@ -1,4 +1,5 @@
-﻿import * as vscode from "vscode";
+import * as vscode from "vscode";
+import * as fs from "node:fs";
 
 export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider {
   public static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
@@ -43,6 +44,51 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
             }
 
             actions.push(this.createSqlInlineIgnoreAction(document, diagnostic, code));
+          } else if (code === "suppression-conflict") {
+            const removeUsing = this.createRemoveUsingLineAction(document, diagnostic, "Remove conflicting Using");
+            if (removeUsing) {
+              actions.push(removeUsing);
+            }
+            const removeSuppression = this.createRemoveSuppressionAttributeAction(document, diagnostic);
+            if (removeSuppression) {
+              actions.push(removeSuppression);
+            }
+          } else if (code === "suppression-noop") {
+            const removeSuppression = this.createRemoveSuppressionAttributeAction(document, diagnostic);
+            if (removeSuppression) {
+              actions.push(removeSuppression);
+            }
+            const removeUsing = this.createRemoveUsingLineAction(document, diagnostic, "Remove no-op Using");
+            if (removeUsing) {
+              actions.push(removeUsing);
+            }
+          } else if (code === "ordering-conflict") {
+            actions.push(this.createOpenCompositionLogAction(diagnostic));
+            actions.push(this.createRevalidateWorkspaceAction(diagnostic));
+          } else if (code === "unknown-primitive") {
+            const createPrimitiveAction = this.createCreatePrimitiveFileAction(document, diagnostic);
+            if (createPrimitiveAction) {
+              actions.push(createPrimitiveAction);
+            }
+            actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
+          } else if (code === "primitive-missing-slot") {
+            const addSlotAction = this.createAddMissingPrimitiveSlotAction(document, diagnostic);
+            if (addSlotAction) {
+              actions.push(addSlotAction);
+            }
+            actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
+          } else if (code === "primitive-missing-param") {
+            const addParamAction = this.createAddMissingPrimitiveParamAction(document, diagnostic);
+            if (addParamAction) {
+              actions.push(addParamAction);
+            }
+            actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
+          } else if (code === "primitive-cycle") {
+            const removeUsePrimitiveAction = this.createRemoveUsePrimitiveAction(document, diagnostic);
+            if (removeUsePrimitiveAction) {
+              actions.push(removeUsePrimitiveAction);
+            }
+            actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
           } else {
             actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
           }
@@ -180,6 +226,238 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     action.edit = edit;
     return action;
   }
+
+  private createOpenCompositionLogAction(diagnostic: vscode.Diagnostic): vscode.CodeAction {
+    const action = new vscode.CodeAction("Show composition log (ordering details)", vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.command = {
+      command: "sfpXmlLinter.showCompositionLog",
+      title: "Show composition log"
+    };
+    return action;
+  }
+
+  private createRevalidateWorkspaceAction(diagnostic: vscode.Diagnostic): vscode.CodeAction {
+    const action = new vscode.CodeAction("Revalidate workspace", vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.command = {
+      command: "sfpXmlLinter.revalidateWorkspace",
+      title: "Revalidate workspace"
+    };
+    return action;
+  }
+
+  private createCreatePrimitiveFileAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const primitiveKey = extractPrimitiveKeyFromMessage(diagnostic.message);
+    if (!primitiveKey) {
+      return undefined;
+    }
+
+    const primitiveUri = resolvePrimitiveTargetUri(document, primitiveKey);
+    if (!primitiveUri) {
+      return undefined;
+    }
+
+    if (fs.existsSync(primitiveUri.fsPath)) {
+      const action = new vscode.CodeAction("Open primitive source", vscode.CodeActionKind.QuickFix);
+      action.diagnostics = [diagnostic];
+      action.command = {
+        command: "vscode.open",
+        title: "Open primitive source",
+        arguments: [primitiveUri]
+      };
+      return action;
+    }
+
+    const action = new vscode.CodeAction(`Create primitive '${primitiveKey}'`, vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    const edit = new vscode.WorkspaceEdit();
+    edit.createFile(primitiveUri, { ignoreIfExists: true, overwrite: false });
+    edit.insert(primitiveUri, new vscode.Position(0, 0), buildPrimitiveTemplateSkeleton(primitiveKey));
+    action.edit = edit;
+    action.command = {
+      command: "vscode.open",
+      title: "Open created primitive",
+      arguments: [primitiveUri]
+    };
+    return action;
+  }
+
+  private createAddMissingPrimitiveSlotAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const missingSlot = extractPrimitiveSlotFromMessage(diagnostic.message);
+    if (!missingSlot) {
+      return undefined;
+    }
+
+    const currentNodeText = document.getText(diagnostic.range);
+    if (!/<\s*UsePrimitive\b/i.test(currentNodeText)) {
+      return undefined;
+    }
+
+    const replacement = addMissingPrimitiveSlotToNode(currentNodeText, missingSlot);
+    if (!replacement || replacement === currentNodeText) {
+      return undefined;
+    }
+
+    const action = new vscode.CodeAction(`Add missing Slot '${missingSlot}'`, vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.isPreferred = true;
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, diagnostic.range, replacement);
+    action.edit = edit;
+    return action;
+  }
+
+  private createAddMissingPrimitiveParamAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const missingParam = extractPrimitiveParamFromMessage(diagnostic.message);
+    if (!missingParam) {
+      return undefined;
+    }
+
+    const currentNodeText = document.getText(diagnostic.range);
+    if (!/<\s*UsePrimitive\b/i.test(currentNodeText)) {
+      return undefined;
+    }
+
+    const replacement = addMissingPrimitiveParamToNode(currentNodeText, missingParam);
+    if (!replacement || replacement === currentNodeText) {
+      return undefined;
+    }
+
+    const action = new vscode.CodeAction(`Add missing parameter '${missingParam}'`, vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.isPreferred = true;
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, diagnostic.range, replacement);
+    action.edit = edit;
+    return action;
+  }
+
+  private createRemoveUsePrimitiveAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const nodeText = document.getText(diagnostic.range);
+    if (!/<\s*UsePrimitive\b/i.test(nodeText)) {
+      return undefined;
+    }
+
+    const action = new vscode.CodeAction("Remove cyclic UsePrimitive", vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, diagnostic.range, "");
+    action.edit = edit;
+    return action;
+  }
+
+  private createRemoveUsingLineAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic,
+    title: string
+  ): vscode.CodeAction | undefined {
+    const line = diagnostic.range.start.line;
+    if (line < 0 || line >= document.lineCount) {
+      return undefined;
+    }
+
+    const lineText = document.lineAt(line).text;
+    if (!/<\s*Using\b/i.test(lineText)) {
+      return undefined;
+    }
+
+    const start = new vscode.Position(line, 0);
+    const end = line + 1 < document.lineCount
+      ? new vscode.Position(line + 1, 0)
+      : new vscode.Position(line, lineText.length);
+    const replaceRange = new vscode.Range(start, end);
+
+    const action = new vscode.CodeAction(title, vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, replaceRange, "");
+    action.edit = edit;
+    return action;
+  }
+
+  private createRemoveSuppressionAttributeAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const directLine = this.tryBuildSuppressionAttributeEdit(document, diagnostic.range.start.line);
+    if (directLine) {
+      const action = new vscode.CodeAction("Remove suppression attribute", vscode.CodeActionKind.QuickFix);
+      action.diagnostics = [diagnostic];
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, directLine.range, directLine.replacement);
+      action.edit = edit;
+      return action;
+    }
+
+    const featureFromMessage = extractSuppressionFeature(diagnostic.message);
+    if (!featureFromMessage) {
+      return undefined;
+    }
+
+    for (let line = 0; line < document.lineCount; line++) {
+      const candidate = this.tryBuildSuppressionAttributeEdit(document, line, featureFromMessage);
+      if (!candidate) {
+        continue;
+      }
+
+      const action = new vscode.CodeAction("Remove suppression attribute", vscode.CodeActionKind.QuickFix);
+      action.diagnostics = [diagnostic];
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, candidate.range, candidate.replacement);
+      action.edit = edit;
+      return action;
+    }
+
+    return undefined;
+  }
+
+  private tryBuildSuppressionAttributeEdit(
+    document: vscode.TextDocument,
+    line: number,
+    requiredFeature?: string
+  ): { range: vscode.Range; replacement: string } | undefined {
+    if (line < 0 || line >= document.lineCount) {
+      return undefined;
+    }
+
+    const lineText = document.lineAt(line).text;
+    if (!/<\s*Using\b/i.test(lineText)) {
+      return undefined;
+    }
+
+    if (requiredFeature) {
+      const featureAttr = /\b(?:Feature|Component|Name)\s*=\s*("([^"]*)"|'([^']*)')/i.exec(lineText);
+      const featureValue = (featureAttr?.[2] ?? featureAttr?.[3] ?? "").trim();
+      if (featureValue !== requiredFeature) {
+        return undefined;
+      }
+    }
+
+    const updated = lineText
+      .replace(/\s+\bSuppressInheritance\s*=\s*("([^"]*)"|'([^']*)')/gi, "")
+      .replace(/\s+\bInherit\s*=\s*("([^"]*)"|'([^']*)')/gi, "");
+    if (updated === lineText) {
+      return undefined;
+    }
+
+    return {
+      range: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, lineText.length)),
+      replacement: updated
+    };
+  }
 }
 
 function whitespacePrefix(text: string): string {
@@ -196,6 +474,25 @@ function extractDidYouMeanSuggestion(message: string): string | undefined {
   const doubleQuoteMatch = /Did you mean "([^"]+)"/i.exec(message);
   if (doubleQuoteMatch?.[1]) {
     return doubleQuoteMatch[1];
+  }
+
+  return undefined;
+}
+
+function extractSuppressionFeature(message: string): string | undefined {
+  const featureConflict = /Using feature '([^']+)' conflicts/i.exec(message);
+  if (featureConflict?.[1]) {
+    return featureConflict[1];
+  }
+
+  const suppressionMessage = /Suppression for feature '([^']+)'/i.exec(message);
+  if (suppressionMessage?.[1]) {
+    return suppressionMessage[1];
+  }
+
+  const sectionMessage = /Suppression for '([^'#]+)#([^']+)'/i.exec(message);
+  if (sectionMessage?.[1]) {
+    return sectionMessage[1];
   }
 
   return undefined;
@@ -218,3 +515,94 @@ function getFileIgnoreInsertPosition(document: vscode.TextDocument): vscode.Posi
 
   return new vscode.Position(0, 0);
 }
+
+function extractPrimitiveKeyFromMessage(message: string): string | undefined {
+  const match = /Primitive '([^']+)'/i.exec(message);
+  const value = (match?.[1] ?? "").trim();
+  return value.length > 0 ? value : undefined;
+}
+
+function extractPrimitiveSlotFromMessage(message: string): string | undefined {
+  const match = /missing required Slot '([^']+)'/i.exec(message);
+  const value = (match?.[1] ?? "").trim();
+  return value.length > 0 ? value : undefined;
+}
+
+function extractPrimitiveParamFromMessage(message: string): string | undefined {
+  const match = /missing required parameter '([^']+)'/i.exec(message);
+  const value = (match?.[1] ?? "").trim();
+  return value.length > 0 ? value : undefined;
+}
+
+function resolvePrimitiveTargetUri(document: vscode.TextDocument, primitiveKey: string): vscode.Uri | undefined {
+  const folder = vscode.workspace.getWorkspaceFolder(document.uri) ?? vscode.workspace.workspaceFolders?.[0];
+  if (!folder) {
+    return undefined;
+  }
+
+  const normalized = primitiveKey
+    .replace(/\\/g, "/")
+    .replace(/^\/*/, "")
+    .replace(/(?:\.primitive)?\.xml$/i, "");
+  const parts = normalized.split("/").filter((part) => part.length > 0);
+  if (parts.length === 0) {
+    return undefined;
+  }
+
+  const fileName = `${parts[parts.length - 1]}.primitive.xml`;
+  const dirParts = parts.slice(0, -1);
+  return vscode.Uri.joinPath(folder.uri, "XML_Primitives", ...dirParts, fileName);
+}
+
+function buildPrimitiveTemplateSkeleton(primitiveKey: string): string {
+  const normalizedKey = primitiveKey.replace(/\\/g, "/").replace(/(?:\.primitive)?\.xml$/i, "");
+  const primitiveName = normalizedKey.split("/").filter((part) => part.length > 0).pop() ?? "NewPrimitive";
+  return [
+    "<Primitive>",
+    "  <Template Name=\"Default\">",
+    `    <!-- TODO: implement primitive ${primitiveName} -->`,
+    "  </Template>",
+    "</Primitive>",
+    ""
+  ].join("\n");
+}
+
+function addMissingPrimitiveSlotToNode(nodeText: string, slotName: string): string | undefined {
+  const selfClosing = /<\s*UsePrimitive\b([\s\S]*?)\/\s*>/i.exec(nodeText);
+  if (selfClosing) {
+    const attrs = selfClosing[1] ?? "";
+    return `<UsePrimitive${attrs}>\n  <Slot Name="${slotName}"></Slot>\n</UsePrimitive>`;
+  }
+
+  const closingMatch = /<\/\s*UsePrimitive\s*>\s*$/i.exec(nodeText);
+  if (!closingMatch) {
+    return undefined;
+  }
+
+  const insertion = `\n  <Slot Name="${slotName}"></Slot>\n`;
+  const closingStart = closingMatch.index ?? nodeText.length;
+  return `${nodeText.slice(0, closingStart)}${insertion}${nodeText.slice(closingStart)}`;
+}
+
+function addMissingPrimitiveParamToNode(nodeText: string, paramName: string): string | undefined {
+  const openTagMatch = /<\s*UsePrimitive\b([^>]*)>/i.exec(nodeText);
+  if (!openTagMatch) {
+    return undefined;
+  }
+  const attrs = openTagMatch[1] ?? "";
+  if (new RegExp(`\\b${escapeRegex(paramName)}\\s*=`, "i").test(attrs)) {
+    return undefined;
+  }
+
+  const openTagStart = openTagMatch.index ?? 0;
+  const openTagText = openTagMatch[0];
+  const insertAt = openTagStart + openTagText.length - 1;
+  return `${nodeText.slice(0, insertAt)} ${paramName}=""${nodeText.slice(insertAt)}`;
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+
+

@@ -1,9 +1,11 @@
 import * as vscode from "vscode";
-import { WorkspaceIndex, IndexedComponent, IndexedForm } from "./types";
+import { WorkspaceIndex, IndexedComponent, IndexedForm, IndexedComponentContributionSummary } from "./types";
 import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
 import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
 import { maskXmlComments } from "../utils/xmlComments";
+import { populateUsingInsertTraceFromText } from "../composition/usingImpact";
+import { collectEffectiveUsingRefs } from "../utils/effectiveUsings";
 
 interface ParsedEntry {
   uri: vscode.Uri;
@@ -59,9 +61,9 @@ export class WorkspaceIndexer {
     buttonReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
     sectionReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
     componentReferenceLocationsByKey: new Map<string, vscode.Location[]>(),
-    componentSectionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
+    componentContributionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
     componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
-    componentSectionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
+    componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),
     formsReady: false,
@@ -114,6 +116,17 @@ export class WorkspaceIndexer {
       mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
     }
 
+    for (const includeRef of facts.includeReferences) {
+      const component = resolveComponentByKey(this.index, includeRef.componentKey);
+      if (!component) {
+        continue;
+      }
+
+      mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
+      mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
+      mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
+    }
+
     const form: IndexedForm = {
       ident: facts.formIdent,
       uri: document.uri,
@@ -126,6 +139,7 @@ export class WorkspaceIndexer {
       sectionDefinitions
     };
 
+    populateUsingInsertTraceFromText(facts, maskedText, this.index);
     this.index.formsByIdent.set(facts.formIdent, form);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
@@ -141,7 +155,7 @@ export class WorkspaceIndexer {
     const maskedText = maskXmlComments(document.getText());
     const facts = parseDocumentFactsFromMaskedText(maskedText);
     const root = (facts.rootTag ?? "").toLowerCase();
-    if (root !== "component") {
+    if (root !== "component" && root !== "feature") {
       return { updated: false, reason: "not-component" };
     }
 
@@ -152,24 +166,28 @@ export class WorkspaceIndexer {
       removeBaseNameVariant(this.index.componentKeysByBaseName, this.getBaseNameFromKey(oldKey), oldKey);
     }
 
-    const sectionDefinitions = this.collectAttributeDefinitions(document, /<Section\b([^>]*)>/gi, "Name", maskedText);
+    const contributionDefinitions = this.collectAttributeDefinitions(document, /<(?:Contribution|Section)\b([^>]*)>/gi, "Name", maskedText);
     const formInjected = this.collectFormInjectedDefinitions(document, maskedText);
     const workflowInjected = this.collectWorkflowInjectedDefinitions(document, maskedText);
+    const contributionSummaries = this.collectComponentContributionSummaries(maskedText);
 
     const component: IndexedComponent = {
       key,
       uri: document.uri,
-      sections: this.readComponentSections(maskedText),
+      contributions: this.readComponentContributions(maskedText),
       componentLocation: new vscode.Location(document.uri, new vscode.Position(0, 0)),
-      sectionDefinitions,
+      contributionDefinitions,
+      contributionSummaries,
       formControlDefinitions: formInjected.controls,
       formButtonDefinitions: formInjected.buttons,
       formSectionDefinitions: formInjected.sections,
+      workflowActionShareCodeDefinitions: workflowInjected.actionShareCodes,
       workflowControlShareCodeDefinitions: workflowInjected.controlShareCodes,
       workflowButtonShareCodeDefinitions: workflowInjected.buttonShareCodes,
       workflowButtonShareCodeButtonIdents: workflowInjected.buttonShareCodeButtonIdents
     };
 
+    populateUsingInsertTraceFromText(facts, maskedText, this.index);
     this.index.componentsByKey.set(key, component);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
@@ -221,7 +239,7 @@ export class WorkspaceIndexer {
           hasIgnoreDirectiveByUri.set(uri.toString(), containsIgnoreDirective(text));
           if (scope === "bootstrap") {
             const root = (facts.rootTag ?? "").toLowerCase();
-            if (root !== "component" && root !== "form") {
+            if (root !== "component" && root !== "feature" && root !== "form") {
               return undefined;
             }
           }
@@ -271,11 +289,11 @@ export class WorkspaceIndexer {
     const buttonReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
     const sectionReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
     const componentReferenceLocationsByKey = new Map<string, vscode.Location[]>();
-    const componentSectionReferenceLocationsByKey = new Map<string, Map<string, vscode.Location[]>>();
+    const componentContributionReferenceLocationsByKey = new Map<string, Map<string, vscode.Location[]>>();
     const componentUsageFormIdentsByKey = new Map<string, Set<string>>();
-    const componentSectionUsageFormIdentsByKey = new Map<string, Map<string, Set<string>>>();
+    const componentContributionUsageFormIdentsByKey = new Map<string, Map<string, Set<string>>>();
 
-    const componentEntries = parsedEntries.filter((entry) => entry.root === "component");
+    const componentEntries = parsedEntries.filter((entry) => entry.root === "component" || entry.root === "feature");
     const componentsStart = Date.now();
     onProgress?.({
       phase: "components-start",
@@ -284,26 +302,29 @@ export class WorkspaceIndexer {
     });
     for (let i = 0; i < componentEntries.length; i++) {
       const entry = componentEntries[i];
-      if (entry.root !== "component") {
+      if (entry.root !== "component" && entry.root !== "feature") {
         continue;
       }
 
       const resolver = createRawResolver(entry.uri, entry.maskedText);
       const key = this.getComponentKey(entry.uri);
-      const sectionDefinitions = this.collectAttributeDefinitions(resolver, /<Section\b([^>]*)>/gi, "Name", entry.maskedText);
+      const contributionDefinitions = this.collectAttributeDefinitions(resolver, /<(?:Contribution|Section)\b([^>]*)>/gi, "Name", entry.maskedText);
       const formInjected = this.collectFormInjectedDefinitions(resolver, entry.maskedText);
       const workflowInjected = this.collectWorkflowInjectedDefinitions(resolver, entry.maskedText);
+      const contributionSummaries = this.collectComponentContributionSummaries(entry.maskedText);
 
       const component: IndexedComponent = {
         key,
         uri: entry.uri,
-        sections: this.readComponentSections(entry.maskedText),
+        contributions: this.readComponentContributions(entry.maskedText),
         componentLocation: new vscode.Location(entry.uri, new vscode.Position(0, 0)),
-        sectionDefinitions,
+        contributionDefinitions,
+        contributionSummaries,
         formControlDefinitions: formInjected.controls,
         formButtonDefinitions: formInjected.buttons,
         formSectionDefinitions: formInjected.sections
         ,
+        workflowActionShareCodeDefinitions: workflowInjected.actionShareCodes,
         workflowControlShareCodeDefinitions: workflowInjected.controlShareCodes,
         workflowButtonShareCodeDefinitions: workflowInjected.buttonShareCodes,
         workflowButtonShareCodeButtonIdents: workflowInjected.buttonShareCodeButtonIdents
@@ -342,15 +363,19 @@ export class WorkspaceIndexer {
       buttonReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
       sectionReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
       componentReferenceLocationsByKey: new Map<string, vscode.Location[]>(),
-      componentSectionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
+      componentContributionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
       componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
-      componentSectionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
+      componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
       parsedFactsByUri: new Map(parsedFactsByUri),
       hasIgnoreDirectiveByUri: new Map(hasIgnoreDirectiveByUri),
       formsReady: true,
       componentsReady: true,
       fullReady: scope === "all"
     };
+
+    for (const entry of parsedEntries) {
+      populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+    }
 
     const formEntries = parsedEntries.filter((entry) => entry.root === "form" && !!entry.facts.formIdent);
     const formsStart = Date.now();
@@ -375,8 +400,19 @@ export class WorkspaceIndexer {
       const buttons = new Set([...entry.facts.declaredButtons]);
       const sections = new Set([...entry.facts.declaredSections]);
 
-      for (const usingRef of entry.facts.usingReferences) {
+      for (const usingRef of collectEffectiveUsingRefs(entry.facts, provisionalIndex)) {
         const component = resolveComponentByKey(provisionalIndex, usingRef.componentKey);
+        if (!component) {
+          continue;
+        }
+
+        mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
+        mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
+        mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
+      }
+
+      for (const includeRef of entry.facts.includeReferences) {
+        const component = resolveComponentByKey(provisionalIndex, includeRef.componentKey);
         if (!component) {
           continue;
         }
@@ -418,6 +454,12 @@ export class WorkspaceIndexer {
       message: `Built ${formEntries.length} forms in ${formsMs} ms.`
     });
 
+    // Recompute insert counts/traces once forms are available,
+    // so workflow/dataview inherited usings are reflected in indexed facts.
+    for (const entry of parsedEntries) {
+      populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+    }
+
     let processedRefEntries = 0;
     const referencesStart = Date.now();
     onProgress?.({
@@ -442,7 +484,7 @@ export class WorkspaceIndexer {
         addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
         if (ref.sectionValue && ref.sectionValueRange) {
           addNestedLocationMapValue(
-            componentSectionReferenceLocationsByKey,
+            componentContributionReferenceLocationsByKey,
             ref.componentKey,
             ref.sectionValue,
             new vscode.Location(uri, ref.sectionValueRange)
@@ -450,17 +492,39 @@ export class WorkspaceIndexer {
         }
       }
 
-      const owningFormIdent = root === "workflow" ? facts.workflowFormIdent : facts.formIdent;
+      for (const ref of facts.includeReferences) {
+        addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
+        if (ref.sectionValue && ref.sectionValueRange) {
+          addNestedLocationMapValue(
+            componentContributionReferenceLocationsByKey,
+            ref.componentKey,
+            ref.sectionValue,
+            new vscode.Location(uri, ref.sectionValueRange)
+          );
+        }
+      }
+
+      const owningFormIdent =
+        root === "workflow"
+          ? facts.workflowFormIdent
+          : root === "dataview"
+            ? facts.rootFormIdent
+            : facts.formIdent;
       if (owningFormIdent) {
-        for (const ref of facts.usingReferences) {
+        for (const ref of collectEffectiveUsingRefs(facts, provisionalIndex)) {
           addNestedSetMapValue(componentUsageFormIdentsByKey, ref.componentKey, owningFormIdent);
           if (ref.sectionValue) {
-            addNestedNestedSetMapValue(componentSectionUsageFormIdentsByKey, ref.componentKey, ref.sectionValue, owningFormIdent);
+            addNestedNestedSetMapValue(componentContributionUsageFormIdentsByKey, ref.componentKey, ref.sectionValue, owningFormIdent);
           }
         }
       }
 
-      const owningFormIdentForRefs = root === "workflow" ? facts.workflowFormIdent : facts.formIdent;
+      const owningFormIdentForRefs =
+        root === "workflow"
+          ? facts.workflowFormIdent
+          : root === "dataview"
+            ? facts.rootFormIdent
+            : facts.formIdent;
       if (root === "workflow" && facts.workflowFormIdent) {
         for (const ref of facts.workflowReferences) {
           if (ref.kind === "formControl") {
@@ -574,9 +638,9 @@ export class WorkspaceIndexer {
       buttonReferenceLocationsByFormIdent,
       sectionReferenceLocationsByFormIdent,
       componentReferenceLocationsByKey,
-      componentSectionReferenceLocationsByKey,
+      componentContributionReferenceLocationsByKey,
       componentUsageFormIdentsByKey,
-      componentSectionUsageFormIdentsByKey,
+      componentContributionUsageFormIdentsByKey,
       parsedFactsByUri,
       hasIgnoreDirectiveByUri,
       formsReady: true,
@@ -604,10 +668,10 @@ export class WorkspaceIndexer {
     const buttons = new Map<string, vscode.Location>();
     const sections = new Map<string, vscode.Location>();
 
-    const sectionRegex = /<Section\b([^>]*)>([\s\S]*?)<\/Section>/gi;
+    const sectionRegex = /<(Contribution|Section)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
     for (const match of text.matchAll(sectionRegex)) {
-      const attrs = match[1] ?? "";
-      const content = match[2] ?? "";
+      const attrs = match[2] ?? "";
+      const content = match[3] ?? "";
       const full = match[0] ?? "";
       const start = match.index ?? 0;
 
@@ -640,19 +704,21 @@ export class WorkspaceIndexer {
   }
 
   private collectWorkflowInjectedDefinitions(document: PositionResolver, preMaskedText?: string): {
+    actionShareCodes: Map<string, vscode.Location>;
     controlShareCodes: Map<string, vscode.Location>;
     buttonShareCodes: Map<string, vscode.Location>;
     buttonShareCodeButtonIdents: Map<string, Set<string>>;
   } {
     const text = resolveMaskedText(document, preMaskedText);
+    const actionShareCodes = new Map<string, vscode.Location>();
     const controlShareCodes = new Map<string, vscode.Location>();
     const buttonShareCodes = new Map<string, vscode.Location>();
     const buttonShareCodeButtonIdents = new Map<string, Set<string>>();
 
-    const sectionRegex = /<Section\b([^>]*)>([\s\S]*?)<\/Section>/gi;
+    const sectionRegex = /<(Contribution|Section)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
     for (const match of text.matchAll(sectionRegex)) {
-      const attrs = match[1] ?? "";
-      const content = match[2] ?? "";
+      const attrs = match[2] ?? "";
+      const content = match[3] ?? "";
       const full = match[0] ?? "";
       const start = match.index ?? 0;
 
@@ -668,6 +734,10 @@ export class WorkspaceIndexer {
 
       const contentStart = start + contentOffset;
       mergeInto(
+        actionShareCodes,
+        this.collectAttributeDefinitionsFromText(document, content, contentStart, /<ActionShareCode\b([^>]*)>/gi, "Ident", true)
+      );
+      mergeInto(
         controlShareCodes,
         this.collectAttributeDefinitionsFromText(document, content, contentStart, /<ControlShareCode\b([^>]*)>/gi, "Ident", true)
       );
@@ -678,7 +748,56 @@ export class WorkspaceIndexer {
       mergeSetMapInto(buttonShareCodeButtonIdents, this.collectButtonShareCodeButtonIdentsFromText(content));
     }
 
-    return { controlShareCodes, buttonShareCodes, buttonShareCodeButtonIdents };
+    return { actionShareCodes, controlShareCodes, buttonShareCodes, buttonShareCodeButtonIdents };
+  }
+
+  private collectComponentContributionSummaries(preMaskedText?: string): Map<string, IndexedComponentContributionSummary> {
+    const text = preMaskedText ?? "";
+    const out = new Map<string, IndexedComponentContributionSummary>();
+    const sectionRegex = /<(Contribution|Section)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+    for (const match of text.matchAll(sectionRegex)) {
+      const attrsText = match[2] ?? "";
+      const body = match[3] ?? "";
+      const name = extractAttributeValue(attrsText, "Name");
+      if (!name) {
+        continue;
+      }
+      const primitiveUsage = collectPrimitiveUsageSummary(body);
+
+      const rootRaw = (extractAttributeValue(attrsText, "Root") ?? "").trim().toLowerCase();
+      const root: IndexedComponentContributionSummary["root"] =
+        rootRaw.length === 0 || rootRaw === "form" ? "form" : rootRaw === "workflow" ? "workflow" : "other";
+
+      out.set(name, {
+        contributionName: name,
+        root,
+        rootExpression: rootRaw.length > 0 ? rootRaw : undefined,
+        insert: extractAttributeValue(attrsText, "Insert"),
+        targetXPath: extractAttributeValue(attrsText, "TargetXPath"),
+        allowMultipleInserts: parseBooleanAttribute(extractAttributeValue(attrsText, "AllowMultipleInserts")),
+        hasContent: /\S/.test(body),
+        formControlCount: countTagOccurrences(body, /<Control\b[^>]*>/gi),
+        formButtonCount: countTagOccurrences(body, /<Button\b[^>]*>/gi),
+        formSectionCount: countTagOccurrences(body, /<Section\b[^>]*>/gi),
+        workflowActionShareCodeCount: countTagOccurrences(body, /<ActionShareCode\b[^>]*>/gi),
+        workflowControlShareCodeCount: countTagOccurrences(body, /<ControlShareCode\b[^>]*>/gi),
+        workflowButtonShareCodeCount: countTagOccurrences(body, /<ButtonShareCode\b[^>]*>/gi),
+        formControlIdents: collectAttributeIdents(body, /<Control\b([^>]*)>/gi, "Ident"),
+        formButtonIdents: collectAttributeIdents(body, /<Button\b([^>]*)>/gi, "Ident"),
+        formSectionIdents: collectAttributeIdents(body, /<Section\b([^>]*)>/gi, "Ident"),
+        workflowReferencedActionShareCodeIdents: collectActionShareCodeReferenceIdents(body),
+        workflowActionShareCodeIdents: collectAttributeIdents(body, /<ActionShareCode\b([^>]*)>/gi, "Ident"),
+        workflowControlShareCodeIdents: collectAttributeIdents(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
+        workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
+        requiredParamNames: collectRequiredContributionParamNames(body),
+        primitiveUsageCountByKey: primitiveUsage.usageCountByKey,
+        primitiveTemplateNamesByKey: primitiveUsage.templateNamesByKey,
+        primitiveProvidedParamNamesByKey: primitiveUsage.providedParamNamesByKey,
+        primitiveProvidedSlotNamesByKey: primitiveUsage.providedSlotNamesByKey
+      });
+    }
+
+    return out;
   }
 
   private collectButtonShareCodeButtonIdentsFromText(text: string): Map<string, Set<string>> {
@@ -789,17 +908,17 @@ export class WorkspaceIndexer {
     return this.collectAttributeDefinitionsFromText(document, text, 0, tagRegex, attributeName, true);
   }
 
-  private readComponentSections(preMaskedText?: string): Set<string> {
+  private readComponentContributions(preMaskedText?: string): Set<string> {
     const text = preMaskedText ?? "";
-    const sections = new Set<string>();
-    for (const m of text.matchAll(/<Section\b[^>]*\bName\s*=\s*("([^"]*)"|'([^']*)')/gi)) {
+    const contributions = new Set<string>();
+    for (const m of text.matchAll(/<(?:Contribution|Section)\b[^>]*\bName\s*=\s*("([^"]*)"|'([^']*)')/gi)) {
       const name = (m[2] ?? m[3] ?? "").trim();
       if (name) {
-        sections.add(name);
+        contributions.add(name);
       }
     }
 
-    return sections;
+    return contributions;
   }
 
   private getComponentKey(uri: vscode.Uri): string {
@@ -920,6 +1039,170 @@ function extractAttributeValue(attrs: string, name: string): string | undefined 
   }
 
   return (match[2] ?? match[3] ?? "").trim();
+}
+
+function collectAttributeIdents(text: string, tagRegex: RegExp, attributeName: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(tagRegex)) {
+    const value = extractAttributeValue(match[1] ?? "", attributeName);
+    if (value) {
+      out.add(value);
+    }
+  }
+
+  return out;
+}
+
+function collectActionShareCodeReferenceIdents(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(/<Action\b([^>]*)>/gi)) {
+    const attrs = match[1] ?? "";
+    const actionType = (extractAttributeValue(attrs, "xsi:type") ?? extractAttributeValue(attrs, "type") ?? "").trim().toLowerCase();
+    if (actionType !== "sharecode") {
+      continue;
+    }
+
+    const ident = extractAttributeValue(attrs, "Ident");
+    if (ident) {
+      out.add(ident);
+    }
+  }
+
+  return out;
+}
+
+function collectRequiredContributionParamNames(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const tokenMatch of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+    const token = (tokenMatch[1] ?? "").trim();
+    if (!token) {
+      continue;
+    }
+
+    if (token.includes(":") || token.includes(",")) {
+      continue;
+    }
+
+    if (!/^[A-Za-z_][\w.-]*$/.test(token)) {
+      continue;
+    }
+
+    out.add(token);
+  }
+
+  return out;
+}
+
+function collectPrimitiveUsageSummary(text: string): {
+  usageCountByKey: Map<string, number>;
+  templateNamesByKey: Map<string, Set<string>>;
+  providedParamNamesByKey: Map<string, Set<string>>;
+  providedSlotNamesByKey: Map<string, Set<string>>;
+} {
+  const usageCountByKey = new Map<string, number>();
+  const templateNamesByKey = new Map<string, Set<string>>();
+  const providedParamNamesByKey = new Map<string, Set<string>>();
+  const providedSlotNamesByKey = new Map<string, Set<string>>();
+  for (const match of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const primitiveKey =
+      extractAttributeValue(attrs, "Primitive") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component");
+    if (!primitiveKey) {
+      continue;
+    }
+
+    const normalized = normalizeComponentKey(primitiveKey);
+    usageCountByKey.set(normalized, (usageCountByKey.get(normalized) ?? 0) + 1);
+
+    const providedParams = providedParamNamesByKey.get(normalized) ?? new Set<string>();
+    for (const attrName of collectAttributeNames(attrs)) {
+      if (["primitive", "name", "feature", "component", "template", "contribution", "section"].includes(attrName.toLowerCase())) {
+        continue;
+      }
+      providedParams.add(attrName);
+    }
+    if (providedParams.size > 0) {
+      providedParamNamesByKey.set(normalized, providedParams);
+    }
+
+    const templateName =
+      extractAttributeValue(attrs, "Template") ??
+      extractAttributeValue(attrs, "Contribution") ??
+      extractAttributeValue(attrs, "Section");
+    if (!templateName) {
+      continue;
+    }
+
+    const existingNames = templateNamesByKey.get(normalized) ?? new Set<string>();
+    existingNames.add(templateName);
+    templateNamesByKey.set(normalized, existingNames);
+  }
+
+  for (const block of text.matchAll(/<UsePrimitive\b([^>]*)>([\s\S]*?)<\/UsePrimitive>/gi)) {
+    const attrs = block[1] ?? "";
+    const body = block[2] ?? "";
+    const primitiveKey =
+      extractAttributeValue(attrs, "Primitive") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component");
+    if (!primitiveKey) {
+      continue;
+    }
+
+    const normalized = normalizeComponentKey(primitiveKey);
+    const providedSlots = providedSlotNamesByKey.get(normalized) ?? new Set<string>();
+    for (const slotMatch of body.matchAll(/<Slot\b([^>]*)>([\s\S]*?)<\/Slot>/gi)) {
+      const slotName = extractAttributeValue(slotMatch[1] ?? "", "Name");
+      if (slotName) {
+        providedSlots.add(slotName);
+      }
+    }
+    if (providedSlots.size > 0) {
+      providedSlotNamesByKey.set(normalized, providedSlots);
+    }
+  }
+
+  return { usageCountByKey, templateNamesByKey, providedParamNamesByKey, providedSlotNamesByKey };
+}
+
+function collectAttributeNames(attrs: string): string[] {
+  const out: string[] = [];
+  for (const match of attrs.matchAll(/([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g)) {
+    const name = (match[1] ?? "").trim();
+    if (!name) {
+      continue;
+    }
+    out.push(name);
+  }
+  return out;
+}
+
+function countTagOccurrences(text: string, regex: RegExp): number {
+  let count = 0;
+  for (const _ of text.matchAll(regex)) {
+    count++;
+  }
+  return count;
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return undefined;
 }
 
 function appliesToFormRoot(root: string | undefined): boolean {

@@ -21,6 +21,24 @@ export interface UsingReference {
   componentValueRange: vscode.Range;
   sectionValue?: string;
   sectionValueRange?: vscode.Range;
+  providedParamNames?: string[];
+  suppressInheritance?: boolean;
+}
+
+export interface IncludeReference {
+  componentKey: string;
+  rawComponentValue: string;
+  componentValueRange: vscode.Range;
+  sectionValue?: string;
+  sectionValueRange?: vscode.Range;
+}
+
+export interface PlaceholderReference {
+  rawToken: string;
+  range: vscode.Range;
+  componentKey?: string;
+  rawComponentValue?: string;
+  contributionValue?: string;
 }
 
 export interface FormIdentReference {
@@ -76,6 +94,8 @@ export interface ParsedDocumentFacts {
   rootTag?: string;
   rootIdent?: string;
   rootIdentRange?: vscode.Range;
+  rootFormIdent?: string;
+  rootFormIdentRange?: vscode.Range;
   formIdent?: string;
   workflowFormIdent?: string;
   workflowFormIdentRange?: vscode.Range;
@@ -84,6 +104,10 @@ export interface ParsedDocumentFacts {
   declaredSections: Set<string>;
   workflowReferences: WorkflowReference[];
   usingReferences: UsingReference[];
+  includeReferences: IncludeReference[];
+  usingContributionInsertCounts: Map<string, number>;
+  usingContributionInsertTraces: Map<string, UsingContributionInsertTrace>;
+  placeholderReferences: PlaceholderReference[];
   formIdentReferences: FormIdentReference[];
   mappingIdentReferences: MappingIdentReference[];
   mappingFormIdentReferences: MappingFormIdentReference[];
@@ -93,11 +117,28 @@ export interface ParsedDocumentFacts {
   identOccurrences: IdentOccurrence[];
   declaredControlShareCodes: Set<string>;
   controlShareCodeDefinitions: Map<string, vscode.Range>;
+  declaredActionShareCodes: Set<string>;
+  actionShareCodeDefinitions: Map<string, vscode.Range>;
   declaredButtonShareCodes: Set<string>;
   buttonShareCodeDefinitions: Map<string, vscode.Range>;
   buttonShareCodeButtonIdents: Map<string, Set<string>>;
+  actionShareCodeReferences: NamedIdent[];
   declaredControlInfos: NamedIdent[];
   declaredButtonInfos: NamedIdent[];
+  rootControlScopeKeys?: Set<string>;
+  rootButtonScopeKeys?: Set<string>;
+  rootSectionScopeKeys?: Set<string>;
+}
+
+export interface UsingContributionInsertTrace {
+  strategy: "placeholder" | "targetXPath" | "symbolCount";
+  finalInsertCount: number;
+  placeholderCount: number;
+  targetXPathExpression?: string;
+  targetXPathMatchCount: number;
+  targetXPathClampedCount: number;
+  allowMultipleInserts: boolean;
+  fallbackSymbolCount: number;
 }
 
 const ATTR_REGEX = /([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
@@ -125,6 +166,10 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     declaredSections: new Set<string>(),
     workflowReferences: [],
     usingReferences: [],
+    includeReferences: [],
+    usingContributionInsertCounts: new Map<string, number>(),
+    usingContributionInsertTraces: new Map<string, UsingContributionInsertTrace>(),
+    placeholderReferences: [],
     formIdentReferences: [],
     mappingIdentReferences: [],
     mappingFormIdentReferences: [],
@@ -134,17 +179,44 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     identOccurrences: [],
     declaredControlShareCodes: new Set<string>(),
     controlShareCodeDefinitions: new Map<string, vscode.Range>(),
+    declaredActionShareCodes: new Set<string>(),
+    actionShareCodeDefinitions: new Map<string, vscode.Range>(),
     declaredButtonShareCodes: new Set<string>(),
     buttonShareCodeDefinitions: new Map<string, vscode.Range>(),
     buttonShareCodeButtonIdents: new Map<string, Set<string>>(),
+    actionShareCodeReferences: [],
     declaredControlInfos: [],
-    declaredButtonInfos: []
+    declaredButtonInfos: [],
+    rootControlScopeKeys: new Set<string>(),
+    rootButtonScopeKeys: new Set<string>(),
+    rootSectionScopeKeys: new Set<string>()
   };
 
   const rootMatch = /<\s*([A-Za-z_][\w:.-]*)\b/.exec(text);
   const rootTagLower = (rootMatch ? stripPrefix(rootMatch[1]) : "").toLowerCase();
   if (rootMatch) {
     facts.rootTag = stripPrefix(rootMatch[1]);
+
+    const rawRootName = rootMatch[1] ?? "";
+    const rootOpenTagRegex = new RegExp(`<\\s*${escapeRegExp(rawRootName)}\\b([^>]*)>`, "i");
+    const rootOpenTagMatch = rootOpenTagRegex.exec(text);
+    if (rootOpenTagMatch) {
+      const attrs = parseAttributes(rootOpenTagMatch[1] ?? "", text, attributeStartIndex(rootOpenTagMatch));
+      const formIdentAttr = attrs.get("FormIdent");
+      if (formIdentAttr?.value) {
+        facts.rootFormIdent = formIdentAttr.value;
+        if (formIdentAttr.valueRange) {
+          facts.rootFormIdentRange = formIdentAttr.valueRange;
+        }
+      }
+    }
+  }
+
+  if (rootTagLower === "form") {
+    const rootScopes = collectRootFormContainerScopeKeys(text);
+    facts.rootControlScopeKeys = rootScopes.controls;
+    facts.rootButtonScopeKeys = rootScopes.buttons;
+    facts.rootSectionScopeKeys = rootScopes.sections;
   }
 
   const rootIdentMatch = /<\s*([A-Za-z_][\w:.-]*)\b[^>]*\bIdent\s*=\s*("([^"]*)"|'([^']*)')/i.exec(text);
@@ -189,18 +261,19 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     }
   }
 
-  const canDeclareFormNodes = rootTagLower === "form" || rootTagLower === "component";
-  const canHaveWorkflowNodes = rootTagLower === "workflow" || rootTagLower === "component";
+  const canDeclareFormNodes = rootTagLower === "form" || rootTagLower === "component" || rootTagLower === "feature";
+  const canHaveWorkflowNodes = rootTagLower === "workflow" || rootTagLower === "component" || rootTagLower === "feature";
 
-  if (canDeclareFormNodes && text.includes("<Control")) {
-    for (const m of text.matchAll(/<Control\b([^>]*)>/gi)) {
-      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+  const controlTags = canDeclareFormNodes && text.includes("<Control") ? collectControlTags(text) : [];
+  if (canDeclareFormNodes && controlTags.length > 0) {
+    for (const controlTag of controlTags) {
+      const attrs = parseAttributes(controlTag.rawAttrs, text, controlTag.attrsStartIndex);
       const attr = attrs.get("Ident");
       const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
       if (attr?.value) {
         facts.declaredControls.add(attr.value);
         if (attr.valueRange) {
-          facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "control" });
+          facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "control", scopeKey: controlTag.scopeKey });
           facts.declaredControlInfos.push({ ident: attr.value, range: attr.valueRange, type });
         }
       }
@@ -292,6 +365,21 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     }
   }
 
+  if (canHaveWorkflowNodes && text.includes("<ActionShareCode")) {
+    for (const m of text.matchAll(/<ActionShareCode\b([^>]*)>/gi)) {
+      const attr = findAttribute(m[1], "Ident", text, attributeStartIndex(m));
+      if (!attr?.value || !attr.valueRange) {
+        continue;
+      }
+
+      const key = attr.value;
+      facts.declaredActionShareCodes.add(key);
+      if (!facts.actionShareCodeDefinitions.has(key)) {
+        facts.actionShareCodeDefinitions.set(key, attr.valueRange);
+      }
+    }
+  }
+
   if (canHaveWorkflowNodes && text.includes("<ButtonShareCode")) {
     for (const share of collectButtonShareCodeContents(text)) {
       const key = share.ident;
@@ -330,18 +418,65 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
   if (text.includes("<Using")) {
     for (const m of text.matchAll(/<Using\b([^>]*)>/gi)) {
       const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-      const componentAttr = attrs.get("Component") ?? attrs.get("Name");
+      const componentAttr = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
       if (!componentAttr?.value || !componentAttr.valueRange) {
         continue;
       }
 
-      const sectionAttr = attrs.get("Section");
+      const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
+      const providedParamNames = collectUsingProvidedParamNames(attrs);
+      const suppressInheritance =
+        parseBooleanAttribute(attrs.get("SuppressInheritance")?.value) === true ||
+        parseBooleanAttribute(attrs.get("Inherit")?.value) === false;
       facts.usingReferences.push({
         componentKey: normalizeComponentKey(componentAttr.value),
         rawComponentValue: componentAttr.value,
         componentValueRange: componentAttr.valueRange,
         sectionValue: sectionAttr?.value,
+        sectionValueRange: sectionAttr?.valueRange,
+        ...(providedParamNames.length > 0 ? { providedParamNames } : {}),
+        ...(suppressInheritance ? { suppressInheritance: true } : {})
+      });
+    }
+  }
+
+  if (text.includes("<Include")) {
+    for (const m of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const componentAttr = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+      if (!componentAttr?.value || !componentAttr.valueRange) {
+        continue;
+      }
+
+      const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
+      facts.includeReferences.push({
+        componentKey: normalizeComponentKey(componentAttr.value),
+        rawComponentValue: componentAttr.value,
+        componentValueRange: componentAttr.valueRange,
+        sectionValue: sectionAttr?.value,
         sectionValueRange: sectionAttr?.valueRange
+      });
+    }
+  }
+
+  if (text.includes("{{")) {
+    for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+      const full = match[0] ?? "";
+      const body = (match[1] ?? "").trim();
+      const start = typeof match.index === "number" ? match.index : -1;
+      if (!full || start < 0 || !body) {
+        continue;
+      }
+
+      const fields = parsePlaceholderFields(body);
+      const rawComponentValue = fields.get("Feature") ?? fields.get("Component") ?? fields.get("Name");
+      const contributionValue = fields.get("Contribution") ?? fields.get("Section");
+      facts.placeholderReferences.push({
+        rawToken: full,
+        range: new vscode.Range(indexToPosition(text, start), indexToPosition(text, start + full.length)),
+        rawComponentValue,
+        componentKey: rawComponentValue ? normalizeComponentKey(rawComponentValue) : undefined,
+        contributionValue
       });
     }
   }
@@ -423,6 +558,14 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     for (const actionTag of text.matchAll(/<Action\b([^>]*)>/gi)) {
       const attrs = parseAttributes(actionTag[1] ?? "", text, attributeStartIndex(actionTag));
       const actionType = (getAttributeCaseInsensitive(attrs, "xsi:type")?.value ?? getAttributeCaseInsensitive(attrs, "type")?.value ?? "").trim().toLowerCase();
+      const identAttr = getAttributeCaseInsensitive(attrs, "Ident");
+      if (actionType === "sharecode" && identAttr?.value && identAttr.valueRange) {
+        facts.actionShareCodeReferences.push({
+          ident: identAttr.value,
+          range: identAttr.valueRange
+        });
+      }
+
       if (actionType !== "actionvalue") {
         continue;
       }
@@ -560,6 +703,10 @@ function stripPrefix(value: string): string {
   return parts[parts.length - 1];
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function attributeStartIndex(match: RegExpMatchArray, attrsGroupIndex = 1): number {
   const full = match[0] ?? "";
   const attrs = match[attrsGroupIndex] ?? "";
@@ -574,10 +721,56 @@ interface ButtonTagMatch {
   scopeKey: string;
 }
 
+interface ControlTagMatch {
+  rawAttrs: string;
+  attrsStartIndex: number;
+  scopeKey: string;
+}
+
 interface SectionTagMatch {
   rawAttrs: string;
   attrsStartIndex: number;
   scopeKey: string;
+}
+
+function collectControlTags(text: string): ControlTagMatch[] {
+  const out: ControlTagMatch[] = [];
+  const stack: Array<{ name: string; start: number }> = [];
+  const tagRegex = /<\s*(\/?)\s*([A-Za-z_][\w:.-]*)([^>]*)>/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = tagRegex.exec(text)) !== null) {
+    const isClosing = match[1] === "/";
+    const name = stripPrefix(match[2]).toLowerCase();
+    const rawAttrs = match[3] ?? "";
+    const fullTag = match[0] ?? "";
+    const tagStart = match.index ?? 0;
+    const isSelfClosing = !isClosing && /\/\s*$/.test(rawAttrs);
+
+    if (!isClosing && name === "control") {
+      const attrsStartOffset = fullTag.indexOf(rawAttrs);
+      const attrsStartIndex = tagStart + (attrsStartOffset >= 0 ? attrsStartOffset : 0);
+      const parentControls = findNearestOpenTag(stack, "controls");
+      const scopeKey = parentControls ? `controls@${parentControls.start}` : "__global_controls__";
+
+      out.push({
+        rawAttrs,
+        attrsStartIndex,
+        scopeKey
+      });
+    }
+
+    if (isClosing) {
+      popOpenTag(stack, name);
+      continue;
+    }
+
+    if (!isSelfClosing) {
+      stack.push({ name, start: tagStart });
+    }
+  }
+
+  return out;
 }
 
 function collectButtonTags(text: string): ButtonTagMatch[] {
@@ -680,6 +873,51 @@ function popOpenTag(stack: Array<{ name: string; start: number }>, closingName: 
       return;
     }
   }
+}
+
+function collectRootFormContainerScopeKeys(text: string): {
+  controls: Set<string>;
+  buttons: Set<string>;
+  sections: Set<string>;
+} {
+  const controls = new Set<string>();
+  const buttons = new Set<string>();
+  const sections = new Set<string>();
+  const stack: Array<{ name: string; start: number }> = [];
+  const tagRegex = /<\s*(\/?)\s*([A-Za-z_][\w:.-]*)([^>]*)>/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = tagRegex.exec(text)) !== null) {
+    const isClosing = match[1] === "/";
+    const name = stripPrefix(match[2]).toLowerCase();
+    const rawAttrs = match[3] ?? "";
+    const tagStart = match.index ?? 0;
+    const isSelfClosing = !isClosing && /\/\s*$/.test(rawAttrs);
+
+    if (!isClosing && (name === "controls" || name === "buttons" || name === "sections")) {
+      const inSection = stack.some((item) => item.name === "section");
+      if (!inSection) {
+        if (name === "controls") {
+          controls.add(`controls@${tagStart}`);
+        } else if (name === "buttons") {
+          buttons.add(`buttons@${tagStart}`);
+        } else {
+          sections.add(`sections@${tagStart}`);
+        }
+      }
+    }
+
+    if (isClosing) {
+      popOpenTag(stack, name);
+      continue;
+    }
+
+    if (!isSelfClosing) {
+      stack.push({ name, start: tagStart });
+    }
+  }
+
+  return { controls, buttons, sections };
 }
 
 interface ButtonShareCodeContent {
@@ -823,6 +1061,63 @@ function getAttributeCaseInsensitive(attrs: Map<string, XmlAttributeMatch>, attr
   }
 
   return undefined;
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return undefined;
+}
+
+function parsePlaceholderFields(rawBody: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const part of rawBody.split(",")) {
+    const idx = part.indexOf(":");
+    if (idx <= 0) {
+      continue;
+    }
+
+    const key = part.slice(0, idx).trim();
+    const value = part.slice(idx + 1).trim();
+    if (!key || !value) {
+      continue;
+    }
+    out.set(key, value);
+  }
+
+  return out;
+}
+
+function collectUsingProvidedParamNames(attrs: Map<string, XmlAttributeMatch>): string[] {
+  const excluded = new Set([
+    "feature",
+    "component",
+    "name",
+    "contribution",
+    "section",
+    "suppressinheritance",
+    "inherit"
+  ]);
+  const out: string[] = [];
+  for (const name of attrs.keys()) {
+    const lower = name.toLowerCase();
+    if (excluded.has(lower)) {
+      continue;
+    }
+    out.push(name);
+  }
+
+  return out;
 }
 
 function normalizeHtmlControlTagName(value: string): "Control" | "ControlLabel" | "ControlPlaceHolder" | undefined {

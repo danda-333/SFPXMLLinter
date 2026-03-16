@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" xmlns:wffc="http://www.gappex.com/sfp/WorkFlow/FormControl" xmlns:fi="http://www.gappex.com/sfp/Form/Indexes" xmlns:fcs="http://www.gappex.com/sfp/Form/Control/Settings" xmlns:dsf="http://www.gappex.com/sfp/DataSource/Froms" xmlns:dws="http://www.gappex.com/sfp/DataView/Settings" xmlns:dvs="http://www.gappex.com/sfp/DataView/Settings" xmlns:fccom="http://www.gappex.com/sfp/Form/Control/Communication">
+	<Manifest Description="Full view/dataview part mirrored from SFPExampleProject Assign feature." Tags="itsm, assign, dataview, view">
+		<ContributionContracts>
+			<ContributionContract For="Columns" Kind="placeholder" Summary="Adds assignee columns to dataview output.">
+				<ExpectsXPath>
+					<XPath>//DataView/Columns</XPath>
+				</ExpectsXPath>
+			</ContributionContract>
+			<ContributionContract For="Froms" Kind="extend-existing" Summary="Adds dataview joins for assignee columns.">
+				<ExpectsXPath>
+					<XPath>//DataView/DataSource/Froms</XPath>
+					<XPath>//DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms</XPath>
+				</ExpectsXPath>
+			</ContributionContract>
+		</ContributionContracts>
+	</Manifest>
+
+	<Contribution Root="DataView" Name="Columns" Insert="placeholder">
+		<Column Ident="AssignedGroupID" TitleResourceKey="AssignedGroupID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				gro.[Name] AS AssignedGroupID
+			]]></SQL>
+		</Column>
+		<Column Ident="AssignedAccountID" TitleResourceKey="AssignedAccountID_ITSM" TableAlterIdent="tbl" IsOptional="true">
+			<SQL><![CDATA[
+				accAss.[FullName] AS AssignedAccountID
+			]]></SQL>
+		</Column>
+	</Contribution>
+
+	<Contribution Root="DataView" Name="Froms" TargetXPath="//DataView/DataSource/Froms | //DataView/Sections/Section[@Ident='BasicExportSection']/DataSource/Froms" AllowMultipleInserts="true" Insert="append">
+		<dsf:From Ident="gro">
+			<dsf:Columns>
+				<dsf:string>AssignedGroupID</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN dbo.[Group] AS gro ON gro.ID = itsm.AssignedGroupID
+			</dsf:SQL>
+		</dsf:From>
+		<dsf:From Ident="accAss">
+			<dsf:Columns>
+				<dsf:string>AssignedAccountID</dsf:string>
+			</dsf:Columns>
+			<dsf:SQL>
+				LEFT JOIN dbo.[Account] AS accAss ON accAss.ID = itsm.AssignedAccountID
+			</dsf:SQL>
+		</dsf:From>
+	</Contribution>
+
+</Feature>

@@ -56,7 +56,10 @@ function collectIncludeComponentKeys(text: string): Set<string> {
   const out = new Set<string>();
   for (const match of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
-    const raw = extractAttributeValue(attrs, "Component") ?? extractAttributeValue(attrs, "Name");
+    const raw =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
     if (!raw) {
       continue;
     }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Feature>
+  <Contribution Root="Form" Name="ButtonsB" TargetXPath="//Form/Buttons" Insert="append">
+    <Button Ident="OrderButtonB" />
+  </Contribution>
+</Feature>

@@ -1,0 +1,5 @@
+<Form Ident="Chyba37PrimitiveMissingSlot">
+  <Controls>
+    <UsePrimitive Name="Common/Dialogs/DialogWithSlot" />
+  </Controls>
+</Form>

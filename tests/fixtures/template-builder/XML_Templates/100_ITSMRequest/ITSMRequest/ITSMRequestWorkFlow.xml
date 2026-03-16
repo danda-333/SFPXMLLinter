@@ -1,39 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WorkFlow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Ident="ITSMRequestWorkFlow" xmlns:dsp="http://www.gappex.com/sfp/DataSource/Parameters" FormIdent="ITSMRequest" PackageIdent="ITSMPackage">
 	<Usings>
-		<Using Component="Common/FolderTreeSetting" />
-		<Using Component="Common/PageSetting" FormIdent="ITSMRequest" />
-		<Using Component="Common/SLACriteriaControls" />
+		<Using Feature="Common/FolderTreeSetting" />
+		<Using Feature="Common/PageSetting" FormIdent="ITSMRequest" />
+		<Using Feature="Common/SLACriteriaControls" />
 
-		<Using Component="Common/Shared/Approval" FormIdent="ITSMRequest" />
-		<Using Component="Common/Shared/Assign" FormIdent="ITSMRequest" />
-		<Using Component="Common/Shared/FolderGroupSegment" FormIdent="ITSMRequest" />
-		<Using Component="Common/Shared/ITSMKey" FormIdent="ITSMRequest" />
-		<Using Component="Common/Shared/Resolve" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Shared/Approval" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Shared/Assign" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Shared/FolderGroupSegment" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Shared/ITSMKey" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Shared/Resolve" FormIdent="ITSMRequest" />
 
-		<Using Component="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMRequest" />
-		<Using Component="Common/Controls/AdditionalFields" FormIdent="ITSMRequest" />
-		<Using Component="Common/Controls/ReporterControls" FormIdent="ITSMRequest" />
-		<Using Component="Common/Controls/CommunicationControls" FormIdent="ITSMRequest" />
-		<Using Component="Common/Controls/LinkControls" FormIdent="ITSMRequest" />
-		<Using Component="Common/Controls/TimeLineControls" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Controls/MainInfoHTMLContentView" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Controls/AdditionalFields" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Controls/ReporterControls" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Controls/CommunicationControls" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Controls/LinkControls" FormIdent="ITSMRequest" />
+		<Using Feature="Common/Controls/TimeLineControls" FormIdent="ITSMRequest" />
 
-		<Using Component="Common/Buttons/SendToCategorizationButton" />
-		<Using Component="Common/Buttons/SendToProcessButton" />
-		<Using Component="Common/Buttons/ReturnToReporterButton" />
-		<Using Component="Common/Buttons/ResendToProcessButton" />
-		<Using Component="Common/Buttons/SupervisorApprovalButtons" />
-		<Using Component="Common/Buttons/SuspendApprovalGroupButton" />
-		<Using Component="Common/Buttons/AnswerApprovalButton" />
-		<Using Component="Common/Buttons/AnswerSolutionButton" />
-		<Using Component="Common/Buttons/SuspendSolutionGroupButton" />
-		<Using Component="Common/Buttons/ResolveToReporterButton" />
-		<Using Component="Common/Buttons/ClaimSolutionButton" />
-		<Using Component="Common/Buttons/CloseButton" />
-		<Using Component="Common/Buttons/CancelButton" />
-		<Using Component="Common/Buttons/SaveGroupButton" />
-		<Using Component="Common/Buttons/DeleteButton" />
-		<Using Component="Common/Buttons/BackButton" />
+		<Using Feature="Common/Buttons/SendToCategorizationButton" />
+		<Using Feature="Common/Buttons/SendToProcessButton" />
+		<Using Feature="Common/Buttons/ReturnToReporterButton" />
+		<Using Feature="Common/Buttons/ResendToProcessButton" />
+		<Using Feature="Common/Buttons/SupervisorApprovalButtons" />
+		<Using Feature="Common/Buttons/SuspendApprovalGroupButton" />
+		<Using Feature="Common/Buttons/AnswerApprovalButton" />
+		<Using Feature="Common/Buttons/AnswerSolutionButton" />
+		<Using Feature="Common/Buttons/SuspendSolutionGroupButton" />
+		<Using Feature="Common/Buttons/ResolveToReporterButton" />
+		<Using Feature="Common/Buttons/ClaimSolutionButton" />
+		<Using Feature="Common/Buttons/CloseButton" />
+		<Using Feature="Common/Buttons/CancelButton" />
+		<Using Feature="Common/Buttons/SaveGroupButton" />
+		<Using Feature="Common/Buttons/DeleteButton" />
+		<Using Feature="Common/Buttons/BackButton" />
 	</Usings>
 	<Definition>
 		<States>

@@ -1,0 +1,49 @@
+{
+  "feature": "OrderMix",
+  "entrypoint": "Common/Features/OrderMix/OrderMix.feature.xml",
+  "tags": ["ordering", "test"],
+  "parts": [
+    {
+      "id": "OrderMix.Form.ButtonsA",
+      "file": "Common/Features/OrderMix/OrderMix.Form.ButtonsA.feature.xml",
+      "appliesTo": ["form"],
+      "ordering": {
+        "group": "form-buttons",
+        "before": ["OrderMix.Form.ButtonsB"],
+        "after": []
+      }
+    },
+    {
+      "id": "OrderMix.Form.ButtonsB",
+      "file": "Common/Features/OrderMix/OrderMix.Form.ButtonsB.feature.xml",
+      "appliesTo": ["form"],
+      "ordering": {
+        "group": "form-buttons",
+        "before": [],
+        "after": []
+      }
+    },
+    {
+      "id": "OrderMix.WorkFlow.ActionsA",
+      "file": "Common/Features/OrderMix/OrderMix.WorkFlow.ActionsA.feature.xml",
+      "appliesTo": ["workflow"],
+      "ordering": {
+        "group": "workflow-actions",
+        "before": [],
+        "after": ["OrderMix.WorkFlow.ActionsB"]
+      }
+    },
+    {
+      "id": "OrderMix.WorkFlow.ActionsB",
+      "file": "Common/Features/OrderMix/OrderMix.WorkFlow.ActionsB.feature.xml",
+      "appliesTo": ["workflow"],
+      "ordering": {
+        "group": "workflow-actions",
+        "before": [],
+        "after": []
+      }
+    }
+  ],
+  "requires": [],
+  "expects": []
+}

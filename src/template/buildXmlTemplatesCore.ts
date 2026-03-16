@@ -26,6 +26,22 @@ interface ComponentDefinition {
   sections: ComponentSection[];
 }
 
+interface PrimitiveTemplate {
+  name?: string;
+  insert?: string;
+  targetXPath?: string;
+  allowMultipleInserts?: boolean;
+  root?: string;
+  content: string;
+}
+
+interface PrimitiveDefinition {
+  key: string;
+  templates: PrimitiveTemplate[];
+}
+
+const TEMPLATE_DEFINITION_TAGS = ["Feature", "Component"] as const;
+
 interface RenderContext {
   library: BuildComponentLibrary;
   maxDepth: number;
@@ -43,6 +59,55 @@ interface PlaceholderToken {
   body: string;
   start: number;
   end: number;
+}
+
+export interface XPathInsertTargetStats {
+  matchCount: number;
+  insertCount: number;
+}
+
+export type XPathInsertMode = "append" | "prepend" | "before" | "after";
+
+export interface XPathInsertRequest {
+  targetXPath: string;
+  content: string;
+  insertMode?: XPathInsertMode;
+  allowMultipleInserts?: boolean;
+}
+
+export interface XPathInsertResult {
+  xml: string;
+  matchCount: number;
+  insertCount: number;
+}
+
+export function countXPathInsertTargets(
+  text: string,
+  targetXPath: string | undefined,
+  allowMultipleInserts?: boolean
+): number {
+  return analyzeXPathInsertTargets(text, targetXPath, allowMultipleInserts).insertCount;
+}
+
+export function analyzeXPathInsertTargets(
+  text: string,
+  targetXPath: string | undefined,
+  allowMultipleInserts?: boolean
+): XPathInsertTargetStats {
+  const xpathExpr = (targetXPath ?? "").trim();
+  if (!xpathExpr) {
+    return { matchCount: 0, insertCount: 0 };
+  }
+
+  const ranges = findTargetRanges(text, xpathExpr);
+  if (ranges.length === 0) {
+    return { matchCount: 0, insertCount: 0 };
+  }
+
+  return {
+    matchCount: ranges.length,
+    insertCount: allowMultipleInserts ? ranges.length : 1
+  };
 }
 
 export function buildComponentLibrary(sources: readonly ComponentSource[]): BuildComponentLibrary {
@@ -71,7 +136,8 @@ export function renderTemplateText(
   templateText: string,
   library: BuildComponentLibrary,
   maxDepth = 12,
-  onDebugLog?: (line: string) => void
+  onDebugLog?: (line: string) => void,
+  inheritedUsingsXml?: string
 ): string {
   const normalizedTemplate = templateText.replace(/^\uFEFF/, "");
   const context: RenderContext = {
@@ -85,8 +151,12 @@ export function renderTemplateText(
   let out = normalizedTemplate;
 
   out = expandIncludes(out, templateParams, context);
-  out = applyUsingSections(out, templateParams, context);
+  out = applyUsingSections(out, templateParams, context, inheritedUsingsXml);
+  out = expandAuthoringSugar(out, templateParams, context);
+  out = expandPrimitiveUsages(out, templateParams, context);
   out = replaceComponentPlaceholders(out, templateParams, context, 0);
+  out = expandAuthoringSugar(out, templateParams, context);
+  out = expandPrimitiveUsages(out, templateParams, context);
   out = sanitizeFinalXml(out, context.templateRoot);
   out = normalizeXmlTagSpacingLikeLegacy(out);
   out = trimWhitespaceLikeLegacy(out);
@@ -95,21 +165,66 @@ export function renderTemplateText(
   return out;
 }
 
+function expandAuthoringSugar(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const before = out;
+    out = expandRepeatBlocks(out, inheritedParams, context);
+    out = expandCaseBlocks(out, inheritedParams, context);
+    out = expandIfBlocks(out, inheritedParams, context);
+    if (out === before) {
+      break;
+    }
+  }
+  return out;
+}
+
 export function extractUsingComponentRefs(text: string): string[] {
   const refs = new Set<string>();
 
   for (const match of text.matchAll(/<Using\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
-    const componentValue = extractAttributeValue(attrs, "Component") ?? extractAttributeValue(attrs, "Name");
+    const componentValue =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
     if (!componentValue) {
       continue;
     }
     refs.add(stripXmlComponentExtension(normalizePath(componentValue)));
   }
 
+  for (const match of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const primitiveValue =
+      extractAttributeValue(attrs, "Primitive") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component");
+    if (!primitiveValue) {
+      continue;
+    }
+    refs.add(stripXmlComponentExtension(normalizePath(primitiveValue)));
+  }
+
+  for (const match of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const featureValue =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
+    if (!featureValue) {
+      continue;
+    }
+    refs.add(stripXmlComponentExtension(normalizePath(featureValue)));
+  }
+
   for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
     const body = match[1] ?? "";
-    const componentValue = extractPlaceholderField(body, "Component") ?? extractPlaceholderField(body, "Name");
+    const componentValue =
+      extractPlaceholderField(body, "Feature") ??
+      extractPlaceholderField(body, "Component") ??
+      extractPlaceholderField(body, "Name");
     if (!componentValue) {
       continue;
     }
@@ -125,6 +240,12 @@ export function normalizePath(value: string): string {
 
 export function stripXmlComponentExtension(value: string): string {
   const lower = value.toLowerCase();
+  if (lower.endsWith(".primitive.xml")) {
+    return value.slice(0, value.length - ".primitive.xml".length);
+  }
+  if (lower.endsWith(".feature.xml")) {
+    return value.slice(0, value.length - ".feature.xml".length);
+  }
   if (lower.endsWith(".component.xml")) {
     return value.slice(0, value.length - ".component.xml".length);
   }
@@ -164,6 +285,21 @@ function resolveComponentSourceByKey(library: BuildComponentLibrary, rawKey: str
   return source;
 }
 
+function resolvePrimitiveByKey(library: BuildComponentLibrary, rawKey: string): PrimitiveDefinition | undefined {
+  const source = resolveComponentSourceByKey(library, rawKey);
+  if (!source) {
+    return undefined;
+  }
+  const templates = parsePrimitiveTemplates(source.text);
+  if (templates.length === 0) {
+    return undefined;
+  }
+  return {
+    key: source.key,
+    templates
+  };
+}
+
 function expandIncludes(text: string, baseParams: Map<string, string>, context: RenderContext): string {
   let result = text;
   const includePattern = /<Include\b[^>]*\/>/gi;
@@ -187,7 +323,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
       cursor = start + full.length;
 
       const attrs = parseXmlAttributes(full);
-      const componentKey = attrs.get("Component") ?? attrs.get("Name");
+      const componentKey = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
       if (!componentKey) {
         next += full;
         continue;
@@ -201,7 +337,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
 
       const includeParams = new Map<string, string>();
       for (const [k, v] of attrs.entries()) {
-        if (k === "Component" || k === "Name") {
+        if (k === "Feature" || k === "Component" || k === "Name") {
           continue;
         }
         includeParams.set(k, v);
@@ -209,7 +345,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
       const mergedParams = mergeParams(baseParams, includeParams);
 
       let componentText = source.text;
-      const sectionName = attrs.get("Section");
+      const sectionName = attrs.get("Contribution") ?? attrs.get("Section");
       if (sectionName && sectionName.trim().length > 0) {
         const def = resolveComponentByKey(context.library, source.key);
         const section = def?.sections.find((s) => (s.name ?? "") === sectionName) ?? def?.sections[0];
@@ -232,8 +368,135 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
   return result;
 }
 
-function applyUsingSections(text: string, templateParams: Map<string, string>, context: RenderContext): string {
-  const usingDirectives = parseUsingDirectives(text);
+function expandPrimitiveUsages(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "UsePrimitive");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderPrimitiveUsage(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+  return out;
+}
+
+function renderPrimitiveUsage(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const primitiveKey =
+    attrs.get("Primitive") ??
+    attrs.get("Name") ??
+    attrs.get("Feature") ??
+    attrs.get("Component");
+  if (!primitiveKey) {
+    return reconstructUsePrimitiveBlock(block);
+  }
+
+  const primitive = resolvePrimitiveByKey(context.library, primitiveKey);
+  if (!primitive) {
+    if (context.onDebugLog) {
+      context.onDebugLog(`[Primitive] '${primitiveKey}' not found.`);
+    }
+    return reconstructUsePrimitiveBlock(block);
+  }
+
+  const selectedTemplateName = attrs.get("Template") ?? attrs.get("Contribution") ?? attrs.get("Section");
+  const template = pickPrimitiveTemplate(primitive.templates, selectedTemplateName);
+  if (!template) {
+    if (context.onDebugLog) {
+      context.onDebugLog(`[Primitive] '${primitiveKey}' has no usable template.`);
+    }
+    return reconstructUsePrimitiveBlock(block);
+  }
+
+  const localParams = new Map<string, string>();
+  for (const [key, value] of attrs.entries()) {
+    if (key === "Primitive" || key === "Name" || key === "Feature" || key === "Component" || key === "Template" || key === "Contribution" || key === "Section") {
+      continue;
+    }
+    localParams.set(key, value);
+  }
+  const params = mergeParams(inheritedParams, localParams);
+  const slots = parsePrimitiveSlots(block.body);
+
+  let rendered = replaceSlotPlaceholders(template.content, slots);
+  rendered = applyParamSubstitution(rendered, params);
+  return rendered;
+}
+
+function reconstructUsePrimitiveBlock(block: TagBlock): string {
+  const attrs = block.attrs?.trim() ?? "";
+  if (!block.body || block.body.trim().length === 0) {
+    return attrs.length > 0 ? `<UsePrimitive ${attrs} />` : "<UsePrimitive />";
+  }
+  return attrs.length > 0
+    ? `<UsePrimitive ${attrs}>${block.body}</UsePrimitive>`
+    : `<UsePrimitive>${block.body}</UsePrimitive>`;
+}
+
+function parsePrimitiveTemplates(text: string): PrimitiveTemplate[] {
+  const blocks = collectTagBlocks(text, "Template").sort((a, b) => a.start - b.start);
+  const templates: PrimitiveTemplate[] = [];
+  for (const block of blocks) {
+    const attrs = parseXmlAttributes(block.attrs);
+    templates.push({
+      name: attrs.get("Name"),
+      insert: attrs.get("Insert"),
+      targetXPath: attrs.get("TargetXPath"),
+      allowMultipleInserts: parseBooleanAttribute(attrs.get("AllowMultipleInserts")),
+      root: attrs.get("Root"),
+      content: block.body
+    });
+  }
+  return templates;
+}
+
+function pickPrimitiveTemplate(templates: readonly PrimitiveTemplate[], requestedName?: string): PrimitiveTemplate | undefined {
+  if (requestedName && requestedName.trim().length > 0) {
+    return templates.find((template) => (template.name ?? "") === requestedName);
+  }
+  return templates.find((template) => (template.insert ?? "").toLowerCase() === "placeholder") ??
+    templates.find((template) => !(template.targetXPath ?? "").trim()) ??
+    templates[0];
+}
+
+function parsePrimitiveSlots(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const blocks = collectTagBlocks(text, "Slot").sort((a, b) => a.start - b.start);
+  for (const block of blocks) {
+    const attrs = parseXmlAttributes(block.attrs);
+    const name = (attrs.get("Name") ?? "").trim();
+    if (!name) {
+      continue;
+    }
+    out.set(name, block.body);
+  }
+  return out;
+}
+
+function replaceSlotPlaceholders(text: string, slots: ReadonlyMap<string, string>): string {
+  return text.replace(/\{\{Slot:([A-Za-z_][\w.-]*)\}\}/g, (full, slotName: string) => {
+    return slots.get(slotName) ?? "";
+  });
+}
+
+function applyUsingSections(
+  text: string,
+  templateParams: Map<string, string>,
+  context: RenderContext,
+  inheritedUsingsXml?: string
+): string {
+  const usingParseSource =
+    inheritedUsingsXml && inheritedUsingsXml.trim().length > 0
+      ? `${text}\n${inheritedUsingsXml}`
+      : text;
+  const usingDirectives = parseUsingDirectives(usingParseSource);
   let out = removeUsingsBlocks(text);
   out = removeStandaloneUsingTags(out);
 
@@ -243,7 +506,7 @@ function applyUsingSections(text: string, templateParams: Map<string, string>, c
       continue;
     }
 
-    const sectionFilter = using.attrs.get("Section");
+    const sectionFilter = using.attrs.get("Contribution") ?? using.attrs.get("Section");
     const params = mergeParams(templateParams, using.attrs);
     const sections = sectionFilter
       ? component.sections.filter((s) => (s.name ?? "") === sectionFilter)
@@ -287,7 +550,7 @@ function replaceComponentPlaceholders(
     out += text.slice(cursor, token.start);
 
     const fields = parsePlaceholderFields(token.body);
-    const componentKey = fields.get("Component") ?? fields.get("Name");
+    const componentKey = fields.get("Feature") ?? fields.get("Component") ?? fields.get("Name");
     if (!componentKey) {
       const value = inheritedParams.get(token.body.trim());
       out += value ?? token.full;
@@ -302,7 +565,7 @@ function replaceComponentPlaceholders(
       continue;
     }
 
-    const sectionName = fields.get("Section");
+    const sectionName = fields.get("Contribution") ?? fields.get("Section");
     const section = pickComponentSection(component.sections, sectionName);
     if (!section) {
       out += token.full;
@@ -320,9 +583,305 @@ function replaceComponentPlaceholders(
   return out;
 }
 
+function expandRepeatBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "Repeat");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    // Replace innermost first and from the end so ranges remain stable.
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderRepeatBlock(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+
+  return out;
+}
+
+interface TagBlock {
+  start: number;
+  end: number;
+  attrs: string;
+  body: string;
+}
+
+function collectTagBlocks(text: string, tagName: string): TagBlock[] {
+  const escapedTagName = escapeRegex(tagName);
+  const tokenRegex = new RegExp(`<\\s*(\\/?)\\s*${escapedTagName}\\b([^>]*)>`, "gi");
+  const stack: Array<{ start: number; openEnd: number; attrs: string }> = [];
+  const blocks: TagBlock[] = [];
+  for (const match of text.matchAll(tokenRegex)) {
+    const slash = match[1] ?? "";
+    const attrs = match[2] ?? "";
+    const token = match[0] ?? "";
+    const start = typeof match.index === "number" ? match.index : -1;
+    if (start < 0) {
+      continue;
+    }
+    const end = start + token.length;
+    const isClosing = slash === "/";
+    const isSelfClosing = !isClosing && /\/\s*>$/.test(token);
+
+    if (!isClosing) {
+      if (isSelfClosing) {
+        blocks.push({
+          start,
+          end,
+          attrs,
+          body: ""
+        });
+        continue;
+      }
+      stack.push({
+        start,
+        openEnd: end,
+        attrs
+      });
+      continue;
+    }
+
+    const top = stack.pop();
+    if (!top) {
+      continue;
+    }
+    blocks.push({
+      start: top.start,
+      end,
+      attrs: top.attrs,
+      body: text.slice(top.openEnd, start)
+    });
+  }
+
+  return blocks;
+}
+
+function renderRepeatBlock(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const paramName = (attrs.get("Param") ?? attrs.get("As") ?? attrs.get("Name") ?? "Item").trim();
+  if (!paramName) {
+    return block.body;
+  }
+
+  const values = collectRepeatValues(attrs);
+  if (values.length === 0) {
+    if (context.onDebugLog) {
+      context.onDebugLog("[Repeat] skipped block with no values.");
+    }
+    return "";
+  }
+
+  const separator = attrs.get("Separator") ?? "";
+  const parts: string[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const item = values[i] ?? "";
+    const localParams = new Map<string, string>([
+      [paramName, item],
+      ["Index", String(i)],
+      ["Index1", String(i + 1)]
+    ]);
+    const params = mergeParams(inheritedParams, localParams);
+    parts.push(applyParamSubstitution(block.body, params));
+  }
+
+  return parts.join(separator);
+}
+
+function collectRepeatValues(attrs: ReadonlyMap<string, string>): string[] {
+  const valuesRaw = attrs.get("Values") ?? attrs.get("Items");
+  if (valuesRaw && valuesRaw.trim().length > 0) {
+    return valuesRaw
+      .split(/[,;|]+/)
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+  }
+
+  const fromRaw = attrs.get("From");
+  const toRaw = attrs.get("To");
+  if (fromRaw === undefined || toRaw === undefined) {
+    return [];
+  }
+
+  const from = Number.parseInt(fromRaw, 10);
+  const to = Number.parseInt(toRaw, 10);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) {
+    return [];
+  }
+
+  let step = Number.parseInt(attrs.get("Step") ?? "1", 10);
+  if (!Number.isFinite(step) || step === 0) {
+    step = 1;
+  }
+  const effectiveStep = from <= to ? Math.abs(step) : -Math.abs(step);
+  const out: string[] = [];
+  for (let current = from; effectiveStep > 0 ? current <= to : current >= to; current += effectiveStep) {
+    out.push(String(current));
+  }
+  return out;
+}
+
+function expandIfBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "If");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderIfBlock(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+  return out;
+}
+
+function renderIfBlock(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const paramName = (attrs.get("Param") ?? attrs.get("Name") ?? attrs.get("Key") ?? "").trim();
+  const leftRaw = attrs.get("Value");
+  const leftValue = leftRaw !== undefined
+    ? resolveParamValue(leftRaw, inheritedParams)
+    : (paramName ? (inheritedParams.get(paramName) ?? "") : "");
+
+  const equalsRaw = attrs.get("Equals");
+  const notEqualsRaw = attrs.get("NotEquals");
+  const inRaw = attrs.get("In");
+  const isEmptyRaw = attrs.get("IsEmpty");
+
+  let isMatch: boolean;
+  if (equalsRaw !== undefined) {
+    isMatch = leftValue === resolveParamValue(equalsRaw, inheritedParams);
+  } else if (notEqualsRaw !== undefined) {
+    isMatch = leftValue !== resolveParamValue(notEqualsRaw, inheritedParams);
+  } else if (inRaw !== undefined) {
+    const inValues = splitListValues(resolveParamValue(inRaw, inheritedParams));
+    isMatch = inValues.includes(leftValue);
+  } else if (isEmptyRaw !== undefined) {
+    const expectEmpty = parseBooleanAttribute(resolveParamValue(isEmptyRaw, inheritedParams)) ?? false;
+    isMatch = expectEmpty ? leftValue.trim().length === 0 : leftValue.trim().length > 0;
+  } else {
+    isMatch = isTruthy(leftValue);
+  }
+
+  if (!isMatch && context.onDebugLog && attrs.size > 0) {
+    context.onDebugLog(`[If] condition did not match${paramName ? ` for '${paramName}'` : ""}.`);
+  }
+  return isMatch ? block.body : "";
+}
+
+function expandCaseBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
+  let out = text;
+  for (let pass = 0; pass < context.maxDepth; pass++) {
+    const blocks = collectTagBlocks(out, "Case");
+    if (blocks.length === 0) {
+      break;
+    }
+
+    const innermost = pickInnermostBlocks(blocks).sort((a, b) => b.start - a.start);
+    let next = out;
+    for (const block of innermost) {
+      const rendered = renderCaseBlock(block, inheritedParams, context);
+      next = `${next.slice(0, block.start)}${rendered}${next.slice(block.end)}`;
+    }
+    out = next;
+  }
+  return out;
+}
+
+function renderCaseBlock(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
+  const attrs = parseXmlAttributes(block.attrs);
+  const paramName = (attrs.get("Param") ?? attrs.get("Name") ?? attrs.get("Key") ?? "").trim();
+  const selectedRaw = attrs.get("Value");
+  const selectedValue = selectedRaw !== undefined
+    ? resolveParamValue(selectedRaw, inheritedParams)
+    : (paramName ? (inheritedParams.get(paramName) ?? "") : "");
+
+  const whenBlocks = collectTagBlocks(block.body, "When")
+    .sort((a, b) => a.start - b.start);
+  for (const whenBlock of whenBlocks) {
+    const whenAttrs = parseXmlAttributes(whenBlock.attrs);
+    const equalsRaw = whenAttrs.get("Equals") ?? whenAttrs.get("Value");
+    const inRaw = whenAttrs.get("In");
+
+    let isMatch = false;
+    if (equalsRaw !== undefined) {
+      const compareValues = splitListValues(resolveParamValue(equalsRaw, inheritedParams));
+      isMatch = compareValues.includes(selectedValue);
+    } else if (inRaw !== undefined) {
+      const compareValues = splitListValues(resolveParamValue(inRaw, inheritedParams));
+      isMatch = compareValues.includes(selectedValue);
+    } else {
+      // Fallback: <When> without selector means first branch.
+      isMatch = true;
+    }
+
+    if (isMatch) {
+      return whenBlock.body;
+    }
+  }
+
+  const defaultBlock = collectTagBlocks(block.body, "Default").sort((a, b) => a.start - b.start)[0];
+  if (defaultBlock) {
+    return defaultBlock.body;
+  }
+
+  if (context.onDebugLog && attrs.size > 0) {
+    context.onDebugLog(`[Case] no branch matched${paramName ? ` for '${paramName}'` : ""}.`);
+  }
+  return "";
+}
+
+function resolveParamValue(value: string, params: Map<string, string>): string {
+  return applyParamSubstitution(value, params).trim();
+}
+
+function splitListValues(raw: string): string[] {
+  return raw
+    .split(/[,;|]+/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+function isTruthy(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") {
+    return false;
+  }
+  return true;
+}
+
+function pickInnermostBlocks(blocks: readonly TagBlock[]): TagBlock[] {
+  if (blocks.length <= 1) {
+    return [...blocks];
+  }
+  return blocks.filter((candidate) => {
+    for (const other of blocks) {
+      if (other === candidate) {
+        continue;
+      }
+      if (other.start > candidate.start && other.end < candidate.end) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
 function parseComponentSections(text: string): ComponentSection[] {
   const sections: ComponentSection[] = [];
-  const tagRegex = /<\s*(\/?)\s*Section\b([^>]*)>/gi;
+  const tagRegex = /<\s*(\/?)\s*(Contribution|Section)\b([^>]*)>/gi;
   let depth = 0;
   let currentOpenEnd = -1;
   let currentAttrsRaw = "";
@@ -331,7 +890,7 @@ function parseComponentSections(text: string): ComponentSection[] {
   for (const match of text.matchAll(tagRegex)) {
     const token = match[0] ?? "";
     const slash = match[1] ?? "";
-    const attrsRaw = match[2] ?? "";
+    const attrsRaw = match[3] ?? "";
     const start = typeof match.index === "number" ? match.index : -1;
     if (start < 0) {
       continue;
@@ -401,46 +960,68 @@ function insertSectionContent(text: string, section: ComponentSection, content: 
   if (targetXPath.length === 0) {
     return text;
   }
+  return applyXPathInsert(text, {
+    targetXPath,
+    content,
+    insertMode: normalizeInsertMode(section.insert),
+    allowMultipleInserts: section.allowMultipleInserts
+  }, context).xml;
+}
 
-  const ranges = findTargetRanges(text, targetXPath, context);
-  if (ranges.length === 0) {
-    return text;
+export function applyXPathInsert(
+  text: string,
+  request: XPathInsertRequest,
+  context?: { onDebugLog?: (line: string) => void }
+): XPathInsertResult {
+  const targetXPath = request.targetXPath.trim();
+  if (!targetXPath) {
+    return { xml: text, matchCount: 0, insertCount: 0 };
   }
 
+  const ranges = findTargetRanges(text, targetXPath, context as RenderContext | undefined);
+  if (ranges.length === 0) {
+    return { xml: text, matchCount: 0, insertCount: 0 };
+  }
+
+  const allowMultipleInserts = request.allowMultipleInserts === true;
   if (ranges.length > 1 && context?.onDebugLog) {
     context.onDebugLog(
       `[TargetXPath] '${targetXPath}' matched ${ranges.length} nodes; ` +
-      `${section.allowMultipleInserts ? "applying to all matches" : "using first match only"}`
+      `${allowMultipleInserts ? "applying to all matches" : "using first match only"}`
     );
   }
 
-  const insertMode = (section.insert ?? "append").toLowerCase();
-  const applicableRanges = section.allowMultipleInserts ? ranges : [ranges[0]];
+  const insertMode = request.insertMode ?? "append";
+  const applicableRanges = allowMultipleInserts ? ranges : [ranges[0]];
   const sortedRanges = [...applicableRanges].sort((a, b) => insertionPointForMode(b, insertMode) - insertionPointForMode(a, insertMode));
 
   let out = text;
   for (const range of sortedRanges) {
     if (insertMode === "prepend") {
-      out = out.slice(0, range.openEnd) + content + out.slice(range.openEnd);
+      out = out.slice(0, range.openEnd) + request.content + out.slice(range.openEnd);
       continue;
     }
     if (insertMode === "before") {
-      out = out.slice(0, range.openStart) + content + out.slice(range.openStart);
+      out = out.slice(0, range.openStart) + request.content + out.slice(range.openStart);
       continue;
     }
     if (insertMode === "after") {
-      out = out.slice(0, range.closeEnd) + content + out.slice(range.closeEnd);
+      out = out.slice(0, range.closeEnd) + request.content + out.slice(range.closeEnd);
       continue;
     }
-    out = out.slice(0, range.closeStart) + content + out.slice(range.closeStart);
+    out = out.slice(0, range.closeStart) + request.content + out.slice(range.closeStart);
   }
 
-  return out;
+  return {
+    xml: out,
+    matchCount: ranges.length,
+    insertCount: applicableRanges.length
+  };
 }
 
 function insertionPointForMode(
   range: { openStart: number; openEnd: number; closeStart: number; closeEnd: number },
-  insertMode: string
+  insertMode: XPathInsertMode
 ): number {
   if (insertMode === "prepend") {
     return range.openEnd;
@@ -452,6 +1033,14 @@ function insertionPointForMode(
     return range.closeEnd;
   }
   return range.closeStart;
+}
+
+function normalizeInsertMode(insertMode: string | undefined): XPathInsertMode {
+  const normalized = (insertMode ?? "append").toLowerCase();
+  if (normalized === "prepend" || normalized === "before" || normalized === "after") {
+    return normalized;
+  }
+  return "append";
 }
 
 function findTargetRanges(
@@ -677,7 +1266,7 @@ function parseUsingDirectives(text: string): UsingDirective[] {
   const regex = /<Using\b([^>]*)\/?>/gi;
   for (const m of text.matchAll(regex)) {
     const attrs = parseXmlAttributes(m[1] ?? "");
-    const componentValue = attrs.get("Component") ?? attrs.get("Name");
+    const componentValue = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
     if (!componentValue) {
       continue;
     }
@@ -763,10 +1352,14 @@ function removeStandaloneUsingTags(text: string): string {
 function normalizeComponentContent(text: string): string {
   let out = text.replace(/<\?xml[^>]*\?>/gi, "");
   out = out.replace(/^\uFEFF/, "");
-  const start = out.indexOf("<Component");
-  if (start >= 0) {
+  for (const tagName of TEMPLATE_DEFINITION_TAGS) {
+    const start = out.indexOf(`<${tagName}`);
+    if (start < 0) {
+      continue;
+    }
+
     const startEnd = out.indexOf(">", start);
-    const end = out.lastIndexOf("</Component>");
+    const end = out.lastIndexOf(`</${tagName}>`);
     if (startEnd >= 0 && end > startEnd) {
       return out.slice(startEnd + 1, end);
     }
@@ -780,9 +1373,9 @@ function sanitizeFinalXml(text: string, templateRoot: string): string {
   const decl = declMatch?.[0] ?? "";
   let out = text;
   out = out.replace(/<\?xml[^>]*\?>/g, "");
-  const isComponentTemplate = templateRoot.localeCompare("Component", undefined, { sensitivity: "accent" }) === 0;
-  if (!isComponentTemplate) {
-    out = stripOuterComponentWrapper(out);
+  const isSfpComponentTemplate = templateRoot.localeCompare("Component", undefined, { sensitivity: "accent" }) === 0;
+  if (!isSfpComponentTemplate) {
+    out = stripOuterTemplateDefinitionWrapper(out);
   }
   if (decl.length > 0) {
     return `${decl}${out}`;
@@ -790,9 +1383,21 @@ function sanitizeFinalXml(text: string, templateRoot: string): string {
   return out;
 }
 
-function stripOuterComponentWrapper(text: string): string {
+function stripOuterTemplateDefinitionWrapper(text: string): string {
+  for (const tagName of TEMPLATE_DEFINITION_TAGS) {
+    const stripped = stripOuterWrapperForTag(text, tagName);
+    if (stripped !== text) {
+      return stripped;
+    }
+  }
+
+  return text;
+}
+
+function stripOuterWrapperForTag(text: string, tagName: string): string {
   const trimmedStart = text.trimStart();
-  if (!/^<Component\b/i.test(trimmedStart)) {
+  const openRegex = new RegExp(`^<${tagName}\\b`, "i");
+  if (!openRegex.test(trimmedStart)) {
     return text;
   }
 
@@ -803,16 +1408,18 @@ function stripOuterComponentWrapper(text: string): string {
   }
 
   const trimmedEnd = text.trimEnd();
-  if (!/<\/Component>\s*$/i.test(trimmedEnd)) {
+  const closeRegex = new RegExp(`</${tagName}>\\s*$`, "i");
+  if (!closeRegex.test(trimmedEnd)) {
     return text;
   }
 
-  const endStart = text.lastIndexOf("</Component>");
+  const closingToken = `</${tagName}>`;
+  const endStart = text.lastIndexOf(closingToken);
   if (endStart <= startEnd) {
     return text;
   }
 
-  return `${text.slice(0, offset)}${text.slice(startEnd + 1, endStart)}${text.slice(endStart + "</Component>".length)}`;
+  return `${text.slice(0, offset)}${text.slice(startEnd + 1, endStart)}${text.slice(endStart + closingToken.length)}`;
 }
 
 function normalizeXmlTagSpacingLikeLegacy(text: string): string {

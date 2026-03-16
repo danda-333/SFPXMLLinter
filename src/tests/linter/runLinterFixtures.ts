@@ -11,7 +11,7 @@ const workspaceRoot = path.resolve(__dirname, "../../../tests/fixtures/linter");
 const state: VscodeMockState = {
   workspaceRoot,
   config: {
-    workspaceRoots: ["XML", "XML_Templates", "XML_Components"],
+    workspaceRoots: ["XML", "XML_Templates", "XML_Components", "XML_Primitives"],
     resourcesRoots: ["Resources"],
     hoverDocsFiles: [],
     rules: {},
@@ -136,6 +136,8 @@ type ParsedDocumentFacts = import("../../indexer/xmlFacts").ParsedDocumentFacts;
 
 const { DiagnosticsEngine } = require("../../diagnostics/engine") as typeof import("../../diagnostics/engine");
 const { parseDocumentFactsFromText } = require("../../indexer/xmlFacts") as typeof import("../../indexer/xmlFacts");
+const { populateUsingInsertTraceFromText } = require("../../composition/usingImpact") as typeof import("../../composition/usingImpact");
+const { loadFeatureManifestRegistry } = require("../../composition/workspace") as typeof import("../../composition/workspace");
 
 class MockTextDocument {
   public readonly uri: Uri;
@@ -196,6 +198,7 @@ class MockTextDocument {
 function run(): void {
   const docs = loadFixtureDocuments();
   const index = buildIndex(docs);
+  const featureRegistry = loadFeatureManifestRegistry(workspaceRoot);
   const engine = new DiagnosticsEngine();
   const invalidExpectations = loadInvalidExpectations();
   let checkedValid = 0;
@@ -208,7 +211,9 @@ function run(): void {
       continue;
     }
 
-    const diagnostics = engine.buildDiagnostics(doc as unknown as import("vscode").TextDocument, index);
+    const diagnostics = engine.buildDiagnostics(doc as unknown as import("vscode").TextDocument, index, {
+      featureRegistry
+    });
     const isInvalidFixture = normalizedRelPath.toLowerCase().includes("/900_chyby/");
 
     if (!isInvalidFixture) {
@@ -271,7 +276,7 @@ function loadInvalidExpectations(): Map<string, string> {
 }
 
 function loadFixtureDocuments(): Map<string, MockTextDocument> {
-  const roots = ["XML_Templates", "XML_Components"];
+  const roots = ["XML_Templates", "XML_Components", "XML_Primitives"];
   const docs = new Map<string, MockTextDocument>();
   for (const root of roots) {
     const base = path.join(workspaceRoot, root);
@@ -305,12 +310,12 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
   // Pass 1: components
   for (const entry of parsedEntries) {
     const { rel, doc, facts, root } = entry;
-    if (root === "component") {
+    if (root === "component" || root === "feature") {
       const componentKey = normalizeComponentKeyFromRel(rel);
-      const sectionNames = collectSectionNames(doc.getText());
-      const sectionDefinitions = new Map<string, Location>();
-      for (const sectionName of sectionNames) {
-        sectionDefinitions.set(sectionName, new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))));
+      const contributionNames = collectContributionNames(doc.getText());
+      const contributionDefinitions = new Map<string, Location>();
+      for (const contributionName of contributionNames) {
+        contributionDefinitions.set(contributionName, new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))));
       }
       const formControlDefinitions = new Map<string, Location>();
       for (const item of facts.declaredControlInfos) {
@@ -331,6 +336,10 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
       for (const [ident, range] of facts.controlShareCodeDefinitions.entries()) {
         workflowControlShareCodeDefinitions.set(ident, new Location(doc.uri, range as unknown as Range));
       }
+      const workflowActionShareCodeDefinitions = new Map<string, Location>();
+      for (const [ident, range] of facts.actionShareCodeDefinitions.entries()) {
+        workflowActionShareCodeDefinitions.set(ident, new Location(doc.uri, range as unknown as Range));
+      }
       const workflowButtonShareCodeDefinitions = new Map<string, Location>();
       for (const [ident, range] of facts.buttonShareCodeDefinitions.entries()) {
         workflowButtonShareCodeDefinitions.set(ident, new Location(doc.uri, range as unknown as Range));
@@ -338,12 +347,14 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
       componentsByKey.set(componentKey, {
         key: componentKey,
         uri: doc.uri as unknown as import("vscode").Uri,
-        sections: sectionNames,
+        contributions: contributionNames,
         componentLocation: new Location(doc.uri, new Range(new Position(0, 0), new Position(0, 0))) as unknown as import("vscode").Location,
-        sectionDefinitions: sectionDefinitions as unknown as Map<string, import("vscode").Location>,
+        contributionDefinitions: contributionDefinitions as unknown as Map<string, import("vscode").Location>,
+        contributionSummaries: collectComponentContributionSummaries(doc.getText()) as unknown as import("../../indexer/types").IndexedComponent["contributionSummaries"],
         formControlDefinitions: formControlDefinitions as unknown as Map<string, import("vscode").Location>,
         formButtonDefinitions: formButtonDefinitions as unknown as Map<string, import("vscode").Location>,
         formSectionDefinitions: formSectionDefinitions as unknown as Map<string, import("vscode").Location>,
+        workflowActionShareCodeDefinitions: workflowActionShareCodeDefinitions as unknown as Map<string, import("vscode").Location>,
         workflowControlShareCodeDefinitions: workflowControlShareCodeDefinitions as unknown as Map<string, import("vscode").Location>,
         workflowButtonShareCodeDefinitions: workflowButtonShareCodeDefinitions as unknown as Map<string, import("vscode").Location>,
         workflowButtonShareCodeButtonIdents: facts.buttonShareCodeButtonIdents
@@ -423,8 +434,12 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
   const emptyNestedRef = new Map<string, Map<string, Location[]>>();
   const emptyUsageMap = new Map<string, Set<string>>();
   const emptyNestedUsage = new Map<string, Map<string, Set<string>>>();
+  const parsedFactsByUri = new Map<string, ParsedDocumentFacts>();
+  for (const entry of parsedEntries) {
+    parsedFactsByUri.set(entry.doc.uri.toString(), entry.facts);
+  }
 
-  return {
+  const index: WorkspaceIndex = {
     formsByIdent: formsByIdent as unknown as Map<string, import("../../indexer/types").IndexedForm>,
     componentsByKey: componentsByKey as unknown as Map<string, import("../../indexer/types").IndexedComponent>,
     componentKeysByBaseName,
@@ -434,15 +449,21 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     buttonReferenceLocationsByFormIdent: new Map<string, Map<string, import("vscode").Location[]>>(),
     sectionReferenceLocationsByFormIdent: new Map<string, Map<string, import("vscode").Location[]>>(),
     componentReferenceLocationsByKey: emptyMapLocations as unknown as Map<string, import("vscode").Location[]>,
-    componentSectionReferenceLocationsByKey: emptyNestedRef as unknown as Map<string, Map<string, import("vscode").Location[]>>,
+    componentContributionReferenceLocationsByKey: emptyNestedRef as unknown as Map<string, Map<string, import("vscode").Location[]>>,
     componentUsageFormIdentsByKey: emptyUsageMap,
-    componentSectionUsageFormIdentsByKey: emptyNestedUsage,
-    parsedFactsByUri: new Map(),
+    componentContributionUsageFormIdentsByKey: emptyNestedUsage,
+    parsedFactsByUri,
     hasIgnoreDirectiveByUri: new Map(),
     formsReady: true,
     componentsReady: true,
     fullReady: true
   };
+
+  for (const entry of parsedEntries) {
+    populateUsingInsertTraceFromText(entry.facts, entry.doc.getText(), index);
+  }
+
+  return index;
 }
 
 function resolveComponentFromFixtureIndex(
@@ -496,14 +517,17 @@ function collectFiles(root: string, extension: string): string[] {
 function normalizeComponentKeyFromRel(relPath: string): string {
   let normalized = relPath.replace(/\\/g, "/");
   normalized = normalized.replace(/^xml_components\//i, "");
+  normalized = normalized.replace(/^xml_primitives\//i, "");
+  normalized = normalized.replace(/\.feature\.xml$/i, "");
+  normalized = normalized.replace(/\.primitive\.xml$/i, "");
   normalized = normalized.replace(/\.component\.xml$/i, "");
   normalized = normalized.replace(/\.xml$/i, "");
   return normalized;
 }
 
-function collectSectionNames(text: string): Set<string> {
+function collectContributionNames(text: string): Set<string> {
   const out = new Set<string>();
-  for (const match of text.matchAll(/<Section\b([^>]*)>/gi)) {
+  for (const match of text.matchAll(/<(?:Contribution|Section)\b([^>]*)>/gi)) {
     const attrs = match[1] ?? "";
     const m = /\bName\s*=\s*("([^"]*)"|'([^']*)')/i.exec(attrs);
     const value = (m?.[2] ?? m?.[3] ?? "").trim();
@@ -513,6 +537,132 @@ function collectSectionNames(text: string): Set<string> {
     out.add(value);
   }
   return out;
+}
+
+function collectComponentContributionSummaries(text: string): Map<string, import("../../indexer/types").IndexedComponentContributionSummary> {
+  const out = new Map<string, import("../../indexer/types").IndexedComponentContributionSummary>();
+  for (const match of text.matchAll(/<(Contribution|Section)\b([^>]*)>([\s\S]*?)<\/\1>/gi)) {
+    const attrs = match[2] ?? "";
+    const body = match[3] ?? "";
+    const name = extractAttributeValue(attrs, "Name");
+    if (!name) {
+      continue;
+    }
+
+    const rootRaw = (extractAttributeValue(attrs, "Root") ?? "").trim().toLowerCase();
+    const root: import("../../indexer/types").IndexedComponentContributionSummary["root"] =
+      rootRaw.length === 0 || rootRaw === "form" ? "form" : rootRaw === "workflow" ? "workflow" : "other";
+
+    out.set(name, {
+      contributionName: name,
+      root,
+      rootExpression: rootRaw.length > 0 ? rootRaw : undefined,
+      insert: extractAttributeValue(attrs, "Insert"),
+      targetXPath: extractAttributeValue(attrs, "TargetXPath"),
+      allowMultipleInserts: parseBooleanAttribute(extractAttributeValue(attrs, "AllowMultipleInserts")),
+      hasContent: /\S/.test(body),
+      formControlCount: countTagOccurrences(body, /<Control\b[^>]*>/gi),
+      formButtonCount: countTagOccurrences(body, /<Button\b[^>]*>/gi),
+      formSectionCount: countTagOccurrences(body, /<Section\b[^>]*>/gi),
+      workflowActionShareCodeCount: countTagOccurrences(body, /<ActionShareCode\b[^>]*>/gi),
+      workflowControlShareCodeCount: countTagOccurrences(body, /<ControlShareCode\b[^>]*>/gi),
+      workflowButtonShareCodeCount: countTagOccurrences(body, /<ButtonShareCode\b[^>]*>/gi),
+      formControlIdents: collectAttributeIdents(body, /<Control\b([^>]*)>/gi, "Ident"),
+      formButtonIdents: collectAttributeIdents(body, /<Button\b([^>]*)>/gi, "Ident"),
+      formSectionIdents: collectAttributeIdents(body, /<Section\b([^>]*)>/gi, "Ident"),
+      workflowReferencedActionShareCodeIdents: collectActionShareCodeReferenceIdents(body),
+      workflowActionShareCodeIdents: collectAttributeIdents(body, /<ActionShareCode\b([^>]*)>/gi, "Ident"),
+      workflowControlShareCodeIdents: collectAttributeIdents(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
+      workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
+      requiredParamNames: collectRequiredContributionParamNames(body),
+      primitiveUsageCountByKey: new Map(),
+      primitiveTemplateNamesByKey: new Map(),
+      primitiveProvidedParamNamesByKey: new Map(),
+      primitiveProvidedSlotNamesByKey: new Map()
+    });
+  }
+
+  return out;
+}
+
+function extractAttributeValue(attrs: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`${escaped}\\s*=\\s*(\"([^\"]*)\"|'([^']*)')`, "i");
+  const match = regex.exec(attrs);
+  return (match?.[2] ?? match?.[3] ?? "").trim() || undefined;
+}
+
+function collectAttributeIdents(text: string, tagRegex: RegExp, attributeName: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(tagRegex)) {
+    const value = extractAttributeValue(match[1] ?? "", attributeName);
+    if (value) {
+      out.add(value);
+    }
+  }
+  return out;
+}
+
+function collectActionShareCodeReferenceIdents(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(/<Action\b([^>]*)>/gi)) {
+    const attrs = match[1] ?? "";
+    const actionType = (extractAttributeValue(attrs, "xsi:type") ?? extractAttributeValue(attrs, "type") ?? "").trim().toLowerCase();
+    if (actionType !== "sharecode") {
+      continue;
+    }
+
+    const ident = extractAttributeValue(attrs, "Ident");
+    if (ident) {
+      out.add(ident);
+    }
+  }
+  return out;
+}
+
+function collectRequiredContributionParamNames(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const tokenMatch of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+    const token = (tokenMatch[1] ?? "").trim();
+    if (!token) {
+      continue;
+    }
+
+    if (token.includes(":") || token.includes(",")) {
+      continue;
+    }
+
+    if (!/^[A-Za-z_][\w.-]*$/.test(token)) {
+      continue;
+    }
+
+    out.add(token);
+  }
+  return out;
+}
+
+function countTagOccurrences(text: string, regex: RegExp): number {
+  let count = 0;
+  for (const _ of text.matchAll(regex)) {
+    count++;
+  }
+  return count;
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return undefined;
 }
 
 function assertNoDiagnostics(

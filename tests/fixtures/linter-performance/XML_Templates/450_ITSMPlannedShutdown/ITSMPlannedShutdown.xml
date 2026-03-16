@@ -102,7 +102,7 @@
 										</div>
 									</div>
 									<div class="card-body">
-										{{Component:Common/Shared/FolderGroupSegment,Section:Html}}
+										{{Component:Common/Shared/FolderGroupSegment,Contribution:Html}}
 										<div class="row">
 											<div class="col-md-12">
 												<div class="form-group">
@@ -124,13 +124,13 @@
 							</div>
 						</div>
 
-						{{Component:Common/Controls/CommunicationControls,Section:Html}}
+						{{Component:Common/Controls/CommunicationControls,Contribution:Html}}
 
 					</div><!-- //Levý sloupec -->
 
 					<div class="col-md-3"><!-- Pravý sloupec -->
 
-						{{Component:Common/Controls/ReporterControls,Section:Html}}
+						{{Component:Common/Controls/ReporterControls,Contribution:Html}}
 
 
 						<div class="row">
@@ -168,8 +168,8 @@
 
 				</div>
 
-				{{Component:Common/Shared/ITSMKey,Section:Html}}
-				{{Component:Common/Controls/ThisFormIdent,Section:Html}}
+				{{Component:Common/Shared/ITSMKey,Contribution:Html}}
+				{{Component:Common/Controls/ThisFormIdent,Contribution:Html}}
 			]]></HTMLTemplate>
 		</Section>
 	</Sections>

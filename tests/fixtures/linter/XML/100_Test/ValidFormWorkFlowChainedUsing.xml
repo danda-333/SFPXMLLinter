@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" FormIdent="ValidForm" Ident="ValidFormChainedUsingWorkFlow">
+
+  <ActionShareCodes>
+
+    <ActionShareCode Ident="ChainedActionShareCode" />
+  </ActionShareCodes>
+
+  <ButtonShareCodes>
+
+    <ButtonShareCode Ident="ChainedButtonShareCode">
+      <Buttons>
+        <Button Ident="LocalButton">
+          <Actions>
+            <Action xsi:type="ShareCode" Ident="ChainedActionShareCode" />
+          </Actions>
+        </Button>
+      </Buttons>
+    </ButtonShareCode>
+  </ButtonShareCodes>
+
+  <States>
+    <State Value="1">
+      <Group>
+        <Buttons>
+          <Button xsi:type="ShareCodeButton" Ident="ChainedButtonShareCode" />
+        </Buttons>
+      </Group>
+    </State>
+  </States>
+</WorkFlow>

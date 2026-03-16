@@ -1,0 +1,9 @@
+<Primitive>
+  <Template Name="Dialog">
+    <Section Root="Form" xsi:type="ConfirmFormDialogSection" Ident="{{DialogIdent}}" TitleResourceKey="{{TitleKey}}">
+      <HTMLTemplate><![CDATA[
+        {{Slot:Body}}
+      ]]></HTMLTemplate>
+    </Section>
+  </Template>
+</Primitive>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkFlow FormIdent="ValidForm" Ident="ValidFormWorkFlow">
+  <Usings>
+    <!-- @Ignore unused-using -->
+    <Using Feature="Shared/Sample" />
+  </Usings>
+</WorkFlow>

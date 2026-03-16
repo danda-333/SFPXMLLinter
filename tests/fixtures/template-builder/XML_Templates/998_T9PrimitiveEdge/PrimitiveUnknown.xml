@@ -1,0 +1,5 @@
+<Form Ident="PrimitiveUnknown">
+  <Controls>
+    <UsePrimitive Name="Common/Unknown/Primitive" />
+  </Controls>
+</Form>

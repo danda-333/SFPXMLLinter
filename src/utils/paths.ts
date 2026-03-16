@@ -12,7 +12,9 @@ export function toLowerPath(value: string): string {
 export function normalizeComponentKey(raw: string): string {
   let key = raw.trim().replace(/\\/g, "/").replace(/^\.\//, "");
 
-  if (/\.component\.xml$/i.test(key)) {
+  if (/\.feature\.xml$/i.test(key)) {
+    key = key.slice(0, -".feature.xml".length);
+  } else if (/\.component\.xml$/i.test(key)) {
     key = key.slice(0, -".component.xml".length);
   } else if (/\.xml$/i.test(key)) {
     key = key.slice(0, -".xml".length);

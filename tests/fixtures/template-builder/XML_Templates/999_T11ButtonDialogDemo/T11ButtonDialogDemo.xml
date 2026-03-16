@@ -1,0 +1,30 @@
+<Form FormIdent="T11ButtonDialogDemo">
+  <Buttons>
+    <UsePrimitive
+      Name="Common/Buttons/ButtonWithDialog"
+      Ident="AssignButton"
+      TitleResourceKey="AssignButton_ITSM"
+      IsSave="true"
+      DialogSectionIdent="AssignConfirmFormDialogSection"
+      DialogExtensionIdent="AssignConfirmFormDialog"
+      DialogTitleResourceKey="AssignConfirmFormDialogSectionTitle_ITSM"
+      DialogConfirmButtonTitleResourceKey="AssignConfirmFormDialogSectionConfirmButton_ITSM"
+      DialogCloseButtonTitleResourceKey="AssignConfirmFormDialogSectionCloseButton_ITSM">
+      <Slot Name="Actions">
+        <Action xsi:type="ShareCode" Ident="Assignee_Update_FromDialog_ActionShare" />
+      </Slot>
+      <Slot Name="DialogBody">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <ControlLabel ControlID="DialogAssignedGroupID" />
+              <Control ID="DialogAssignedGroupID" />
+            </div>
+          </div>
+        </div>
+      </Slot>
+    </UsePrimitive>
+  </Buttons>
+  <Sections>
+  </Sections>
+</Form>

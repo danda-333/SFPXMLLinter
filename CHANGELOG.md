@@ -1,5 +1,109 @@
 # Changelog
 
+## Unreleased
+
+## 0.1.6
+
+- Duplicate-ident scope fix:
+  - fixed false-positive `duplicate-button-ident` cases where using-injected root buttons were incorrectly scoped to nested section button containers.
+  - duplicate scope matching now uses concrete parent container instances (`controls@...`, `buttons@...`, `sections@...`) and root container keys derived from parsed document structure.
+  - improved consistency for composition-injected symbol diagnostics against real template target XPath placement.
+
+## 0.1.5
+
+- Diagnostics and composition consistency:
+  - unified duplicate-ident validation between template XML and effective composed output.
+  - duplicate detection is now parent-scope aware for `Control`, `Button`, and `Section` (same Ident in different parent containers no longer reports false positives).
+  - added regression fixtures for using-injected duplicates and scoped duplicate-valid scenarios.
+- Using parameter diagnostics:
+  - improved `missing-using-param` validation based on effective active/inherited usings and contribution insert impact.
+- Test output UX:
+  - unified colored test output across runners through shared console color bootstrap (`green` pass, `red` fail, `yellow` warning/skip).
+
+## 0.1.4
+
+- Auto-build dependency chain:
+  - improved component-save dependent template selection to include templates affected via inherited `Using` (`Form` -> `WorkFlow`/`DataView`), not only direct references.
+  - extended index usage ownership mapping for `DataView` (`FormIdent`) so inherited dependency fan-out is correctly discoverable from index.
+
+## 0.1.3
+
+- Template builder inherited using parameters:
+  - fixed inherited `Using` transfer so custom attributes/params from Form are preserved when inherited into `WorkFlow`/`DataView` build path.
+  - inherited `Using` projection still respects `SuppressInheritance` and local deduplication.
+- Tests:
+  - expanded inherited-using regression to verify parameter propagation (`{{...}}` substitution) from inherited `Using` attributes.
+
+## 0.1.2
+
+- Template builder inherited usings:
+  - fixed runtime build path so `WorkFlow`/`DataView` templates correctly apply `Using` inherited from owning `Form` (`FormIdent`).
+  - inherited `Using` resolution now respects local `SuppressInheritance` and avoids duplicate activation when local and inherited entries overlap.
+- Tests:
+  - added regression case for inherited `Using` application in template core tests.
+
+## 0.1.1
+
+- Template builder:
+  - `sfpXmlLinter.templateBuilder.postBuildFormat` is now enabled by default (`true`), so final build outputs are formatted by the internal tolerant formatter unless explicitly disabled.
+- Performance and responsiveness:
+  - reduced repeated validation scheduling on editor/tab visibility changes.
+  - reduced Composition Tree refresh churn with debounced refresh and in-memory tree/use-location caching.
+  - lowered noisy standalone validation skip logs.
+
+## 0.1.0
+
+- Template generators (T11) completion:
+  - finalized generator v2 contract with explicit kinds:
+    - `document` (`kind + applies(ctx)? + run(ctx)`)
+    - `snippet` (`kind + selector + run(ctx)`)
+  - added generator scaffolding commands:
+    - `SFP XML Linter: Create Generator Template (Document)`
+    - `SFP XML Linter: Create Generator Template (Snippet)`
+  - added generator authoring docs:
+    - `Docs/TemplateGenerators.MD`
+  - added new M11 regression coverage:
+    - multi-generator determinism (`document + snippet`) in one file
+    - fail-safe scenario where one generator throws but build continues
+    - performance checkpoint script (`npm run test:templates:perf`)
+- Templating naming migration:
+  - added first-class support for `Feature` / `Contribution` authoring while keeping legacy `Component` / `Section` compatibility.
+  - added `Feature="..."` alias support for `Using` / `Include` and `{{Feature:...}}` placeholder references.
+- Diagnostics naming cleanup:
+  - renamed `unknown-using-component` -> `unknown-using-feature`
+  - renamed `unknown-using-section` -> `unknown-using-contribution`
+  - kept legacy settings compatibility for old rule ids.
+- Indexing and validation fixes:
+  - updated runtime/workspace indexing to recognize `Feature` roots and `Contribution` blocks, so real validation matches fixture behavior.
+  - fixed `unused-using` / `partial-using` fixture coverage to validate the intended rule instead of side-effect diagnostics.
+  - added `Include` reference indexing in parsed facts so composition/index model stays in sync with template build behavior.
+- Tests and fixtures:
+  - migrated linter/template/composition fixtures to the new `Feature` / `Contribution` naming.
+  - refreshed invalid fixture mappings and regression coverage for `unused-using` / `partial-using`.
+- Composition effective trace and using impact:
+  - indexed per-contribution insert trace (`strategy`, XPath matches, clamped count, placeholder count, fallback symbol count, final insert count).
+  - Tree View `Using/Contribution -> Meta` now shows indexed insert trace details and uses insert count as the single effective/unused signal.
+  - Tree View now includes dedicated `Includes` group for normal XML documents.
+- Feature conflict handling:
+  - `duplicate-provider` conflict message now includes source file and applies-to context for each conflicting provider.
+  - suppressed false-positive `duplicate-provider` conflict for control providers limited to `form` + `filter` context overlap.
+- Feature manifest bootstrap:
+  - added command `SFP XML Linter: Generate Feature Manifest Bootstrap`.
+  - generates `*.feature.json` draft from XML-first feature composition near the active feature file (with overwrite confirmation).
+  - added composition bootstrap regression tests.
+- Using impact + inheritance diagnostics:
+  - `unused-using` / `partial-using` now consume indexed insert traces as primary source.
+  - added form-owned inheritance diagnostics for `WorkFlow` and `DataView` (`*-redundant-feature-using`), default severity `warning`.
+  - added composition diagnostics tests covering redundant inheritance scenarios.
+- Primitive diagnostics + Tree View:
+  - added primitive linter rules: `unknown-primitive`, `primitive-missing-slot`, `primitive-missing-param`, `primitive-cycle`.
+  - Composition Tree `Using/Contribution` now shows primitive usage summary (`uses`, effective `inserts`) and source navigation.
+  - indexed contribution summaries now include primitive usage metadata.
+- Primitive regression coverage:
+  - added linter fixtures for primitive diagnostics (`chyba-36`..`chyba-39` + fixture primitives).
+  - added dedicated primitive template tests (`runBuildTemplatePrimitiveTests`).
+  - added fixture-level primitive edge scenarios (`998_T9PrimitiveEdge`).
+
 ## 0.0.16
 
 - VSIX packaging fix:

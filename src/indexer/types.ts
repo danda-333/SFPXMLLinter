@@ -16,15 +16,45 @@ export interface IndexedForm {
 export interface IndexedComponent {
   key: string;
   uri: vscode.Uri;
-  sections: Set<string>;
+  contributions: Set<string>;
   componentLocation: vscode.Location;
-  sectionDefinitions: Map<string, vscode.Location>;
+  contributionDefinitions: Map<string, vscode.Location>;
+  contributionSummaries: Map<string, IndexedComponentContributionSummary>;
   formControlDefinitions: Map<string, vscode.Location>;
   formButtonDefinitions: Map<string, vscode.Location>;
   formSectionDefinitions: Map<string, vscode.Location>;
+  workflowActionShareCodeDefinitions: Map<string, vscode.Location>;
   workflowControlShareCodeDefinitions: Map<string, vscode.Location>;
   workflowButtonShareCodeDefinitions: Map<string, vscode.Location>;
   workflowButtonShareCodeButtonIdents: Map<string, Set<string>>;
+}
+
+export interface IndexedComponentContributionSummary {
+  contributionName: string;
+  root?: "form" | "workflow" | "other";
+  rootExpression?: string;
+  insert?: string;
+  targetXPath?: string;
+  allowMultipleInserts?: boolean;
+  hasContent: boolean;
+  formControlCount: number;
+  formButtonCount: number;
+  formSectionCount: number;
+  workflowActionShareCodeCount: number;
+  workflowControlShareCodeCount: number;
+  workflowButtonShareCodeCount: number;
+  formControlIdents: Set<string>;
+  formButtonIdents: Set<string>;
+  formSectionIdents: Set<string>;
+  workflowReferencedActionShareCodeIdents: Set<string>;
+  workflowActionShareCodeIdents: Set<string>;
+  workflowControlShareCodeIdents: Set<string>;
+  workflowButtonShareCodeIdents: Set<string>;
+  requiredParamNames: Set<string>;
+  primitiveUsageCountByKey: Map<string, number>;
+  primitiveTemplateNamesByKey: Map<string, Set<string>>;
+  primitiveProvidedParamNamesByKey: Map<string, Set<string>>;
+  primitiveProvidedSlotNamesByKey: Map<string, Set<string>>;
 }
 
 export interface WorkspaceIndex {
@@ -37,9 +67,9 @@ export interface WorkspaceIndex {
   buttonReferenceLocationsByFormIdent: Map<string, Map<string, vscode.Location[]>>;
   sectionReferenceLocationsByFormIdent: Map<string, Map<string, vscode.Location[]>>;
   componentReferenceLocationsByKey: Map<string, vscode.Location[]>;
-  componentSectionReferenceLocationsByKey: Map<string, Map<string, vscode.Location[]>>;
+  componentContributionReferenceLocationsByKey: Map<string, Map<string, vscode.Location[]>>;
   componentUsageFormIdentsByKey: Map<string, Set<string>>;
-  componentSectionUsageFormIdentsByKey: Map<string, Map<string, Set<string>>>;
+  componentContributionUsageFormIdentsByKey: Map<string, Map<string, Set<string>>>;
   parsedFactsByUri: Map<string, ParsedDocumentFacts>;
   hasIgnoreDirectiveByUri: Map<string, boolean>;
   formsReady: boolean;

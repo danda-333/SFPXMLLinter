@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ValidPrimitivePerfForm">
+  <Controls>
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl01" Title="PerfControl01_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl02" Title="PerfControl02_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl03" Title="PerfControl03_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl04" Title="PerfControl04_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl05" Title="PerfControl05_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl06" Title="PerfControl06_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl07" Title="PerfControl07_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl08" Title="PerfControl08_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl09" Title="PerfControl09_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl10" Title="PerfControl10_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl11" Title="PerfControl11_Title" />
+    <UsePrimitive Name="Common/Perf/PerfControl" Ident="PerfControl12" Title="PerfControl12_Title" />
+  </Controls>
+</Form>

@@ -5,6 +5,7 @@ import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { getSystemMetadata } from "../config/systemMetadata";
 import { getEquivalentFormIdentKeys, resolveSystemTableName } from "../utils/formIdents";
+import { buildDocumentCompositionModel, collectSelectedDocumentContributions, DocumentCompositionModel } from "../composition/documentModel";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type TargetKind =
@@ -71,7 +72,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
 
     if (target.kind === "componentSection") {
       const componentKey = target.componentKey ?? "";
-      for (const location of index.componentSectionReferenceLocationsByKey.get(componentKey)?.get(target.ident) ?? []) {
+      for (const location of index.componentContributionReferenceLocationsByKey.get(componentKey)?.get(target.ident) ?? []) {
         pushUniqueLocation(out, seen, location);
       }
       return out;
@@ -83,7 +84,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       target.kind === "componentSectionDeclaration"
     ) {
       const componentKey = target.componentKey ?? "";
-      const formIdents = index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
+      const formIdents = collectFormIdentsForComponentDeclarationTarget(index, componentKey, target.ident, target.kind);
       for (const formIdent of formIdents) {
         const byForm =
           target.kind === "componentControlDeclaration"
@@ -120,6 +121,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
 
     const index = this.getIndex(document.uri);
     const facts = parseDocumentFacts(document);
+    const documentComposition = buildDocumentCompositionModel(facts, index);
 
     const formEntry = findFormByUri(index, document.uri);
     if (formEntry) {
@@ -213,7 +215,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       if (usingRef.sectionValue && usingRef.sectionValueRange?.contains(position)) {
         const component = resolveComponentByKey(index, usingRef.componentKey);
         if (component) {
-          const sectionDecl = component.sectionDefinitions.get(usingRef.sectionValue);
+          const sectionDecl = component.contributionDefinitions.get(usingRef.sectionValue);
           if (sectionDecl) {
             return {
               formIdent: "",
@@ -249,7 +251,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
           };
         }
 
-        for (const [section, location] of component.sectionDefinitions.entries()) {
+        for (const [section, location] of component.contributionDefinitions.entries()) {
           if (!location.range.contains(position)) {
             continue;
           }
@@ -340,6 +342,9 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       if (!form) {
         return undefined;
       }
+      const workflowControlDefinitions = collectWorkflowControlDefinitions(form, index, documentComposition);
+      const workflowButtonDefinitions = collectWorkflowButtonDefinitions(form, index, documentComposition);
+      const workflowSectionDefinitions = collectWorkflowSectionDefinitions(form, index, documentComposition);
 
       for (const ref of facts.workflowReferences) {
         if (!ref.range.contains(position)) {
@@ -351,7 +356,13 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
           continue;
         }
 
-        const declaration = getDeclarationForKind(form, kind, ref.ident);
+        const declaration = getWorkflowDeclarationForKind(
+          kind,
+          ref.ident,
+          workflowControlDefinitions,
+          workflowButtonDefinitions,
+          workflowSectionDefinitions
+        );
         if (!declaration) {
           continue;
         }
@@ -456,6 +467,147 @@ function getDeclarationForKind(
   }
 
   return form.sectionDefinitions.get(identKey);
+}
+
+function getWorkflowDeclarationForKind(
+  kind: Exclude<TargetKind, "form">,
+  identKey: string,
+  controlDefinitions: ReadonlyMap<string, vscode.Location>,
+  buttonDefinitions: ReadonlyMap<string, vscode.Location>,
+  sectionDefinitions: ReadonlyMap<string, vscode.Location>
+): vscode.Location | undefined {
+  if (kind === "control") {
+    return controlDefinitions.get(identKey);
+  }
+
+  if (kind === "button") {
+    return buttonDefinitions.get(identKey);
+  }
+
+  return sectionDefinitions.get(identKey);
+}
+
+function collectWorkflowControlDefinitions(
+  form: IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): Map<string, vscode.Location> {
+  const out = new Map<string, vscode.Location>(form.controlDefinitions);
+
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formControlIdents) {
+      const location = component.formControlDefinitions.get(ident);
+      if (!location || out.has(ident)) {
+        continue;
+      }
+      out.set(ident, location);
+    }
+  }
+
+  return out;
+}
+
+function collectFormIdentsForComponentDeclarationTarget(
+  index: WorkspaceIndex,
+  componentKey: string,
+  ident: string,
+  kind: "componentControlDeclaration" | "componentButtonDeclaration" | "componentSectionDeclaration"
+): Set<string> {
+  const component = resolveComponentByKey(index, componentKey);
+  if (!component) {
+    return index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
+  }
+
+  const relevantContributionNames: string[] = [];
+  for (const contribution of component.contributionSummaries.values()) {
+    const idents =
+      kind === "componentControlDeclaration"
+        ? contribution.formControlIdents
+        : kind === "componentButtonDeclaration"
+          ? contribution.formButtonIdents
+          : contribution.formSectionIdents;
+    if (!idents.has(ident)) {
+      continue;
+    }
+    relevantContributionNames.push(contribution.contributionName);
+  }
+
+  if (relevantContributionNames.length === 0) {
+    return index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
+  }
+
+  const usageByContribution = index.componentContributionUsageFormIdentsByKey.get(componentKey);
+  if (!usageByContribution) {
+    return new Set<string>();
+  }
+
+  const out = new Set<string>();
+  for (const contributionName of relevantContributionNames) {
+    const contributionFormIdents = usageByContribution.get(contributionName);
+    if (!contributionFormIdents) {
+      continue;
+    }
+    for (const formIdent of contributionFormIdents) {
+      out.add(formIdent);
+    }
+  }
+
+  return out;
+}
+
+function collectWorkflowButtonDefinitions(
+  form: IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): Map<string, vscode.Location> {
+  const out = new Map<string, vscode.Location>(form.buttonDefinitions);
+
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formButtonIdents) {
+      const location = component.formButtonDefinitions.get(ident);
+      if (!location || out.has(ident)) {
+        continue;
+      }
+      out.set(ident, location);
+    }
+  }
+
+  return out;
+}
+
+function collectWorkflowSectionDefinitions(
+  form: IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): Map<string, vscode.Location> {
+  const out = new Map<string, vscode.Location>(form.sectionDefinitions);
+
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formSectionIdents) {
+      const location = component.formSectionDefinitions.get(ident);
+      if (!location || out.has(ident)) {
+        continue;
+      }
+      out.set(ident, location);
+    }
+  }
+
+  return out;
 }
 
 function pushUniqueLocation(target: vscode.Location[], seen: Set<string>, location: vscode.Location): void {

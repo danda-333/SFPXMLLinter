@@ -1,7 +1,9 @@
-﻿import * as vscode from "vscode";
+import * as vscode from "vscode";
 import { WorkspaceIndex, IndexedForm } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
+import { resolveComponentByKey } from "../indexer/componentResolve";
+import { buildDocumentCompositionModel, collectSelectedDocumentContributions, DocumentCompositionModel } from "../composition/documentModel";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type RenameKind = "form" | "control" | "button" | "section";
@@ -82,6 +84,7 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
 
     const index = this.getIndex(document.uri);
     const facts = parseDocumentFacts(document);
+    const documentComposition = buildDocumentCompositionModel(facts, index);
 
     const formEntry = findFormByUri(index, document.uri);
     if (formEntry) {
@@ -141,6 +144,9 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
       if (!form) {
         return undefined;
       }
+      const workflowControlDefinitions = collectWorkflowControlDefinitions(form, index, documentComposition);
+      const workflowButtonDefinitions = collectWorkflowButtonDefinitions(form, index, documentComposition);
+      const workflowSectionDefinitions = collectWorkflowSectionDefinitions(form, index, documentComposition);
 
       for (const ref of facts.workflowReferences) {
         if (!ref.range.contains(position)) {
@@ -152,7 +158,13 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
           continue;
         }
 
-        const declaration = getDeclarationForKind(form, kind, ref.ident);
+        const declaration = getWorkflowDeclarationForKind(
+          kind,
+          ref.ident,
+          workflowControlDefinitions,
+          workflowButtonDefinitions,
+          workflowSectionDefinitions
+        );
         if (!declaration) {
           continue;
         }
@@ -249,6 +261,96 @@ function getDeclarationForKind(
   return form.sectionDefinitions.get(identKey);
 }
 
+function getWorkflowDeclarationForKind(
+  kind: Exclude<RenameKind, "form">,
+  identKey: string,
+  controlDefinitions: ReadonlyMap<string, vscode.Location>,
+  buttonDefinitions: ReadonlyMap<string, vscode.Location>,
+  sectionDefinitions: ReadonlyMap<string, vscode.Location>
+): vscode.Location | undefined {
+  if (kind === "control") {
+    return controlDefinitions.get(identKey);
+  }
+
+  if (kind === "button") {
+    return buttonDefinitions.get(identKey);
+  }
+
+  return sectionDefinitions.get(identKey);
+}
+
+function collectWorkflowControlDefinitions(
+  form: IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): Map<string, vscode.Location> {
+  const out = new Map<string, vscode.Location>(form.controlDefinitions);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formControlIdents) {
+      const location = component.formControlDefinitions.get(ident);
+      if (!location || out.has(ident)) {
+        continue;
+      }
+      out.set(ident, location);
+    }
+  }
+
+  return out;
+}
+
+function collectWorkflowButtonDefinitions(
+  form: IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): Map<string, vscode.Location> {
+  const out = new Map<string, vscode.Location>(form.buttonDefinitions);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formButtonIdents) {
+      const location = component.formButtonDefinitions.get(ident);
+      if (!location || out.has(ident)) {
+        continue;
+      }
+      out.set(ident, location);
+    }
+  }
+
+  return out;
+}
+
+function collectWorkflowSectionDefinitions(
+  form: IndexedForm,
+  index: WorkspaceIndex,
+  documentComposition: DocumentCompositionModel
+): Map<string, vscode.Location> {
+  const out = new Map<string, vscode.Location>(form.sectionDefinitions);
+  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    const component = resolveComponentByKey(index, contributionRef.componentKey);
+    if (!component) {
+      continue;
+    }
+
+    for (const ident of contributionRef.contribution.formSectionIdents) {
+      const location = component.formSectionDefinitions.get(ident);
+      if (!location || out.has(ident)) {
+        continue;
+      }
+      out.set(ident, location);
+    }
+  }
+
+  return out;
+}
+
 function pushRenameLocation(
   edit: vscode.WorkspaceEdit,
   seen: Set<string>,
@@ -263,3 +365,4 @@ function pushRenameLocation(
   seen.add(key);
   edit.replace(location.uri, location.range, newName);
 }
+

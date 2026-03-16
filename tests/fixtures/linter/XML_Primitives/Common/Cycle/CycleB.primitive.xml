@@ -1,0 +1,5 @@
+<Primitive>
+  <Template>
+    <UsePrimitive Name="Common/Cycle/CycleA" />
+  </Template>
+</Primitive>

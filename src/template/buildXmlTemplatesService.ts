@@ -7,12 +7,29 @@ import {
   renderTemplateText,
   stripXmlComponentExtension
 } from "./buildXmlTemplatesCore";
-import { normalizeLineEndingsForTemplate } from "./lineEndings";
+import { applyTemplateOutputQuality, TemplateBuilderProvenanceMode } from "./outputQuality";
+import { runTemplateGenerators } from "./generators";
+import { loadWorkspaceUserGenerators } from "./generators/userGeneratorLoader";
 
 interface BuildRunOptions {
   silent?: boolean;
+  mode?: "fast" | "debug" | "release";
+  postBuildFormat?: boolean;
+  provenanceMode?: TemplateBuilderProvenanceMode;
+  provenanceLabel?: string;
+  formatterMaxConsecutiveBlankLines?: number;
+  generatorsEnabled?: boolean;
+  generatorTimeoutMs?: number;
+  generatorEnableUserScripts?: boolean;
+  generatorUserScriptsRoots?: string[];
   onLogLine?: (line: string) => void;
   onFileStatus?: (relativeTemplatePath: string, status: "update" | "nochange" | "error") => void;
+  onTemplateEvaluated?: (
+    relativeTemplatePath: string,
+    status: "update" | "nochange" | "error",
+    templateText: string,
+    debugLines: readonly string[]
+  ) => void;
 }
 
 export interface BuildRunSummary {
@@ -23,6 +40,19 @@ export interface BuildRunSummary {
 
 export interface BuildRunResult {
   summary?: BuildRunSummary;
+}
+
+interface ParsedTemplateRoot {
+  rootTag: string;
+  formIdent?: string;
+}
+
+interface ParsedUsingEntry {
+  featureKey: string;
+  contributionKey?: string;
+  suppressInheritance: boolean;
+  attributes: ReadonlyArray<{ name: string; value: string }>;
+  rawTag: string;
 }
 
 export class BuildXmlTemplatesService {
@@ -41,11 +71,14 @@ export class BuildXmlTemplatesService {
   public async findTemplatesUsingComponent(workspaceFolder: vscode.WorkspaceFolder, componentFilePath: string): Promise<string[]> {
     const normalizedComponentPath = normalizePath(componentFilePath);
     const componentsRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
-    if (!normalizedComponentPath.startsWith(`${componentsRoot}/`)) {
+    const primitivesRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Primitives"));
+    if (!normalizedComponentPath.startsWith(`${componentsRoot}/`) && !normalizedComponentPath.startsWith(`${primitivesRoot}/`)) {
       return [];
     }
 
-    const rel = normalizedComponentPath.slice(componentsRoot.length + 1);
+    const rel = normalizedComponentPath.startsWith(`${componentsRoot}/`)
+      ? normalizedComponentPath.slice(componentsRoot.length + 1)
+      : normalizedComponentPath.slice(primitivesRoot.length + 1);
     const relNoExt = stripXmlComponentExtension(rel);
     const targetBaseName = relNoExt.split("/").pop() ?? relNoExt;
 
@@ -72,10 +105,11 @@ export class BuildXmlTemplatesService {
   ): Promise<BuildRunResult> {
     const templateUris = await collectTemplateTargets(workspaceFolder, targetPath);
     const componentUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Components/**/*.xml"));
+    const primitiveUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Primitives/**/*.xml"));
 
     const componentSources: Array<{ key: string; text: string; origin: string }> = [];
-    for (const uri of componentUris) {
-      const key = componentKeyFromUri(workspaceFolder, uri);
+    for (const uri of [...componentUris, ...primitiveUris]) {
+      const key = componentLikeKeyFromUri(workspaceFolder, uri);
       if (!key) {
         continue;
       }
@@ -89,6 +123,24 @@ export class BuildXmlTemplatesService {
     }
 
     const componentLibrary = buildComponentLibrary(componentSources);
+    const templateTextByUri = new Map<string, string>();
+    const formUsingsByFormIdent = new Map<string, ParsedUsingEntry[]>();
+    for (const templateUri of templateUris) {
+      const text = await readWorkspaceTextFile(templateUri);
+      templateTextByUri.set(templateUri.toString(), text);
+      const root = parseTemplateRoot(text);
+      if (root.rootTag === "form" && root.formIdent) {
+        formUsingsByFormIdent.set(root.formIdent, parseUsingEntries(text));
+      }
+    }
+
+    const userGenerators = options.generatorEnableUserScripts === false
+      ? []
+      : await loadWorkspaceUserGenerators(
+          workspaceFolder.uri.fsPath,
+          options.generatorUserScriptsRoots ?? ["XML_Generators"],
+          options.onLogLine
+        );
     const summary: BuildRunSummary = { updated: 0, skipped: 0, errors: 0 };
     const total = templateUris.length;
     let current = 0;
@@ -99,11 +151,52 @@ export class BuildXmlTemplatesService {
       options.onLogLine?.(`[${current}/${total}] ${relPath}`);
 
       try {
-        const templateText = await readWorkspaceTextFile(templateUri);
-        const rendered = normalizeLineEndingsForTemplate(
-          renderTemplateText(templateText, componentLibrary, 12, (line) => options.onLogLine?.(`DEBUG: ${line}`)),
-          templateText
+        const templateText = templateTextByUri.get(templateUri.toString()) ?? await readWorkspaceTextFile(templateUri);
+        const inheritedUsingsXml = buildInheritedUsingsXml(templateText, formUsingsByFormIdent);
+        const debugLines: string[] = [];
+        const debugMode = options.mode === "debug";
+        const renderedRaw = renderTemplateText(
+          templateText,
+          componentLibrary,
+          12,
+          debugMode
+            ? (line) => {
+                debugLines.push(line);
+                options.onLogLine?.(`DEBUG: ${line}`);
+              }
+            : undefined,
+          inheritedUsingsXml
         );
+        const generated = runTemplateGenerators(
+          {
+            xml: renderedRaw,
+            sourceTemplateText: templateText,
+            relativeTemplatePath: relPath,
+            mode: options.mode ?? "debug"
+          },
+          {
+            enabled: options.generatorsEnabled !== false,
+            timeoutMs: Math.max(50, options.generatorTimeoutMs ?? 150),
+            userGenerators
+          },
+          options.onLogLine
+        );
+        for (const warning of generated.warnings) {
+          options.onLogLine?.(`[generator][warning] ${warning.code}: ${warning.message}`);
+        }
+        if ((options.mode ?? "debug") === "debug") {
+          options.onLogLine?.(
+            `[generator] summary: applied=${generated.appliedGeneratorIds.length}, warnings=${generated.warnings.length}, duration=${generated.durationMs} ms`
+          );
+        }
+
+        const rendered = applyTemplateOutputQuality(generated.xml, templateText, {
+          postBuildFormat: options.postBuildFormat === true,
+          provenanceMode: options.provenanceMode ?? "off",
+          provenanceLabel: options.provenanceLabel,
+          relativeTemplatePath: relPath,
+          formatterMaxConsecutiveBlankLines: Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)
+        });
         const outputUri = templateToRuntimeUri(templateUri);
         const existing = await readWorkspaceTextFile(outputUri).catch(() => undefined);
 
@@ -111,6 +204,7 @@ export class BuildXmlTemplatesService {
           summary.skipped++;
           options.onLogLine?.("SKIPPED");
           options.onFileStatus?.(relPath, "nochange");
+          options.onTemplateEvaluated?.(relPath, "nochange", templateText, debugLines);
           continue;
         }
 
@@ -119,6 +213,7 @@ export class BuildXmlTemplatesService {
         summary.updated++;
         options.onLogLine?.("UPDATED");
         options.onFileStatus?.(relPath, "update");
+        options.onTemplateEvaluated?.(relPath, "update", templateText, debugLines);
       } catch (error) {
         summary.errors++;
         const message = error instanceof Error ? error.message : String(error);
@@ -159,15 +254,19 @@ async function collectTemplateTargets(workspaceFolder: vscode.WorkspaceFolder, t
   return vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Templates/**/*.xml"));
 }
 
-function componentKeyFromUri(workspaceFolder: vscode.WorkspaceFolder, uri: vscode.Uri): string | undefined {
+function componentLikeKeyFromUri(workspaceFolder: vscode.WorkspaceFolder, uri: vscode.Uri): string | undefined {
   const root = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
+  const primitivesRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Primitives"));
   const current = normalizePath(uri.fsPath);
-  if (!current.startsWith(`${root}/`)) {
-    return undefined;
+  if (current.startsWith(`${root}/`)) {
+    const rel = current.slice(root.length + 1);
+    return stripXmlComponentExtension(rel);
   }
-
-  const rel = current.slice(root.length + 1);
-  return stripXmlComponentExtension(rel);
+  if (current.startsWith(`${primitivesRoot}/`)) {
+    const rel = current.slice(primitivesRoot.length + 1);
+    return stripXmlComponentExtension(rel);
+  }
+  return undefined;
 }
 
 function relativeTemplatePath(workspaceFolder: vscode.WorkspaceFolder, templateUri: vscode.Uri): string {
@@ -178,6 +277,161 @@ function relativeTemplatePath(workspaceFolder: vscode.WorkspaceFolder, templateU
 function templateToRuntimeUri(templateUri: vscode.Uri): vscode.Uri {
   const fsPath = templateUri.fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`);
   return vscode.Uri.file(fsPath);
+}
+
+function parseTemplateRoot(text: string): ParsedTemplateRoot {
+  const rootMatch = /<\s*([A-Za-z_][\w.-]*)\b([^>]*)>/i.exec(text);
+  if (!rootMatch) {
+    return { rootTag: "" };
+  }
+  const rootTag = (rootMatch[1] ?? "").trim().toLowerCase();
+  const attrs = rootMatch[2] ?? "";
+  if (rootTag === "form") {
+    const formIdent = extractAttributeValue(attrs, "Ident");
+    return { rootTag, formIdent };
+  }
+  if (rootTag === "workflow" || rootTag === "dataview") {
+    const formIdent = extractAttributeValue(attrs, "FormIdent");
+    return { rootTag, formIdent };
+  }
+  return { rootTag };
+}
+
+function buildInheritedUsingsXml(
+  templateText: string,
+  formUsingsByFormIdent: ReadonlyMap<string, ParsedUsingEntry[]>
+): string | undefined {
+  const root = parseTemplateRoot(templateText);
+  if ((root.rootTag !== "workflow" && root.rootTag !== "dataview") || !root.formIdent) {
+    return undefined;
+  }
+
+  const inherited = formUsingsByFormIdent.get(root.formIdent);
+  if (!inherited || inherited.length === 0) {
+    return undefined;
+  }
+
+  const localUsings = parseUsingEntries(templateText);
+  const localKeys = new Set<string>(localUsings.map((item) => toUsingEntryKey(item.featureKey, item.contributionKey)));
+  const suppressFull = new Set<string>();
+  const suppressContribution = new Set<string>();
+  for (const item of localUsings) {
+    if (!item.suppressInheritance) {
+      continue;
+    }
+    if (!item.contributionKey) {
+      suppressFull.add(item.featureKey);
+      continue;
+    }
+    suppressContribution.add(toUsingEntryKey(item.featureKey, item.contributionKey));
+  }
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const inheritedUsing of inherited) {
+    if (inheritedUsing.suppressInheritance) {
+      continue;
+    }
+    const key = toUsingEntryKey(inheritedUsing.featureKey, inheritedUsing.contributionKey);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    if (suppressFull.has(inheritedUsing.featureKey)) {
+      continue;
+    }
+    if (inheritedUsing.contributionKey && suppressContribution.has(key)) {
+      continue;
+    }
+    if (localKeys.has(key)) {
+      continue;
+    }
+
+    out.push(inheritedUsing.rawTag);
+  }
+
+  return out.length > 0 ? out.join("\n") : undefined;
+}
+
+function parseUsingEntries(text: string): ParsedUsingEntry[] {
+  const out: ParsedUsingEntry[] = [];
+  const pattern = /<Using\b([^>]*)\/?>/gi;
+  for (const match of text.matchAll(pattern)) {
+    const attrs = match[1] ?? "";
+    const orderedAttrs = parseXmlAttributesOrdered(attrs);
+    const featureValue =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
+    if (!featureValue) {
+      continue;
+    }
+    const featureKey = stripXmlComponentExtension(normalizePath(featureValue.trim()));
+    const contributionRaw = extractAttributeValue(attrs, "Contribution") ?? extractAttributeValue(attrs, "Section");
+    const contributionKey = contributionRaw?.trim();
+    const suppressInheritance = parseBooleanAttribute(extractAttributeValue(attrs, "SuppressInheritance"));
+    out.push({
+      featureKey,
+      contributionKey: contributionKey && contributionKey.length > 0 ? contributionKey : undefined,
+      suppressInheritance,
+      attributes: orderedAttrs,
+      rawTag: buildInheritedUsingTag(orderedAttrs)
+    });
+  }
+  return out;
+}
+
+function buildInheritedUsingTag(attributes: ReadonlyArray<{ name: string; value: string }>): string {
+  const visibleAttrs = attributes.filter((attr) => attr.name.trim().toLowerCase() !== "suppressinheritance");
+  if (visibleAttrs.length === 0) {
+    return "<Using />";
+  }
+  const attrsText = visibleAttrs.map((attr) => `${attr.name}="${escapeXmlAttribute(attr.value)}"`).join(" ");
+  return `<Using ${attrsText} />`;
+}
+
+function parseXmlAttributesOrdered(attrs: string): Array<{ name: string; value: string }> {
+  const out: Array<{ name: string; value: string }> = [];
+  const pattern = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+  for (const match of attrs.matchAll(pattern)) {
+    const name = (match[1] ?? "").trim();
+    if (!name) {
+      continue;
+    }
+    const value = (match[2] ?? match[3] ?? "").trim();
+    out.push({ name, value });
+  }
+  return out;
+}
+
+function escapeXmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function toUsingEntryKey(featureKey: string, contributionKey?: string): string {
+  return `${featureKey}#${(contributionKey ?? "").trim()}`;
+}
+
+function extractAttributeValue(attrs: string, name: string): string | undefined {
+  const regex = new RegExp(`\\b${name}\\s*=\\s*(\"([^\"]*)\"|'([^']*)')`, "i");
+  const match = regex.exec(attrs);
+  if (!match) {
+    return undefined;
+  }
+  return (match[2] ?? match[3] ?? "").trim();
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
 }
 
 function formatSummaryText(summary: BuildRunSummary): string {

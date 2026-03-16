@@ -5,6 +5,7 @@ export interface EffectiveUsingRef {
   componentKey: string;
   rawComponentValue: string;
   sectionValue?: string;
+  providedParamNames?: string[];
   source: "local" | "inherited";
   inheritedFromFormIdent?: string;
 }
@@ -52,6 +53,9 @@ export function collectEffectiveUsingRefs(
       componentKey: usingRef.componentKey,
       rawComponentValue: usingRef.rawComponentValue,
       ...(usingRef.sectionValue ? { sectionValue: usingRef.sectionValue } : {}),
+      ...(usingRef.providedParamNames && usingRef.providedParamNames.length > 0
+        ? { providedParamNames: usingRef.providedParamNames }
+        : {}),
       source: "local"
     });
   }
@@ -98,6 +102,9 @@ export function collectEffectiveUsingRefs(
       componentKey: usingRef.componentKey,
       rawComponentValue: usingRef.rawComponentValue,
       ...(usingRef.sectionValue ? { sectionValue: usingRef.sectionValue } : {}),
+      ...(usingRef.providedParamNames && usingRef.providedParamNames.length > 0
+        ? { providedParamNames: usingRef.providedParamNames }
+        : {}),
       source: "inherited",
       inheritedFromFormIdent: owningFormIdent
     });

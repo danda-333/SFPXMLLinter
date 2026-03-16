@@ -58,11 +58,12 @@ async function loadSingleGenerator(filePath: string): Promise<LoadedTemplateGene
     return undefined;
   }
 
+  const mtimeMs = safeGetMtimeMs(filePath);
   const rawModule = ext === ".ts"
     ? await loadTypeScriptModule(filePath)
     : ext === ".mjs"
-      ? await import(pathToFileURL(filePath).href)
-      : require(filePath);
+      ? await import(withCacheBusting(pathToFileURL(filePath).href, mtimeMs))
+      : loadCommonJsFresh(filePath);
   const mod = normalizeExport(rawModule);
   if (!mod || typeof mod !== "object") {
     return undefined;
@@ -114,6 +115,32 @@ async function loadSingleGenerator(filePath: string): Promise<LoadedTemplateGene
     }
   };
   return documentGenerator;
+}
+
+function loadCommonJsFresh(filePath: string): unknown {
+  try {
+    const resolved = require.resolve(filePath);
+    delete require.cache[resolved];
+  } catch {
+    // Continue with regular require if resolve fails.
+  }
+  return require(filePath);
+}
+
+function withCacheBusting(url: string, token: number): string {
+  if (!Number.isFinite(token) || token <= 0) {
+    return url;
+  }
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${Math.trunc(token)}`;
+}
+
+function safeGetMtimeMs(filePath: string): number {
+  try {
+    return fs.statSync(filePath).mtimeMs;
+  } catch {
+    return 0;
+  }
 }
 
 function normalizeExport(mod: unknown): unknown {
@@ -173,4 +200,3 @@ async function loadTypeScriptModule(filePath: string): Promise<unknown> {
   script.runInContext(context);
   return module.exports;
 }
-

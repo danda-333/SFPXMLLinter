@@ -1622,14 +1622,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function collectDependentTemplatesFromIndex(componentKey: string): string[] {
     const idx = templateIndexer.getIndex();
-    const candidateKeys = new Set<string>([componentKey]);
-    const baseName = componentKey.split("/").pop() ?? componentKey;
-    const variants = idx.componentKeysByBaseName.get(baseName);
-    if (variants) {
-      for (const variant of variants) {
-        candidateKeys.add(variant);
-      }
-    }
+    const candidateKeys = collectCandidateComponentKeys(idx, componentKey);
 
     const result = new Set<string>();
     const affectedFormIdents = new Set<string>();
@@ -1681,6 +1674,118 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     return [...result].sort((a, b) => a.localeCompare(b));
+  }
+
+  function collectCandidateComponentKeys(index: WorkspaceIndex, componentKey: string): Set<string> {
+    const out = new Set<string>([componentKey]);
+    const baseName = componentKey.split("/").pop() ?? componentKey;
+    const variants = index.componentKeysByBaseName.get(baseName);
+    if (variants) {
+      for (const variant of variants) {
+        out.add(variant);
+      }
+    }
+    return out;
+  }
+
+  function getOwningFormIdentFromFacts(
+    facts: ReturnType<typeof parseDocumentFactsFromText>
+  ): string | undefined {
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root === "form") {
+      return facts.formIdent;
+    }
+
+    if (root === "workflow") {
+      return facts.workflowFormIdent ?? facts.rootFormIdent;
+    }
+
+    if (root === "dataview") {
+      return facts.rootFormIdent;
+    }
+
+    return undefined;
+  }
+
+  function collectAffectedFormIdentsForComponent(componentKey: string): Set<string> {
+    const out = new Set<string>();
+    const indexes = [templateIndexer.getIndex(), runtimeIndexer.getIndex()];
+
+    for (const idx of indexes) {
+      const candidateKeys = collectCandidateComponentKeys(idx, componentKey);
+      for (const key of candidateKeys) {
+        const usageFormIdents = idx.componentUsageFormIdentsByKey.get(key);
+        if (!usageFormIdents) {
+          continue;
+        }
+
+        for (const formIdent of usageFormIdents) {
+          out.add(formIdent);
+        }
+      }
+    }
+
+    return out;
+  }
+
+  function collectDependentUrisForFormIdents(formIdents: ReadonlySet<string>): vscode.Uri[] {
+    const out = new Map<string, vscode.Uri>();
+    if (formIdents.size === 0) {
+      return [];
+    }
+
+    const indexes = [templateIndexer.getIndex(), runtimeIndexer.getIndex()];
+    for (const idx of indexes) {
+      for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+        const owningFormIdent = getOwningFormIdentFromFacts(facts);
+        if (!owningFormIdent || !formIdents.has(owningFormIdent)) {
+          continue;
+        }
+
+        const uri = vscode.Uri.parse(uriKey);
+        if (uri.scheme !== "file" || !isReindexRelevantUri(uri)) {
+          continue;
+        }
+
+        out.set(uri.toString(), uri);
+      }
+    }
+
+    return [...out.values()].sort((a, b) => a.fsPath.localeCompare(b.fsPath));
+  }
+
+  function enqueueDependentValidationForFormIdents(
+    formIdents: ReadonlySet<string>,
+    sourceLabel: string
+  ): void {
+    if (formIdents.size === 0) {
+      return;
+    }
+
+    const uris = collectDependentUrisForFormIdents(formIdents);
+    if (uris.length === 0) {
+      return;
+    }
+
+    let queuedHigh = 0;
+    let queuedLow = 0;
+    for (const uri of uris) {
+      if (!shouldValidateUriForActiveProjects(uri)) {
+        continue;
+      }
+
+      if (isUserOpenDocument(uri)) {
+        enqueueValidation(uri, "high");
+        queuedHigh++;
+      } else {
+        enqueueValidation(uri, "low");
+        queuedLow++;
+      }
+    }
+
+    logIndex(
+      `SAVE dependency revalidation queued (${sourceLabel}): forms=${formIdents.size}, files=${uris.length}, high=${queuedHigh}, low=${queuedLow}`
+    );
   }
 
   function validateDocument(document: vscode.TextDocument): void {
@@ -1889,13 +1994,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           logIndex(
             `SAVE form incremental refresh ${refreshed.updated ? "UPDATED" : "SKIPPED"} (${refreshed.reason}) ${rel} in ${Date.now() - startedAt} ms`
           );
-        } else if (root === "component") {
+          if (refreshed.updated && refreshed.formIdent) {
+            enqueueDependentValidationForFormIdents(new Set<string>([refreshed.formIdent]), `form:${rel}`);
+          }
+        } else if (root === "component" || root === "feature") {
           const startedAt = Date.now();
           const refreshed = activeIndexer.refreshComponentDocument(document);
           refreshedComponentKey = refreshed.componentKey;
           logIndex(
-            `SAVE component incremental refresh ${refreshed.updated ? "UPDATED" : "SKIPPED"} (${refreshed.reason}) ${rel} in ${Date.now() - startedAt} ms`
+            `SAVE ${root} incremental refresh ${refreshed.updated ? "UPDATED" : "SKIPPED"} (${refreshed.reason}) ${rel} in ${Date.now() - startedAt} ms`
           );
+          if (refreshed.updated && refreshed.componentKey) {
+            const affectedFormIdents = collectAffectedFormIdentsForComponent(refreshed.componentKey);
+            enqueueDependentValidationForFormIdents(affectedFormIdents, `${root}:${rel}`);
+          }
         } else {
           logIndex(`SAVE skip non-structural root='${root || "unknown"}': ${rel}`);
         }

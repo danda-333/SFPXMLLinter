@@ -39,4 +39,8 @@ Minimal scenarios for each validation rule.
 - `chyba-37-primitive-missing-slot.xml` -> `primitive-missing-slot`
 - `chyba-38-primitive-missing-param.xml` -> `primitive-missing-param`
 - `chyba-39-primitive-cycle.xml` -> `primitive-cycle`
+- `chyba-40-missing-using-param.xml` -> `missing-using-param`
+- `chyba-41-duplicate-control-ident.xml` -> `duplicate-control-ident` (duplicate between local Control and Using-injected contribution)
+- `chyba-42-duplicate-button-ident.xml` -> `duplicate-button-ident` (duplicate between local Button and Using-injected contribution)
+- `chyba-43-duplicate-section-ident.xml` -> `duplicate-section-ident` (duplicate between local Section and Using-injected contribution)
 

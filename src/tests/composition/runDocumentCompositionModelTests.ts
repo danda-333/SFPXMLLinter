@@ -227,6 +227,7 @@ function collectComponentContributionSummaries(text: string): Map<string, import
       workflowControlShareCodeIdents: collectTagIdentSet(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
       workflowButtonShareCodeIdents: collectTagIdentSet(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
       workflowReferencedActionShareCodeIdents: collectActionShareCodeUsageSet(body),
+      requiredParamNames: collectRequiredContributionParamNames(body),
       primitiveUsageCountByKey: new Map(),
       primitiveTemplateNamesByKey: new Map(),
       primitiveProvidedParamNamesByKey: new Map(),
@@ -284,6 +285,27 @@ function collectActionShareCodeUsageSet(body: string): Set<string> {
       continue;
     }
     out.add(ident);
+  }
+  return out;
+}
+
+function collectRequiredContributionParamNames(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const tokenMatch of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+    const token = (tokenMatch[1] ?? "").trim();
+    if (!token) {
+      continue;
+    }
+
+    if (token.includes(":") || token.includes(",")) {
+      continue;
+    }
+
+    if (!/^[A-Za-z_][\w.-]*$/.test(token)) {
+      continue;
+    }
+
+    out.add(token);
   }
   return out;
 }

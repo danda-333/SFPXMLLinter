@@ -21,6 +21,7 @@ export interface UsingReference {
   componentValueRange: vscode.Range;
   sectionValue?: string;
   sectionValueRange?: vscode.Range;
+  providedParamNames?: string[];
   suppressInheritance?: boolean;
 }
 
@@ -250,15 +251,16 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
   const canDeclareFormNodes = rootTagLower === "form" || rootTagLower === "component" || rootTagLower === "feature";
   const canHaveWorkflowNodes = rootTagLower === "workflow" || rootTagLower === "component" || rootTagLower === "feature";
 
-  if (canDeclareFormNodes && text.includes("<Control")) {
-    for (const m of text.matchAll(/<Control\b([^>]*)>/gi)) {
-      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+  const controlTags = canDeclareFormNodes && text.includes("<Control") ? collectControlTags(text) : [];
+  if (canDeclareFormNodes && controlTags.length > 0) {
+    for (const controlTag of controlTags) {
+      const attrs = parseAttributes(controlTag.rawAttrs, text, controlTag.attrsStartIndex);
       const attr = attrs.get("Ident");
       const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
       if (attr?.value) {
         facts.declaredControls.add(attr.value);
         if (attr.valueRange) {
-          facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "control" });
+          facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "control", scopeKey: controlTag.scopeKey });
           facts.declaredControlInfos.push({ ident: attr.value, range: attr.valueRange, type });
         }
       }
@@ -409,6 +411,7 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
       }
 
       const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
+      const providedParamNames = collectUsingProvidedParamNames(attrs);
       const suppressInheritance =
         parseBooleanAttribute(attrs.get("SuppressInheritance")?.value) === true ||
         parseBooleanAttribute(attrs.get("Inherit")?.value) === false;
@@ -418,6 +421,7 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
         componentValueRange: componentAttr.valueRange,
         sectionValue: sectionAttr?.value,
         sectionValueRange: sectionAttr?.valueRange,
+        ...(providedParamNames.length > 0 ? { providedParamNames } : {}),
         ...(suppressInheritance ? { suppressInheritance: true } : {})
       });
     }
@@ -704,10 +708,56 @@ interface ButtonTagMatch {
   scopeKey: string;
 }
 
+interface ControlTagMatch {
+  rawAttrs: string;
+  attrsStartIndex: number;
+  scopeKey: string;
+}
+
 interface SectionTagMatch {
   rawAttrs: string;
   attrsStartIndex: number;
   scopeKey: string;
+}
+
+function collectControlTags(text: string): ControlTagMatch[] {
+  const out: ControlTagMatch[] = [];
+  const stack: Array<{ name: string; start: number }> = [];
+  const tagRegex = /<\s*(\/?)\s*([A-Za-z_][\w:.-]*)([^>]*)>/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = tagRegex.exec(text)) !== null) {
+    const isClosing = match[1] === "/";
+    const name = stripPrefix(match[2]).toLowerCase();
+    const rawAttrs = match[3] ?? "";
+    const fullTag = match[0] ?? "";
+    const tagStart = match.index ?? 0;
+    const isSelfClosing = !isClosing && /\/\s*$/.test(rawAttrs);
+
+    if (!isClosing && name === "control") {
+      const attrsStartOffset = fullTag.indexOf(rawAttrs);
+      const attrsStartIndex = tagStart + (attrsStartOffset >= 0 ? attrsStartOffset : 0);
+      const parentControls = findNearestOpenTag(stack, "controls");
+      const scopeKey = parentControls ? `controls@${parentControls.start}` : "__global_controls__";
+
+      out.push({
+        rawAttrs,
+        attrsStartIndex,
+        scopeKey
+      });
+    }
+
+    if (isClosing) {
+      popOpenTag(stack, name);
+      continue;
+    }
+
+    if (!isSelfClosing) {
+      stack.push({ name, start: tagStart });
+    }
+  }
+
+  return out;
 }
 
 function collectButtonTags(text: string): ButtonTagMatch[] {
@@ -985,6 +1035,28 @@ function parsePlaceholderFields(rawBody: string): Map<string, string> {
       continue;
     }
     out.set(key, value);
+  }
+
+  return out;
+}
+
+function collectUsingProvidedParamNames(attrs: Map<string, XmlAttributeMatch>): string[] {
+  const excluded = new Set([
+    "feature",
+    "component",
+    "name",
+    "contribution",
+    "section",
+    "suppressinheritance",
+    "inherit"
+  ]);
+  const out: string[] = [];
+  for (const name of attrs.keys()) {
+    const lower = name.toLowerCase();
+    if (excluded.has(lower)) {
+      continue;
+    }
+    out.push(name);
   }
 
   return out;

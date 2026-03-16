@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.1.5
+
+- Diagnostics and composition consistency:
+  - unified duplicate-ident validation between template XML and effective composed output.
+  - duplicate detection is now parent-scope aware for `Control`, `Button`, and `Section` (same Ident in different parent containers no longer reports false positives).
+  - added regression fixtures for using-injected duplicates and scoped duplicate-valid scenarios.
+- Using parameter diagnostics:
+  - improved `missing-using-param` validation based on effective active/inherited usings and contribution insert impact.
+- Test output UX:
+  - unified colored test output across runners through shared console color bootstrap (`green` pass, `red` fail, `yellow` warning/skip).
+
 ## 0.1.4
 
 - Auto-build dependency chain:

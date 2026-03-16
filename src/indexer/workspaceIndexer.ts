@@ -789,6 +789,7 @@ export class WorkspaceIndexer {
         workflowActionShareCodeIdents: collectAttributeIdents(body, /<ActionShareCode\b([^>]*)>/gi, "Ident"),
         workflowControlShareCodeIdents: collectAttributeIdents(body, /<ControlShareCode\b([^>]*)>/gi, "Ident"),
         workflowButtonShareCodeIdents: collectAttributeIdents(body, /<ButtonShareCode\b([^>]*)>/gi, "Ident"),
+        requiredParamNames: collectRequiredContributionParamNames(body),
         primitiveUsageCountByKey: primitiveUsage.usageCountByKey,
         primitiveTemplateNamesByKey: primitiveUsage.templateNamesByKey,
         primitiveProvidedParamNamesByKey: primitiveUsage.providedParamNamesByKey,
@@ -1065,6 +1066,28 @@ function collectActionShareCodeReferenceIdents(text: string): Set<string> {
     if (ident) {
       out.add(ident);
     }
+  }
+
+  return out;
+}
+
+function collectRequiredContributionParamNames(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const tokenMatch of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+    const token = (tokenMatch[1] ?? "").trim();
+    if (!token) {
+      continue;
+    }
+
+    if (token.includes(":") || token.includes(",")) {
+      continue;
+    }
+
+    if (!/^[A-Za-z_][\w.-]*$/.test(token)) {
+      continue;
+    }
+
+    out.add(token);
   }
 
   return out;

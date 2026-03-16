@@ -38,6 +38,7 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "unknown-using-feature": "error",
   "unknown-using-contribution": "warning",
   "contribution-mismatch": "warning",
+  "missing-using-param": "warning",
   "unused-using": "information",
   "partial-using": "information",
   "unknown-primitive": "warning",

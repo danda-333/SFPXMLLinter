@@ -129,11 +129,11 @@ export class DiagnosticsEngine {
     issues: RuleDiagnostic[],
     documentComposition: DocumentCompositionModel
   ): void {
-    const seen = new Map<string, { control?: boolean; buttonByScope: Set<string>; sectionByScope: Set<string> }>();
+    const seen = new Map<string, { controlByScope: Set<string>; buttonByScope: Set<string>; sectionByScope: Set<string> }>();
     const occurrences = collectExpandedIdentOccurrences(facts, index, documentComposition);
     for (const occurrence of occurrences) {
       const key = occurrence.ident;
-      const flags = seen.get(key) ?? { buttonByScope: new Set<string>(), sectionByScope: new Set<string>() };
+      const flags = seen.get(key) ?? { controlByScope: new Set<string>(), buttonByScope: new Set<string>(), sectionByScope: new Set<string>() };
       const ruleId =
         occurrence.kind === "control"
           ? "duplicate-control-ident"
@@ -141,7 +141,18 @@ export class DiagnosticsEngine {
             ? "duplicate-button-ident"
             : "duplicate-section-ident";
 
-      if (occurrence.kind === "button") {
+      if (occurrence.kind === "control") {
+        const scopeKey = occurrence.scopeKey ?? "__global_controls__";
+        if (flags.controlByScope.has(scopeKey)) {
+          issues.push({
+            ruleId,
+            range: occurrence.range,
+            message: `Duplicate ${occurrence.kind} Ident '${occurrence.ident}'.`
+          });
+        } else {
+          flags.controlByScope.add(scopeKey);
+        }
+      } else if (occurrence.kind === "button") {
         const scopeKey = occurrence.scopeKey ?? "__global_buttons__";
         if (flags.buttonByScope.has(scopeKey)) {
           issues.push({
@@ -163,14 +174,6 @@ export class DiagnosticsEngine {
         } else {
           flags.sectionByScope.add(scopeKey);
         }
-      } else if (flags[occurrence.kind]) {
-        issues.push({
-          ruleId,
-          range: occurrence.range,
-          message: `Duplicate ${occurrence.kind} Ident '${occurrence.ident}'.`
-        });
-      } else {
-        flags[occurrence.kind] = true;
       }
 
       seen.set(key, flags);
@@ -518,6 +521,86 @@ export class DiagnosticsEngine {
 
     this.validateUsingSuppressionConflicts(facts, index, issues);
     this.validateFormOwnedUsingInheritance(facts, index, issues);
+    this.validateMissingUsingParams(facts, index, issues, documentComposition);
+  }
+
+  private validateMissingUsingParams(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
+    issues: RuleDiagnostic[],
+    documentComposition: DocumentCompositionModel
+  ): void {
+    const implicitParams = new Set<string>(["formident"]);
+    const localUsingRangeByKey = new Map<string, vscode.Range>();
+    for (const ref of facts.usingReferences) {
+      if (ref.suppressInheritance) {
+        continue;
+      }
+
+      const key = getUsingKey(ref.componentKey, ref.sectionValue);
+      if (!localUsingRangeByKey.has(key)) {
+        localUsingRangeByKey.set(key, ref.sectionValueRange ?? ref.componentValueRange);
+      }
+    }
+
+    for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
+      const component = resolveComponentByKey(index, usingRef.componentKey);
+      if (!component) {
+        continue;
+      }
+
+      const usingModel = documentComposition.usings.find(
+        (item) =>
+          item.componentKey === usingRef.componentKey &&
+          item.source === usingRef.source &&
+          (item.sectionValue ?? "") === (usingRef.sectionValue ?? "")
+      );
+      if (!usingModel || !usingModel.hasResolvedFeature) {
+        continue;
+      }
+
+      const providedParamNames = new Set<string>(
+        (usingRef.providedParamNames ?? []).map((name) => name.trim().toLowerCase()).filter((name) => name.length > 0)
+      );
+      const missingForUsing = new Set<string>();
+      for (const contributionModel of usingModel.contributions) {
+        if (contributionModel.insertCount <= 0) {
+          continue;
+        }
+
+        for (const requiredParamName of contributionModel.contribution.requiredParamNames) {
+          const normalized = requiredParamName.trim().toLowerCase();
+          if (!normalized || implicitParams.has(normalized) || providedParamNames.has(normalized)) {
+            continue;
+          }
+
+          missingForUsing.add(requiredParamName);
+        }
+      }
+
+      if (missingForUsing.size === 0) {
+        continue;
+      }
+
+      const range =
+        usingRef.source === "local"
+          ? localUsingRangeByKey.get(getUsingKey(usingRef.componentKey, usingRef.sectionValue))
+          : facts.workflowFormIdentRange ?? facts.rootFormIdentRange ?? facts.rootIdentRange;
+      if (!range) {
+        continue;
+      }
+
+      const missingList = [...missingForUsing].sort((a, b) => a.localeCompare(b));
+      const sourceLabel =
+        usingRef.source === "inherited" && usingRef.inheritedFromFormIdent
+          ? `inherited from Form '${usingRef.inheritedFromFormIdent}'`
+          : "active";
+      issues.push({
+        ruleId: "missing-using-param",
+        range,
+        message: `Using '${usingRef.rawComponentValue}${usingRef.sectionValue ? `#${usingRef.sectionValue}` : ""}' is ${sourceLabel} but missing required parameter(s): ${missingList.join(", ")}.`
+      });
+    }
   }
 
   private validateUsingSuppressionConflicts(
@@ -1860,7 +1943,98 @@ function collectExpandedIdentOccurrences(
   documentComposition: DocumentCompositionModel
 ): ReturnType<typeof parseDocumentFacts>["identOccurrences"] {
   const out = [...facts.identOccurrences];
-  if (facts.rootTag?.toLowerCase() !== "workflow") {
+  const rootLower = (facts.rootTag ?? "").toLowerCase();
+
+  if (rootLower === "form") {
+    const localUsingRangesByComponent = new Map<string, vscode.Range>();
+    const localUsingRangesByComponentAndContribution = new Map<string, vscode.Range>();
+    for (const usingRef of facts.usingReferences) {
+      if (usingRef.suppressInheritance) {
+        continue;
+      }
+
+      if (!localUsingRangesByComponent.has(usingRef.componentKey)) {
+        localUsingRangesByComponent.set(usingRef.componentKey, usingRef.componentValueRange);
+      }
+
+      if (usingRef.sectionValue && !localUsingRangesByComponentAndContribution.has(`${usingRef.componentKey}::${usingRef.sectionValue}`)) {
+        localUsingRangesByComponentAndContribution.set(`${usingRef.componentKey}::${usingRef.sectionValue}`, usingRef.sectionValueRange ?? usingRef.componentValueRange);
+      }
+    }
+
+    const defaultRange = facts.rootIdentRange
+      ?? facts.rootFormIdentRange
+      ?? facts.workflowFormIdentRange
+      ?? new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1));
+    const defaultButtonScopeKey =
+      facts.identOccurrences.find((item) => item.kind === "button")?.scopeKey
+      ?? "__global_buttons__";
+    const defaultSectionScopeKey =
+      facts.identOccurrences.find((item) => item.kind === "section")?.scopeKey
+      ?? "__global_sections__";
+    const defaultControlScopeKey =
+      facts.identOccurrences.find((item) => item.kind === "control")?.scopeKey
+      ?? "__global_controls__";
+
+    for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+      if (!contributionMatchesDocumentRoot(facts.rootTag, contributionRef.contribution)) {
+        continue;
+      }
+
+      for (const controlIdent of contributionRef.contribution.formControlIdents) {
+        const contributionKey = `${contributionRef.componentKey}::${contributionRef.contribution.contributionName}`;
+        const range =
+          contributionRef.source === "local"
+            ? localUsingRangesByComponentAndContribution.get(contributionKey)
+              ?? localUsingRangesByComponent.get(contributionRef.componentKey)
+              ?? defaultRange
+            : defaultRange;
+
+        out.push({
+          ident: controlIdent,
+          kind: "control",
+          range,
+          scopeKey: defaultControlScopeKey
+        });
+      }
+
+      for (const buttonIdent of contributionRef.contribution.formButtonIdents) {
+        const contributionKey = `${contributionRef.componentKey}::${contributionRef.contribution.contributionName}`;
+        const range =
+          contributionRef.source === "local"
+            ? localUsingRangesByComponentAndContribution.get(contributionKey)
+              ?? localUsingRangesByComponent.get(contributionRef.componentKey)
+              ?? defaultRange
+            : defaultRange;
+
+        out.push({
+          ident: buttonIdent,
+          kind: "button",
+          range,
+          scopeKey: defaultButtonScopeKey
+        });
+      }
+
+      for (const sectionIdent of contributionRef.contribution.formSectionIdents) {
+        const contributionKey = `${contributionRef.componentKey}::${contributionRef.contribution.contributionName}`;
+        const range =
+          contributionRef.source === "local"
+            ? localUsingRangesByComponentAndContribution.get(contributionKey)
+              ?? localUsingRangesByComponent.get(contributionRef.componentKey)
+              ?? defaultRange
+            : defaultRange;
+
+        out.push({
+          ident: sectionIdent,
+          kind: "section",
+          range,
+          scopeKey: defaultSectionScopeKey
+        });
+      }
+    }
+  }
+
+  if (rootLower !== "workflow") {
     return out;
   }
 
@@ -2254,4 +2428,8 @@ function addNestedRangeMapValue(
   current.push(range);
   nested.set(nestedKey, current);
   target.set(key, nested);
+}
+
+function getUsingKey(componentKey: string, sectionValue?: string): string {
+  return `${componentKey}::${sectionValue ?? ""}`;
 }

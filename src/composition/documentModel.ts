@@ -40,7 +40,9 @@ export interface DocumentCompositionModel {
 
 export interface EffectiveDocumentContributionRef {
   componentKey: string;
+  rawComponentValue: string;
   source: "local" | "inherited";
+  sectionValue?: string;
   contribution: IndexedComponentContributionSummary;
 }
 
@@ -116,7 +118,9 @@ export function collectEffectiveDocumentContributions(
 
       out.push({
         componentKey: usingModel.componentKey,
+        rawComponentValue: usingModel.rawComponentValue,
         source: usingModel.source,
+        ...(usingModel.sectionValue ? { sectionValue: usingModel.sectionValue } : {}),
         contribution: contributionModel.contribution
       });
     }
@@ -137,7 +141,9 @@ export function collectSelectedDocumentContributions(
     for (const contributionModel of usingModel.contributions) {
       out.push({
         componentKey: usingModel.componentKey,
+        rawComponentValue: usingModel.rawComponentValue,
         source: usingModel.source,
+        ...(usingModel.sectionValue ? { sectionValue: usingModel.sectionValue } : {}),
         contribution: contributionModel.contribution
       });
     }

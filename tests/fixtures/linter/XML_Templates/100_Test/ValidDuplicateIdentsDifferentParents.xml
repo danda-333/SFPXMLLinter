@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Form xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Ident="ValidDuplicateIdentsDifferentParentsForm">
+  <Controls>
+    <Control xsi:type="TextBoxControl" Ident="ScopedDupControl" />
+  </Controls>
+  <Controls>
+    <Control xsi:type="TextBoxControl" Ident="ScopedDupControl" />
+  </Controls>
+
+  <Buttons>
+    <Button xsi:type="FormButton" Ident="ScopedDupButton" TitleResourceKey="ScopedDupButton_Package" IsSave="false" IsVisible="true" />
+  </Buttons>
+  <Buttons>
+    <Button xsi:type="FormButton" Ident="ScopedDupButton" TitleResourceKey="ScopedDupButton2_Package" IsSave="false" IsVisible="true" />
+  </Buttons>
+
+  <Sections>
+    <Section xsi:type="FormSection" Ident="ScopedDupSection" />
+  </Sections>
+  <Sections>
+    <Section xsi:type="FormSection" Ident="ScopedDupSection" />
+  </Sections>
+</Form>

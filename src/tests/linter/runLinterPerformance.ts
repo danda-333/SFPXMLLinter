@@ -10,6 +10,7 @@ const workspaceRoot = configuredFixture && configuredFixture.length > 0
 // Keep env overrides for stricter local/CI experiments.
 const maxPhaseMs = Number(process.env.SFP_LINTER_PERF_LIMIT_MS ?? "2000");
 const maxBackgroundValidationMs = Number(process.env.SFP_LINTER_PERF_BG_LIMIT_MS ?? "4500");
+const maxXmlRebuildMs = Number(process.env.SFP_LINTER_PERF_REBUILD_LIMIT_MS ?? "5000");
 
 type VscodeMockState = {
   workspaceRoot: string;
@@ -42,6 +43,15 @@ class Uri {
 
   public toString(): string {
     return `file://${this.fsPath.replace(/\\/g, "/")}`;
+  }
+}
+
+class RelativePattern {
+  public readonly baseUri: Uri;
+  public readonly pattern: string;
+  constructor(base: Uri | { uri: Uri }, pattern: string) {
+    this.baseUri = base instanceof Uri ? base : base.uri;
+    this.pattern = pattern;
   }
 }
 
@@ -170,12 +180,22 @@ function collectXmlFiles(baseDir: string): Uri[] {
 
 function parseRootFromPattern(globPattern: string): string | undefined {
   const normalized = globPattern.replace(/\\/g, "/");
-  const match = /\*\*\/([^/]+)\/\*\*\/\*\.xml$/i.exec(normalized);
-  return match?.[1];
+  const withoutPrefix = normalized.replace(/^\*\*\//, "");
+  const root = withoutPrefix.split("/")[0];
+  return root && root.length > 0 ? root : undefined;
+}
+
+function resolvePatternInput(pattern: string | RelativePattern): { baseDir: string; pattern: string } {
+  if (typeof pattern === "string") {
+    return { baseDir: state.workspaceRoot, pattern };
+  }
+
+  return { baseDir: pattern.baseUri.fsPath, pattern: pattern.pattern };
 }
 
 const vscodeMock = {
   Uri,
+  RelativePattern,
   Position,
   Range,
   Location,
@@ -187,15 +207,22 @@ const vscodeMock = {
       async readFile(uri: Uri): Promise<Uint8Array> {
         const content = await fs.promises.readFile(uri.fsPath);
         return new Uint8Array(content);
+      },
+      async writeFile(uri: Uri, content: Uint8Array): Promise<void> {
+        await fs.promises.writeFile(uri.fsPath, Buffer.from(content));
+      },
+      async createDirectory(uri: Uri): Promise<void> {
+        await fs.promises.mkdir(uri.fsPath, { recursive: true });
       }
     },
-    async findFiles(pattern: string): Promise<Uri[]> {
-      const root = parseRootFromPattern(pattern);
+    async findFiles(pattern: string | RelativePattern): Promise<Uri[]> {
+      const { baseDir, pattern: patternText } = resolvePatternInput(pattern);
+      const root = parseRootFromPattern(patternText);
       if (!root) {
         return [];
       }
 
-      const target = path.join(state.workspaceRoot, root);
+      const target = path.join(baseDir, root);
       return collectXmlFiles(target);
     },
     async openTextDocument(uri: Uri): Promise<TextDocument> {
@@ -231,6 +258,7 @@ const vscodeMock = {
 type RebuildIndexProgressEvent = import("../../indexer/workspaceIndexer").RebuildIndexProgressEvent;
 type WorkspaceIndexer = import("../../indexer/workspaceIndexer").WorkspaceIndexer;
 type DiagnosticsEngine = import("../../diagnostics/engine").DiagnosticsEngine;
+type BuildXmlTemplatesService = import("../../template/buildXmlTemplatesService").BuildXmlTemplatesService;
 
 const moduleAny = Module as unknown as { _load: (request: string, parent: unknown, isMain: boolean) => unknown };
 const originalLoad = moduleAny._load;
@@ -247,6 +275,9 @@ const { WorkspaceIndexer } = require("../../indexer/workspaceIndexer") as {
 };
 const { DiagnosticsEngine } = require("../../diagnostics/engine") as {
   DiagnosticsEngine: new () => DiagnosticsEngine;
+};
+const { BuildXmlTemplatesService } = require("../../template/buildXmlTemplatesService") as {
+  BuildXmlTemplatesService: new () => BuildXmlTemplatesService;
 };
 
 function computeLineStarts(text: string): number[] {
@@ -341,6 +372,29 @@ async function measureBackgroundValidation(
   return durationMs;
 }
 
+async function measureXmlRebuild(): Promise<number> {
+  const workspaceFolder = vscodeMock.workspace.workspaceFolders[0];
+  const service = new BuildXmlTemplatesService();
+  const started = Date.now();
+  const result = await service.run(workspaceFolder as unknown as import("vscode").WorkspaceFolder, {
+    silent: true,
+    mode: "fast",
+    postBuildFormat: true,
+    provenanceMode: "off",
+    formatterMaxConsecutiveBlankLines: 2,
+    generatorsEnabled: true,
+    generatorTimeoutMs: 300,
+    generatorEnableUserScripts: true,
+    generatorUserScriptsRoots: ["XML_Generators"]
+  });
+  const durationMs = Date.now() - started;
+  const summary = result.summary ?? { updated: 0, skipped: 0, errors: 0 };
+  console.log(
+    `[linter:perf] xml/rebuild: ${durationMs} ms (updated=${summary.updated}, skipped=${summary.skipped}, errors=${summary.errors})`
+  );
+  return durationMs;
+}
+
 function readWorkspaceFileText(filePath: string): string {
   const bytes = fs.readFileSync(filePath);
   const text = new TextDecoder("utf-8").decode(bytes);
@@ -363,6 +417,7 @@ async function run(): Promise<void> {
   console.log(`[linter:perf] Fixture: ${workspaceRoot}`);
   console.log(`[linter:perf] Threshold per startup phase: ${maxPhaseMs} ms`);
   console.log(`[linter:perf] Threshold background validation: ${maxBackgroundValidationMs} ms`);
+  console.log(`[linter:perf] Threshold XML rebuild: ${maxXmlRebuildMs} ms`);
 
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
@@ -371,6 +426,7 @@ async function run(): Promise<void> {
   const templateFullMs = await measureIndex("template/full", templateIndexer, "all");
   const runtimeFullMs = await measureIndex("runtime/full", runtimeIndexer, "all");
   const backgroundValidationMs = await measureBackgroundValidation(templateIndexer, runtimeIndexer);
+  const xmlRebuildMs = await measureXmlRebuild();
 
   const violations: string[] = [];
   if (templateBootstrapMs > maxPhaseMs) {
@@ -384,6 +440,9 @@ async function run(): Promise<void> {
   }
   if (backgroundValidationMs > maxBackgroundValidationMs) {
     violations.push(`background/validation=${backgroundValidationMs} ms`);
+  }
+  if (xmlRebuildMs > maxXmlRebuildMs) {
+    violations.push(`xml/rebuild=${xmlRebuildMs} ms`);
   }
 
   if (violations.length > 0) {

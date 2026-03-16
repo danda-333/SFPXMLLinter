@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.1.8
+
+- Startup and indexing performance:
+  - reduced deferred full reindex delay after bootstrap startup indexing (new default: `startup.fullReindexDelayMs = 1000`).
+  - added startup progress verbosity toggle (`startup.verboseProgress`, default `false`) to avoid heavy per-phase startup logging overhead.
+  - optimized workspace indexer using-trace computation:
+    - removed redundant full first trace pass,
+    - computes trace in one pass after forms are known,
+    - narrows trace processing only to eligible files (local/inherited using relevance).
+  - added parsed-entry cache in workspace indexer keyed by file signature (`mtime` + `size`) to reduce repeated read/parse work across bootstrap/full passes.
+- Performance testing:
+  - replaced `tests/fixtures/linter-performance` dataset with full `SFPExampleProject` snapshot (including generators/primitives) for realistic coverage.
+  - expanded linter perf benchmark with:
+    - XML rebuild timing (`xml/rebuild`),
+    - real startup pipeline timing (`real-startup`: bootstrap + full + registry + open-doc validation + background validation).
+  - refreshed generated runtime XML in `linter-performance` fixture to keep perf runs clean (no restore required after benchmark).
+
 ## 0.1.7
 
 - Template builder inherited `Using` refactor:

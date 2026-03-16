@@ -1164,7 +1164,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     isReindexRunning = true;
     const startedAt = Date.now();
     try {
-      const verboseProgress = options?.verboseProgress ?? !hasShownInitialIndexReadyNotification;
+      const verboseProgress = options?.verboseProgress ?? getSettings().startupVerboseProgress;
       let pendingScope: "bootstrap" | "all" = scope;
       do {
         queuedReindexScope = "none";
@@ -1441,7 +1441,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     return projectKeys.size > 1;
   }
 
-  function scheduleDeferredFullReindex(delayMs = 6000): void {
+  function scheduleDeferredFullReindex(delayMs = 1000): void {
     if (deferredFullReindexTimer) {
       clearTimeout(deferredFullReindexTimer);
     }
@@ -2888,11 +2888,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const hasRuntimeOpenAtStartup = getUserOpenUris().some((uri) => getXmlIndexDomainByUri(uri) === "runtime");
     await withReindexProgress("SFP XML Linter: Initial Bootstrap Indexing", async () => {
       await rebuildBootstrapIndexAndValidateOpenDocs({
-        verboseProgress: true,
+        verboseProgress: getSettings().startupVerboseProgress,
         includeRuntime: hasRuntimeOpenAtStartup
       });
     });
-    scheduleDeferredFullReindex();
+    scheduleDeferredFullReindex(getSettings().startupFullReindexDelayMs);
   })();
 }
 

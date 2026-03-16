@@ -479,6 +479,8 @@ function createInheritanceSettings(): import("../../config/settings").SfpXmlLint
     templateBuilderGeneratorTimeoutMs: 150,
     templateBuilderGeneratorEnableUserScripts: true,
     templateBuilderGeneratorUserScriptsRoots: ["XML_Generators"],
+    startupFullReindexDelayMs: 1000,
+    startupVerboseProgress: false,
     ruleSeverities: {
       "workflow-redundant-feature-using": "warning",
       "dataview-redundant-feature-using": "warning",

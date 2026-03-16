@@ -370,6 +370,17 @@
           },
           "description": "Workspace-relative folders scanned for user-defined template generators (*.js, *.cjs, *.mjs, *.ts)."
         },
+        "sfpXmlLinter.startup.fullReindexDelayMs": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 0,
+          "description": "Delay in milliseconds before deferred full reindex after initial bootstrap indexing."
+        },
+        "sfpXmlLinter.startup.verboseProgress": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, logs detailed per-phase index progress during startup and deferred reindex passes."
+        },
         "sfpXmlLinter.composition.openMode": {
           "type": "string",
           "enum": [

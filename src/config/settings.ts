@@ -18,6 +18,8 @@ export interface SfpXmlLinterSettings {
   templateBuilderGeneratorTimeoutMs: number;
   templateBuilderGeneratorEnableUserScripts: boolean;
   templateBuilderGeneratorUserScriptsRoots: string[];
+  startupFullReindexDelayMs: number;
+  startupVerboseProgress: boolean;
 }
 
 const DEFAULT_RULES: Record<string, RuleSeverity> = {
@@ -98,6 +100,8 @@ export function getSettings(): SfpXmlLinterSettings {
   const templateBuilderGeneratorTimeoutMs = Math.max(50, cfg.get<number>("templateBuilder.generators.timeoutMs", 150));
   const templateBuilderGeneratorEnableUserScripts = cfg.get<boolean>("templateBuilder.generators.enableUserScripts", true);
   const templateBuilderGeneratorUserScriptsRoots = cfg.get<string[]>("templateBuilder.generators.userScriptsRoots", ["XML_Generators"]);
+  const startupFullReindexDelayMs = Math.max(0, cfg.get<number>("startup.fullReindexDelayMs", 1000));
+  const startupVerboseProgress = cfg.get<boolean>("startup.verboseProgress", false);
 
   return {
     workspaceRoots,
@@ -114,7 +118,9 @@ export function getSettings(): SfpXmlLinterSettings {
     templateBuilderGeneratorsEnabled,
     templateBuilderGeneratorTimeoutMs,
     templateBuilderGeneratorEnableUserScripts,
-    templateBuilderGeneratorUserScriptsRoots
+    templateBuilderGeneratorUserScriptsRoots,
+    startupFullReindexDelayMs,
+    startupVerboseProgress
   };
 }
 

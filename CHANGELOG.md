@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.7
+
+- Template builder inherited `Using` refactor:
+  - switched inherited `Using` source for build from ad-hoc template file scanning to indexed snapshot (`templateIndexer`) to keep one source of truth across build/validation/tree view.
+  - preserved inherited custom `Using` attributes/params during build by indexing full `Using` attribute sets.
+  - removed builder-side fallback form-using scan/cache path.
+- Auto-build on save:
+  - saving `Form` template now queues related templates of the same `FormIdent` (`Form` + `WorkFlow` + `DataView`) so inherited `Using` changes are propagated immediately.
+
 ## 0.1.6
 
 - Duplicate-ident scope fix:

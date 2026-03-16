@@ -21,6 +21,7 @@ export interface UsingReference {
   componentValueRange: vscode.Range;
   sectionValue?: string;
   sectionValueRange?: vscode.Range;
+  attributes?: ReadonlyArray<{ name: string; value: string }>;
   providedParamNames?: string[];
   suppressInheritance?: boolean;
 }
@@ -434,6 +435,7 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
         componentValueRange: componentAttr.valueRange,
         sectionValue: sectionAttr?.value,
         sectionValueRange: sectionAttr?.valueRange,
+        attributes: [...attrs.values()].map((attr) => ({ name: attr.name, value: attr.value })),
         ...(providedParamNames.length > 0 ? { providedParamNames } : {}),
         ...(suppressInheritance ? { suppressInheritance: true } : {})
       });

@@ -7,7 +7,7 @@ import { documentInConfiguredRoots, getXmlIndexDomainByUri, XmlIndexDomain } fro
 import { invalidateSystemMetadataCache } from "./config/systemMetadata";
 import { DiagnosticsHoverProvider } from "./providers/diagnosticsHoverProvider";
 import { HoverRegistry, DocumentationHoverResolver } from "./providers/hoverRegistry";
-import { BuildXmlTemplatesService } from "./template/buildXmlTemplatesService";
+import { BuildXmlTemplatesService, TemplateInheritedUsingEntry } from "./template/buildXmlTemplatesService";
 import { SfpXmlCompletionProvider } from "./providers/completionProvider";
 import { SfpXmlDefinitionProvider } from "./providers/definitionProvider";
 import { SfpXmlIgnoreCodeActionProvider } from "./providers/ignoreCodeActionProvider";
@@ -613,6 +613,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       templateText: string,
       debugLines: readonly string[]
     ) => void;
+    inheritedUsingsByFormIdent: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]>;
   } {
     const onTemplateEvaluatedSafe =
       onTemplateEvaluated ??
@@ -632,6 +633,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       generatorTimeoutMs: settings.templateBuilderGeneratorTimeoutMs,
       generatorEnableUserScripts: settings.templateBuilderGeneratorEnableUserScripts,
       generatorUserScriptsRoots: settings.templateBuilderGeneratorUserScriptsRoots,
+      inheritedUsingsByFormIdent: buildInheritedUsingsSnapshotFromIndex(),
       onLogLine: (line: string) => {
         const trimmed = line.trim();
         if (trimmed.length === 0) {
@@ -1580,6 +1582,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     if (isInFolder(document.uri, "XML_Templates")) {
       logBuild(`SAVE XML_Templates: ${vscode.workspace.asRelativePath(document.uri, false)}`);
+      const facts = parseDocumentFacts(document);
+      const root = (facts.rootTag ?? "").toLowerCase();
+      if (root === "form" && facts.formIdent) {
+        const relatedTemplatePaths = collectTemplatePathsForFormIdentFromIndex(facts.formIdent);
+        if (relatedTemplatePaths.length > 0) {
+          logBuild(`Form save detected: queue related templates for FormIdent='${facts.formIdent}' count=${relatedTemplatePaths.length}`);
+          for (const templatePath of relatedTemplatePaths) {
+            await queueTemplateBuild(workspaceFolder, templatePath);
+          }
+          return;
+        }
+      }
       await queueTemplateBuild(workspaceFolder, document.uri.fsPath);
       return;
     }
@@ -1671,6 +1685,68 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
         result.add(uri.fsPath);
       }
+    }
+
+    return [...result].sort((a, b) => a.localeCompare(b));
+  }
+
+  function buildInheritedUsingsSnapshotFromIndex(): ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]> {
+    const idx = templateIndexer.getIndex();
+    const out = new Map<string, TemplateInheritedUsingEntry[]>();
+    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+      const root = (facts.rootTag ?? "").toLowerCase();
+      if (root !== "form" || !facts.formIdent) {
+        continue;
+      }
+
+      const uri = vscode.Uri.parse(uriKey);
+      if (!isInFolder(uri, "XML_Templates")) {
+        continue;
+      }
+
+      if (!facts.usingReferences || facts.usingReferences.length === 0) {
+        out.set(facts.formIdent, []);
+        continue;
+      }
+
+      const entries: TemplateInheritedUsingEntry[] = facts.usingReferences.map((ref) => ({
+        featureKey: ref.componentKey,
+        contributionKey: ref.sectionValue,
+        suppressInheritance: ref.suppressInheritance === true,
+        rawComponentValue: ref.rawComponentValue,
+        attributes: ref.attributes
+      }));
+      out.set(facts.formIdent, entries);
+    }
+
+    return out;
+  }
+
+  function collectTemplatePathsForFormIdentFromIndex(formIdent: string): string[] {
+    const idx = templateIndexer.getIndex();
+    const result = new Set<string>();
+    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+      const root = (facts.rootTag ?? "").toLowerCase();
+      if (root !== "form" && root !== "workflow" && root !== "dataview") {
+        continue;
+      }
+
+      const owningFormIdent =
+        root === "form"
+          ? facts.formIdent
+          : root === "workflow"
+            ? (facts.workflowFormIdent ?? facts.rootFormIdent)
+            : facts.rootFormIdent;
+      if (!owningFormIdent || owningFormIdent !== formIdent) {
+        continue;
+      }
+
+      const uri = vscode.Uri.parse(uriKey);
+      if (!isInFolder(uri, "XML_Templates")) {
+        continue;
+      }
+
+      result.add(uri.fsPath);
     }
 
     return [...result].sort((a, b) => a.localeCompare(b));

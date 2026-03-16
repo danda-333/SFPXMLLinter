@@ -92,3 +92,49 @@ Poznamky:
 ## Poznamka k T11
 
 Slozitejsi transformace (napr. lift opakovanych action sekvenci do `ActionShareCode`) zustavaji v `T11`.
+
+## ContributionPatch / ContributionSlot
+
+Pokud chceme rozsireni existujici contribution bez kopirovani cele feature, muzeme
+v contribution definovat extension point pomoci `ContributionSlot`.
+
+Priklad ve feature:
+
+```xml
+<Contribution Name="Html" Root="Form" TargetXPath="//Form/Controls" Insert="append">
+  <Control ID="GeneralResolutionCardPlaceHolder">
+    <div class="card-body">
+      <div class="row"><div class="col-md-12"><Control ID="SolutionDescription" /></div></div>
+      <ContributionSlot Name="GeneralResolutionCard.Body.End" />
+    </div>
+  </Control>
+</Contribution>
+```
+
+Priklad v template:
+
+```xml
+<Usings>
+  <Using Feature="Common/Shared/Resolve" Contribution="Html" />
+</Usings>
+
+<ContributionPatches>
+  <ContributionPatch Feature="Common/Shared/Resolve" Contribution="Html">
+    <AppendSlot Name="GeneralResolutionCard.Body.End">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="form-group">
+            <ControlLabel ControlID="ReporterResponseDeadlineDateTime" />
+            <Control ID="ReporterResponseDeadlineDateTime" />
+          </div>
+        </div>
+      </div>
+    </AppendSlot>
+  </ContributionPatch>
+</ContributionPatches>
+```
+
+Poznamky:
+- aktualne je podporovana operace `AppendSlot`.
+- `ContributionSlot` je pouze build-time marker; ve finalnim XML se necha jen jeho obsah.
+- patch je cileny na `Feature/Component` + konkretni `Contribution`.

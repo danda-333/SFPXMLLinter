@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -27,6 +27,7 @@
     "onStartupFinished",
     "onCommand:sfpXmlLinter.buildXmlTemplates",
     "onCommand:sfpXmlLinter.buildXmlTemplatesAll",
+    "onCommand:sfpXmlLinter.compareTemplateWithBuiltXml",
     "onCommand:sfpXmlLinter.createDocumentGeneratorTemplate",
     "onCommand:sfpXmlLinter.createSnippetGeneratorTemplate",
     "onCommand:sfpXmlLinter.showBuildQueueLog",
@@ -94,6 +95,10 @@
       {
         "command": "sfpXmlLinter.buildXmlTemplatesAll",
         "title": "SFP XML Linter: Build XML Templates (All)"
+      },
+      {
+        "command": "sfpXmlLinter.compareTemplateWithBuiltXml",
+        "title": "SFP XML Linter: Compare Current XML vs Built XML"
       },
       {
         "command": "sfpXmlLinter.createDocumentGeneratorTemplate",

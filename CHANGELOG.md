@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.1.9
+
+- Contribution patching:
+  - added `ContributionPatch` support in template build pipeline.
+  - added `AppendSlot` operation to extend existing contribution content at predefined extension points.
+  - introduced `ContributionSlot` build-time marker for contribution-level slot extension (separate from primitive `Slot`).
+  - contribution patch blocks are removed from final XML output after build.
+- New compare command:
+  - added `SFP XML Linter: Compare Current XML vs Built XML`.
+  - compares active XML with in-memory final built XML using the same build/generator pipeline.
+  - works from both `XML_Templates` and matching files under `XML`.
+- Docs and tests:
+  - updated `Docs/T9AuthoringSugarExamples.md` with `ContributionPatch` / `ContributionSlot` examples.
+  - added template core regression test for contribution patch append-slot behavior.
+
 ## 0.1.8
 
 - Startup and indexing performance:

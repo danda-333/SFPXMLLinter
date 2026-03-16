@@ -64,6 +64,56 @@ export interface TemplateInheritedUsingEntry {
 }
 
 export class BuildXmlTemplatesService {
+  public async renderTemplateToFinalXml(
+    workspaceFolder: vscode.WorkspaceFolder,
+    templateUri: vscode.Uri,
+    options: BuildRunOptions = {},
+    templateTextOverride?: string
+  ): Promise<string> {
+    const componentLibrary = await this.buildWorkspaceComponentLibrary(workspaceFolder);
+    const relPath = relativeTemplatePath(workspaceFolder, templateUri);
+    const templateText = templateTextOverride ?? await readWorkspaceTextFile(templateUri);
+    const inheritedUsingsXml = buildInheritedUsingsXml(templateText, options.inheritedUsingsByFormIdent);
+    const renderedRaw = renderTemplateText(
+      templateText,
+      componentLibrary,
+      12,
+      options.mode === "debug" ? options.onLogLine : undefined,
+      inheritedUsingsXml
+    );
+
+    const userGenerators = options.generatorEnableUserScripts === false
+      ? []
+      : await loadWorkspaceUserGenerators(
+          workspaceFolder.uri.fsPath,
+          options.generatorUserScriptsRoots ?? ["XML_Generators"],
+          options.onLogLine
+        );
+
+    const generated = runTemplateGenerators(
+      {
+        xml: renderedRaw,
+        sourceTemplateText: templateText,
+        relativeTemplatePath: relPath,
+        mode: options.mode ?? "debug"
+      },
+      {
+        enabled: options.generatorsEnabled !== false,
+        timeoutMs: Math.max(50, options.generatorTimeoutMs ?? 150),
+        userGenerators
+      },
+      options.onLogLine
+    );
+
+    return applyTemplateOutputQuality(generated.xml, templateText, {
+      postBuildFormat: options.postBuildFormat === true,
+      provenanceMode: options.provenanceMode ?? "off",
+      provenanceLabel: options.provenanceLabel,
+      relativeTemplatePath: relPath,
+      formatterMaxConsecutiveBlankLines: Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)
+    });
+  }
+
   public async run(workspaceFolder: vscode.WorkspaceFolder, options: BuildRunOptions = {}): Promise<BuildRunResult> {
     return this.runInternal(workspaceFolder, undefined, options);
   }
@@ -112,25 +162,7 @@ export class BuildXmlTemplatesService {
     options: BuildRunOptions
   ): Promise<BuildRunResult> {
     const templateUris = await collectTemplateTargets(workspaceFolder, targetPath);
-    const componentUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Components/**/*.xml"));
-    const primitiveUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Primitives/**/*.xml"));
-
-    const componentSources: Array<{ key: string; text: string; origin: string }> = [];
-    for (const uri of [...componentUris, ...primitiveUris]) {
-      const key = componentLikeKeyFromUri(workspaceFolder, uri);
-      if (!key) {
-        continue;
-      }
-
-      const text = await readWorkspaceTextFile(uri);
-      componentSources.push({
-        key,
-        text,
-        origin: uri.fsPath
-      });
-    }
-
-    const componentLibrary = buildComponentLibrary(componentSources);
+    const componentLibrary = await this.buildWorkspaceComponentLibrary(workspaceFolder);
     const templateTextByUri = new Map<string, string>();
     for (const templateUri of templateUris) {
       const text = await readWorkspaceTextFile(templateUri);
@@ -237,6 +269,25 @@ export class BuildXmlTemplatesService {
     }
 
     return { summary };
+  }
+
+  private async buildWorkspaceComponentLibrary(workspaceFolder: vscode.WorkspaceFolder): Promise<ReturnType<typeof buildComponentLibrary>> {
+    const componentUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Components/**/*.xml"));
+    const primitiveUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Primitives/**/*.xml"));
+    const componentSources: Array<{ key: string; text: string; origin: string }> = [];
+    for (const uri of [...componentUris, ...primitiveUris]) {
+      const key = componentLikeKeyFromUri(workspaceFolder, uri);
+      if (!key) {
+        continue;
+      }
+      const text = await readWorkspaceTextFile(uri);
+      componentSources.push({
+        key,
+        text,
+        origin: uri.fsPath
+      });
+    }
+    return buildComponentLibrary(componentSources);
   }
 }
 

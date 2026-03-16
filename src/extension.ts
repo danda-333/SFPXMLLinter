@@ -2325,6 +2325,63 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("sfpXmlLinter.compareTemplateWithBuiltXml", async () => {
+      const editor = vscode.window.activeTextEditor;
+      const document = editor?.document;
+      if (!document || document.languageId !== "xml") {
+        vscode.window.showWarningMessage("Open an XML document first.");
+        return;
+      }
+
+      const folder = vscode.workspace.getWorkspaceFolder(document.uri) ?? vscode.workspace.workspaceFolders?.[0];
+      if (!folder) {
+        vscode.window.showWarningMessage("No workspace folder is open.");
+        return;
+      }
+
+      let templateUri: vscode.Uri | undefined;
+      if (isInFolder(document.uri, "XML_Templates")) {
+        templateUri = document.uri;
+      } else if (isInFolder(document.uri, "XML")) {
+        const templatePath = document.uri.fsPath.replace(/[\\/]XML([\\/])/i, `${path.sep}XML_Templates$1`);
+        if (await pathExists(templatePath)) {
+          templateUri = vscode.Uri.file(templatePath);
+        }
+      }
+
+      if (!templateUri) {
+        vscode.window.showWarningMessage("Current XML is not under XML_Templates/XML or matching template file was not found.");
+        return;
+      }
+
+      try {
+        const mode = getTemplateBuilderMode();
+        const options = createBuildRunOptions(true, mode);
+        const sourceIsTemplate = templateUri.toString() === document.uri.toString();
+        const renderedXml = await buildService.renderTemplateToFinalXml(
+          folder,
+          templateUri,
+          options,
+          sourceIsTemplate ? document.getText() : undefined
+        );
+        const renderedDoc = await vscode.workspace.openTextDocument({
+          language: "xml",
+          content: renderedXml
+        });
+
+        const leftLabel = vscode.workspace.asRelativePath(document.uri, false);
+        const title = `SFP Compare: ${leftLabel} ↔ Built XML`;
+        await vscode.commands.executeCommand("vscode.diff", document.uri, renderedDoc.uri, title);
+        logBuild(`Compare opened: ${leftLabel} -> built from ${vscode.workspace.asRelativePath(templateUri, false)}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Template compare failed: ${message}`);
+        logBuild(`COMPARE ERROR: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("sfpXmlLinter.createDocumentGeneratorTemplate", async () => {
       await createGeneratorTemplateFile("document");
     })

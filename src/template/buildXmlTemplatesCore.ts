@@ -54,6 +54,17 @@ interface UsingDirective {
   componentKey: string;
 }
 
+interface ContributionPatchDirective {
+  componentKey: string;
+  contributionName?: string;
+  appendSlotOperations: ContributionPatchAppendSlotOperation[];
+}
+
+interface ContributionPatchAppendSlotOperation {
+  name: string;
+  content: string;
+}
+
 interface PlaceholderToken {
   full: string;
   body: string;
@@ -217,6 +228,18 @@ export function extractUsingComponentRefs(text: string): string[] {
       continue;
     }
     refs.add(stripXmlComponentExtension(normalizePath(featureValue)));
+  }
+
+  for (const match of text.matchAll(/<ContributionPatch\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const componentValue =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
+    if (!componentValue) {
+      continue;
+    }
+    refs.add(stripXmlComponentExtension(normalizePath(componentValue)));
   }
 
   for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
@@ -492,6 +515,7 @@ function applyUsingSections(
   context: RenderContext,
   inheritedUsingsXml?: string
 ): string {
+  const contributionPatches = parseContributionPatchDirectives(text, context);
   const usingParseSource =
     inheritedUsingsXml && inheritedUsingsXml.trim().length > 0
       ? `${text}\n${inheritedUsingsXml}`
@@ -499,6 +523,7 @@ function applyUsingSections(
   const usingDirectives = parseUsingDirectives(usingParseSource);
   let out = removeUsingsBlocks(text);
   out = removeStandaloneUsingTags(out);
+  out = removeContributionPatchBlocks(out);
 
   for (const using of usingDirectives) {
     const component = resolveComponentByKey(context.library, using.componentKey);
@@ -521,7 +546,11 @@ function applyUsingSections(
         continue;
       }
 
-      const renderedInner = replaceComponentPlaceholders(applyParamSubstitution(section.content, params), params, context, 1);
+      let renderedInner = applyParamSubstitution(section.content, params);
+      const sectionPatches = filterContributionPatchesForSection(contributionPatches, component.key, section.name);
+      renderedInner = applyContributionPatchesToSection(renderedInner, sectionPatches, context);
+      renderedInner = replaceComponentPlaceholders(renderedInner, params, context, 1);
+      renderedInner = unwrapContributionSlots(renderedInner);
       out = insertSectionContent(out, section, renderedInner, context);
     }
   }
@@ -1280,6 +1309,129 @@ function parseUsingDirectives(text: string): UsingDirective[] {
   return out;
 }
 
+function parseContributionPatchDirectives(text: string, context: RenderContext): ContributionPatchDirective[] {
+  const out: ContributionPatchDirective[] = [];
+  const patchBlocks = collectTagBlocks(text, "ContributionPatch").sort((a, b) => a.start - b.start);
+  for (const patchBlock of patchBlocks) {
+    const attrs = parseXmlAttributes(patchBlock.attrs);
+    const componentValue = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+    if (!componentValue) {
+      continue;
+    }
+    const resolvedSource = resolveComponentSourceByKey(context.library, componentValue);
+    const componentKey = resolvedSource
+      ? stripXmlComponentExtension(normalizePath(resolvedSource.key))
+      : stripXmlComponentExtension(normalizePath(componentValue));
+    const contributionName = attrs.get("Contribution") ?? attrs.get("Section");
+    const appendSlotOperations: ContributionPatchAppendSlotOperation[] = [];
+    const appendBlocks = collectTagBlocks(patchBlock.body, "AppendSlot").sort((a, b) => a.start - b.start);
+    for (const appendBlock of appendBlocks) {
+      const appendAttrs = parseXmlAttributes(appendBlock.attrs);
+      const slotName = (appendAttrs.get("Name") ?? "").trim();
+      if (!slotName) {
+        continue;
+      }
+      appendSlotOperations.push({
+        name: slotName,
+        content: appendBlock.body
+      });
+    }
+    out.push({
+      componentKey,
+      contributionName,
+      appendSlotOperations
+    });
+  }
+  return out;
+}
+
+function filterContributionPatchesForSection(
+  directives: readonly ContributionPatchDirective[],
+  componentKey: string,
+  contributionName: string | undefined
+): ContributionPatchDirective[] {
+  const normalizedComponentKey = stripXmlComponentExtension(normalizePath(componentKey));
+  const normalizedContributionName = (contributionName ?? "").trim();
+  return directives.filter((directive) => {
+    if (directive.componentKey !== normalizedComponentKey) {
+      return false;
+    }
+    const directiveContribution = (directive.contributionName ?? "").trim();
+    if (!directiveContribution) {
+      return true;
+    }
+    return directiveContribution === normalizedContributionName;
+  });
+}
+
+function applyContributionPatchesToSection(
+  sectionContent: string,
+  directives: readonly ContributionPatchDirective[],
+  context: RenderContext
+): string {
+  let out = sectionContent;
+  for (const directive of directives) {
+    for (const operation of directive.appendSlotOperations) {
+      const result = appendIntoSlot(out, operation.name, operation.content);
+      out = result.text;
+      if (result.appliedCount === 0 && context.onDebugLog) {
+        context.onDebugLog(`[ContributionPatch] Slot '${operation.name}' was not found for append.`);
+      }
+    }
+  }
+  return out;
+}
+
+function appendIntoSlot(
+  text: string,
+  slotName: string,
+  appendContent: string
+): { text: string; appliedCount: number } {
+  const slotBlocks = collectTagBlocks(text, "ContributionSlot").sort((a, b) => b.start - a.start);
+  if (slotBlocks.length === 0) {
+    return { text, appliedCount: 0 };
+  }
+
+  let out = text;
+  let appliedCount = 0;
+  for (const slotBlock of slotBlocks) {
+    const slotAttrs = parseXmlAttributes(slotBlock.attrs);
+    const currentName = (slotAttrs.get("Name") ?? "").trim();
+    if (currentName !== slotName) {
+      continue;
+    }
+
+    const full = out.slice(slotBlock.start, slotBlock.end);
+    const isSelfClosing = /\/\s*>$/.test(full);
+    let replacement: string;
+    if (isSelfClosing) {
+      const attrs = slotBlock.attrs.replace(/\/\s*$/, "").trim();
+      replacement = attrs.length > 0
+        ? `<ContributionSlot ${attrs}>${appendContent}</ContributionSlot>`
+        : `<ContributionSlot>${appendContent}</ContributionSlot>`;
+    } else {
+      replacement = `${full.slice(0, full.length - "</ContributionSlot>".length)}${appendContent}</ContributionSlot>`;
+    }
+    out = `${out.slice(0, slotBlock.start)}${replacement}${out.slice(slotBlock.end)}`;
+    appliedCount++;
+  }
+
+  return { text: out, appliedCount };
+}
+
+function unwrapContributionSlots(text: string): string {
+  const slotBlocks = collectTagBlocks(text, "ContributionSlot").sort((a, b) => b.start - a.start);
+  if (slotBlocks.length === 0) {
+    return text;
+  }
+
+  let out = text;
+  for (const slotBlock of slotBlocks) {
+    out = `${out.slice(0, slotBlock.start)}${slotBlock.body}${out.slice(slotBlock.end)}`;
+  }
+  return out;
+}
+
 function parseXmlAttributes(rawAttrs: string): Map<string, string> {
   const out = new Map<string, string>();
   const regex = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
@@ -1347,6 +1499,13 @@ function removeUsingsBlocks(text: string): string {
 
 function removeStandaloneUsingTags(text: string): string {
   return text.replace(/^[ \t]*<Using\b[^>]*\/?>[ \t]*\r?\n?/gim, "");
+}
+
+function removeContributionPatchBlocks(text: string): string {
+  let out = text.replace(/<ContributionPatches\b[^>]*>[\s\S]*?<\/ContributionPatches>/gi, "");
+  out = out.replace(/^[ \t]*<ContributionPatch\b[\s\S]*?<\/ContributionPatch>[ \t]*\r?\n?/gim, "");
+  out = out.replace(/^[ \t]*<ContributionPatch\b[^>]*\/>[ \t]*\r?\n?/gim, "");
+  return out;
 }
 
 function normalizeComponentContent(text: string): string {

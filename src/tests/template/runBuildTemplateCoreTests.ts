@@ -417,6 +417,46 @@ function run(): void {
 </Form>`
     },
     {
+      name: "contribution-patch-append-slot-applies-and-slot-markers-are-removed",
+      components: [
+        {
+          key: "Common/Shared/Resolve",
+          text: `
+<Feature>
+  <Contribution Name="Html" Root="Form" TargetXPath="//Form/Host" Insert="append">
+    <Card>
+      <Row>Base</Row>
+      <ContributionSlot Name="GeneralResolutionCard.Body.End" />
+    </Card>
+  </Contribution>
+</Feature>`
+        }
+      ],
+      template: `
+<Form>
+  <Usings>
+    <Using Feature="Common/Shared/Resolve" Contribution="Html" />
+  </Usings>
+  <ContributionPatches>
+    <ContributionPatch Feature="Common/Shared/Resolve" Contribution="Html">
+      <AppendSlot Name="GeneralResolutionCard.Body.End">
+        <Row>ReporterResponseDeadlineDateTime</Row>
+      </AppendSlot>
+    </ContributionPatch>
+  </ContributionPatches>
+  <Host></Host>
+</Form>`,
+      expected: `
+<Form>
+  <Host>
+    <Card>
+      <Row>Base</Row>
+      <Row>ReporterResponseDeadlineDateTime</Row>
+    </Card>
+  </Host>
+</Form>`
+    },
+    {
       name: "primitive-use-with-slot-and-params",
       components: [
         {

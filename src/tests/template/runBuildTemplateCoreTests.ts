@@ -108,7 +108,7 @@ function run(): void {
           text: `
 <Feature>
   <Contribution Name="ControlShareCodes" Root="WorkFlow" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
-    <ControlShareCode Ident="InheritedControlShareCode" />
+    <ControlShareCode Ident="InheritedControlShareCode_{{Suffix}}_{{FormIdent}}" />
   </Contribution>
 </Feature>`
         }
@@ -118,11 +118,11 @@ function run(): void {
   <ControlShareCodes>
   </ControlShareCodes>
 </WorkFlow>`,
-      inheritedUsingsXml: `<Using Feature="Common/Shared/FormOwned" />`,
+      inheritedUsingsXml: `<Using Feature="Common/Shared/FormOwned" Suffix="FromInherited" />`,
       expected: `
 <WorkFlow FormIdent="Demo">
   <ControlShareCodes>
-    <ControlShareCode Ident="InheritedControlShareCode" />
+    <ControlShareCode Ident="InheritedControlShareCode_FromInherited_Demo" />
   </ControlShareCodes>
 </WorkFlow>`
     },

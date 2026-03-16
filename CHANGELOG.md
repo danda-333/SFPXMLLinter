@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.3
+
+- Template builder inherited using parameters:
+  - fixed inherited `Using` transfer so custom attributes/params from Form are preserved when inherited into `WorkFlow`/`DataView` build path.
+  - inherited `Using` projection still respects `SuppressInheritance` and local deduplication.
+- Tests:
+  - expanded inherited-using regression to verify parameter propagation (`{{...}}` substitution) from inherited `Using` attributes.
+
 ## 0.1.2
 
 - Template builder inherited usings:

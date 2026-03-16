@@ -51,6 +51,7 @@ interface ParsedUsingEntry {
   featureKey: string;
   contributionKey?: string;
   suppressInheritance: boolean;
+  attributes: ReadonlyArray<{ name: string; value: string }>;
   rawTag: string;
 }
 
@@ -358,6 +359,7 @@ function parseUsingEntries(text: string): ParsedUsingEntry[] {
   const pattern = /<Using\b([^>]*)\/?>/gi;
   for (const match of text.matchAll(pattern)) {
     const attrs = match[1] ?? "";
+    const orderedAttrs = parseXmlAttributesOrdered(attrs);
     const featureValue =
       extractAttributeValue(attrs, "Feature") ??
       extractAttributeValue(attrs, "Component") ??
@@ -373,17 +375,42 @@ function parseUsingEntries(text: string): ParsedUsingEntry[] {
       featureKey,
       contributionKey: contributionKey && contributionKey.length > 0 ? contributionKey : undefined,
       suppressInheritance,
-      rawTag: buildInheritedUsingTag(featureValue, contributionKey)
+      attributes: orderedAttrs,
+      rawTag: buildInheritedUsingTag(orderedAttrs)
     });
   }
   return out;
 }
 
-function buildInheritedUsingTag(featureValue: string, contributionKey?: string): string {
-  if (contributionKey && contributionKey.trim().length > 0) {
-    return `<Using Feature="${featureValue}" Contribution="${contributionKey}" />`;
+function buildInheritedUsingTag(attributes: ReadonlyArray<{ name: string; value: string }>): string {
+  const visibleAttrs = attributes.filter((attr) => attr.name.trim().toLowerCase() !== "suppressinheritance");
+  if (visibleAttrs.length === 0) {
+    return "<Using />";
   }
-  return `<Using Feature="${featureValue}" />`;
+  const attrsText = visibleAttrs.map((attr) => `${attr.name}="${escapeXmlAttribute(attr.value)}"`).join(" ");
+  return `<Using ${attrsText} />`;
+}
+
+function parseXmlAttributesOrdered(attrs: string): Array<{ name: string; value: string }> {
+  const out: Array<{ name: string; value: string }> = [];
+  const pattern = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+  for (const match of attrs.matchAll(pattern)) {
+    const name = (match[1] ?? "").trim();
+    if (!name) {
+      continue;
+    }
+    const value = (match[2] ?? match[3] ?? "").trim();
+    out.push({ name, value });
+  }
+  return out;
+}
+
+function escapeXmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function toUsingEntryKey(featureKey: string, contributionKey?: string): string {

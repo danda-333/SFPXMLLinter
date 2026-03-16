@@ -1,5 +1,22 @@
-﻿import * as vscode from "vscode";
+import * as vscode from "vscode";
 import type { ParsedDocumentFacts } from "./xmlFacts";
+
+export type IndexedSymbolKind =
+  | "control"
+  | "button"
+  | "section"
+  | "actionShareCode"
+  | "controlShareCode"
+  | "buttonShareCode";
+
+export interface IndexedSymbolProvenanceProvider {
+  sourceKind: "using" | "include" | "placeholder" | "primitive";
+  featureKey?: string;
+  contributionName?: string;
+  primitiveKey?: string;
+  templateName?: string;
+  confidence: "exact";
+}
 
 export interface IndexedForm {
   ident: string;
@@ -72,6 +89,7 @@ export interface WorkspaceIndex {
   componentContributionUsageFormIdentsByKey: Map<string, Map<string, Set<string>>>;
   parsedFactsByUri: Map<string, ParsedDocumentFacts>;
   hasIgnoreDirectiveByUri: Map<string, boolean>;
+  builtSymbolProvidersByUri?: Map<string, Map<string, IndexedSymbolProvenanceProvider[]>>;
   formsReady: boolean;
   componentsReady: boolean;
   fullReady: boolean;

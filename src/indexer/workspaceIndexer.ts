@@ -1,9 +1,11 @@
 import * as vscode from "vscode";
 import * as nodeFs from "node:fs/promises";
 import { WorkspaceIndex, IndexedComponent, IndexedForm, IndexedComponentContributionSummary } from "./types";
+import { IndexedSymbolProvenanceProvider } from "./types";
 import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
 import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
+import { toIndexUriKey } from "./uriKey";
 import { maskXmlComments } from "../utils/xmlComments";
 import { populateUsingInsertTraceFromText } from "../composition/usingImpact";
 import { collectEffectiveUsingRefs } from "../utils/effectiveUsings";
@@ -78,6 +80,7 @@ export class WorkspaceIndexer {
     componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),
+    builtSymbolProvidersByUri: new Map(),
     formsReady: false,
     componentsReady: false,
     fullReady: false
@@ -85,6 +88,16 @@ export class WorkspaceIndexer {
 
   public getIndex(): WorkspaceIndex {
     return this.index;
+  }
+
+  public setBuiltSymbolProvidersForUri(
+    uri: vscode.Uri,
+    providersBySymbolKey: Map<string, IndexedSymbolProvenanceProvider[]>
+  ): void {
+    if (!this.index.builtSymbolProvidersByUri) {
+      this.index.builtSymbolProvidersByUri = new Map();
+    }
+    this.index.builtSymbolProvidersByUri.set(toIndexUriKey(uri), providersBySymbolKey);
   }
 
   public refreshFormDocument(document: vscode.TextDocument): {
@@ -360,6 +373,7 @@ export class WorkspaceIndexer {
       componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
       parsedFactsByUri: new Map(parsedFactsByUri),
       hasIgnoreDirectiveByUri: new Map(hasIgnoreDirectiveByUri),
+      builtSymbolProvidersByUri: new Map(),
       formsReady: true,
       componentsReady: true,
       fullReady: scope === "all"
@@ -660,6 +674,7 @@ export class WorkspaceIndexer {
       componentContributionUsageFormIdentsByKey,
       parsedFactsByUri,
       hasIgnoreDirectiveByUri,
+      builtSymbolProvidersByUri: new Map(),
       formsReady: true,
       componentsReady: true,
       fullReady: scope === "all"

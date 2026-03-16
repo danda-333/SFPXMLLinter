@@ -8,6 +8,7 @@ import { invalidateSystemMetadataCache } from "./config/systemMetadata";
 import { DiagnosticsHoverProvider } from "./providers/diagnosticsHoverProvider";
 import { HoverRegistry, DocumentationHoverResolver } from "./providers/hoverRegistry";
 import { BuildXmlTemplatesService, TemplateInheritedUsingEntry } from "./template/buildXmlTemplatesService";
+import { TemplateMutationRecord } from "./template/buildXmlTemplatesCore";
 import { SfpXmlCompletionProvider } from "./providers/completionProvider";
 import { SfpXmlDefinitionProvider } from "./providers/definitionProvider";
 import { SfpXmlIgnoreCodeActionProvider } from "./providers/ignoreCodeActionProvider";
@@ -21,8 +22,7 @@ import { parseDocumentFacts, parseDocumentFactsFromText } from "./indexer/xmlFac
 import { formatXmlTolerant } from "./formatter";
 import { formatXmlSelectionWithContext } from "./formatter/selection";
 import { FormatterOptions } from "./formatter/types";
-import { WorkspaceIndex } from "./indexer/types";
-import { IndexedForm } from "./indexer/types";
+import { WorkspaceIndex, IndexedForm, IndexedSymbolProvenanceProvider } from "./indexer/types";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
 import { FeatureRegistryStore } from "./composition/registry";
 import { CompositionTreeProvider } from "./composition/treeView";
@@ -100,6 +100,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   let deferredFullReindexTimer: NodeJS.Timeout | undefined;
   let isValidationWorkerRunning = false;
   let isTemplateBuildRunning = false;
+  let isProvenanceHydrationRunning = false;
+  let queuedFullProvenanceHydration = false;
+  const queuedTargetedProvenanceHydrationPaths = new Set<string>();
   const internalValidationOpens = new Set<string>();
   let lowPriorityValidationStartTimer: NodeJS.Timeout | undefined;
   let queuedFullTemplateBuild = false;
@@ -409,18 +412,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     debugLines: readonly string[];
   };
 
+  type BuildTemplateMutationTelemetry = {
+    outputRelativePath: string;
+    outputFsPath: string;
+    mutations: readonly TemplateMutationRecord[];
+  };
+
   function createBuildTelemetryCollector(): {
     entries: Map<string, BuildTemplateEvaluation>;
+    mutationsByTemplate: Map<string, BuildTemplateMutationTelemetry>;
     onTemplateEvaluated: (
       relativeTemplatePath: string,
       status: "update" | "nochange" | "error",
       templateText: string,
       debugLines: readonly string[]
     ) => void;
+    onTemplateMutations: (
+      relativeTemplatePath: string,
+      outputRelativePath: string,
+      outputFsPath: string,
+      mutations: readonly TemplateMutationRecord[]
+    ) => void;
   } {
     const entries = new Map<string, BuildTemplateEvaluation>();
+    const mutationsByTemplate = new Map<string, BuildTemplateMutationTelemetry>();
     return {
       entries,
+      mutationsByTemplate,
       onTemplateEvaluated: (
         relativeTemplatePath: string,
         status: "update" | "nochange" | "error",
@@ -431,6 +449,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           status,
           templateText,
           debugLines
+        });
+      },
+      onTemplateMutations: (
+        relativeTemplatePath: string,
+        outputRelativePath: string,
+        outputFsPath: string,
+        mutations: readonly TemplateMutationRecord[]
+      ) => {
+        mutationsByTemplate.set(relativeTemplatePath, {
+          outputRelativePath,
+          outputFsPath,
+          mutations
         });
       }
     };
@@ -525,6 +555,187 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  function applyBuildMutationTelemetry(mutationsByTemplate: ReadonlyMap<string, BuildTemplateMutationTelemetry>): void {
+    for (const telemetry of mutationsByTemplate.values()) {
+      const outputUri = vscode.Uri.file(telemetry.outputFsPath);
+      const providersBySymbolKey = buildProvidersBySymbolKeyFromMutations(telemetry.mutations);
+      runtimeIndexer.setBuiltSymbolProvidersForUri(outputUri, providersBySymbolKey);
+    }
+
+    if (mutationsByTemplate.size > 0) {
+      logComposition(`[build:provenance] applied symbol providers for ${mutationsByTemplate.size} template outputs`);
+      compositionTreeProvider.refresh();
+    }
+  }
+
+  async function hydrateRuntimeProvenanceFromTemplates(): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    if (folders.length === 0) {
+      return;
+    }
+
+    const startedAt = Date.now();
+    let templateCount = 0;
+    let outputCount = 0;
+    const inheritedUsingsByFormIdent = buildInheritedUsingsSnapshotFromIndex();
+    for (const folder of folders) {
+      const entries = await buildService.collectTemplateMutationTelemetry(
+        folder,
+        {
+          mode: "release",
+          inheritedUsingsByFormIdent
+        }
+      );
+      templateCount += entries.length;
+      for (const entry of entries) {
+        const outputUri = vscode.Uri.file(entry.outputFsPath);
+        const providersBySymbolKey = buildProvidersBySymbolKeyFromMutations(entry.mutations);
+        runtimeIndexer.setBuiltSymbolProvidersForUri(outputUri, providersBySymbolKey);
+        outputCount++;
+      }
+    }
+
+    if (templateCount > 0) {
+      logComposition(
+        `[build:provenance] hydrated from templates=${templateCount}, outputs=${outputCount} in ${Date.now() - startedAt} ms`
+      );
+      compositionTreeProvider.refresh();
+    }
+  }
+
+  function runtimeXmlToTemplatePath(runtimeFsPath: string): string {
+    return runtimeFsPath.replace(/[\\/]XML([\\/])/i, `${path.sep}XML_Templates$1`);
+  }
+
+  function applyMutationEntries(
+    entries: ReadonlyArray<{ outputFsPath: string; mutations: readonly TemplateMutationRecord[] }>
+  ): number {
+    let applied = 0;
+    for (const entry of entries) {
+      const outputUri = vscode.Uri.file(entry.outputFsPath);
+      const providersBySymbolKey = buildProvidersBySymbolKeyFromMutations(entry.mutations);
+      runtimeIndexer.setBuiltSymbolProvidersForUri(outputUri, providersBySymbolKey);
+      applied++;
+    }
+    return applied;
+  }
+
+  function queueProvenanceHydration(targetRuntimeUri?: vscode.Uri): void {
+    if (targetRuntimeUri?.scheme === "file") {
+      queuedTargetedProvenanceHydrationPaths.add(runtimeXmlToTemplatePath(targetRuntimeUri.fsPath));
+    }
+    queuedFullProvenanceHydration = true;
+    void runProvenanceHydrationWorker();
+  }
+
+  async function runProvenanceHydrationWorker(): Promise<void> {
+    if (isProvenanceHydrationRunning) {
+      return;
+    }
+
+    isProvenanceHydrationRunning = true;
+    try {
+      while (queuedFullProvenanceHydration || queuedTargetedProvenanceHydrationPaths.size > 0) {
+        const folders = vscode.workspace.workspaceFolders ?? [];
+        if (folders.length === 0) {
+          queuedFullProvenanceHydration = false;
+          queuedTargetedProvenanceHydrationPaths.clear();
+          return;
+        }
+
+        const inheritedUsingsByFormIdent = buildInheritedUsingsSnapshotFromIndex();
+
+        // Process targeted active files first so TreeView gets fast feedback.
+        while (queuedTargetedProvenanceHydrationPaths.size > 0) {
+          const nextTemplatePath = queuedTargetedProvenanceHydrationPaths.values().next().value as string | undefined;
+          if (!nextTemplatePath) {
+            break;
+          }
+          queuedTargetedProvenanceHydrationPaths.delete(nextTemplatePath);
+          const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(nextTemplatePath))
+            ?? folders.find((item) => nextTemplatePath.toLowerCase().startsWith(item.uri.fsPath.toLowerCase()));
+          if (!folder) {
+            continue;
+          }
+
+          const entries = await buildService.collectTemplateMutationTelemetry(
+            folder,
+            {
+              mode: "release",
+              inheritedUsingsByFormIdent
+            },
+            nextTemplatePath
+          );
+          const applied = applyMutationEntries(entries);
+          if (applied > 0) {
+            logComposition(`[build:provenance] targeted hydration applied outputs=${applied}`);
+            compositionTreeProvider.refresh();
+          }
+        }
+
+        if (!queuedFullProvenanceHydration) {
+          continue;
+        }
+        queuedFullProvenanceHydration = false;
+
+        const startedAt = Date.now();
+        let templateCount = 0;
+        let outputCount = 0;
+        for (const folder of folders) {
+          const entries = await buildService.collectTemplateMutationTelemetry(
+            folder,
+            {
+              mode: "release",
+              inheritedUsingsByFormIdent
+            }
+          );
+          templateCount += entries.length;
+          outputCount += applyMutationEntries(entries);
+          await sleep(0);
+        }
+
+        if (templateCount > 0) {
+          logComposition(
+            `[build:provenance] background hydration from templates=${templateCount}, outputs=${outputCount} in ${Date.now() - startedAt} ms`
+          );
+          compositionTreeProvider.refresh();
+        }
+      }
+    } finally {
+      isProvenanceHydrationRunning = false;
+    }
+  }
+
+  function buildProvidersBySymbolKeyFromMutations(
+    mutations: readonly TemplateMutationRecord[]
+  ): Map<string, IndexedSymbolProvenanceProvider[]> {
+    const out = new Map<string, IndexedSymbolProvenanceProvider[]>();
+    const dedupe = new Set<string>();
+    for (const mutation of mutations) {
+      const provider: IndexedSymbolProvenanceProvider = {
+        sourceKind: mutation.source.kind,
+        featureKey: mutation.source.featureKey,
+        contributionName: mutation.source.contributionName,
+        primitiveKey: mutation.source.primitiveKey,
+        templateName: mutation.source.templateName,
+        confidence: "exact"
+      };
+      const providerSignature = `${provider.sourceKind}|${provider.featureKey ?? ""}|${provider.contributionName ?? ""}|${provider.primitiveKey ?? ""}|${provider.templateName ?? ""}`;
+      for (const symbol of mutation.insertedSymbols) {
+        const key = `${symbol.kind}:${symbol.ident}`.toLowerCase();
+        const dedupeKey = `${key}|${providerSignature}`;
+        if (dedupe.has(dedupeKey)) {
+          continue;
+        }
+        dedupe.add(dedupeKey);
+        const bucket = out.get(key) ?? [];
+        bucket.push(provider);
+        out.set(key, bucket);
+      }
+    }
+    return out;
+  }
+
   function logFeatureOrderingSnapshot(sourceLabel: string): void {
     const registry = featureRegistryStore.getRegistry();
     for (const [featureName, manifest] of registry.manifestsByFeature.entries()) {
@@ -616,6 +827,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       status: "update" | "nochange" | "error",
       templateText: string,
       debugLines: readonly string[]
+    ) => void,
+    onTemplateMutations?: (
+      relativeTemplatePath: string,
+      outputRelativePath: string,
+      outputFsPath: string,
+      mutations: readonly TemplateMutationRecord[]
     ) => void
   ): {
     silent: boolean;
@@ -636,10 +853,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       templateText: string,
       debugLines: readonly string[]
     ) => void;
+    onTemplateMutations: (
+      relativeTemplatePath: string,
+      outputRelativePath: string,
+      outputFsPath: string,
+      mutations: readonly TemplateMutationRecord[]
+    ) => void;
     inheritedUsingsByFormIdent: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]>;
   } {
     const onTemplateEvaluatedSafe =
       onTemplateEvaluated ??
+      (() => {
+        // no-op
+      });
+    const onTemplateMutationsSafe =
+      onTemplateMutations ??
       (() => {
         // no-op
       });
@@ -690,7 +918,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
         logBuild(`RESULT ${relativeTemplatePath}: ${status}`);
       },
-      onTemplateEvaluated: onTemplateEvaluatedSafe
+      onTemplateEvaluated: onTemplateEvaluatedSafe,
+      onTemplateMutations: onTemplateMutationsSafe
     };
   }
 
@@ -1199,6 +1428,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         } else {
           await rebuildIndexAndValidateOpenDocs({ verboseProgress });
         }
+        const activeUri = vscode.window.activeTextEditor?.document.uri;
+        queueProvenanceHydration(activeUri);
         logIndex(`REINDEX pass DONE scope=${pendingScope} in ${Date.now() - passStartedAt} ms`);
 
         const queued = queuedReindexScope;
@@ -1510,7 +1741,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (queuedFullTemplateBuild) {
           queuedFullTemplateBuild = false;
           logBuild("BUILD START full templates");
-          await buildService.run(workspaceFolder, createBuildRunOptions(true, mode, telemetry.onTemplateEvaluated));
+          await buildService.run(
+            workspaceFolder,
+            createBuildRunOptions(true, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+          );
           executedBuild = true;
           executedFullBuild = true;
           logBuild("BUILD DONE full templates");
@@ -1524,7 +1758,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         queuedTemplatePaths.delete(nextPath);
         logBuild(`BUILD START target: ${vscode.workspace.asRelativePath(nextPath, false)} (remaining=${queuedTemplatePaths.size})`);
-        await buildService.runForPath(workspaceFolder, nextPath, createBuildRunOptions(true, mode, telemetry.onTemplateEvaluated));
+        await buildService.runForPath(
+          workspaceFolder,
+          nextPath,
+          createBuildRunOptions(true, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+        );
         executedBuild = true;
         builtTargetPaths.add(nextPath);
         logBuild(`BUILD DONE target: ${vscode.workspace.asRelativePath(nextPath, false)}`);
@@ -1540,6 +1778,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           logIndex(`POST-BUILD incremental form refresh count=${refreshedCount} in ${Date.now() - refreshStartedAt} ms`);
         }
 
+        applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
         logBuildCompositionSnapshot("auto", telemetry.entries, mode);
       }
     } catch (error) {
@@ -2002,12 +2241,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         validateDocument(document);
       }
       compositionTreeProvider.refresh();
+      if (document.uri.scheme === "file" && isInFolder(document.uri, "XML")) {
+        queueProvenanceHydration(document.uri);
+      }
       if (isUserOpenDocument(document.uri) && documentInConfiguredRoots(document)) {
         enqueueValidation(document.uri, "high");
       }
     }),
-    vscode.window.onDidChangeActiveTextEditor(() => {
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
       compositionTreeProvider.refresh();
+      const document = editor?.document;
+      if (document?.languageId === "xml" && document.uri.scheme === "file" && isInFolder(document.uri, "XML")) {
+        queueProvenanceHydration(document.uri);
+      }
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
       if (document.languageId !== "xml") {
@@ -2271,8 +2517,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         if (targetUris.length === 0) {
           logBuild("No current/selected resource -> FULL fallback");
-          await buildService.run(folder, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
+          await buildService.run(
+            folder,
+            createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+          );
           await queueReindex("all");
+          applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
           logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
           logBuild("MANUAL build current/selection DONE (full fallback)");
           return;
@@ -2309,8 +2559,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
 
         if (usedFullFallback || templateTargets.size === 0) {
-          await buildService.run(folder, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
+          await buildService.run(
+            folder,
+            createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+          );
           await queueReindex("all");
+          applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
           logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
           logBuild("MANUAL build current/selection DONE (full fallback)");
           return;
@@ -2318,9 +2572,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         for (const targetPath of templateTargets) {
           logBuild(`MANUAL target build: ${vscode.workspace.asRelativePath(targetPath, false)}`);
-          await buildService.runForPath(folder, targetPath, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
+          await buildService.runForPath(
+            folder,
+            targetPath,
+            createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+          );
         }
         await queueReindex("all");
+        applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
         logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
 
         logBuild("MANUAL build current/selection DONE");
@@ -2344,8 +2603,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         logBuild("MANUAL build all START");
         const mode = getTemplateBuilderMode();
         const telemetry = createBuildTelemetryCollector();
-        await buildService.run(folder, createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated));
+        await buildService.run(
+          folder,
+          createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+        );
         await queueReindex("all");
+        applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
         logBuildCompositionSnapshot("manual-all", telemetry.entries, mode);
         logBuild("MANUAL build all DONE");
       } catch (error) {

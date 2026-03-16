@@ -5,8 +5,10 @@ import {
   extractUsingComponentRefs,
   normalizePath,
   renderTemplateText,
+  renderTemplateWithTrace,
   stripXmlComponentExtension
 } from "./buildXmlTemplatesCore";
+import type { TemplateMutationRecord } from "./buildXmlTemplatesCore";
 import { applyTemplateOutputQuality, TemplateBuilderProvenanceMode } from "./outputQuality";
 import { runTemplateGenerators } from "./generators";
 import { loadWorkspaceUserGenerators } from "./generators/userGeneratorLoader";
@@ -30,6 +32,12 @@ interface BuildRunOptions {
     templateText: string,
     debugLines: readonly string[]
   ) => void;
+  onTemplateMutations?: (
+    relativeTemplatePath: string,
+    outputRelativePath: string,
+    outputFsPath: string,
+    mutations: readonly TemplateMutationRecord[]
+  ) => void;
   inheritedUsingsByFormIdent?: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]>;
 }
 
@@ -41,6 +49,13 @@ export interface BuildRunSummary {
 
 export interface BuildRunResult {
   summary?: BuildRunSummary;
+}
+
+export interface TemplateMutationTelemetryEntry {
+  relativeTemplatePath: string;
+  outputRelativePath: string;
+  outputFsPath: string;
+  mutations: readonly TemplateMutationRecord[];
 }
 
 interface ParsedTemplateRoot {
@@ -64,6 +79,42 @@ export interface TemplateInheritedUsingEntry {
 }
 
 export class BuildXmlTemplatesService {
+  public async collectTemplateMutationTelemetry(
+    workspaceFolder: vscode.WorkspaceFolder,
+    options: BuildRunOptions = {},
+    targetPath?: string
+  ): Promise<TemplateMutationTelemetryEntry[]> {
+    const templateUris = await collectTemplateTargets(workspaceFolder, targetPath);
+    if (templateUris.length === 0) {
+      return [];
+    }
+
+    const componentLibrary = await this.buildWorkspaceComponentLibrary(workspaceFolder);
+    const out: TemplateMutationTelemetryEntry[] = [];
+    for (const templateUri of templateUris) {
+      const relPath = relativeTemplatePath(workspaceFolder, templateUri);
+      const templateText = await readWorkspaceTextFile(templateUri);
+      const inheritedUsingsXml = buildInheritedUsingsXml(templateText, options.inheritedUsingsByFormIdent);
+      const renderResult = renderTemplateWithTrace(
+        templateText,
+        componentLibrary,
+        12,
+        options.mode === "debug" ? options.onLogLine : undefined,
+        inheritedUsingsXml
+      );
+      const outputUri = templateToRuntimeUri(templateUri);
+      const outputRelativePath = vscode.workspace.asRelativePath(outputUri, false).replace(/\\/g, "/");
+      out.push({
+        relativeTemplatePath: relPath,
+        outputRelativePath,
+        outputFsPath: outputUri.fsPath,
+        mutations: renderResult.mutations
+      });
+    }
+
+    return out;
+  }
+
   public async renderTemplateToFinalXml(
     workspaceFolder: vscode.WorkspaceFolder,
     templateUri: vscode.Uri,
@@ -190,7 +241,7 @@ export class BuildXmlTemplatesService {
         const inheritedUsingsXml = buildInheritedUsingsXml(templateText, options.inheritedUsingsByFormIdent);
         const debugLines: string[] = [];
         const debugMode = options.mode === "debug";
-        const renderedRaw = renderTemplateText(
+        const renderResult = renderTemplateWithTrace(
           templateText,
           componentLibrary,
           12,
@@ -202,6 +253,7 @@ export class BuildXmlTemplatesService {
             : undefined,
           inheritedUsingsXml
         );
+        const renderedRaw = renderResult.xml;
         const generated = runTemplateGenerators(
           {
             xml: renderedRaw,
@@ -233,6 +285,7 @@ export class BuildXmlTemplatesService {
           formatterMaxConsecutiveBlankLines: Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)
         });
         const outputUri = templateToRuntimeUri(templateUri);
+        const outputRelativePath = vscode.workspace.asRelativePath(outputUri, false).replace(/\\/g, "/");
         const existing = await readWorkspaceTextFile(outputUri).catch(() => undefined);
 
         if (existing === rendered) {
@@ -240,6 +293,7 @@ export class BuildXmlTemplatesService {
           options.onLogLine?.("SKIPPED");
           options.onFileStatus?.(relPath, "nochange");
           options.onTemplateEvaluated?.(relPath, "nochange", templateText, debugLines);
+          options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations);
           continue;
         }
 
@@ -249,6 +303,7 @@ export class BuildXmlTemplatesService {
         options.onLogLine?.("UPDATED");
         options.onFileStatus?.(relPath, "update");
         options.onTemplateEvaluated?.(relPath, "update", templateText, debugLines);
+        options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations);
       } catch (error) {
         summary.errors++;
         const message = error instanceof Error ? error.message : String(error);

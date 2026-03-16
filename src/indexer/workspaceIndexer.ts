@@ -781,6 +781,12 @@ export class WorkspaceIndexer {
         continue;
       }
       const primitiveUsage = collectPrimitiveUsageSummary(body);
+      const directFormButtonIdents = collectAttributeIdents(body, /<Button\b([^>]*)>/gi, "Ident");
+      const primitiveFormButtonIdents = collectPrimitiveFormButtonIdents(body);
+      const formButtonIdents = new Set<string>(directFormButtonIdents);
+      for (const ident of primitiveFormButtonIdents) {
+        formButtonIdents.add(ident);
+      }
 
       const rootRaw = (extractAttributeValue(attrsText, "Root") ?? "").trim().toLowerCase();
       const root: IndexedComponentContributionSummary["root"] =
@@ -801,7 +807,7 @@ export class WorkspaceIndexer {
         workflowControlShareCodeCount: countTagOccurrences(body, /<ControlShareCode\b[^>]*>/gi),
         workflowButtonShareCodeCount: countTagOccurrences(body, /<ButtonShareCode\b[^>]*>/gi),
         formControlIdents: collectAttributeIdents(body, /<Control\b([^>]*)>/gi, "Ident"),
-        formButtonIdents: collectAttributeIdents(body, /<Button\b([^>]*)>/gi, "Ident"),
+        formButtonIdents,
         formSectionIdents: collectAttributeIdents(body, /<Section\b([^>]*)>/gi, "Ident"),
         workflowReferencedActionShareCodeIdents: collectActionShareCodeReferenceIdents(body),
         workflowActionShareCodeIdents: collectAttributeIdents(body, /<ActionShareCode\b([^>]*)>/gi, "Ident"),
@@ -1166,6 +1172,34 @@ function collectRequiredContributionParamNames(text: string): Set<string> {
     out.add(token);
   }
 
+  return out;
+}
+
+function collectPrimitiveFormButtonIdents(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const primitiveKey =
+      extractAttributeValue(attrs, "Primitive") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component");
+    if (!primitiveKey) {
+      continue;
+    }
+
+    const normalized = normalizeComponentKey(primitiveKey).toLowerCase();
+    if (!/\/buttons\/[^/]*button$/i.test(normalized)) {
+      continue;
+    }
+
+    const ident = extractAttributeValue(attrs, "Ident");
+    if (!ident) {
+      continue;
+    }
+
+    out.add(ident);
+  }
   return out;
 }
 

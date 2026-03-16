@@ -1,7 +1,8 @@
 import { resolveComponentByKey } from "../indexer/componentResolve";
-import { WorkspaceIndex } from "../indexer/types";
+import { IndexedForm, WorkspaceIndex } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
-import { DocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
+import { DocumentCompositionModel, buildDocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
+import { contributionMatchesDocumentRoot } from "../composition/usingImpact";
 
 export type CompletionSymbolKind =
   | "workflowControlShareCode"
@@ -15,6 +16,7 @@ export interface CompletionSymbolContext {
   facts: ReturnType<typeof parseDocumentFacts>;
   index: WorkspaceIndex;
   composition: DocumentCompositionModel;
+  resolveOwningForm?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined;
 }
 
 type CompletionCollector = (ctx: CompletionSymbolContext) => Set<string>;
@@ -95,12 +97,16 @@ function collectWorkflowActionShareCodeValues(ctx: CompletionSymbolContext): Set
 }
 
 function collectWorkflowFormControlValues(ctx: CompletionSymbolContext): Set<string> {
-  const form = resolveWorkflowOwnerForm(ctx);
-  if (!form) {
+  const owner = resolveWorkflowOwnerForm(ctx);
+  if (!owner) {
     return new Set<string>();
   }
+  const { form, index: ownerIndex } = owner;
 
   const out = new Set<string>(form.controls);
+  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex).controls) {
+    out.add(ident);
+  }
   for (const contributionRef of collectSelectedDocumentContributions(ctx.composition)) {
     const component = resolveComponentByKey(ctx.index, contributionRef.componentKey);
     if (!component) {
@@ -118,12 +124,16 @@ function collectWorkflowFormControlValues(ctx: CompletionSymbolContext): Set<str
 }
 
 function collectWorkflowFormButtonValues(ctx: CompletionSymbolContext): Set<string> {
-  const form = resolveWorkflowOwnerForm(ctx);
-  if (!form) {
+  const owner = resolveWorkflowOwnerForm(ctx);
+  if (!owner) {
     return new Set<string>();
   }
+  const { form, index: ownerIndex } = owner;
 
   const out = new Set<string>(form.buttons);
+  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex).buttons) {
+    out.add(ident);
+  }
   for (const contributionRef of collectSelectedDocumentContributions(ctx.composition)) {
     const component = resolveComponentByKey(ctx.index, contributionRef.componentKey);
     if (!component) {
@@ -141,12 +151,16 @@ function collectWorkflowFormButtonValues(ctx: CompletionSymbolContext): Set<stri
 }
 
 function collectWorkflowFormSectionValues(ctx: CompletionSymbolContext): Set<string> {
-  const form = resolveWorkflowOwnerForm(ctx);
-  if (!form) {
+  const owner = resolveWorkflowOwnerForm(ctx);
+  if (!owner) {
     return new Set<string>();
   }
+  const { form, index: ownerIndex } = owner;
 
   const out = new Set<string>(form.sections);
+  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex).sections) {
+    out.add(ident);
+  }
   for (const contributionRef of collectSelectedDocumentContributions(ctx.composition)) {
     const component = resolveComponentByKey(ctx.index, contributionRef.componentKey);
     if (!component) {
@@ -163,11 +177,51 @@ function collectWorkflowFormSectionValues(ctx: CompletionSymbolContext): Set<str
   return out;
 }
 
-function resolveWorkflowOwnerForm(ctx: CompletionSymbolContext): import("../indexer/types").IndexedForm | undefined {
+function resolveWorkflowOwnerForm(ctx: CompletionSymbolContext): { form: IndexedForm; index: WorkspaceIndex } | undefined {
   const formIdent = ctx.facts.workflowFormIdent;
   if (!formIdent) {
     return undefined;
   }
 
-  return ctx.index.formsByIdent.get(formIdent);
+  const resolved = ctx.resolveOwningForm?.(formIdent, ctx.index);
+  if (resolved) {
+    return resolved;
+  }
+
+  const fallback = ctx.index.formsByIdent.get(formIdent);
+  if (!fallback) {
+    return undefined;
+  }
+  return { form: fallback, index: ctx.index };
+}
+
+function collectEffectiveOwnerFormContributionSymbols(
+  form: IndexedForm,
+  index: WorkspaceIndex
+): { controls: Set<string>; buttons: Set<string>; sections: Set<string> } {
+  const controls = new Set<string>();
+  const buttons = new Set<string>();
+  const sections = new Set<string>();
+  const facts = index.parsedFactsByUri.get(form.uri.toString());
+  if (!facts) {
+    return { controls, buttons, sections };
+  }
+
+  const composition = buildDocumentCompositionModel(facts, index);
+  for (const contributionRef of collectSelectedDocumentContributions(composition)) {
+    if (!contributionMatchesDocumentRoot("Form", contributionRef.contribution)) {
+      continue;
+    }
+    for (const ident of contributionRef.contribution.formControlIdents) {
+      controls.add(ident);
+    }
+    for (const ident of contributionRef.contribution.formButtonIdents) {
+      buttons.add(ident);
+    }
+    for (const ident of contributionRef.contribution.formSectionIdents) {
+      sections.add(ident);
+    }
+  }
+
+  return { controls, buttons, sections };
 }

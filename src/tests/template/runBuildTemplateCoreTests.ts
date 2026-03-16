@@ -101,6 +101,70 @@ function run(): void {
 </Form>`
     },
     {
+      name: "commented-component-contribution-is-ignored",
+      components: [
+        {
+          key: "Common/Legacy",
+          text: `
+<Component>
+  <!--
+  <Section Name="Controls" Root="Form" TargetXPath="//Form/Controls" Insert="append">
+    <Control Ident="CommentedOutControl" />
+  </Section>
+  -->
+  <Section Name="Controls" Root="Form" TargetXPath="//Form/Controls" Insert="append">
+    <Control Ident="LegacyAdded" />
+  </Section>
+</Component>`
+        }
+      ],
+      template: `
+<Form>
+  <Usings>
+    <Using Feature="Common/Legacy" />
+  </Usings>
+  <Controls>
+    <Control Ident="Base" />
+  </Controls>
+</Form>`,
+      expected: `
+<Form>
+  <Controls>
+    <Control Ident="Base" />
+    <Control Ident="LegacyAdded" />
+  </Controls>
+</Form>`
+    },
+    {
+      name: "commented-using-is-ignored",
+      components: [
+        {
+          key: "Common/Buttons/CloseButton",
+          text: `
+<Feature>
+  <Contribution Name="Buttons" Root="Form" TargetXPath="//Form/Buttons" Insert="append">
+    <Button Ident="CloseButton" />
+  </Contribution>
+</Feature>`
+        }
+      ],
+      template: `
+<Form Ident="A">
+  <Usings>
+    <!-- <Using Feature="Common/Buttons/CloseButton" /> -->
+  </Usings>
+  <Buttons>
+    <Button Ident="BaseButton" />
+  </Buttons>
+</Form>`,
+      expected: `
+<Form Ident="A">
+  <Buttons>
+    <Button Ident="BaseButton" />
+  </Buttons>
+</Form>`
+    },
+    {
       name: "inherited-usings-are-applied-when-provided",
       components: [
         {
@@ -694,12 +758,16 @@ function runRefsTest(): void {
   <Usings>
     <Using Feature="Common\\Shared\\Assign.feature.xml" />
     <Using Name="Library/One.xml" />
+    <!-- <Using Feature="Common/ShouldNotBeFound.xml" /> -->
   </Usings>
   <UsePrimitive Name="Common/Dialogs/ConfirmFormDialogSection.primitive.xml" />
+  <!-- <UsePrimitive Name="Common/ShouldNotBeFoundPrimitive.xml" /> -->
   <Include Feature="Common/IncA.feature.xml" />
   <Include Name="Common/IncB.xml" />
+  <!-- <Include Feature="Common/ShouldNotBeFoundInclude.xml" /> -->
   <X>{{Feature:Common/Two.xml,Contribution:S}}</X>
   <Y>{{Name:Common/Three.feature.xml,Contribution:S}}</Y>
+  <!-- {{Feature:Common/ShouldNotBeFoundPlaceholder.xml,Contribution:S}} -->
 </Form>`;
   const refs = extractUsingComponentRefs(input).sort((a, b) => a.localeCompare(b));
   const expected = [

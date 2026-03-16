@@ -10,8 +10,10 @@ import { getAllFormIdentCandidates } from "../utils/formIdents";
 import { buildDocumentCompositionModel } from "../composition/documentModel";
 import { contributionMatchesDocumentRoot } from "../composition/usingImpact";
 import { collectCompletionSymbolValues, CompletionSymbolKind } from "../utils/completionSymbolModel";
+import { IndexedForm } from "../indexer/types";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
+type OwningFormResolver = (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined;
 
 const ROOT_ELEMENTS = ["Form", "WorkFlow", "DataView", "Filter", "Dashboard", "Configuration", "Feature", "Component", "Primitive"];
 
@@ -239,7 +241,10 @@ interface PlaceholderCompletionContext {
 }
 
 export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
-  constructor(private readonly getIndex: IndexAccessor) {}
+  constructor(
+    private readonly getIndex: IndexAccessor,
+    private readonly resolveOwningForm?: OwningFormResolver
+  ) {}
 
   async provideCompletionItems(
     document: vscode.TextDocument,
@@ -622,7 +627,8 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
           const values = collectCompletionSymbolValues(symbolKind, {
             facts,
             index,
-            composition: documentComposition
+            composition: documentComposition,
+            resolveOwningForm: this.resolveOwningForm
           });
           return asValueItems(values, vscode.CompletionItemKind.Reference);
         }
@@ -642,7 +648,8 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         const values = collectCompletionSymbolValues("workflowFormControl", {
           facts,
           index,
-          composition: documentComposition
+          composition: documentComposition,
+          resolveOwningForm: this.resolveOwningForm
         });
         return asValueItems(values, vscode.CompletionItemKind.Reference);
       }
@@ -669,7 +676,8 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         const values = collectCompletionSymbolValues("workflowFormControl", {
           facts,
           index,
-          composition: documentComposition
+          composition: documentComposition,
+          resolveOwningForm: this.resolveOwningForm
         });
         return asValueItems(values, vscode.CompletionItemKind.Reference);
       }

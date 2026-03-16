@@ -22,6 +22,7 @@ import { formatXmlTolerant } from "./formatter";
 import { formatXmlSelectionWithContext } from "./formatter/selection";
 import { FormatterOptions } from "./formatter/types";
 import { WorkspaceIndex } from "./indexer/types";
+import { IndexedForm } from "./indexer/types";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
 import { FeatureRegistryStore } from "./composition/registry";
 import { CompositionTreeProvider } from "./composition/treeView";
@@ -61,7 +62,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const compositionTreeProvider = new CompositionTreeProvider(
     () => vscode.window.activeTextEditor?.document,
     (uri) => getIndexForUri(uri),
-    () => featureRegistryStore.getRegistry()
+    () => featureRegistryStore.getRegistry(),
+    (formIdent, preferredIndex) => resolveOwningFormForDiagnostics(formIdent, preferredIndex)
   );
   const compositionTreeView = vscode.window.createTreeView("sfpXmlLinter.compositionView", {
     treeDataProvider: compositionTreeProvider,
@@ -340,6 +342,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     return getIndexerForUri(uri).getIndex();
+  }
+
+  function resolveOwningFormForDiagnostics(formIdent: string, preferredIndex: WorkspaceIndex): { form: IndexedForm; index: WorkspaceIndex } | undefined {
+    const runtimeIndex = runtimeIndexer.getIndex();
+    const runtimeForm = runtimeIndex.formsByIdent.get(formIdent);
+    if (runtimeForm) {
+      return { form: runtimeForm, index: runtimeIndex };
+    }
+
+    const preferredForm = preferredIndex.formsByIdent.get(formIdent);
+    if (preferredForm) {
+      return { form: preferredForm, index: preferredIndex };
+    }
+
+    const templateIndex = templateIndexer.getIndex();
+    const templateForm = templateIndex.formsByIdent.get(formIdent);
+    if (templateForm) {
+      return { form: templateForm, index: templateIndex };
+    }
+
+    return undefined;
   }
 
   function rebuildFeatureRegistry(): void {
@@ -1027,7 +1050,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         settingsOverride: options?.settingsSnapshot,
         metadataOverride: options?.metadataSnapshot,
         skipConfiguredRootsCheck: true,
-        featureRegistry: featureRegistryStore.getRegistry()
+        featureRegistry: featureRegistryStore.getRegistry(),
+        resolveOwningForm: (formIdent) => resolveOwningFormForDiagnostics(formIdent, index)
       }
     );
     const diagnosticsMs = Date.now() - diagnosticsStartedAt;
@@ -1889,7 +1913,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
 
       logSingleFile(`validate standalone START: ${relOrPath}`);
-      const standaloneDiagnostics = engine.buildDiagnostics(document, emptyIndex, { standaloneMode: true }).filter((d) => {
+      const standaloneDiagnostics = engine.buildDiagnostics(document, emptyIndex, {
+        standaloneMode: true,
+        resolveOwningForm: (formIdent) => resolveOwningFormForDiagnostics(formIdent, emptyIndex)
+      }).filter((d) => {
         const code = typeof d.code === "string" ? d.code : "";
         return !REFERENCE_REQUIRED_RULES.has(code);
       });
@@ -1912,9 +1939,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
-    const result = engine.buildDiagnostics(document, getIndexerForUri(document.uri).getIndex(), {
+    const currentIndex = getIndexerForUri(document.uri).getIndex();
+    const result = engine.buildDiagnostics(document, currentIndex, {
       parsedFacts: parseDocumentFacts(document),
-      featureRegistry: featureRegistryStore.getRegistry()
+      featureRegistry: featureRegistryStore.getRegistry(),
+      resolveOwningForm: (formIdent) => resolveOwningFormForDiagnostics(formIdent, currentIndex)
     });
     diagnostics.set(document.uri, result);
     if (result.length > 0 || isUserOpenDocument(document.uri)) {
@@ -2147,7 +2176,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.languages.registerHoverProvider({ language: "xml" }, new HoverRegistry([documentationHoverResolver])),
     vscode.languages.registerCompletionItemProvider(
       { language: "xml" },
-      new SfpXmlCompletionProvider((uri) => getIndexForUri(uri)),
+      new SfpXmlCompletionProvider(
+        (uri) => getIndexForUri(uri),
+        (formIdent, preferredIndex) => resolveOwningFormForDiagnostics(formIdent, preferredIndex)
+      ),
       "<",
       " ",
       ":",
@@ -2843,9 +2875,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       for (const uri of uris) {
         const doc = await vscode.workspace.openTextDocument(uri);
-        const ds = engine.buildDiagnostics(doc, getIndexerForUri(uri).getIndex(), {
-          parsedFacts: getIndexerForUri(uri).getIndex().parsedFactsByUri.get(uri.toString()),
-          featureRegistry: featureRegistryStore.getRegistry()
+        const currentIndex = getIndexerForUri(uri).getIndex();
+        const ds = engine.buildDiagnostics(doc, currentIndex, {
+          parsedFacts: currentIndex.parsedFactsByUri.get(uri.toString()),
+          featureRegistry: featureRegistryStore.getRegistry(),
+          resolveOwningForm: (formIdent) => resolveOwningFormForDiagnostics(formIdent, currentIndex)
         });
         if (ds.length === 0) {
           continue;

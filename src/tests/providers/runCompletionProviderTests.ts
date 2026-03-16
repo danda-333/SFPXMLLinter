@@ -1,4 +1,4 @@
-import { strict as assert } from "node:assert";
+﻿import { strict as assert } from "node:assert";
 import * as path from "node:path";
 import Module = require("node:module");
 
@@ -202,7 +202,7 @@ async function run(): Promise<void> {
 
   const keyDoc = createDocFromCursor(
     "XML_Templates/100_Test/CompletionPlaceholderForm.xml",
-    "<Form Ident=\"A\"><Host>{{Fe¦}}</Host></Form>"
+    "<Form Ident=\"A\"><Host>{{FeÂ¦}}</Host></Form>"
   );
   const keyItems = toItems(await provider.provideCompletionItems(keyDoc.document as unknown as import("vscode").TextDocument, keyDoc.position as unknown as import("vscode").Position));
   assert.ok(keyItems.some((item) => item.label === "Feature"), "Expected placeholder key completion to suggest 'Feature'.");
@@ -210,21 +210,21 @@ async function run(): Promise<void> {
 
   const keyAfterFeatureDoc = createDocFromCursor(
     "XML_Templates/100_Test/CompletionPlaceholderForm.xml",
-    "<Form Ident=\"A\"><Host>{{Feature:Shared/Sample,Con¦}}</Host></Form>"
+    "<Form Ident=\"A\"><Host>{{Feature:Shared/Sample,ConÂ¦}}</Host></Form>"
   );
   const keyAfterFeatureItems = toItems(await provider.provideCompletionItems(keyAfterFeatureDoc.document as unknown as import("vscode").TextDocument, keyAfterFeatureDoc.position as unknown as import("vscode").Position));
   assert.ok(keyAfterFeatureItems.some((item) => item.label === "Contribution"), "Expected placeholder key completion to suggest 'Contribution'.");
 
   const keyRequiredParamDoc = createDocFromCursor(
     "XML_Templates/100_Test/CompletionPlaceholderForm.xml",
-    "<Form Ident=\"A\"><Host>{{Feature:Shared/Sample,Contribution:Controls,Cu¦}}</Host></Form>"
+    "<Form Ident=\"A\"><Host>{{Feature:Shared/Sample,Contribution:Controls,CuÂ¦}}</Host></Form>"
   );
   const keyRequiredParamItems = toItems(await provider.provideCompletionItems(keyRequiredParamDoc.document as unknown as import("vscode").TextDocument, keyRequiredParamDoc.position as unknown as import("vscode").Position));
   assert.ok(keyRequiredParamItems.some((item) => item.label === "CustomParam"), "Expected required contribution param key completion ('CustomParam').");
 
   const valueDoc = createDocFromCursor(
     "XML_Templates/100_Test/CompletionPlaceholderForm.xml",
-    "<Form Ident=\"A\"><Host>{{Feature:Shared/Sample,Contribution:¦}}</Host></Form>"
+    "<Form Ident=\"A\"><Host>{{Feature:Shared/Sample,Contribution:Â¦}}</Host></Form>"
   );
   const valueItems = toItems(await provider.provideCompletionItems(valueDoc.document as unknown as import("vscode").TextDocument, valueDoc.position as unknown as import("vscode").Position));
   assert.ok(valueItems.some((item) => item.label === "Controls"), "Expected contribution value completion to include root-relevant 'Controls'.");
@@ -232,17 +232,27 @@ async function run(): Promise<void> {
 
   const primitiveValueDoc = createDocFromCursor(
     "XML_Templates/100_Test/CompletionPlaceholderForm.xml",
-    "<Form Ident=\"A\"><Host>{{Primitive:Common/Dialogs/DialogWithSlot,Template:¦}}</Host></Form>"
+    "<Form Ident=\"A\"><Host>{{Primitive:Common/Dialogs/DialogWithSlot,Template:Â¦}}</Host></Form>"
   );
   const primitiveValueItems = toItems(await provider.provideCompletionItems(primitiveValueDoc.document as unknown as import("vscode").TextDocument, primitiveValueDoc.position as unknown as import("vscode").Position));
   assert.ok(primitiveValueItems.some((item) => item.label === "Main"), "Expected primitive template value completion to include 'Main'.");
   assert.ok(primitiveValueItems.some((item) => item.label === "Compact"), "Expected primitive template value completion to include 'Compact'.");
 
+  const workflowButtonIdentDoc = createDocFromCursor(
+    "XML_Templates/100_Test/CompletionWorkflow.xml",
+    "<WorkFlow FormIdent=\"FormA\"><Steps><Step><Groups><Group><Buttons><Button Ident=\"Â¦\" /></Buttons></Group></Groups></Step></Steps></WorkFlow>"
+  );
+  const workflowButtonIdentItems = toItems(await provider.provideCompletionItems(workflowButtonIdentDoc.document as unknown as import("vscode").TextDocument, workflowButtonIdentDoc.position as unknown as import("vscode").Position));
+  assert.ok(
+    workflowButtonIdentItems.some((item) => item.label === "InjectedButton"),
+    "Expected workflow button Ident completion to include owner Form effective injected button ('InjectedButton')."
+  );
+
   console.log("Completion provider placeholder tests passed.");
 }
 
 function createDocFromCursor(relativePath: string, withCursor: string): { document: MockTextDocument; position: Position } {
-  const marker = "¦";
+  const marker = "Â¦";
   const offset = withCursor.indexOf(marker);
   if (offset < 0) {
     throw new Error("Missing cursor marker.");
@@ -286,6 +296,33 @@ function createIndex(): import("../../indexer/types").WorkspaceIndex {
     primitiveProvidedParamNamesByKey: new Map(),
     primitiveProvidedSlotNamesByKey: new Map()
   });
+  contributionSummaries.set("Buttons", {
+    contributionName: "Buttons",
+    root: "form",
+    rootExpression: "form",
+    insert: "append",
+    targetXPath: "//Form/Buttons",
+    allowMultipleInserts: false,
+    hasContent: true,
+    formControlCount: 0,
+    formButtonCount: 1,
+    formSectionCount: 0,
+    workflowActionShareCodeCount: 0,
+    workflowControlShareCodeCount: 0,
+    workflowButtonShareCodeCount: 0,
+    formControlIdents: new Set(),
+    formButtonIdents: new Set(["InjectedButton"]),
+    formSectionIdents: new Set(),
+    workflowReferencedActionShareCodeIdents: new Set(),
+    workflowActionShareCodeIdents: new Set(),
+    workflowControlShareCodeIdents: new Set(),
+    workflowButtonShareCodeIdents: new Set(),
+    requiredParamNames: new Set(),
+    primitiveUsageCountByKey: new Map(),
+    primitiveTemplateNamesByKey: new Map(),
+    primitiveProvidedParamNamesByKey: new Map(),
+    primitiveProvidedSlotNamesByKey: new Map()
+  });
   contributionSummaries.set("ActionShareCodes", {
     contributionName: "ActionShareCodes",
     root: "workflow",
@@ -317,7 +354,7 @@ function createIndex(): import("../../indexer/types").WorkspaceIndex {
   const component: import("../../indexer/types").IndexedComponent = {
     key: "Shared/Sample",
     uri: Uri.file(path.join(workspaceRoot, "XML_Components", "Shared", "Sample.feature.xml")) as unknown as import("vscode").Uri,
-    contributions: new Set(["Controls", "ActionShareCodes"]),
+    contributions: new Set(["Controls", "Buttons", "ActionShareCodes"]),
     componentLocation: { uri: Uri.file(workspaceRoot), range: new Range(new Position(0, 0), new Position(0, 0)) } as unknown as import("vscode").Location,
     contributionDefinitions: new Map(),
     contributionSummaries,
@@ -405,8 +442,30 @@ function createIndex(): import("../../indexer/types").WorkspaceIndex {
   const componentKeysByBaseName = new Map<string, Set<string>>([["Sample", new Set(["Shared/Sample"])]]);
   componentKeysByBaseName.set("DialogWithSlot", new Set(["Common/Dialogs/DialogWithSlot"]));
 
+  const { parseDocumentFacts } = require("../../indexer/xmlFacts") as typeof import("../../indexer/xmlFacts");
+  const formUri = Uri.file(path.join(workspaceRoot, "XML_Templates", "100_Test", "FormA.xml")) as unknown as import("vscode").Uri;
+  const formDocument = new MockTextDocument(
+    path.join(workspaceRoot, "XML_Templates", "100_Test", "FormA.xml"),
+    "<Form Ident=\"FormA\"><Usings><Using Feature=\"Shared/Sample\" Contribution=\"Buttons\" /></Usings><Buttons></Buttons></Form>"
+  );
+
   return {
-    formsByIdent: new Map(),
+    formsByIdent: new Map([
+      [
+        "FormA",
+        {
+          ident: "FormA",
+          uri: formUri,
+          controls: new Set<string>(),
+          buttons: new Set<string>(),
+          sections: new Set<string>(),
+          formIdentLocation: { uri: formUri, range: new Range(new Position(0, 0), new Position(0, 0)) } as unknown as import("vscode").Location,
+          controlDefinitions: new Map(),
+          buttonDefinitions: new Map(),
+          sectionDefinitions: new Map()
+        } satisfies import("../../indexer/types").IndexedForm
+      ]
+    ]),
     componentsByKey,
     componentKeysByBaseName,
     formIdentReferenceLocations: new Map(),
@@ -418,7 +477,9 @@ function createIndex(): import("../../indexer/types").WorkspaceIndex {
     componentContributionReferenceLocationsByKey: new Map(),
     componentUsageFormIdentsByKey: new Map(),
     componentContributionUsageFormIdentsByKey: new Map(),
-    parsedFactsByUri: new Map(),
+    parsedFactsByUri: new Map([
+      [formUri.toString(), parseDocumentFacts(formDocument as unknown as import("vscode").TextDocument)]
+    ]),
     hasIgnoreDirectiveByUri: new Map(),
     formsReady: true,
     componentsReady: true,

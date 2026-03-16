@@ -38,6 +38,7 @@ export interface BuildDiagnosticsOptions {
   metadataOverride?: SystemMetadata;
   skipConfiguredRootsCheck?: boolean;
   featureRegistry?: FeatureManifestRegistry;
+  resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined;
 }
 
 export class DiagnosticsEngine {
@@ -84,7 +85,7 @@ export class DiagnosticsEngine {
     this.validateIdentConventions(facts, index, issues, metadata);
 
     if (facts.rootTag?.toLowerCase() === "workflow") {
-      this.validateWorkflowReferences(facts, index, issues, metadata, documentComposition);
+      this.validateWorkflowReferences(facts, index, issues, metadata, documentComposition, options?.resolveOwningForm);
     }
 
     this.validateMappingFormIdentReferences(facts, index, issues, metadata, formIdentCandidates, settings);
@@ -214,22 +215,25 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[],
     metadata: SystemMetadata,
-    documentComposition: DocumentCompositionModel
+    documentComposition: DocumentCompositionModel,
+    resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined
   ): void {
     const formIdent = facts.workflowFormIdent;
     if (!formIdent) {
       return;
     }
 
-    const form = index.formsByIdent.get(formIdent);
+    const resolvedOwningForm = resolveOwningForm?.(formIdent);
+    const form = resolvedOwningForm?.form ?? index.formsByIdent.get(formIdent);
     if (!form) {
       return;
     }
+    const formIndex = resolvedOwningForm?.index ?? index;
 
     const availableControlShareCodes = collectWorkflowControlShareCodes(facts, index, documentComposition);
     const availableButtonShareCodes = collectWorkflowButtonShareCodes(facts, index, documentComposition);
-    const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata, documentComposition);
-    const availableButtons = collectWorkflowAvailableButtons(facts, index, form, documentComposition);
+    const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata, documentComposition, formIndex);
+    const availableButtons = collectWorkflowAvailableButtons(facts, index, form, documentComposition, formIndex);
     for (const ref of facts.workflowReferences) {
       if (ref.kind === "formControl") {
         if (!availableControls.has(ref.ident)) {
@@ -2109,14 +2113,22 @@ function collectWorkflowAvailableControls(
   index: WorkspaceIndex,
   form: import("../indexer/types").IndexedForm,
   metadata: ReturnType<typeof getSystemMetadata>,
-  documentComposition: DocumentCompositionModel
+  documentComposition: DocumentCompositionModel,
+  formIndex: WorkspaceIndex
 ): Set<string> {
   const out = new Set<string>(form.controls);
+  const formEffectiveSymbols = collectFormEffectiveContributionSymbols(form, formIndex);
+  for (const ident of formEffectiveSymbols.controlIdents) {
+    out.add(ident);
+  }
   for (const column of metadata.defaultFormColumns) {
     out.add(column);
   }
 
   for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    if (!contributionMatchesDocumentRoot(facts.rootTag, contributionRef.contribution)) {
+      continue;
+    }
     for (const ident of contributionRef.contribution.formControlIdents) {
       out.add(ident);
     }
@@ -2129,16 +2141,51 @@ function collectWorkflowAvailableButtons(
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   form: import("../indexer/types").IndexedForm,
-  documentComposition: DocumentCompositionModel
+  documentComposition: DocumentCompositionModel,
+  formIndex: WorkspaceIndex
 ): Set<string> {
   const out = new Set<string>(form.buttons);
+  const formEffectiveSymbols = collectFormEffectiveContributionSymbols(form, formIndex);
+  for (const ident of formEffectiveSymbols.buttonIdents) {
+    out.add(ident);
+  }
   for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
+    if (!contributionMatchesDocumentRoot(facts.rootTag, contributionRef.contribution)) {
+      continue;
+    }
     for (const ident of contributionRef.contribution.formButtonIdents) {
       out.add(ident);
     }
   }
 
   return out;
+}
+
+function collectFormEffectiveContributionSymbols(
+  form: import("../indexer/types").IndexedForm,
+  index: WorkspaceIndex
+): { controlIdents: Set<string>; buttonIdents: Set<string> } {
+  const controlIdents = new Set<string>();
+  const buttonIdents = new Set<string>();
+  const formFacts = index.parsedFactsByUri.get(form.uri.toString());
+  if (!formFacts) {
+    return { controlIdents, buttonIdents };
+  }
+
+  const formComposition = buildDocumentCompositionModel(formFacts, index);
+  for (const contributionRef of collectSelectedDocumentContributions(formComposition)) {
+    if (!contributionMatchesDocumentRoot("Form", contributionRef.contribution)) {
+      continue;
+    }
+    for (const ident of contributionRef.contribution.formControlIdents) {
+      controlIdents.add(ident);
+    }
+    for (const ident of contributionRef.contribution.formButtonIdents) {
+      buttonIdents.add(ident);
+    }
+  }
+
+  return { controlIdents, buttonIdents };
 }
 
 function endsWithExact(value: string, suffix: string): boolean {

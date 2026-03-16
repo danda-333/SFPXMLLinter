@@ -302,6 +302,39 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     }
   }
 
+  if (canDeclareFormNodes && text.includes("<UsePrimitive")) {
+    const primitiveTags = collectPrimitiveTags(text);
+    for (const primitiveTag of primitiveTags) {
+      const attrs = parseAttributes(primitiveTag.rawAttrs, text, primitiveTag.attrsStartIndex);
+      const primitiveName =
+        attrs.get("Primitive")?.value ??
+        attrs.get("Name")?.value ??
+        attrs.get("Feature")?.value ??
+        attrs.get("Component")?.value;
+      if (!primitiveName || !isButtonPrimitiveKey(primitiveName)) {
+        continue;
+      }
+
+      const ident = attrs.get("Ident");
+      if (!ident?.value || !ident.valueRange) {
+        continue;
+      }
+
+      facts.declaredButtons.add(ident.value);
+      facts.identOccurrences.push({
+        ident: ident.value,
+        range: ident.valueRange,
+        kind: "button",
+        scopeKey: primitiveTag.scopeKey
+      });
+      facts.declaredButtonInfos.push({
+        ident: ident.value,
+        range: ident.valueRange,
+        type: "UsePrimitiveButton"
+      });
+    }
+  }
+
   if ((canDeclareFormNodes || canHaveWorkflowNodes) && text.includes("<Section")) {
     const sectionTags = collectSectionTags(text);
     for (const sectionTag of sectionTags) {
@@ -735,6 +768,12 @@ interface SectionTagMatch {
   scopeKey: string;
 }
 
+interface PrimitiveTagMatch {
+  rawAttrs: string;
+  attrsStartIndex: number;
+  scopeKey: string;
+}
+
 function collectControlTags(text: string): ControlTagMatch[] {
   const out: ControlTagMatch[] = [];
   const stack: Array<{ name: string; start: number }> = [];
@@ -834,6 +873,46 @@ function collectSectionTags(text: string): SectionTagMatch[] {
       const attrsStartIndex = tagStart + (attrsStartOffset >= 0 ? attrsStartOffset : 0);
       const parentSections = findNearestOpenTag(stack, "sections");
       const scopeKey = parentSections ? `sections@${parentSections.start}` : "__global_sections__";
+
+      out.push({
+        rawAttrs,
+        attrsStartIndex,
+        scopeKey
+      });
+    }
+
+    if (isClosing) {
+      popOpenTag(stack, name);
+      continue;
+    }
+
+    if (!isSelfClosing) {
+      stack.push({ name, start: tagStart });
+    }
+  }
+
+  return out;
+}
+
+function collectPrimitiveTags(text: string): PrimitiveTagMatch[] {
+  const out: PrimitiveTagMatch[] = [];
+  const stack: Array<{ name: string; start: number }> = [];
+  const tagRegex = /<\s*(\/?)\s*([A-Za-z_][\w:.-]*)([^>]*)>/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = tagRegex.exec(text)) !== null) {
+    const isClosing = match[1] === "/";
+    const name = stripPrefix(match[2]).toLowerCase();
+    const rawAttrs = match[3] ?? "";
+    const fullTag = match[0] ?? "";
+    const tagStart = match.index ?? 0;
+    const isSelfClosing = !isClosing && /\/\s*$/.test(rawAttrs);
+
+    if (!isClosing && name === "useprimitive") {
+      const attrsStartOffset = fullTag.indexOf(rawAttrs);
+      const attrsStartIndex = tagStart + (attrsStartOffset >= 0 ? attrsStartOffset : 0);
+      const parentButtons = findNearestOpenTag(stack, "buttons");
+      const scopeKey = parentButtons ? `buttons@${parentButtons.start}` : "__global_buttons__";
 
       out.push({
         rawAttrs,
@@ -1079,6 +1158,11 @@ function parseBooleanAttribute(value: string | undefined): boolean | undefined {
   }
 
   return undefined;
+}
+
+function isButtonPrimitiveKey(value: string): boolean {
+  const normalized = normalizeComponentKey(value).toLowerCase();
+  return /\/buttons\/[^/]*button$/i.test(normalized);
 }
 
 function parsePlaceholderFields(rawBody: string): Map<string, string> {

@@ -1,5 +1,6 @@
 import { DOMParser } from "@xmldom/xmldom";
 import * as xpath from "xpath";
+import { maskXmlComments } from "../utils/xmlComments";
 
 export interface ComponentSource {
   key: string;
@@ -192,8 +193,9 @@ function expandAuthoringSugar(text: string, inheritedParams: Map<string, string>
 
 export function extractUsingComponentRefs(text: string): string[] {
   const refs = new Set<string>();
+  const scanText = maskXmlComments(text);
 
-  for (const match of text.matchAll(/<Using\b([^>]*)\/?>/gi)) {
+  for (const match of scanText.matchAll(/<Using\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
     const componentValue =
       extractAttributeValue(attrs, "Feature") ??
@@ -205,7 +207,7 @@ export function extractUsingComponentRefs(text: string): string[] {
     refs.add(stripXmlComponentExtension(normalizePath(componentValue)));
   }
 
-  for (const match of text.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
+  for (const match of scanText.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
     const primitiveValue =
       extractAttributeValue(attrs, "Primitive") ??
@@ -218,7 +220,7 @@ export function extractUsingComponentRefs(text: string): string[] {
     refs.add(stripXmlComponentExtension(normalizePath(primitiveValue)));
   }
 
-  for (const match of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+  for (const match of scanText.matchAll(/<Include\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
     const featureValue =
       extractAttributeValue(attrs, "Feature") ??
@@ -230,7 +232,7 @@ export function extractUsingComponentRefs(text: string): string[] {
     refs.add(stripXmlComponentExtension(normalizePath(featureValue)));
   }
 
-  for (const match of text.matchAll(/<ContributionPatch\b([^>]*)\/?>/gi)) {
+  for (const match of scanText.matchAll(/<ContributionPatch\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
     const componentValue =
       extractAttributeValue(attrs, "Feature") ??
@@ -242,7 +244,7 @@ export function extractUsingComponentRefs(text: string): string[] {
     refs.add(stripXmlComponentExtension(normalizePath(componentValue)));
   }
 
-  for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+  for (const match of scanText.matchAll(/\{\{([^{}]+)\}\}/g)) {
     const body = match[1] ?? "";
     const componentValue =
       extractPlaceholderField(body, "Feature") ??
@@ -328,7 +330,8 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
   const includePattern = /<Include\b[^>]*\/>/gi;
 
   for (let pass = 0; pass < 10; pass++) {
-    const matches = [...result.matchAll(includePattern)];
+    const maskedResult = maskXmlComments(result);
+    const matches = [...maskedResult.matchAll(includePattern)];
     if (matches.length === 0) {
       break;
     }
@@ -910,13 +913,14 @@ function pickInnermostBlocks(blocks: readonly TagBlock[]): TagBlock[] {
 
 function parseComponentSections(text: string): ComponentSection[] {
   const sections: ComponentSection[] = [];
+  const scanText = maskXmlComments(text);
   const tagRegex = /<\s*(\/?)\s*(Contribution|Section)\b([^>]*)>/gi;
   let depth = 0;
   let currentOpenEnd = -1;
   let currentAttrsRaw = "";
   let currentContentStart = -1;
 
-  for (const match of text.matchAll(tagRegex)) {
+  for (const match of scanText.matchAll(tagRegex)) {
     const token = match[0] ?? "";
     const slash = match[1] ?? "";
     const attrsRaw = match[3] ?? "";
@@ -1293,7 +1297,8 @@ function buildTemplateParams(text: string): Map<string, string> {
 function parseUsingDirectives(text: string): UsingDirective[] {
   const out: UsingDirective[] = [];
   const regex = /<Using\b([^>]*)\/?>/gi;
-  for (const m of text.matchAll(regex)) {
+  const scanText = maskXmlComments(text);
+  for (const m of scanText.matchAll(regex)) {
     const attrs = parseXmlAttributes(m[1] ?? "");
     const componentValue = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
     if (!componentValue) {
@@ -1448,7 +1453,8 @@ function parseXmlAttributes(rawAttrs: string): Map<string, string> {
 function collectPlaceholderTokens(text: string): PlaceholderToken[] {
   const out: PlaceholderToken[] = [];
   const regex = /\{\{([^{}]+)\}\}/g;
-  for (const match of text.matchAll(regex)) {
+  const scanText = maskXmlComments(text);
+  for (const match of scanText.matchAll(regex)) {
     if (typeof match.index !== "number") {
       continue;
     }

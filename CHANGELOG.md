@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.1.10
+
+- TreeView and effective model integration:
+  - TreeView now overlays Form symbols from final runtime index (`XML`) for the same `FormIdent`, so final buttons/controls/sections are visible consistently.
+  - added explicit `final` symbol origin in composition tree for symbols resolved from final index only.
+  - improved owner-form resolution flow reused across diagnostics/completion/tree model paths.
+- Template/comment handling hardening:
+  - template builder now ignores XML comments for `Using` parsing, `Include` scanning, placeholder scanning, and component reference extraction.
+  - component section parsing now ignores commented `<Contribution>/<Section>` blocks.
+  - fixed false-positive build application from commented `Using` directives.
+- Tests:
+  - added regression test for primitive-based local button facts (`UsePrimitive` button idents).
+  - added template core regressions for commented using and commented component contribution behavior.
+
 ## 0.1.9
 
 - Contribution patching:

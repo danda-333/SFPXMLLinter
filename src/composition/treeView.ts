@@ -2,12 +2,11 @@ import * as vscode from "vscode";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseDocumentFacts, ParsedDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
-import { WorkspaceIndex, IndexedComponentContributionSummary } from "../indexer/types";
+import { WorkspaceIndex, IndexedComponentContributionSummary, IndexedForm } from "../indexer/types";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { FeatureManifestRegistry } from "./workspace";
 import {
   buildDocumentCompositionModel,
-  collectInjectedSymbols,
   DocumentCompositionModel,
   DocumentUsingContributionModel
 } from "./documentModel";
@@ -83,7 +82,7 @@ interface SymbolNode extends BaseNode {
 
 interface AggregatedSymbol {
   ident: string;
-  origin: "local" | "injected";
+  origin: "local" | "injected" | "inherited" | "final";
   source?: string;
   resourceUri?: vscode.Uri;
   sourceLocation?: vscode.Location;
@@ -113,7 +112,8 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
   public constructor(
     private readonly getActiveDocument: () => vscode.TextDocument | undefined,
     private readonly getIndexForUri: (uri: vscode.Uri) => WorkspaceIndex,
-    private readonly getFeatureRegistry: () => FeatureManifestRegistry
+    private readonly getFeatureRegistry: () => FeatureManifestRegistry,
+    private readonly resolveOwningFormForModel?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined
   ) {}
 
   public refresh(): void {
@@ -229,7 +229,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       return nodes;
     }
 
-    const regularXmlTree = buildRegularXmlTree(document, facts, index);
+    const regularXmlTree = buildRegularXmlTree(document, facts, index, this.resolveOwningFormForModel);
     if (regularXmlTree.length > 0) {
       nodes = regularXmlTree;
       this.cachedRootTree = {
@@ -441,7 +441,8 @@ function buildFeatureTree(
 function buildRegularXmlTree(
   document: vscode.TextDocument,
   facts: ReturnType<typeof parseDocumentFacts>,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  resolveOwningFormForModel?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined
 ): CompositionTreeNode[] {
   const root = (facts.rootTag ?? "").toLowerCase();
   if (root !== "form" && root !== "workflow" && root !== "dataview") {
@@ -454,9 +455,23 @@ function buildRegularXmlTree(
   children.push(buildActionsNode(root, sharedSectionNodeId("Actions"), composition));
 
   if (root === "form") {
-    const controls = aggregateFormControls(document.uri, facts, index, composition);
-    const buttons = aggregateFormButtons(document.uri, facts, index, composition);
-    const sections = aggregateFormSections(document.uri, facts, index, composition);
+    const resolvedFinalForm =
+      facts.formIdent
+        ? resolveOwningFormForModel?.(facts.formIdent, index)
+        : undefined;
+    const finalFormOverlay =
+      resolvedFinalForm && resolvedFinalForm.form.uri.toString() !== document.uri.toString()
+        ? resolvedFinalForm.form
+        : undefined;
+
+    let controls = aggregateFormControls(document.uri, facts, index, composition);
+    let buttons = aggregateFormButtons(document.uri, facts, index, composition);
+    let sections = aggregateFormSections(document.uri, facts, index, composition);
+    if (finalFormOverlay) {
+      controls = overlayFinalIndexedFormSymbols(controls, finalFormOverlay, "control");
+      buttons = overlayFinalIndexedFormSymbols(buttons, finalFormOverlay, "button");
+      sections = overlayFinalIndexedFormSymbols(sections, finalFormOverlay, "section");
+    }
     children.push(buildSymbolGroup("Controls", controls, "symbol-field", sharedSectionNodeId("Controls")));
     children.push(buildSymbolGroup("Buttons", buttons, "symbol-event", sharedSectionNodeId("Buttons")));
     children.push(buildSymbolGroup("Sections", sections, "symbol-structure", sharedSectionNodeId("Sections")));
@@ -495,6 +510,37 @@ function buildRegularXmlTree(
     children.push(buildSymbolGroup("ControlShareCodes", controlShareCodes, "symbol-key", sharedSectionNodeId("ControlShareCodes")));
     children.push(buildSymbolGroup("ButtonShareCodes", buttonShareCodes, "symbol-key", sharedSectionNodeId("ButtonShareCodes")));
     children.push(buildSymbolGroup("ActionShareCodes", actionShareCodes, "symbol-key", sharedSectionNodeId("ActionShareCodes")));
+  }
+
+  const owningFormIdent = root === "workflow"
+    ? facts.workflowFormIdent
+    : root === "dataview"
+      ? (facts.rootFormIdent ?? facts.formIdent)
+      : undefined;
+  if ((root === "workflow" || root === "dataview") && owningFormIdent) {
+    const resolvedOwningForm = resolveOwningFormForModel?.(owningFormIdent, index);
+    if (resolvedOwningForm) {
+      const ownerFacts = resolvedOwningForm.index.parsedFactsByUri.get(resolvedOwningForm.form.uri.toString());
+      if (ownerFacts) {
+        const ownerComposition = buildDocumentCompositionModel(ownerFacts, resolvedOwningForm.index);
+        const ownerControls = aggregateFormControls(resolvedOwningForm.form.uri, ownerFacts, resolvedOwningForm.index, ownerComposition);
+        const ownerButtons = aggregateFormButtons(resolvedOwningForm.form.uri, ownerFacts, resolvedOwningForm.index, ownerComposition);
+        const ownerSections = aggregateFormSections(resolvedOwningForm.form.uri, ownerFacts, resolvedOwningForm.index, ownerComposition);
+        children.push({
+          id: sharedSectionNodeId("OwningFormSymbols"),
+          type: "group",
+          label: `Owning Form Symbols (${owningFormIdent})`,
+          description: resolvedOwningForm.index === index ? "template" : "runtime",
+          collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+          icon: new vscode.ThemeIcon("symbol-file"),
+          children: [
+            buildSymbolGroup("Controls", ownerControls, "symbol-field", sharedSectionNodeId("OwningFormSymbols.Controls")),
+            buildSymbolGroup("Buttons", ownerButtons, "symbol-event", sharedSectionNodeId("OwningFormSymbols.Buttons")),
+            buildSymbolGroup("Sections", ownerSections, "symbol-structure", sharedSectionNodeId("OwningFormSymbols.Sections"))
+          ]
+        });
+      }
+    }
   }
 
   const usingTree = buildUsingTree(document, facts, index, composition);
@@ -537,9 +583,15 @@ function buildDocumentSummaryNode(
   const localControlCount = facts.declaredControlInfos.length;
   const localButtonCount = facts.declaredButtonInfos.length;
   const localSectionCount = facts.identOccurrences.filter((item) => item.kind === "section").length;
-  const injectedControlCount = collectInjectedSymbols(composition, index, (summary) => summary.formControlIdents).size;
-  const injectedButtonCount = collectInjectedSymbols(composition, index, (summary) => summary.formButtonIdents).size;
-  const injectedSectionCount = collectInjectedSymbols(composition, index, (summary) => summary.formSectionIdents).size;
+  const composedControlSymbols = collectComposedSymbolsFromModel(composition, index, (summary) => summary.formControlIdents);
+  const composedButtonSymbols = collectComposedSymbolsFromModel(composition, index, (summary) => summary.formButtonIdents);
+  const composedSectionSymbols = collectComposedSymbolsFromModel(composition, index, (summary) => summary.formSectionIdents);
+  const injectedControlCount = [...composedControlSymbols.values()].filter((item) => item.origin === "injected").length;
+  const inheritedControlCount = [...composedControlSymbols.values()].filter((item) => item.origin === "inherited").length;
+  const injectedButtonCount = [...composedButtonSymbols.values()].filter((item) => item.origin === "injected").length;
+  const inheritedButtonCount = [...composedButtonSymbols.values()].filter((item) => item.origin === "inherited").length;
+  const injectedSectionCount = [...composedSectionSymbols.values()].filter((item) => item.origin === "injected").length;
+  const inheritedSectionCount = [...composedSectionSymbols.values()].filter((item) => item.origin === "inherited").length;
   const summary = [
     detailNode(`Root: ${facts.rootTag ?? "(unknown)"}`),
     detailNode(`Ident: ${facts.rootIdent ?? facts.formIdent ?? facts.workflowFormIdent ?? "(none)"}`),
@@ -555,10 +607,13 @@ function buildDocumentSummaryNode(
   } else if (root === "form") {
     summary.push(detailNode(`Local Controls: ${localControlCount}`));
     summary.push(detailNode(`Injected Controls: ${injectedControlCount}`));
+    summary.push(detailNode(`Inherited Controls: ${inheritedControlCount}`));
     summary.push(detailNode(`Local Buttons: ${localButtonCount}`));
     summary.push(detailNode(`Injected Buttons: ${injectedButtonCount}`));
+    summary.push(detailNode(`Inherited Buttons: ${inheritedButtonCount}`));
     summary.push(detailNode(`Local Sections: ${localSectionCount}`));
     summary.push(detailNode(`Injected Sections: ${injectedSectionCount}`));
+    summary.push(detailNode(`Inherited Sections: ${inheritedSectionCount}`));
   }
 
   return {
@@ -1194,8 +1249,8 @@ function aggregateFormControls(
     ident: item.ident,
     location: new vscode.Location(documentUri, item.range)
   }));
-  const injected = collectInjectedSymbols(composition, index, (summary) => summary.formControlIdents);
-  return mergeAggregatedSymbols(local, injected);
+  const composed = collectComposedSymbolsFromModel(composition, index, (summary) => summary.formControlIdents);
+  return mergeAggregatedSymbols(local, composed);
 }
 
 function aggregateFormButtons(
@@ -1208,8 +1263,8 @@ function aggregateFormButtons(
     ident: item.ident,
     location: new vscode.Location(documentUri, item.range)
   }));
-  const injected = collectInjectedSymbols(composition, index, (summary) => summary.formButtonIdents);
-  return mergeAggregatedSymbols(local, injected);
+  const composed = collectComposedSymbolsFromModel(composition, index, (summary) => summary.formButtonIdents);
+  return mergeAggregatedSymbols(local, composed);
 }
 
 function aggregateFormSections(
@@ -1224,8 +1279,44 @@ function aggregateFormSections(
       ident: item.ident,
       location: new vscode.Location(documentUri, item.range)
     }));
-  const injected = collectInjectedSymbols(composition, index, (summary) => summary.formSectionIdents);
-  return mergeAggregatedSymbols(local, injected);
+  const composed = collectComposedSymbolsFromModel(composition, index, (summary) => summary.formSectionIdents);
+  return mergeAggregatedSymbols(local, composed);
+}
+
+function overlayFinalIndexedFormSymbols(
+  symbols: readonly AggregatedSymbol[],
+  form: IndexedForm,
+  kind: "control" | "button" | "section"
+): AggregatedSymbol[] {
+  const out = new Map<string, AggregatedSymbol>();
+  for (const symbol of symbols) {
+    out.set(symbol.ident, symbol);
+  }
+
+  const idents =
+    kind === "control" ? form.controls :
+    kind === "button" ? form.buttons :
+    form.sections;
+  const definitions =
+    kind === "control" ? form.controlDefinitions :
+    kind === "button" ? form.buttonDefinitions :
+    form.sectionDefinitions;
+
+  for (const ident of idents) {
+    if (out.has(ident)) {
+      continue;
+    }
+    const sourceLocation = definitions.get(ident);
+    out.set(ident, {
+      ident,
+      origin: "final",
+      source: `final-index:${form.ident}`,
+      resourceUri: sourceLocation?.uri ?? form.uri,
+      sourceLocation
+    });
+  }
+
+  return [...out.values()].sort((a, b) => a.ident.localeCompare(b.ident));
 }
 
 function aggregateWorkflowShareCodes(
@@ -1244,26 +1335,18 @@ function aggregateWorkflowShareCodes(
     usageCount: usageLocationsByIdent.get(ident)?.length ?? 0,
     usageLocations: usageLocationsByIdent.get(ident) ?? []
   }));
-  const injected = new Map<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>();
-  for (const [ident, source] of collectInjectedSymbols(composition, index, selector)) {
-    if (injected.has(ident)) {
-      continue;
-    }
-    injected.set(ident, {
-      source: source.source,
-      resourceUri: source.resourceUri,
-      sourceLocation: source.sourceLocation,
-      usageCount: usageLocationsByIdent.get(ident)?.length ?? 0,
-      usageLocations: usageLocationsByIdent.get(ident) ?? []
-    });
+  const composed = collectComposedSymbolsFromModel(composition, index, selector);
+  for (const value of composed.values()) {
+    value.usageCount = usageLocationsByIdent.get(value.ident)?.length ?? 0;
+    value.usageLocations = usageLocationsByIdent.get(value.ident) ?? [];
   }
 
-  return mergeAggregatedSymbols(local, injected);
+  return mergeAggregatedSymbols(local, composed);
 }
 
 function mergeAggregatedSymbols(
   localSymbols: ReadonlyArray<{ ident: string; location?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>,
-  injectedMap: ReadonlyMap<string, { source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>
+  composedMap: ReadonlyMap<string, { ident: string; origin: "injected" | "inherited"; source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>
 ): AggregatedSymbol[] {
   const out = new Map<string, AggregatedSymbol>();
 
@@ -1278,13 +1361,13 @@ function mergeAggregatedSymbols(
     });
   }
 
-  for (const [ident, source] of injectedMap.entries()) {
+  for (const [ident, source] of composedMap.entries()) {
     if (out.has(ident)) {
       continue;
     }
     out.set(ident, {
       ident,
-      origin: "injected",
+      origin: source.origin,
       source: source.source,
       resourceUri: source.resourceUri,
       sourceLocation: source.sourceLocation,
@@ -1294,6 +1377,43 @@ function mergeAggregatedSymbols(
   }
 
   return [...out.values()].sort((a, b) => a.ident.localeCompare(b.ident));
+}
+
+function collectComposedSymbolsFromModel(
+  model: DocumentCompositionModel,
+  index: WorkspaceIndex,
+  selector: (summary: IndexedComponentContributionSummary) => ReadonlySet<string>
+): Map<string, { ident: string; origin: "injected" | "inherited"; source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }> {
+  const out = new Map<string, { ident: string; origin: "injected" | "inherited"; source: string; resourceUri?: vscode.Uri; sourceLocation?: vscode.Location; usageCount?: number; usageLocations?: vscode.Location[] }>();
+  for (const usingModel of model.usings) {
+    if (!usingModel.hasResolvedFeature) {
+      continue;
+    }
+    const component = resolveComponentByKey(index, usingModel.componentKey);
+    if (!component) {
+      continue;
+    }
+    const sourceLabel = usingModel.sectionValue
+      ? `${usingModel.rawComponentValue}#${usingModel.sectionValue}`
+      : usingModel.rawComponentValue;
+    const origin: "injected" | "inherited" = usingModel.source === "inherited" ? "inherited" : "injected";
+    for (const contributionModel of usingModel.contributions) {
+      const sourceLocation = component.contributionDefinitions.get(contributionModel.contribution.contributionName);
+      for (const ident of selector(contributionModel.contribution)) {
+        if (out.has(ident)) {
+          continue;
+        }
+        out.set(ident, {
+          ident,
+          origin,
+          source: sourceLabel,
+          resourceUri: component.uri,
+          ...(sourceLocation ? { sourceLocation } : {})
+        });
+      }
+    }
+  }
+  return out;
 }
 
 function buildSymbolGroup(label: string, symbols: readonly AggregatedSymbol[], iconId: string, nodeId: string): GroupNode {
@@ -1311,8 +1431,18 @@ function buildSymbolGroup(label: string, symbols: readonly AggregatedSymbol[], i
             id: `${nodeId}:symbol:${symbol.ident}`,
             label: symbol.ident,
             description: symbol.usageCount !== undefined ? `${symbol.origin}, used ${symbol.usageCount}` : symbol.origin,
-            tooltip: symbol.source ? `Injected from ${symbol.source}` : symbol.origin,
-            icon: new vscode.ThemeIcon(symbol.origin === "local" ? "circle-large-filled" : "arrow-circle-right"),
+            tooltip: symbol.source
+              ? `${symbol.origin === "inherited" ? "Inherited" : symbol.origin === "injected" ? "Injected" : symbol.origin === "final" ? "Final" : "Local"} from ${symbol.source}`
+              : symbol.origin,
+            icon: new vscode.ThemeIcon(
+              symbol.origin === "local"
+                ? "circle-large-filled"
+                : symbol.origin === "inherited"
+                  ? "arrow-both"
+                  : symbol.origin === "final"
+                    ? "database"
+                  : "arrow-circle-right"
+            ),
             resourceUri: symbol.resourceUri,
             contextValue: symbol.sourceLocation ? "compositionSymbol" : undefined,
             sourceLocation: symbol.sourceLocation,

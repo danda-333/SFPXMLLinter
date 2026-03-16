@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as nodeFs from "node:fs/promises";
 import { WorkspaceIndex, IndexedComponent, IndexedForm, IndexedComponentContributionSummary } from "./types";
 import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
 import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
@@ -12,6 +13,15 @@ interface ParsedEntry {
   maskedText: string;
   facts: ReturnType<typeof parseDocumentFactsFromMaskedText>;
   root: string;
+}
+
+interface ParsedEntryCacheRecord {
+  mtimeMs: number;
+  size: number;
+  maskedText: string;
+  facts: ReturnType<typeof parseDocumentFactsFromMaskedText>;
+  root: string;
+  hasIgnoreDirective: boolean;
 }
 
 interface PositionResolver {
@@ -50,6 +60,8 @@ export interface RebuildIndexOptions {
 
 export class WorkspaceIndexer {
   public constructor(private readonly roots?: readonly string[]) {}
+
+  private readonly parsedEntryCacheByUri = new Map<string, ParsedEntryCacheRecord>();
 
   private index: WorkspaceIndex = {
     formsByIdent: new Map<string, IndexedForm>(),
@@ -229,27 +241,7 @@ export class WorkspaceIndexer {
       const batch = files.slice(offset, offset + parseBatchSize);
       const batchEntries = await Promise.all(
         batch.map(async (uri): Promise<ParsedEntry | undefined> => {
-          if (scope === "bootstrap" && !isLikelyBootstrapPath(uri)) {
-            return undefined;
-          }
-
-          const text = await readWorkspaceFileText(uri);
-          const maskedText = maskXmlComments(text);
-          const facts = parseDocumentFactsFromMaskedText(maskedText);
-          hasIgnoreDirectiveByUri.set(uri.toString(), containsIgnoreDirective(text));
-          if (scope === "bootstrap") {
-            const root = (facts.rootTag ?? "").toLowerCase();
-            if (root !== "component" && root !== "feature" && root !== "form") {
-              return undefined;
-            }
-          }
-
-          return {
-            uri,
-            maskedText,
-            facts,
-            root: (facts.rootTag ?? "").toLowerCase()
-          };
+          return this.readParsedEntry(uri, scope, hasIgnoreDirectiveByUri);
         })
       );
 
@@ -968,6 +960,64 @@ export class WorkspaceIndexer {
     const pieces = key.split("/");
     return pieces[pieces.length - 1] ?? key;
   }
+
+  private async readParsedEntry(
+    uri: vscode.Uri,
+    scope: "all" | "bootstrap",
+    hasIgnoreDirectiveByUri: Map<string, boolean>
+  ): Promise<ParsedEntry | undefined> {
+    if (scope === "bootstrap" && !isLikelyBootstrapPath(uri)) {
+      return undefined;
+    }
+
+    const uriKey = uri.toString();
+    const signature = await getFileSignature(uri);
+    if (signature) {
+      const cached = this.parsedEntryCacheByUri.get(uriKey);
+      if (cached && cached.mtimeMs === signature.mtimeMs && cached.size === signature.size) {
+        hasIgnoreDirectiveByUri.set(uriKey, cached.hasIgnoreDirective);
+        if (scope === "bootstrap" && cached.root !== "component" && cached.root !== "feature" && cached.root !== "form") {
+          return undefined;
+        }
+        return {
+          uri,
+          maskedText: cached.maskedText,
+          facts: cached.facts,
+          root: cached.root
+        };
+      }
+    }
+
+    const text = await readWorkspaceFileText(uri);
+    const maskedText = maskXmlComments(text);
+    const facts = parseDocumentFactsFromMaskedText(maskedText);
+    const root = (facts.rootTag ?? "").toLowerCase();
+    const hasIgnoreDirective = containsIgnoreDirective(text);
+    hasIgnoreDirectiveByUri.set(uriKey, hasIgnoreDirective);
+    if (signature) {
+      this.parsedEntryCacheByUri.set(uriKey, {
+        mtimeMs: signature.mtimeMs,
+        size: signature.size,
+        maskedText,
+        facts,
+        root,
+        hasIgnoreDirective
+      });
+    } else {
+      this.parsedEntryCacheByUri.delete(uriKey);
+    }
+
+    if (scope === "bootstrap" && root !== "component" && root !== "feature" && root !== "form") {
+      return undefined;
+    }
+
+    return {
+      uri,
+      maskedText,
+      facts,
+      root
+    };
+  }
 }
 
 function mergeDefinitions(
@@ -1283,6 +1333,22 @@ async function readWorkspaceFileText(uri: vscode.Uri): Promise<string> {
   const bytes = await vscode.workspace.fs.readFile(uri);
   const text = new TextDecoder("utf-8").decode(bytes);
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+async function getFileSignature(uri: vscode.Uri): Promise<{ mtimeMs: number; size: number } | undefined> {
+  if (uri.scheme !== "file") {
+    return undefined;
+  }
+
+  try {
+    const stat = await nodeFs.stat(uri.fsPath);
+    return {
+      mtimeMs: stat.mtimeMs,
+      size: stat.size
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 function createRawResolver(uri: vscode.Uri, text: string): PositionResolver {

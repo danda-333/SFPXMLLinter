@@ -1632,18 +1632,51 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     const result = new Set<string>();
+    const affectedFormIdents = new Set<string>();
     for (const key of candidateKeys) {
       const refs = idx.componentReferenceLocationsByKey.get(key);
       if (!refs) {
-        continue;
+        // continue with usage fallback lookup below
+      } else {
+        for (const location of refs) {
+          if (!isInFolder(location.uri, "XML_Templates")) {
+            continue;
+          }
+
+          result.add(location.uri.fsPath);
+        }
       }
 
-      for (const location of refs) {
-        if (!isInFolder(location.uri, "XML_Templates")) {
+      const usageFormIdents = idx.componentUsageFormIdentsByKey.get(key);
+      if (usageFormIdents) {
+        for (const formIdent of usageFormIdents) {
+          affectedFormIdents.add(formIdent);
+        }
+      }
+    }
+
+    if (affectedFormIdents.size > 0) {
+      for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+        const root = (facts.rootTag ?? "").toLowerCase();
+        if (root !== "form" && root !== "workflow" && root !== "dataview") {
           continue;
         }
 
-        result.add(location.uri.fsPath);
+        const owningFormIdent =
+          root === "form"
+            ? facts.formIdent
+            : root === "workflow"
+              ? (facts.workflowFormIdent ?? facts.rootFormIdent)
+              : facts.rootFormIdent;
+        if (!owningFormIdent || !affectedFormIdents.has(owningFormIdent)) {
+          continue;
+        }
+
+        const uri = vscode.Uri.parse(uriKey);
+        if (!isInFolder(uri, "XML_Templates")) {
+          continue;
+        }
+        result.add(uri.fsPath);
       }
     }
 

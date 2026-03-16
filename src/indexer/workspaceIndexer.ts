@@ -504,7 +504,12 @@ export class WorkspaceIndexer {
         }
       }
 
-      const owningFormIdent = root === "workflow" ? facts.workflowFormIdent : facts.formIdent;
+      const owningFormIdent =
+        root === "workflow"
+          ? facts.workflowFormIdent
+          : root === "dataview"
+            ? facts.rootFormIdent
+            : facts.formIdent;
       if (owningFormIdent) {
         for (const ref of collectEffectiveUsingRefs(facts, provisionalIndex)) {
           addNestedSetMapValue(componentUsageFormIdentsByKey, ref.componentKey, owningFormIdent);
@@ -514,7 +519,12 @@ export class WorkspaceIndexer {
         }
       }
 
-      const owningFormIdentForRefs = root === "workflow" ? facts.workflowFormIdent : facts.formIdent;
+      const owningFormIdentForRefs =
+        root === "workflow"
+          ? facts.workflowFormIdent
+          : root === "dataview"
+            ? facts.rootFormIdent
+            : facts.formIdent;
       if (root === "workflow" && facts.workflowFormIdent) {
         for (const ref of facts.workflowReferences) {
           if (ref.kind === "formControl") {

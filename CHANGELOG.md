@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.4
+
+- Auto-build dependency chain:
+  - improved component-save dependent template selection to include templates affected via inherited `Using` (`Form` -> `WorkFlow`/`DataView`), not only direct references.
+  - extended index usage ownership mapping for `DataView` (`FormIdent`) so inherited dependency fan-out is correctly discoverable from index.
+
 ## 0.1.3
 
 - Template builder inherited using parameters:

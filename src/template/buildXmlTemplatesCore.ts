@@ -136,7 +136,8 @@ export function renderTemplateText(
   templateText: string,
   library: BuildComponentLibrary,
   maxDepth = 12,
-  onDebugLog?: (line: string) => void
+  onDebugLog?: (line: string) => void,
+  inheritedUsingsXml?: string
 ): string {
   const normalizedTemplate = templateText.replace(/^\uFEFF/, "");
   const context: RenderContext = {
@@ -150,7 +151,7 @@ export function renderTemplateText(
   let out = normalizedTemplate;
 
   out = expandIncludes(out, templateParams, context);
-  out = applyUsingSections(out, templateParams, context);
+  out = applyUsingSections(out, templateParams, context, inheritedUsingsXml);
   out = expandAuthoringSugar(out, templateParams, context);
   out = expandPrimitiveUsages(out, templateParams, context);
   out = replaceComponentPlaceholders(out, templateParams, context, 0);
@@ -485,8 +486,17 @@ function replaceSlotPlaceholders(text: string, slots: ReadonlyMap<string, string
   });
 }
 
-function applyUsingSections(text: string, templateParams: Map<string, string>, context: RenderContext): string {
-  const usingDirectives = parseUsingDirectives(text);
+function applyUsingSections(
+  text: string,
+  templateParams: Map<string, string>,
+  context: RenderContext,
+  inheritedUsingsXml?: string
+): string {
+  const usingParseSource =
+    inheritedUsingsXml && inheritedUsingsXml.trim().length > 0
+      ? `${text}\n${inheritedUsingsXml}`
+      : text;
+  const usingDirectives = parseUsingDirectives(usingParseSource);
   let out = removeUsingsBlocks(text);
   out = removeStandaloneUsingTags(out);
 

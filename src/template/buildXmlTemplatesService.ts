@@ -42,6 +42,18 @@ export interface BuildRunResult {
   summary?: BuildRunSummary;
 }
 
+interface ParsedTemplateRoot {
+  rootTag: string;
+  formIdent?: string;
+}
+
+interface ParsedUsingEntry {
+  featureKey: string;
+  contributionKey?: string;
+  suppressInheritance: boolean;
+  rawTag: string;
+}
+
 export class BuildXmlTemplatesService {
   public async run(workspaceFolder: vscode.WorkspaceFolder, options: BuildRunOptions = {}): Promise<BuildRunResult> {
     return this.runInternal(workspaceFolder, undefined, options);
@@ -110,6 +122,17 @@ export class BuildXmlTemplatesService {
     }
 
     const componentLibrary = buildComponentLibrary(componentSources);
+    const templateTextByUri = new Map<string, string>();
+    const formUsingsByFormIdent = new Map<string, ParsedUsingEntry[]>();
+    for (const templateUri of templateUris) {
+      const text = await readWorkspaceTextFile(templateUri);
+      templateTextByUri.set(templateUri.toString(), text);
+      const root = parseTemplateRoot(text);
+      if (root.rootTag === "form" && root.formIdent) {
+        formUsingsByFormIdent.set(root.formIdent, parseUsingEntries(text));
+      }
+    }
+
     const userGenerators = options.generatorEnableUserScripts === false
       ? []
       : await loadWorkspaceUserGenerators(
@@ -127,7 +150,8 @@ export class BuildXmlTemplatesService {
       options.onLogLine?.(`[${current}/${total}] ${relPath}`);
 
       try {
-        const templateText = await readWorkspaceTextFile(templateUri);
+        const templateText = templateTextByUri.get(templateUri.toString()) ?? await readWorkspaceTextFile(templateUri);
+        const inheritedUsingsXml = buildInheritedUsingsXml(templateText, formUsingsByFormIdent);
         const debugLines: string[] = [];
         const debugMode = options.mode === "debug";
         const renderedRaw = renderTemplateText(
@@ -139,7 +163,8 @@ export class BuildXmlTemplatesService {
                 debugLines.push(line);
                 options.onLogLine?.(`DEBUG: ${line}`);
               }
-            : undefined
+            : undefined,
+          inheritedUsingsXml
         );
         const generated = runTemplateGenerators(
           {
@@ -251,6 +276,135 @@ function relativeTemplatePath(workspaceFolder: vscode.WorkspaceFolder, templateU
 function templateToRuntimeUri(templateUri: vscode.Uri): vscode.Uri {
   const fsPath = templateUri.fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`);
   return vscode.Uri.file(fsPath);
+}
+
+function parseTemplateRoot(text: string): ParsedTemplateRoot {
+  const rootMatch = /<\s*([A-Za-z_][\w.-]*)\b([^>]*)>/i.exec(text);
+  if (!rootMatch) {
+    return { rootTag: "" };
+  }
+  const rootTag = (rootMatch[1] ?? "").trim().toLowerCase();
+  const attrs = rootMatch[2] ?? "";
+  if (rootTag === "form") {
+    const formIdent = extractAttributeValue(attrs, "Ident");
+    return { rootTag, formIdent };
+  }
+  if (rootTag === "workflow" || rootTag === "dataview") {
+    const formIdent = extractAttributeValue(attrs, "FormIdent");
+    return { rootTag, formIdent };
+  }
+  return { rootTag };
+}
+
+function buildInheritedUsingsXml(
+  templateText: string,
+  formUsingsByFormIdent: ReadonlyMap<string, ParsedUsingEntry[]>
+): string | undefined {
+  const root = parseTemplateRoot(templateText);
+  if ((root.rootTag !== "workflow" && root.rootTag !== "dataview") || !root.formIdent) {
+    return undefined;
+  }
+
+  const inherited = formUsingsByFormIdent.get(root.formIdent);
+  if (!inherited || inherited.length === 0) {
+    return undefined;
+  }
+
+  const localUsings = parseUsingEntries(templateText);
+  const localKeys = new Set<string>(localUsings.map((item) => toUsingEntryKey(item.featureKey, item.contributionKey)));
+  const suppressFull = new Set<string>();
+  const suppressContribution = new Set<string>();
+  for (const item of localUsings) {
+    if (!item.suppressInheritance) {
+      continue;
+    }
+    if (!item.contributionKey) {
+      suppressFull.add(item.featureKey);
+      continue;
+    }
+    suppressContribution.add(toUsingEntryKey(item.featureKey, item.contributionKey));
+  }
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const inheritedUsing of inherited) {
+    if (inheritedUsing.suppressInheritance) {
+      continue;
+    }
+    const key = toUsingEntryKey(inheritedUsing.featureKey, inheritedUsing.contributionKey);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    if (suppressFull.has(inheritedUsing.featureKey)) {
+      continue;
+    }
+    if (inheritedUsing.contributionKey && suppressContribution.has(key)) {
+      continue;
+    }
+    if (localKeys.has(key)) {
+      continue;
+    }
+
+    out.push(inheritedUsing.rawTag);
+  }
+
+  return out.length > 0 ? out.join("\n") : undefined;
+}
+
+function parseUsingEntries(text: string): ParsedUsingEntry[] {
+  const out: ParsedUsingEntry[] = [];
+  const pattern = /<Using\b([^>]*)\/?>/gi;
+  for (const match of text.matchAll(pattern)) {
+    const attrs = match[1] ?? "";
+    const featureValue =
+      extractAttributeValue(attrs, "Feature") ??
+      extractAttributeValue(attrs, "Component") ??
+      extractAttributeValue(attrs, "Name");
+    if (!featureValue) {
+      continue;
+    }
+    const featureKey = stripXmlComponentExtension(normalizePath(featureValue.trim()));
+    const contributionRaw = extractAttributeValue(attrs, "Contribution") ?? extractAttributeValue(attrs, "Section");
+    const contributionKey = contributionRaw?.trim();
+    const suppressInheritance = parseBooleanAttribute(extractAttributeValue(attrs, "SuppressInheritance"));
+    out.push({
+      featureKey,
+      contributionKey: contributionKey && contributionKey.length > 0 ? contributionKey : undefined,
+      suppressInheritance,
+      rawTag: buildInheritedUsingTag(featureValue, contributionKey)
+    });
+  }
+  return out;
+}
+
+function buildInheritedUsingTag(featureValue: string, contributionKey?: string): string {
+  if (contributionKey && contributionKey.trim().length > 0) {
+    return `<Using Feature="${featureValue}" Contribution="${contributionKey}" />`;
+  }
+  return `<Using Feature="${featureValue}" />`;
+}
+
+function toUsingEntryKey(featureKey: string, contributionKey?: string): string {
+  return `${featureKey}#${(contributionKey ?? "").trim()}`;
+}
+
+function extractAttributeValue(attrs: string, name: string): string | undefined {
+  const regex = new RegExp(`\\b${name}\\s*=\\s*(\"([^\"]*)\"|'([^']*)')`, "i");
+  const match = regex.exec(attrs);
+  if (!match) {
+    return undefined;
+  }
+  return (match[2] ?? match[3] ?? "").trim();
+}
+
+function parseBooleanAttribute(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
 }
 
 function formatSummaryText(summary: BuildRunSummary): string {

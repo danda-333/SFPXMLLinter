@@ -8,6 +8,7 @@ interface Case {
   expected: string;
   maxDepth?: number;
   expectedDebugLogs?: string[];
+  inheritedUsingsXml?: string;
 }
 
 function run(): void {
@@ -98,6 +99,32 @@ function run(): void {
     <Control Ident="AddedByUsing" />
   </Controls>
 </Form>`
+    },
+    {
+      name: "inherited-usings-are-applied-when-provided",
+      components: [
+        {
+          key: "Common/Shared/FormOwned",
+          text: `
+<Feature>
+  <Contribution Name="ControlShareCodes" Root="WorkFlow" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+    <ControlShareCode Ident="InheritedControlShareCode" />
+  </Contribution>
+</Feature>`
+        }
+      ],
+      template: `
+<WorkFlow FormIdent="Demo">
+  <ControlShareCodes>
+  </ControlShareCodes>
+</WorkFlow>`,
+      inheritedUsingsXml: `<Using Feature="Common/Shared/FormOwned" />`,
+      expected: `
+<WorkFlow FormIdent="Demo">
+  <ControlShareCodes>
+    <ControlShareCode Ident="InheritedControlShareCode" />
+  </ControlShareCodes>
+</WorkFlow>`
     },
     {
       name: "insert-modes-prepend-before-after-append",
@@ -590,7 +617,13 @@ function run(): void {
     try {
       const library = buildComponentLibrary(c.components);
       const debugLogs: string[] = [];
-      const actual = renderTemplateText(c.template, library, c.maxDepth ?? 12, (line) => debugLogs.push(line));
+      const actual = renderTemplateText(
+        c.template,
+        library,
+        c.maxDepth ?? 12,
+        (line) => debugLogs.push(line),
+        c.inheritedUsingsXml
+      );
       assert.equal(normalize(actual), normalize(c.expected));
       if (c.expectedDebugLogs) {
         assert.deepEqual(debugLogs, c.expectedDebugLogs);

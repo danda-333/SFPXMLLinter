@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.2
+
+- Template builder inherited usings:
+  - fixed runtime build path so `WorkFlow`/`DataView` templates correctly apply `Using` inherited from owning `Form` (`FormIdent`).
+  - inherited `Using` resolution now respects local `SuppressInheritance` and avoids duplicate activation when local and inherited entries overlap.
+- Tests:
+  - added regression case for inherited `Using` application in template core tests.
+
 ## 0.1.1
 
 - Template builder:

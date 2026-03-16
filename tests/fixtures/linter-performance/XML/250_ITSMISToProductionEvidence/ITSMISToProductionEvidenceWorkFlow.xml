@@ -77,122 +77,9 @@
         <FormControl Ident="PHCommunicationCard" IsVisible="true" />
       </Controls>
     </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" /> -->
-
-    <ControlShareCode Ident="ShowCommunicationControlShare">
-      <Controls>
-
-        <FormControl Ident="CommunicationList" IsVisible="true" />
-        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
-
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableCommunicationControlShare">
-      <Controls>
-
-        <FormControl Ident="Communication" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="CommunicationList" IsVisible="true" />
-        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
-
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableRequiredDialogCommunicationControlShare">
-      <Controls>
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMSupplierRequest AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMSupplierRequest'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMSupplierRequest'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="DialogCommunicationRequiredPlaceHolder" IsVisible="true" />
-          </TrueControls>
-        </FormControl>
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" /> -->
-
   </ControlShareCodes>
 
   <ActionShareCodes>
-
-    <ActionShareCode Ident="DialogCommunicationRequiredActionShare">
-      <Actions>
-
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMSupplierRequest AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMSupplierRequest'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMSupplierRequest'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="Required" ActionStart="BeforeValidation">
-              <Idents>
-                <string>DialogCommunication</string>
-              </Idents>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-
-      </Actions>
-    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="DialogCommunicationRequiredActionShare" /> -->
-
   </ActionShareCodes>
 
   <ButtonShareCodes>
@@ -240,48 +127,9 @@
       </Buttons>
     </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
 
-    <ButtonShareCode Ident="SaveButtonShare">
-      <Buttons>
-        <Button Ident="SaveButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-        <Button Ident="SaveAndExitButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" /> -->
   </ButtonShareCodes>
 
   <GlobalActions>
-
-    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
-      <DataSource>
-        <SQL><![CDATA[
-          IF @ITSMKey IS NULL
-          BEGIN
-            DECLARE
-              @CounterIdent VARCHAR(100) = 'ITSM_IS',
-              @NextNumber INT
-
-            EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
-
-            UPDATE usr.[ITSMRequest]
-            SET ITSMKey = CONCAT('IS-', RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
-            WHERE ID = @ID
-          END
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
-        </Parameters>
-      </DataSource>
-    </Action>
-
   </GlobalActions>
 
   <Steps>
@@ -300,9 +148,6 @@
           </Sections>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -319,9 +164,6 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -337,9 +179,6 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -358,9 +197,6 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -376,9 +212,6 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -397,9 +230,6 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -415,9 +245,6 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="DisableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -435,9 +262,6 @@
           </Buttons>
           <Controls>
             <FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>

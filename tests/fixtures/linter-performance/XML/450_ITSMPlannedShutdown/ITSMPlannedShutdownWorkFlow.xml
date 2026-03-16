@@ -9,60 +9,6 @@
   </Definition>
 
   <GlobalJavaScripts>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel3" ControlIdent="IsShowCategoryLevel3">
-      <Selectors>
-        <string>.js-howHideCategoryLevel3</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel4" ControlIdent="IsShowCategoryLevel4">
-      <Selectors>
-        <string>.js-howHideCategoryLevel4</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5">
-      <Selectors>
-        <string>.js-howHideCategoryLevel5</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowIfElevatedPermissionOrNotFirstState" ControlIdent="IsElevatedPermissionOrNotFirstState">
-      <Selectors>
-        <string>.js-showIfElevatedPermissionOrNotFirstState</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowIfReporterEmailDifferent" ControlIdent="IsReporterEmailDifferent">
-      <Selectors>
-        <string>.js-showIfReporterEmailDifferent</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowIfReporterPhoneDifferent" ControlIdent="IsReporterPhoneDifferent">
-      <Selectors>
-        <string>.js-showIfReporterPhoneDifferent</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
   </GlobalJavaScripts>
 
   <ControlShareCodes>
@@ -74,187 +20,9 @@
         <FormControl Ident="DateTimeTo" IsReadOnly="false" />
       </Controls>
     </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableBasicControlShare" /> -->
-
-    <ControlShareCode Ident="EnableCategoryControlShare">
-      <Controls>
-        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" /> -->
-
-    <ControlShareCode Ident="ShowReporterContanctInfoDiffControlShare">
-      <Controls>
-        <FormControl Ident="IsReporterEmailDifferent" IsVisible="true" />
-        <FormControl Ident="IsReporterPhoneDifferent" IsVisible="true" />
-        <FormControl Ident="ReporterEmailDifferentPlaceHolder" IsVisible="true" />
-        <FormControl Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" /> -->
-
-    <ControlShareCode Ident="ShowReporterInformationControlShare">
-      <Controls>
-        <FormControl Ident="ReporterAccountID" IsVisible="true" />
-        <FormControl Ident="ReporterEmail" IsVisible="true" />
-        <FormControl Ident="ReporterPhone" IsVisible="true" />
-        <FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" />
-        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableReporterInformationControlShare">
-      <Controls>
-        <FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableAdvancedReporterInformationControlShare">
-      <Controls>
-
-        <FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
-
-        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAdvancedReporterInformationControlShare" /> -->
-
-    <ControlShareCode Ident="ShowCommunicationControlShare">
-      <Controls>
-
-        <FormControl Ident="CommunicationList" IsVisible="true" />
-        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
-
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableCommunicationControlShare">
-      <Controls>
-
-        <FormControl Ident="Communication" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="CommunicationList" IsVisible="true" />
-        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
-
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableRequiredDialogCommunicationControlShare">
-      <Controls>
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMPlannedShutdown AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMPlannedShutdown'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMPlannedShutdown'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="DialogCommunicationRequiredPlaceHolder" IsVisible="true" />
-          </TrueControls>
-        </FormControl>
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="ShowLinkControlShare">
-      <Controls>
-        <FormControl Ident="ParentTableID" IsVisible="true" />
-        <FormControl Ident="SubITSMDataGrid" IsVisible="true" />
-        <FormControl Ident="ITSMLinkSubForm" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> -->
-
-    <ControlShareCode Ident="EnableLinkControlShare">
-      <Controls>
-        <FormControl Ident="ParentTableID" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="SubITSMDataGrid" IsVisible="true" />
-        <FormControl Ident="ITSMLinkSubForm" IsVisible="true" IsReadOnly="false" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> -->
-
   </ControlShareCodes>
 
   <ActionShareCodes>
-
-    <ActionShareCode Ident="DialogCommunicationRequiredActionShare">
-      <Actions>
-
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMPlannedShutdown AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMPlannedShutdown'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMPlannedShutdown'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="Required" ActionStart="BeforeValidation">
-              <Idents>
-                <string>DialogCommunication</string>
-              </Idents>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-
-      </Actions>
-    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="DialogCommunicationRequiredActionShare" /> -->
-
   </ActionShareCodes>
 
   <ButtonShareCodes>
@@ -297,141 +65,9 @@
       </Buttons>
     </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />  -->
 
-    <ButtonShareCode Ident="SaveButtonShare">
-      <Buttons>
-        <Button Ident="SaveButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-        <Button Ident="SaveAndExitButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" /> -->
   </ButtonShareCodes>
 
   <GlobalActions>
-
-    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
-      <DataSource>
-        <SQL><![CDATA[
-          IF @ITSMKey IS NULL
-          BEGIN
-            DECLARE
-              @CounterIdent VARCHAR(100) = 'ITSM_PS',
-              @NextNumber INT
-
-            EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
-
-            UPDATE usr.[ITSMPlannedShutdown]
-            SET ITSMKey = CONCAT('PS-', RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
-            WHERE ID = @ID
-          END
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
-        </Parameters>
-      </DataSource>
-    </Action>
-
-    <Action xsi:type="SetValue" Ident="IsElevatedPermissionOrNotFirstState" Value="" ActionStart="BeforeValidation" />
-
-    <Action xsi:type="IF" ActionStart="BeforeValidation">
-      <Condition>
-        <SQL><![CDATA[
-
-          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-          INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
-
-          DECLARE @LastITSMCategoryIdent VARCHAR(900) = @ITSMCategoryLevel2Ident;
-          IF @IsShowCategoryLevel3 = 1
-            SET @LastITSMCategoryIdent = @ITSMCategoryLevel3Ident
-          IF @IsShowCategoryLevel4 = 1
-            SET @LastITSMCategoryIdent = @ITSMCategoryLevel4Ident
-          IF @IsShowCategoryLevel5 = 1
-            SET @LastITSMCategoryIdent = @ITSMCategoryLevel5Ident
-
-          SELECT IIF(
-            EXISTS(
-              SELECT NULL
-              FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMPlannedShutdownSegment',@PermissionIDs)
-              WHERE
-                FolderTreeIdent = @LastITSMCategoryIdent
-            )
-            OR ISNULL(@ID, 0) != 0
-          , 0, 1)
-
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
-
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel3" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel4" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
-        </Parameters>
-      </Condition>
-      <TrueActions>
-
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
-          <Condition>
-            <SQL><![CDATA[
-
-              SELECT IIF(
-                ISNULL(@Var_ButtonIdent, '') != 'SendToCategorizationButton'
-              , 1, 0)
-
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Var_ButtonIdent" DataType="String" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-
-            <Action xsi:type="ActionValue" Ident="ITSMEntryMethodTypeGuid_Update_Action" ControlIdent="ITSMEntryMethodTypeGuid" ActionStart="BeforeValidation">
-              <DataSource>
-                <SQL><![CDATA[
-
-                  SELECT CAST([GUID] AS VARCHAR(MAX)) AS ITSMEntryMethodTypeGuid
-                  FROM usr.ITSMEntryMethodTypeSetting
-                  WHERE FunctionalKey = 'itsm' AND [State] != @DeletedState
-
-                ]]></SQL>
-                <Parameters>
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-                </Parameters>
-              </DataSource>
-            </Action>
-
-          </TrueActions>
-        </Action>
-
-        <Action xsi:type="ActionValue" Ident="ReporterAccountID_Update_Action" ControlIdent="ReporterAccountID" ActionStart="BeforeValidation">
-          <DataSource>
-            <SQL><![CDATA[
-
-              SELECT @UserID AS ReporterAccountID
-
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </DataSource>
-        </Action>
-
-      </TrueActions>
-    </Action>
-
   </GlobalActions>
 
   <Steps>
@@ -454,14 +90,7 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
-
-          <Sections>
-            <Section Ident="TimeLineSection" IsVisible="false" />
-          </Sections>
         </Group>
       </Groups>
     </Step> <!--New-->
@@ -481,9 +110,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>

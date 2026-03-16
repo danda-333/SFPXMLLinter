@@ -36,60 +36,6 @@
         <string>1</string>
       </ShowValues>
     </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel3" ControlIdent="IsShowCategoryLevel3">
-      <Selectors>
-        <string>.js-howHideCategoryLevel3</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel4" ControlIdent="IsShowCategoryLevel4">
-      <Selectors>
-        <string>.js-howHideCategoryLevel4</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowHideCategoryLevel5" ControlIdent="IsShowCategoryLevel5">
-      <Selectors>
-        <string>.js-howHideCategoryLevel5</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowIfElevatedPermissionOrNotFirstState" ControlIdent="IsElevatedPermissionOrNotFirstState">
-      <Selectors>
-        <string>.js-showIfElevatedPermissionOrNotFirstState</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowIfReporterEmailDifferent" ControlIdent="IsReporterEmailDifferent">
-      <Selectors>
-        <string>.js-showIfReporterEmailDifferent</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
-
-    <JavaScript xsi:type="ShowHide" Ident="ShowIfReporterPhoneDifferent" ControlIdent="IsReporterPhoneDifferent">
-      <Selectors>
-        <string>.js-showIfReporterPhoneDifferent</string>
-      </Selectors>
-      <ShowValues>
-        <string>1</string>
-      </ShowValues>
-    </JavaScript>
   </GlobalJavaScripts>
 
   <ControlShareCodes>
@@ -225,174 +171,6 @@
         <FormControl Ident="PHRollback" IsVisible="true" />
       </Controls>
     </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" /> -->
-
-    <ControlShareCode Ident="EnableApprovalControlShare">
-      <Controls>
-
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                @IsElevatedPermissionOrNotFirstState = 1
-                OR @IsElevatedPermissionOrNotFirstState IS NULL
-                OR ISNULL(@ID, 0) != 0
-              ,1,0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsElevatedPermissionOrNotFirstState" SetDataType="ActualData" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="ITSMApprovalRequestFakeSubForm" IsVisible="true" IsReadOnly="false" />
-          </TrueControls>
-        </FormControl>
-
-        <FormControl Ident="ApproverSubFormCardPlaceHolder" IsVisible="true" />
-        <!-- <FormControl Ident="ITSMApprovalRequestFakeSubForm" IsVisible="true" IsReadOnly="false" /> -->
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableApprovalControlShare" /> -->
-
-    <ControlShareCode Ident="ShowApprovalControlShare">
-      <Controls>
-        <FormControl Ident="ApproverSubFormCardPlaceHolder" IsVisible="true" />
-        <FormControl Ident="ITSMApprovalRequestFakeSubForm" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowApprovalControlShare" /> -->
-
-    <ControlShareCode Ident="ShowApproveDataGridControlShare">
-      <Controls>
-        <FormControl Ident="PHMultiApprove" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowApproveDataGridControlShare" /> -->
-
-    <ControlShareCode Ident="EnableCategoryControlShare">
-      <Controls>
-        <FormControl Ident="ITSMCompanyIdent" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel2Ident" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel3Ident" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel4Ident" IsReadOnly="false" />
-        <FormControl Ident="ITSMCategoryLevel5Ident" IsReadOnly="false" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCategoryControlShare" /> -->
-
-    <ControlShareCode Ident="ShowReporterContanctInfoDiffControlShare">
-      <Controls>
-        <FormControl Ident="IsReporterEmailDifferent" IsVisible="true" />
-        <FormControl Ident="IsReporterPhoneDifferent" IsVisible="true" />
-        <FormControl Ident="ReporterEmailDifferentPlaceHolder" IsVisible="true" />
-        <FormControl Ident="ReporterPhoneDifferentPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" /> -->
-
-    <ControlShareCode Ident="ShowReporterInformationControlShare">
-      <Controls>
-        <FormControl Ident="ReporterAccountID" IsVisible="true" />
-        <FormControl Ident="ReporterEmail" IsVisible="true" />
-        <FormControl Ident="ReporterPhone" IsVisible="true" />
-        <FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" />
-        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableReporterInformationControlShare">
-      <Controls>
-        <FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableAdvancedReporterInformationControlShare">
-      <Controls>
-
-        <FormControl Ident="ReporterEmail" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterPhone" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ReporterAccountID" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="ITSMEntryMethodTypeGuid" IsVisible="true" IsReadOnly="false" />
-
-        <FormControl Ident="ReporterInformationCardPlaceHolder" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableAdvancedReporterInformationControlShare" /> -->
-
-    <ControlShareCode Ident="ShowCommunicationControlShare">
-      <Controls>
-
-        <FormControl Ident="CommunicationList" IsVisible="true" />
-        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
-
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableCommunicationControlShare">
-      <Controls>
-
-        <FormControl Ident="Communication" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="CommunicationList" IsVisible="true" />
-        <FormControl Ident="CommunicationCardPlaceHolder" IsVisible="true" />
-
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="EnableRequiredDialogCommunicationControlShare">
-      <Controls>
-        <FormControl xsi:type="IFControl">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMRelease AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMRelease'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMRelease'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueControls>
-            <FormControl Ident="DialogCommunicationRequiredPlaceHolder" IsVisible="true" />
-          </TrueControls>
-        </FormControl>
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" /> -->
-
-    <ControlShareCode Ident="ShowLinkControlShare">
-      <Controls>
-        <FormControl Ident="ParentTableID" IsVisible="true" />
-        <FormControl Ident="SubITSMDataGrid" IsVisible="true" />
-        <FormControl Ident="ITSMLinkSubForm" IsVisible="true" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="ShowLinkControlShare" /> -->
-
-    <ControlShareCode Ident="EnableLinkControlShare">
-      <Controls>
-        <FormControl Ident="ParentTableID" IsVisible="true" IsReadOnly="false" />
-        <FormControl Ident="SubITSMDataGrid" IsVisible="true" />
-        <FormControl Ident="ITSMLinkSubForm" IsVisible="true" IsReadOnly="false" />
-      </Controls>
-    </ControlShareCode> <!-- <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" /> -->
-
   </ControlShareCodes>
 
   <ActionShareCodes>
@@ -739,511 +517,6 @@
       </Actions>
     </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="ReleaseClosedNotificationActionShare" /> -->
 
-    <ActionShareCode Ident="ApproveActionShareCode">
-      <Actions>
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMRelease AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMRelease'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMRelease'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="Required" ActionStart="BeforeValidation">
-              <Idents>
-                <string>DialogCommunication</string>
-              </Idents>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-
-        <Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterSave">
-          <DataSource>
-            <SQL>
-
-              UPDATE usr.ITSMApproval
-              SET IsApproved = @ApprovedState
-              , ApproveDateTime = GETDATE()
-              , ApprovedAccountID = @UserID
-              , ApproveComment = @DialogCommunication
-              WHERE
-                TableID = @ID
-                AND FormIdent = @FormIdent
-                AND ApproveRoundGUID = @ActualApproveRoundGuid
-                AND ApproveOrder = (
-                  SELECT MIN(sub.ApproveOrder)
-                  FROM usr.ITSMApproval sub
-                  WHERE sub.FormIdent = @FormIdent
-                    AND sub.TableID = @ID
-                    AND sub.ApproveRoundGUID = @ActualApproveRoundGuid
-                    AND sub.State != 0
-                    AND sub.IsApproved IS NULL
-                )
-                AND IsApproved IS NULL
-                AND State != 0
-
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ApprovedState" DataType="Number" Value="1" />
-              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMRelease" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualApproveRoundGuid" DataType="Guid" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" DataType="String" />
-            </Parameters>
-          </DataSource>
-        </Action>
-
-        <!-- <Action xsi:type="History" Ident="HistoryActionApproved" HistoryType="Approve_ITSM" ActionStart="AfterSave" /> -->
-
-        <Action xsi:type="IF" ActionStart="AfterPermission">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMApproval
-                  WHERE
-                    TableID = @ID
-                    AND FormIdent = @FormIdent
-                    AND ApproveRoundGUID = @ActualApproveRoundGuid
-                    AND IsApproved IS NULL
-                    AND State != 0
-                )
-                ,1,0
-              )
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMRelease" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualApproveRoundGuid" DataType="Guid" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterPermission">
-              <DataSource>
-                <SQL>
-
-                  UPDATE usr.ITSMRelease
-                  SET ActualApproveRoundGuid = NEWID()
-                  WHERE ID = @ID
-
-                </SQL>
-                <Parameters>
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-                </Parameters>
-              </DataSource>
-            </Action>
-            <Action xsi:type="GenerateForm" Ident="GenerateITSMApprovalRequestFakeSubForm" FormIdent="ITSMApprovalRequestFakeSubForm" ActionStart="AfterPermission" ButtonIdent="SaveButton">
-              <Mappings>
-                <Mapping FromIdent="TableID" ToIdent="TableID" />
-                <Mapping FromIdent="FormIdent" ToIdent="FormIdent" />
-                <Mapping FromIdent="ApproveOrder" ToIdent="ApproveOrder" />
-                <Mapping FromIdent="ApproverType" ToIdent="ApproverType" />
-                <Mapping FromIdent="ApproverGroupID" ToIdent="ApproverGroupID" />
-                <Mapping FromIdent="ApproverAccountID" ToIdent="ApproverAccountID" />
-                <Mapping FromIdent="ApproveRoundGUID" ToIdent="ApproveRoundGUID" />
-              </Mappings>
-              <DataSource>
-                <SQL><![CDATA[
-                  DECLARE @LastFolderTree VARCHAR(900);
-
-                  DECLARE @NewApproveRoundGUID uniqueidentifier = (
-                    SELECT ActualApproveRoundGuid
-                    FROM usr.ITSMRelease
-                    WHERE ID = @ID
-                  )
-
-                  SET @LastFolderTree = COALESCE(
-                    CASE WHEN @IsShowCategoryLevel5 = 1 THEN NULLIF(@ITSMCategoryLevel5Ident, '') ELSE NULL END,
-                    NULLIF(@ITSMCategoryLevel4Ident, ''),
-                    NULLIF(@ITSMCategoryLevel3Ident, ''),
-                    NULLIF(@ITSMCategoryLevel2Ident, ''),
-                    NULLIF(@ITSMCompanyIdent, '')
-                  );
-
-                  SELECT
-                    @ID AS TableID,
-                    @FormIdent AS FormIdent,
-                    appsf.ApproveOrder AS ApproveOrder,
-                    appsf.ApproverType,
-                    appsf.ApproverGroupID,
-                    appsf.ApproverAccountID,
-                    @NewApproveRoundGUID AS ApproveRoundGUID
-                  FROM usr.ITSMApproval AS appsf
-                  WHERE
-                    ApproveRoundGUID = @OldActualApproveRoundGuid
-                    AND appsf.TableID = @ID
-                    AND appsf.FormIdent = @FormIdent
-                    AND appsf.State != @DeletedState
-                ]]></SQL>
-                <Parameters>
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" Value="ITSMRelease" />
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="OldActualApproveRoundGuid" AlterIdent="ActualApproveRoundGuid" DataType="Guid" SetDataType="OldData" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualApproveRoundGuid" DataType="Guid" SetDataType="ActualData" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" />
-                </Parameters>
-              </DataSource>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-
-      </Actions>
-
-    </ActionShareCode><!-- <Action xsi:type="ShareCode" Ident="ApproveActionShareCode" /> -->
-
-    <ActionShareCode Ident="RejectActionShareCode">
-      <Actions>
-
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMRelease AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMRelease'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMRelease'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="Required" ActionStart="BeforeValidation">
-              <Idents>
-                <string>DialogCommunication</string>
-              </Idents>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-
-        <Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterSave">
-          <DataSource>
-            <SQL>
-
-              UPDATE usr.ITSMApproval
-              SET IsApproved = @ApprovedState
-              , ApproveDateTime = GETDATE()
-              , ApprovedAccountID = @UserID
-              , ApproveComment = @DialogCommunication
-              WHERE
-                TableID = @ID
-                AND FormIdent = @FormIdent
-                AND ApproveRoundGUID = @ActualApproveRoundGuid
-                AND ApproveOrder = (
-                  SELECT MIN(sub.ApproveOrder)
-                  FROM usr.ITSMApproval sub
-                  WHERE sub.FormIdent = @FormIdent
-                    AND sub.TableID = @ID
-                    AND sub.ApproveRoundGUID = @ActualApproveRoundGuid
-                    AND sub.State != 0
-                    AND sub.IsApproved IS NULL
-                )
-                AND IsApproved IS NULL
-                AND State != 0
-
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ApprovedState" DataType="Number" Value="0" />
-              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="50" Value="ITSMRelease" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualApproveRoundGuid" DataType="Guid" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="DialogCommunication" DataType="String" />
-            </Parameters>
-          </DataSource>
-        </Action>
-
-        <Action xsi:type="ActionTrigger" Ident="SetApproved" ActionStart="AfterPermission">
-          <DataSource>
-            <SQL>
-
-              UPDATE usr.ITSMRelease
-              SET ActualApproveRoundGuid = NEWID()
-              WHERE ID = @ID
-
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-            </Parameters>
-          </DataSource>
-        </Action>
-
-        <Action xsi:type="GenerateForm" Ident="GenerateITSMApprovalRequestFakeSubForm" FormIdent="ITSMApprovalRequestFakeSubForm" ActionStart="AfterPermission" ButtonIdent="SaveButton">
-          <Mappings>
-            <Mapping FromIdent="TableID" ToIdent="TableID" />
-            <Mapping FromIdent="FormIdent" ToIdent="FormIdent" />
-            <Mapping FromIdent="ApproveOrder" ToIdent="ApproveOrder" />
-            <Mapping FromIdent="ApproverType" ToIdent="ApproverType" />
-            <Mapping FromIdent="ApproverGroupID" ToIdent="ApproverGroupID" />
-            <Mapping FromIdent="ApproverAccountID" ToIdent="ApproverAccountID" />
-            <Mapping FromIdent="ApproveRoundGUID" ToIdent="ApproveRoundGUID" />
-          </Mappings>
-          <DataSource>
-            <SQL><![CDATA[
-              DECLARE @LastFolderTree VARCHAR(900);
-
-              DECLARE @NewApproveRoundGUID uniqueidentifier = (
-                SELECT ActualApproveRoundGuid
-                FROM usr.ITSMRelease
-                WHERE ID = @ID
-              )
-
-              SET @LastFolderTree = COALESCE(
-                CASE WHEN @IsShowCategoryLevel5 = 1 THEN NULLIF(@ITSMCategoryLevel5Ident, '') ELSE NULL END,
-                NULLIF(@ITSMCategoryLevel4Ident, ''),
-                NULLIF(@ITSMCategoryLevel3Ident, ''),
-                NULLIF(@ITSMCategoryLevel2Ident, ''),
-                NULLIF(@ITSMCompanyIdent, '')
-              );
-
-              SELECT
-                @ID AS TableID,
-                @FormIdent AS FormIdent,
-                appsf.ApproveOrder AS ApproveOrder,
-                appsf.ApproverType,
-                appsf.ApproverGroupID,
-                appsf.ApproverAccountID,
-                @NewApproveRoundGUID AS ApproveRoundGUID
-              FROM usr.ITSMApproval AS appsf
-              WHERE
-                ApproveRoundGUID = @OldActualApproveRoundGuid
-                AND appsf.TableID = @ID
-                AND appsf.FormIdent = @FormIdent
-                AND appsf.State != @DeletedState
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" Value="ITSMRelease" />
-              <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="OldActualApproveRoundGuid" AlterIdent="ActualApproveRoundGuid" DataType="Guid" SetDataType="OldData" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" />
-            </Parameters>
-          </DataSource>
-        </Action>
-
-      </Actions>
-    </ActionShareCode><!-- <Action xsi:type="ShareCode" Ident="RejectActionShareCode" /> -->
-
-    <ActionShareCode Ident="ApprovalInitActionShareCode">
-      <Actions>
-
-        <Action xsi:type="IF" ActionStart="AfterValidation">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@IsFirstApproveGenerated, 0) != 1
-                ,1,0
-              )
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsFirstApproveGenerated" DataType="Number" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="GenerateSubForm" ControlIdent="ITSMApprovalRequestFakeSubForm" ActionStart="AfterValidation">
-              <DataSource>
-                <Columns>
-                  <Column Ident="ApproveOrder" DataBindType="Value" />
-                  <Column Ident="ApproverType" DataBindType="Value" />
-                  <Column Ident="ApproverGroupID" DataBindType="Value" />
-                  <Column Ident="ApproverAccountID" DataBindType="Value" />
-                  <Column Ident="ApproveRoundGUID" DataBindType="Value" />
-                </Columns>
-                <SQL><![CDATA[
-                  DECLARE @LastFolderTree VARCHAR(900);
-
-                  SET @LastFolderTree = COALESCE(
-                    CASE WHEN @IsShowCategoryLevel5 = 1 THEN NULLIF(@ITSMCategoryLevel5Ident, '') ELSE NULL END,
-                    NULLIF(@ITSMCategoryLevel4Ident, ''),
-                    NULLIF(@ITSMCategoryLevel3Ident, ''),
-                    NULLIF(@ITSMCategoryLevel2Ident, ''),
-                    NULLIF(@ITSMCompanyIdent, '')
-                  );
-
-                  SELECT
-                    (ISNULL(@LastApproveOrder,0) + appsf.ApproveOrder) AS ApproveOrder,
-                    appsf.ApproverType,
-                    appsf.ApproverGroupID,
-                    appsf.ApproverAccountID,
-                    @ActualApproveRoundGuid AS ApproveRoundGUID
-                  FROM usr.ITSMApproveSubForm AS appsf
-                  INNER JOIN usr.ITSMApproveSetting AS appSet ON appSet.ID = appsf.TableID AND appsf.FormIdent = @FormIdent AND appsf.State != @DeletedState
-                  INNER JOIN dbo.FolderTree AS folTre ON folTre.Ident = @LastFolderTree
-                  INNER JOIN dbo.Folder AS fol ON fol.ID = folTre.FolderID AND fol.FormIdent = @CategoryFormIdent
-                  INNER JOIN usr.ITSMCategory AS cat ON cat.ID = fol.TableID AND cat.ITSMApproveSettingID = appSet.ID
-                ]]></SQL>
-                <Parameters>
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" Value="ITSMApproveSetting" />
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="CategoryFormIdent" DataType="String" Value="ITSMCategory" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualApproveRoundGuid" DataType="Guid" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCompanyIdent" DataType="String" />
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="LastApproveOrder" DataType="Number" />
-                </Parameters>
-              </DataSource>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-        <Action xsi:type="IF" ActionStart="AfterPermission">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@IsFirstApproveGenerated, 0) != 1
-                ,1,0
-              )
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsFirstApproveGenerated" DataType="Number" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="ActionTrigger" Ident="FirstGenerated" ActionStart="AfterPermission">
-              <DataSource>
-                <SQL>
-
-                  UPDATE usr.ITSMRelease
-                  SET IsFirstApproveGenerated = 1
-                  WHERE ID = @ID
-
-                </SQL>
-                <Parameters>
-                  <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-                </Parameters>
-              </DataSource>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-
-      </Actions>
-    </ActionShareCode><!-- <Action xsi:type="ShareCode" Ident="RejectActionShareCode" /> -->
-
-    <ActionShareCode Ident="DialogCommunicationRequiredActionShare">
-      <Actions>
-
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
-          <Condition>
-            <SQL>
-              SELECT IIF(
-                ISNULL(@Communication, '') = ''
-                AND NOT EXISTS(
-                  SELECT NULL
-                  FROM usr.ITSMRelease AS tic
-                  OUTER APPLY (
-                    SELECT TOP(1) his.*
-                    FROM dbo.History AS his
-                    WHERE
-                      his.TableID = tic.ID
-                      AND his.FormIdent = 'ITSMRelease'
-                      AND his.HistoryTypeID = 'ChangeState'
-                    ORDER BY his.CreateDate DESC
-                  ) AS hisLast
-                  INNER JOIN dbo.Communication AS com
-                    ON com.TableID = tic.ID
-                    AND com.FormIdent = 'ITSMRelease'
-                    AND com.CreateDate >= ISNULL(hisLast.CreateDate, tic.CreateDate)
-                    AND com.AccountID = @UserID
-                    AND com.CommunicationTypeID = 'Comment_ITSM'
-                  WHERE tic.ID = @ID
-                )
-              , 1, 0)
-            </SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Communication" SetDataType="ActualData" DataType="String" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-            <Action xsi:type="Required" ActionStart="BeforeValidation">
-              <Idents>
-                <string>DialogCommunication</string>
-              </Idents>
-            </Action>
-          </TrueActions>
-          <FalseActions>
-          </FalseActions>
-        </Action>
-
-      </Actions>
-    </ActionShareCode> <!-- <Action xsi:type="ShareCode" Ident="DialogCommunicationRequiredActionShare" /> -->
-
   </ActionShareCodes>
 
   <ButtonShareCodes>
@@ -1552,47 +825,9 @@
       </Buttons>
     </ButtonShareCode> <!--<Button xsi:type="ShareCodeButton" Ident="DeleteButtonShare" />-->
 
-    <ButtonShareCode Ident="SaveButtonShare">
-      <Buttons>
-        <Button Ident="SaveButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-        <Button Ident="SaveAndExitButton" IsVisible="true">
-          <Actions>
-            <Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-          </Actions>
-        </Button>
-      </Buttons>
-    </ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" /> -->
   </ButtonShareCodes>
 
   <GlobalActions>
-
-    <Action xsi:type="ActionTrigger" Ident="UpdateITSMKey" ActionStart="AfterSave">
-      <DataSource>
-        <SQL><![CDATA[
-          IF @ITSMKey IS NULL
-          BEGIN
-            DECLARE
-              @CounterIdent VARCHAR(100) = 'ITSM_REL',
-              @NextNumber INT
-
-            EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
-
-            UPDATE usr.[ITSMRelease]
-            SET ITSMKey = CONCAT('REL-', RIGHT('000000' + CAST(@NextNumber AS VARCHAR(6)), 6))
-            WHERE ID = @ID
-          END
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMKey" DataType="String" />
-        </Parameters>
-      </DataSource>
-    </Action>
 
     <Action xsi:type="IF" ActionStart="BeforeValidation">
       <Condition>
@@ -1613,156 +848,6 @@
             <string>ITSMCategoryLevel5Ident</string>
           </Idents>
         </Action>
-      </TrueActions>
-    </Action>
-
-    <Action xsi:type="IF" ActionStart="AfterPermission">
-      <Condition>
-        <SQL>
-          SELECT IIF(
-            EXISTS(
-              SELECT NULL
-              FROM usr.ITSMApproval
-              WHERE
-                ApproveRoundGUID = @ActualApproveRoundGuid
-                AND ApproveRoundStartDateTime IS NULL
-                AND State != 0
-            )
-            AND
-            EXISTS(
-              SELECT NULL
-              FROM usr.ITSMRelease
-              WHERE
-                ID = @ID
-                AND State IN (30,40)
-            )
-            ,1,0
-          )
-        </SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualApproveRoundGuid" DataType="Guid" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-        </Parameters>
-      </Condition>
-      <TrueActions>
-        <Action xsi:type="ActionTrigger" Ident="UpdateStartState" ActionStart="AfterPermission">
-          <DataSource>
-            <SQL><![CDATA[
-              DECLARE @ITSMKey VARCHAR(100) = (
-                SELECT ITSMKey
-                FROM usr.ITSMRelease
-                WHERE ID = @ID
-              )
-              DECLARE
-                @CounterIdent VARCHAR(100) = CONCAT(@ITSMKey, '_S'),
-                @NextNumber INT
-
-              EXEC @NextNumber = usr.CounterGetNext @CounterIdent, @UserID;
-
-              UPDATE usr.ITSMApproval
-              SET ApproveRoundStartDateTime = GETDATE(),ITSMKey = CONCAT(@ITSMKey, '_S:', @NextNumber)
-              WHERE ApproveRoundGUID = @ActualApproveRoundGuid
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ActualApproveRoundGuid" DataType="Guid" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </DataSource>
-        </Action>
-      </TrueActions>
-    </Action>
-
-    <Action xsi:type="SetValue" Ident="IsElevatedPermissionOrNotFirstState" Value="" ActionStart="BeforeValidation" />
-
-    <Action xsi:type="IF" ActionStart="BeforeValidation">
-      <Condition>
-        <SQL><![CDATA[
-
-          DECLARE @PermissionIDs dbo.ListNVarchar100Type;
-          INSERT INTO @PermissionIDs VALUES ('ITSMOperator');
-
-          DECLARE @LastITSMCategoryIdent VARCHAR(900) = @ITSMCategoryLevel2Ident;
-          IF @IsShowCategoryLevel3 = 1
-            SET @LastITSMCategoryIdent = @ITSMCategoryLevel3Ident
-          IF @IsShowCategoryLevel4 = 1
-            SET @LastITSMCategoryIdent = @ITSMCategoryLevel4Ident
-          IF @IsShowCategoryLevel5 = 1
-            SET @LastITSMCategoryIdent = @ITSMCategoryLevel5Ident
-
-          SELECT IIF(
-            EXISTS(
-              SELECT NULL
-              FROM usr.ITSM_GetAllowedFolderTreeByAccountAndPermissionAndSegmentType(@UserID,@FolderGroupSegmentIdent,'ITSMReleaseSegment',@PermissionIDs)
-              WHERE
-                FolderTreeIdent = @LastITSMCategoryIdent
-            )
-            OR ISNULL(@ID, 0) != 0
-          , 0, 1)
-
-        ]]></SQL>
-        <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FolderGroupSegmentIdent" DataType="String" MaxLength="50" Value="ITSMCommonFolderGroup" />
-
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel3" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel4" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="IsShowCategoryLevel5" DataType="Number" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel2Ident" DataType="VarChar" MaxLength="900" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel3Ident" DataType="VarChar" MaxLength="900" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel4Ident" DataType="VarChar" MaxLength="900" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ITSMCategoryLevel5Ident" DataType="VarChar" MaxLength="900" />
-        </Parameters>
-      </Condition>
-      <TrueActions>
-
-        <Action xsi:type="IF" ActionStart="BeforeValidation">
-          <Condition>
-            <SQL><![CDATA[
-
-              SELECT IIF(
-                ISNULL(@Var_ButtonIdent, '') != 'SendToCategorizationButton'
-              , 1, 0)
-
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="Var_ButtonIdent" DataType="String" />
-            </Parameters>
-          </Condition>
-          <TrueActions>
-
-            <Action xsi:type="ActionValue" Ident="ITSMEntryMethodTypeGuid_Update_Action" ControlIdent="ITSMEntryMethodTypeGuid" ActionStart="BeforeValidation">
-              <DataSource>
-                <SQL><![CDATA[
-
-                  SELECT CAST([GUID] AS VARCHAR(MAX)) AS ITSMEntryMethodTypeGuid
-                  FROM usr.ITSMEntryMethodTypeSetting
-                  WHERE FunctionalKey = 'itsm' AND [State] != @DeletedState
-
-                ]]></SQL>
-                <Parameters>
-                  <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-                </Parameters>
-              </DataSource>
-            </Action>
-
-          </TrueActions>
-        </Action>
-
-        <Action xsi:type="ActionValue" Ident="ReporterAccountID_Update_Action" ControlIdent="ReporterAccountID" ActionStart="BeforeValidation">
-          <DataSource>
-            <SQL><![CDATA[
-
-              SELECT @UserID AS ReporterAccountID
-
-            ]]></SQL>
-            <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-            </Parameters>
-          </DataSource>
-        </Action>
-
       </TrueActions>
     </Action>
 
@@ -1790,14 +875,7 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
-
-          <Sections>
-            <Section Ident="TimeLineSection" IsVisible="false" />
-          </Sections>
         </Group>
       </Groups>
     </Step>
@@ -1817,9 +895,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -1838,9 +913,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableApprovalControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -1861,9 +933,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -1882,9 +951,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableApprovalControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -1910,9 +976,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowApproveDataGridControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -1931,8 +994,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowApproveDataGridControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
 
           </Controls>
         </Group>
@@ -1958,9 +1019,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowApproveDataGridControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -1979,8 +1037,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterInformationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowApproveDataGridControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
 
           </Controls>
         </Group>
@@ -2005,9 +1061,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -2024,9 +1077,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableOperatorControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -2049,9 +1099,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowShutdownControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -2069,9 +1116,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierDeployControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -2095,9 +1139,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowDeploymentControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -2115,9 +1156,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierTestingControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -2142,9 +1180,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -2162,9 +1197,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableManagerRollbackControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -2189,9 +1221,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -2209,9 +1238,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="EnableSupplierRollbackControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -2236,9 +1262,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
         <Group>
@@ -2255,9 +1278,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowReporterContanctInfoDiffControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableCommunicationControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="EnableLinkControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>
@@ -2283,9 +1303,6 @@
             <FormControl xsi:type="ShareCodeControl" Ident="ShowTestingControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowRollbackControlShare" />
             <FormControl xsi:type="ShareCodeControl" Ident="ShowCommunicationControlShare" />
-
-            <FormControl xsi:type="ShareCodeControl" Ident="EnableRequiredDialogCommunicationControlShare" />
-
           </Controls>
         </Group>
       </Groups>

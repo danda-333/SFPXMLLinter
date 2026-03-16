@@ -100,21 +100,6 @@
 				</Button>
 			</Buttons>
 		</ButtonShareCode>
-
-		<ButtonShareCode Ident="SaveButtonShare">
-			<Buttons>
-				<Button Ident="SaveButton" IsVisible="true">
-					<Actions>
-						<Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-					</Actions>
-				</Button>
-				<Button Ident="SaveAndExitButton" IsVisible="true">
-					<Actions>
-						<Action xsi:type="Communication" ControlIdent="Communication" Type="Comment_ITSM" ActionStart="AfterSave" />
-					</Actions>
-				</Button>
-			</Buttons>
-		</ButtonShareCode> <!-- <Button xsi:type="ShareCodeButton" Ident="SaveButtonShare" /> -->
 	</ButtonShareCodes>
 
 	<GlobalActions>
@@ -276,10 +261,6 @@
 					<Controls>
 						<FormControl xsi:type="ShareCodeControl" Ident="EnableAllControlShare" />
 					</Controls>
-
-					<Sections>
-						<Section Ident="TimeLineSection" IsVisible="false" />
-					</Sections>
 				</Group>
 			</Groups>
 		</Step> <!--New-->

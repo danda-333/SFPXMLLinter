@@ -46,6 +46,7 @@ const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-using-feature",
   "unknown-using-contribution",
   "contribution-mismatch",
+  "orphan-placeholder",
   "ident-convention-lookup-control"
 ]);
 

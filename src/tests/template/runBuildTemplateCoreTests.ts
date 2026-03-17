@@ -28,6 +28,9 @@ function run(): void {
       ],
       template: `
 <Form Ident="ITSMRequest">
+  <Usings>
+    <Using Feature="Common/Shared/Assign" Contribution="Html" />
+  </Usings>
   <Body>{{Feature:Common/Shared/Assign,Contribution:Html,CustomParam:ParamValue}}</Body>
 </Form>`,
       expected: `
@@ -382,7 +385,7 @@ function run(): void {
 </Feature>`
         }
       ],
-      template: `<Form>{{Feature:C/A,Contribution:Main,Value:42}}</Form>`,
+      template: `<Form><Usings><Using Feature="C/A" Contribution="Main" /><Using Feature="C/B" Contribution="Main" /></Usings>{{Feature:C/A,Contribution:Main,Value:42}}</Form>`,
       expected: `<Form><A><B>42</B></A></Form>`
     },
     {
@@ -390,6 +393,22 @@ function run(): void {
       components: [],
       template: `<Form>{{Feature:Missing/Comp,Contribution:S}}</Form>`,
       expected: `<Form>{{Feature:Missing/Comp,Contribution:S}}</Form>`
+    },
+    {
+      name: "placeholder-requires-active-using-namespace",
+      components: [
+        {
+          key: "Common/Shared/Assign",
+          text: `
+<Feature>
+  <Contribution Name="Html" Insert="placeholder" Root="Form">
+    <Wrap>ShouldNotRenderWithoutUsing</Wrap>
+  </Contribution>
+</Feature>`
+        }
+      ],
+      template: `<Form>{{Feature:Common/Shared/Assign,Contribution:Html}}</Form>`,
+      expected: `<Form>{{Feature:Common/Shared/Assign,Contribution:Html}}</Form>`
     },
     {
       name: "sfp-component-root-template-is-preserved",

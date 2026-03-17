@@ -1,4 +1,4 @@
-import { DOMParser } from "@xmldom/xmldom";
+﻿import { DOMParser } from "@xmldom/xmldom";
 import * as xpath from "xpath";
 import { maskXmlComments } from "../utils/xmlComments";
 
@@ -97,6 +97,15 @@ interface ContributionPatchAppendSlotOperation {
   name: string;
   content: string;
 }
+
+interface ActivePlaceholderContributionContext {
+  componentKey: string;
+  contributionName: string;
+  params: Map<string, string>;
+  sectionPatches: ContributionPatchDirective[];
+}
+
+type ActivePlaceholderContexts = Map<string, ActivePlaceholderContributionContext[]>;
 
 interface PlaceholderToken {
   full: string;
@@ -205,12 +214,15 @@ export function renderTemplateWithTrace(
 
   const templateParams = buildTemplateParams(normalizedTemplate);
   let out = normalizedTemplate;
+  let activePlaceholderContexts: ActivePlaceholderContexts = new Map();
 
   out = expandIncludes(out, templateParams, context);
-  out = applyUsingSections(out, templateParams, context, inheritedUsingsXml);
+  const usingPhase = applyUsingSections(out, templateParams, context, inheritedUsingsXml);
+  out = usingPhase.text;
+  activePlaceholderContexts = usingPhase.activePlaceholderContexts;
   out = expandAuthoringSugar(out, templateParams, context);
   out = expandPrimitiveUsages(out, templateParams, context);
-  out = replaceComponentPlaceholders(out, templateParams, context, 0);
+  out = replaceComponentPlaceholders(out, templateParams, context, 0, activePlaceholderContexts);
   out = expandAuthoringSugar(out, templateParams, context);
   out = expandPrimitiveUsages(out, templateParams, context);
   out = sanitizeFinalXml(out, context.templateRoot);
@@ -572,7 +584,7 @@ function applyUsingSections(
   templateParams: Map<string, string>,
   context: RenderContext,
   inheritedUsingsXml?: string
-): string {
+): { text: string; activePlaceholderContexts: ActivePlaceholderContexts } {
   const contributionPatches = parseContributionPatchDirectives(text, context);
   const usingParseSource =
     inheritedUsingsXml && inheritedUsingsXml.trim().length > 0
@@ -582,6 +594,13 @@ function applyUsingSections(
   let out = removeUsingsBlocks(text);
   out = removeStandaloneUsingTags(out);
   out = removeContributionPatchBlocks(out);
+
+  const activePlaceholderContexts: ActivePlaceholderContexts = new Map();
+  const resolvedUsings: Array<{
+    component: ComponentDefinition;
+    params: Map<string, string>;
+    sections: ComponentSection[];
+  }> = [];
 
   for (const using of usingDirectives) {
     const component = resolveComponentByKey(context.library, using.componentKey);
@@ -595,7 +614,44 @@ function applyUsingSections(
       ? component.sections.filter((s) => (s.name ?? "") === sectionFilter)
       : component.sections;
 
-    for (const section of sections) {
+    resolvedUsings.push({
+      component,
+      params,
+      sections
+    });
+  }
+
+  for (const resolved of resolvedUsings) {
+    for (const section of resolved.sections) {
+      if (!matchesSectionRoot(section.root, context.templateRoot)) {
+        continue;
+      }
+      const insertMode = (section.insert ?? "append").toLowerCase();
+      if (insertMode !== "placeholder") {
+        continue;
+      }
+      const contributionName = (section.name ?? "").trim();
+      if (!contributionName) {
+        continue;
+      }
+
+      const sectionPatches = filterContributionPatchesForSection(contributionPatches, resolved.component.key, section.name);
+      const key = buildPlaceholderContributionKey(resolved.component.key, contributionName);
+      const bucket = activePlaceholderContexts.get(key) ?? [];
+      bucket.push({
+        componentKey: resolved.component.key,
+        contributionName,
+        params: resolved.params,
+        sectionPatches
+      });
+      activePlaceholderContexts.set(key, bucket);
+    }
+  }
+
+  for (const resolved of resolvedUsings) {
+    const component = resolved.component;
+    const params = resolved.params;
+    for (const section of resolved.sections) {
       if (!matchesSectionRoot(section.root, context.templateRoot)) {
         continue;
       }
@@ -607,7 +663,7 @@ function applyUsingSections(
       let renderedInner = applyParamSubstitution(section.content, params);
       const sectionPatches = filterContributionPatchesForSection(contributionPatches, component.key, section.name);
       renderedInner = applyContributionPatchesToSection(renderedInner, sectionPatches, context);
-      renderedInner = replaceComponentPlaceholders(renderedInner, params, context, 1);
+      renderedInner = replaceComponentPlaceholders(renderedInner, params, context, 1, activePlaceholderContexts);
       renderedInner = unwrapContributionSlots(renderedInner);
       reportMutation(context, {
         kind: "using",
@@ -618,14 +674,18 @@ function applyUsingSections(
     }
   }
 
-  return out;
+  return {
+    text: out,
+    activePlaceholderContexts
+  };
 }
 
 function replaceComponentPlaceholders(
   text: string,
   inheritedParams: Map<string, string>,
   context: RenderContext,
-  depth: number
+  depth: number,
+  activePlaceholderContexts: ActivePlaceholderContexts
 ): string {
   if (depth >= context.maxDepth) {
     return text;
@@ -665,9 +725,34 @@ function replaceComponentPlaceholders(
       continue;
     }
 
-    const params = mergeParams(inheritedParams, fields);
-    const rendered = applyParamSubstitution(section.content, params);
-    const renderedPlaceholder = replaceComponentPlaceholders(rendered, params, context, depth + 1);
+    const contributionName = (section.name ?? "").trim();
+    if (!contributionName) {
+      out += token.full;
+      cursor = token.end;
+      continue;
+    }
+
+    const placeholderKey = buildPlaceholderContributionKey(component.key, contributionName);
+    const activeContexts = activePlaceholderContexts.get(placeholderKey);
+    if (!activeContexts || activeContexts.length === 0) {
+      out += token.full;
+      cursor = token.end;
+      continue;
+    }
+
+    if (activeContexts.length > 1 && context.onDebugLog) {
+      context.onDebugLog(
+        `[Placeholder] Multiple active Using contexts for '${component.key}#${contributionName}', selecting first.`
+      );
+    }
+
+    const selectedContext = activeContexts[0];
+    let params = mergeParams(inheritedParams, selectedContext.params);
+    params = mergeParams(params, fields);
+    let rendered = applyParamSubstitution(section.content, params);
+    rendered = applyContributionPatchesToSection(rendered, selectedContext.sectionPatches, context);
+    let renderedPlaceholder = replaceComponentPlaceholders(rendered, params, context, depth + 1, activePlaceholderContexts);
+    renderedPlaceholder = unwrapContributionSlots(renderedPlaceholder);
     reportMutation(context, {
       kind: "placeholder",
       featureKey: component.key,
@@ -679,6 +764,10 @@ function replaceComponentPlaceholders(
 
   out += text.slice(cursor);
   return out;
+}
+
+function buildPlaceholderContributionKey(componentKey: string, contributionName: string): string {
+  return `${stripXmlComponentExtension(normalizePath(componentKey))}#${contributionName.trim()}`;
 }
 
 function expandRepeatBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {
@@ -1801,3 +1890,4 @@ function matchesSectionRoot(sectionRoot: string | undefined, templateRoot: strin
   }
   return roots.some((r) => r.localeCompare(templateRoot, undefined, { sensitivity: "accent" }) === 0);
 }
+

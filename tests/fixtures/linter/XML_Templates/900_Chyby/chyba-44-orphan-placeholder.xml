@@ -1,0 +1,6 @@
+﻿<Form Ident="ChybaOrphanPlaceholder">
+  <Controls>
+    <Control Ident="X" />
+  </Controls>
+  <Host>{{Feature:Shared/PlaceholderNamespace,Contribution:Html}}</Host>
+</Form>

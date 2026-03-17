@@ -1,0 +1,5 @@
+﻿<Feature>
+  <Contribution Name="Html" Insert="placeholder" Root="Form">
+    <Block>Placeholder Namespace</Block>
+  </Contribution>
+</Feature>

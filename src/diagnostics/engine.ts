@@ -526,6 +526,7 @@ export class DiagnosticsEngine {
     this.validateUsingSuppressionConflicts(facts, index, issues);
     this.validateFormOwnedUsingInheritance(facts, index, issues);
     this.validateMissingUsingParams(facts, index, issues, documentComposition);
+    this.validateOrphanPlaceholderReferences(facts, index, issues);
   }
 
   private validateMissingUsingParams(
@@ -603,6 +604,78 @@ export class DiagnosticsEngine {
         ruleId: "missing-using-param",
         range,
         message: `Using '${usingRef.rawComponentValue}${usingRef.sectionValue ? `#${usingRef.sectionValue}` : ""}' is ${sourceLabel} but missing required parameter(s): ${missingList.join(", ")}.`
+      });
+    }
+  }
+
+  private validateOrphanPlaceholderReferences(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
+    issues: RuleDiagnostic[]
+  ): void {
+    if (facts.placeholderReferences.length === 0) {
+      return;
+    }
+
+    const rootTag = facts.rootTag;
+    const activePlaceholderContributionKeys = new Set<string>();
+    const activePlaceholderFeatureKeys = new Set<string>();
+
+    for (const usingRef of collectEffectiveUsingRefs(facts, index)) {
+      const component = resolveComponentByKey(index, usingRef.componentKey);
+      if (!component) {
+        continue;
+      }
+
+      const candidateContributions = usingRef.sectionValue
+        ? [component.contributionSummaries.get(usingRef.sectionValue)].filter(
+            (item): item is import("../indexer/types").IndexedComponentContributionSummary => !!item
+          )
+        : [...component.contributionSummaries.values()];
+      for (const contribution of candidateContributions) {
+        if ((contribution.insert ?? "").toLowerCase() !== "placeholder") {
+          continue;
+        }
+        if (!contributionMatchesDocumentRoot(rootTag, contribution)) {
+          continue;
+        }
+        activePlaceholderFeatureKeys.add(component.key);
+        activePlaceholderContributionKeys.add(getUsingKey(component.key, contribution.contributionName));
+      }
+    }
+
+    for (const placeholderRef of facts.placeholderReferences) {
+      if (!placeholderRef.componentKey) {
+        continue;
+      }
+
+      const component = resolveComponentByKey(index, placeholderRef.componentKey);
+      if (!component) {
+        continue;
+      }
+
+      const placeholderContributions = [...component.contributionSummaries.values()].filter(
+        (item) => (item.insert ?? "").toLowerCase() === "placeholder"
+      );
+      if (placeholderContributions.length === 0) {
+        continue;
+      }
+
+      const contributionName = placeholderRef.contributionValue?.trim();
+      const isActive = contributionName
+        ? activePlaceholderContributionKeys.has(getUsingKey(component.key, contributionName))
+        : activePlaceholderFeatureKeys.has(component.key);
+      if (isActive) {
+        continue;
+      }
+
+      const scopedLabel = contributionName
+        ? `${placeholderRef.rawComponentValue ?? component.key}#${contributionName}`
+        : (placeholderRef.rawComponentValue ?? component.key);
+      issues.push({
+        ruleId: "orphan-placeholder",
+        range: placeholderRef.range,
+        message: `Placeholder '${scopedLabel}' has no active Using namespace in current document.`
       });
     }
   }
@@ -2510,3 +2583,4 @@ function resolveInjectedSectionScopeKey(targetXPath: string | undefined, rootSco
 
   return fallback;
 }
+

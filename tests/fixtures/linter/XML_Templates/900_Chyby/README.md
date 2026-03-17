@@ -44,3 +44,4 @@ Minimal scenarios for each validation rule.
 - `chyba-42-duplicate-button-ident.xml` -> `duplicate-button-ident` (duplicate between local Button and Using-injected contribution)
 - `chyba-43-duplicate-section-ident.xml` -> `duplicate-section-ident` (duplicate between local Section and Using-injected contribution)
 
+- `chyba-44-orphan-placeholder.xml` -> `orphan-placeholder` (placeholder references feature contribution without active Using namespace)

@@ -77,6 +77,8 @@ export interface TemplateBuildOutputsReadyStats {
   executedFullBuild: boolean;
   builtTargetCount: number;
   summary: BuildSummaryLike;
+  updatedTemplatePaths: readonly string[];
+  updatedOutputPaths: readonly string[];
 }
 
 interface BuildSummaryLike {
@@ -279,7 +281,9 @@ export class TemplateBuildOrchestrator {
           durationMs: Date.now() - workerStartedAt,
           executedFullBuild,
           builtTargetCount: builtTargetPaths.size,
-          summary: { ...aggregatedSummary }
+          summary: { ...aggregatedSummary },
+          updatedTemplatePaths: collectUpdatedTemplatePaths(telemetry.entries),
+          updatedOutputPaths: collectUpdatedOutputPaths(telemetry.entries, telemetry.mutationsByTemplate)
         });
       }
     } catch (error) {
@@ -344,6 +348,43 @@ function collectUpdatedTemplateKeys(entries: ReadonlyMap<string, unknown>): Set<
       out.add(toTemplateRelativeKey(templateKey));
     }
   }
+  return out;
+}
+
+function collectUpdatedTemplatePaths(entries: ReadonlyMap<string, unknown>): string[] {
+  const out: string[] = [];
+  for (const [templatePath, value] of entries.entries()) {
+    if (!value || typeof value !== "object") {
+      continue;
+    }
+    const status = String((value as { status?: unknown }).status ?? "").toLowerCase();
+    if (status === "update") {
+      out.push(templatePath.replace(/\\/g, "/"));
+    }
+  }
+  out.sort((a, b) => a.localeCompare(b));
+  return out;
+}
+
+function collectUpdatedOutputPaths(
+  entries: ReadonlyMap<string, unknown>,
+  mutationsByTemplate: ReadonlyMap<string, unknown>
+): string[] {
+  const updatedTemplateKeys = collectUpdatedTemplateKeys(entries);
+  const out: string[] = [];
+  for (const [templateKey, value] of mutationsByTemplate.entries()) {
+    if (!updatedTemplateKeys.has(toTemplateRelativeKey(templateKey))) {
+      continue;
+    }
+    if (!value || typeof value !== "object") {
+      continue;
+    }
+    const outputRelativePath = (value as { outputRelativePath?: unknown }).outputRelativePath;
+    if (typeof outputRelativePath === "string" && outputRelativePath.trim().length > 0) {
+      out.push(outputRelativePath.replace(/\\/g, "/"));
+    }
+  }
+  out.sort((a, b) => a.localeCompare(b));
   return out;
 }
 

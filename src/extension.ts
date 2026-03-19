@@ -150,6 +150,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       return vscode.workspace.asRelativePath(uriOrPath, false);
     },
+    onBuildOutputsReady: (stats) => {
+      compositionTreeProvider.setLastBuildSummary({
+        scope: stats.executedFullBuild ? "full" : "targeted",
+        totalMs: stats.durationMs,
+        targets: stats.builtTargetCount,
+        updated: stats.summary.updated,
+        skipped: stats.summary.skipped,
+        errors: stats.summary.errors,
+        updatedTemplatePaths: stats.updatedTemplatePaths,
+        updatedOutputPaths: stats.updatedOutputPaths
+      });
+    },
     onBuildStateChanged: (state) => {
       compositionTreeProvider.setBuildState(state === "running" ? "building" : "ready");
     }
@@ -1081,6 +1093,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       aggregate.autoPostRuntimeMs = stats.phases.postBuildRuntimeRefreshMs;
     },
     onBuildOutputsReady: (stats) => {
+      compositionTreeProvider.setLastBuildSummary({
+        scope: stats.executedFullBuild ? "full" : "targeted",
+        totalMs: stats.durationMs,
+        targets: stats.builtTargetCount,
+        updated: stats.summary.updated,
+        skipped: stats.summary.skipped,
+        errors: stats.summary.errors,
+        updatedTemplatePaths: stats.updatedTemplatePaths,
+        updatedOutputPaths: stats.updatedOutputPaths
+      });
       logPerformance(
         `build ready | scope=${stats.executedFullBuild ? "full" : "targeted"} | total=${stats.durationMs}ms | ` +
         `targets=${stats.builtTargetCount} | updated=${stats.summary.updated} | skipped=${stats.summary.skipped} | errors=${stats.summary.errors}`

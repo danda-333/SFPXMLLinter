@@ -8,6 +8,7 @@ import {
   CompositionTelemetryCollector
 } from "./compositionTelemetryService";
 import { TemplateBuildRunMode } from "./templateBuildRunOptionsFactory";
+import type { TemplateBuildOutputsReadyStats } from "./templateBuildOrchestrator";
 
 export interface ManualTemplateBuildCommandsServiceDeps {
   buildService: BuildXmlTemplatesService;
@@ -43,6 +44,7 @@ export interface ManualTemplateBuildCommandsServiceDeps {
   isInFolder: (uri: vscode.Uri, folderName: string) => boolean;
   toRelativePath: (uriOrPath: vscode.Uri | string) => string;
   onBuildStateChanged?: (state: "idle" | "running") => void;
+  onBuildOutputsReady?: (stats: TemplateBuildOutputsReadyStats) => void;
 }
 
 export class ManualTemplateBuildCommandsService {
@@ -56,6 +58,7 @@ export class ManualTemplateBuildCommandsService {
     }
 
     this.deps.onBuildStateChanged?.("running");
+    const commandStartedAt = Date.now();
     try {
       this.deps.logBuild("MANUAL build current/selection START");
       const mode = this.deps.getTemplateBuilderMode();
@@ -71,6 +74,9 @@ export class ManualTemplateBuildCommandsService {
         );
         await this.deps.queueReindexAll();
         this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
+        this.deps.onBuildOutputsReady?.(
+          buildOutputsReadyStatsFromTelemetry(telemetry, true, undefined, Date.now() - commandStartedAt)
+        );
         this.deps.logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
         this.deps.logBuild("MANUAL build current/selection DONE (full fallback)");
         return;
@@ -128,6 +134,9 @@ export class ManualTemplateBuildCommandsService {
       }
       await this.deps.queueReindexAll();
       this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
+      this.deps.onBuildOutputsReady?.(
+        buildOutputsReadyStatsFromTelemetry(telemetry, false, templateTargets.size, Date.now() - commandStartedAt)
+      );
       this.deps.logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
       this.deps.logBuild("MANUAL build current/selection DONE");
     } catch (error) {
@@ -147,6 +156,7 @@ export class ManualTemplateBuildCommandsService {
     }
 
     this.deps.onBuildStateChanged?.("running");
+    const commandStartedAt = Date.now();
     try {
       this.deps.logBuild("MANUAL build all START");
       const mode = this.deps.getTemplateBuilderMode();
@@ -157,6 +167,9 @@ export class ManualTemplateBuildCommandsService {
       );
       await this.deps.queueReindexAll();
       this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
+      this.deps.onBuildOutputsReady?.(
+        buildOutputsReadyStatsFromTelemetry(telemetry, true, undefined, Date.now() - commandStartedAt)
+      );
       this.deps.logBuildCompositionSnapshot("manual-all", telemetry.entries, mode);
       this.deps.logBuild("MANUAL build all DONE");
     } catch (error) {
@@ -228,14 +241,14 @@ export class ManualTemplateBuildCommandsService {
 
   private collectBuildSelectionUris(uri?: vscode.Uri, uris?: vscode.Uri[]): vscode.Uri[] {
     if (Array.isArray(uris) && uris.length > 0) {
-      return this.dedupeUris(uris);
+      return this.dedupeUris(uris.filter((item) => isVsCodeUri(item)));
     }
 
     if (Array.isArray(uri)) {
-      return this.dedupeUris(uri);
+      return this.dedupeUris(uri.filter((item) => isVsCodeUri(item)));
     }
 
-    if (uri) {
+    if (isVsCodeUri(uri)) {
       return [uri];
     }
 
@@ -269,4 +282,53 @@ export class ManualTemplateBuildCommandsService {
       return false;
     }
   }
+}
+
+function isVsCodeUri(value: unknown): value is vscode.Uri {
+  if (!(value instanceof vscode.Uri) && (!value || typeof value !== "object")) {
+    return false;
+  }
+  const candidate = value as vscode.Uri;
+  return typeof candidate.scheme === "string" && typeof candidate.fsPath === "string" && typeof candidate.toString === "function";
+}
+
+function buildOutputsReadyStatsFromTelemetry(
+  telemetry: CompositionTelemetryCollector,
+  fullBuild: boolean,
+  builtTargetCount?: number,
+  durationMs?: number
+): TemplateBuildOutputsReadyStats {
+  const updatedTemplatePaths: string[] = [];
+  const summary = { updated: 0, skipped: 0, errors: 0 };
+  for (const [templatePath, evaluation] of telemetry.entries) {
+    const status = String(evaluation.status).toLowerCase();
+    if (status === "update") {
+      summary.updated += 1;
+      updatedTemplatePaths.push(templatePath.replace(/\\/g, "/"));
+    } else if (status === "nochange") {
+      summary.skipped += 1;
+    } else if (status === "error") {
+      summary.errors += 1;
+    }
+  }
+  const updatedTemplateKeySet = new Set(updatedTemplatePaths.map((item) => item.toLowerCase()));
+  const updatedOutputPaths: string[] = [];
+  for (const [templatePath, mutation] of telemetry.mutationsByTemplate) {
+    if (!updatedTemplateKeySet.has(templatePath.replace(/\\/g, "/").toLowerCase())) {
+      continue;
+    }
+    if (mutation.outputRelativePath) {
+      updatedOutputPaths.push(mutation.outputRelativePath.replace(/\\/g, "/"));
+    }
+  }
+  updatedTemplatePaths.sort((a, b) => a.localeCompare(b));
+  updatedOutputPaths.sort((a, b) => a.localeCompare(b));
+  return {
+    durationMs: durationMs ?? 0,
+    executedFullBuild: fullBuild,
+    builtTargetCount: builtTargetCount ?? telemetry.entries.size,
+    summary,
+    updatedTemplatePaths,
+    updatedOutputPaths
+  };
 }

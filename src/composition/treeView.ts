@@ -108,6 +108,17 @@ interface CachedRootTree {
   nodes: CompositionTreeNode[];
 }
 
+interface BuildStatusSummary {
+  scope: "full" | "targeted";
+  totalMs: number;
+  targets: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+  updatedTemplatePaths: readonly string[];
+  updatedOutputPaths: readonly string[];
+}
+
 export class CompositionTreeProvider implements vscode.TreeDataProvider<CompositionTreeNode> {
   private readonly didChangeTreeDataEmitter = new vscode.EventEmitter<CompositionTreeNode | undefined | null | void>();
   private readonly expandedNodeIds = new Set<string>();
@@ -115,6 +126,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
   private readonly refreshDebounceMs = 75;
   private cachedRootTree: CachedRootTree | undefined;
   private buildState: "ready" | "building" = "ready";
+  private lastBuildSummary: BuildStatusSummary | undefined;
 
   public readonly onDidChangeTreeData = this.didChangeTreeDataEmitter.event;
 
@@ -141,6 +153,11 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       return;
     }
     this.buildState = state;
+    this.didChangeTreeDataEmitter.fire();
+  }
+
+  public setLastBuildSummary(summary: BuildStatusSummary | undefined): void {
+    this.lastBuildSummary = summary;
     this.didChangeTreeDataEmitter.fire();
   }
 
@@ -269,7 +286,53 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
         id: "status:build",
         label: "Build: Running",
         description: "template build in progress",
-        icon: new vscode.ThemeIcon("sync~spin")
+        icon: new vscode.ThemeIcon("sync~spin"),
+        contextValue: "compositionBuildStatus"
+      };
+    }
+
+    const summary = this.lastBuildSummary;
+    if (summary) {
+      const updateRows: CompositionTreeNode[] = [];
+      updateRows.push(detailNode(`Scope: ${summary.scope}`));
+      updateRows.push(detailNode(`Duration: ${summary.totalMs} ms`));
+      updateRows.push(detailNode(`Targets: ${summary.targets}`));
+      updateRows.push(detailNode(`Summary: updated=${summary.updated}, skipped=${summary.skipped}, errors=${summary.errors}`));
+
+      const outputsNode: GroupNode = {
+        type: "group",
+        id: "status:build:outputs",
+        label: "Updated Outputs",
+        description: String(summary.updatedOutputPaths.length),
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("file-code"),
+        children:
+          summary.updatedOutputPaths.length > 0
+            ? summary.updatedOutputPaths.map((item) => detailNode(item))
+            : [detailNode("none")]
+      };
+      const templatesNode: GroupNode = {
+        type: "group",
+        id: "status:build:templates",
+        label: "Updated Templates",
+        description: String(summary.updatedTemplatePaths.length),
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("symbol-file"),
+        children:
+          summary.updatedTemplatePaths.length > 0
+            ? summary.updatedTemplatePaths.map((item) => detailNode(item))
+            : [detailNode("none")]
+      };
+      updateRows.push(outputsNode, templatesNode);
+      return {
+        type: "info",
+        id: "status:build",
+        label: "Build: Ready",
+        description: `updated=${summary.updated}, skipped=${summary.skipped}, errors=${summary.errors}`,
+        icon: new vscode.ThemeIcon(summary.errors > 0 ? "warning" : "pass"),
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        children: updateRows,
+        contextValue: "compositionBuildStatus"
       };
     }
 
@@ -278,7 +341,8 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       id: "status:build",
       label: "Build: Ready",
       description: "outputs are up to date",
-      icon: new vscode.ThemeIcon("pass")
+      icon: new vscode.ThemeIcon("pass"),
+      contextValue: "compositionBuildStatus"
     };
   }
 }

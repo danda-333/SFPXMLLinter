@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.14
+
+- Packaging and publish optimization:
+  - added extension bundling with `esbuild` (`dist/extension.js`) and enabled it in `vscode:prepublish`.
+  - switched extension entrypoint from `out/extension.js` to bundled `dist/extension.js`.
+  - updated `.vscodeignore` to exclude `out/**` from VSIX and include only runtime `dist/**`.
+  - significantly reduced packaged file count and VSIX size for faster install/update.
+
 ## 0.1.13
 
 - Expected XPath diagnostics:

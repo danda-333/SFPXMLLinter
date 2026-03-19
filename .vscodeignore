@@ -20,3 +20,5 @@ tmp_b.xml
 **/*.map
 **/*.ts
 out/tests/**
+out/**
+!dist/**

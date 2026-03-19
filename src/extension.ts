@@ -84,7 +84,6 @@ const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-using-contribution",
   "contribution-mismatch",
   "orphan-placeholder",
-  "ident-convention-lookup-control"
 ]);
 
 function getDiagnosticCodeValue(code: unknown): string | undefined {
@@ -682,10 +681,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function getTemplateComposedFallbackRange(facts: ReturnType<typeof parseDocumentFactsFromText>): vscode.Range {
     return (
-      facts.usingReferences[0]?.componentValueRange ??
       facts.workflowFormIdentRange ??
       facts.rootFormIdentRange ??
       facts.rootIdentRange ??
+      facts.usingReferences[0]?.componentValueRange ??
       new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1))
     );
   }

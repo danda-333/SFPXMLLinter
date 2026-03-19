@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as path from "node:path";
 import { parseDocumentFacts, ParsedDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
 import { WorkspaceIndex, IndexedComponentContributionSummary, IndexedForm, IndexedSymbolProvenanceProvider } from "../indexer/types";
 import { resolveComponentByKey } from "../indexer/componentResolve";
@@ -50,6 +51,9 @@ interface BaseNode {
   factKind?: string;
   symbolKind?: string;
   statusSourceKey?: string;
+  compareLeftUri?: vscode.Uri;
+  compareRightUri?: vscode.Uri;
+  compareTitle?: string;
 }
 
 interface InfoNode extends BaseNode {
@@ -246,7 +250,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       cached.registryRef === registry &&
       cached.relativePath === relPath
     ) {
-      return [this.buildStatusNode(), ...cached.nodes];
+      return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index), ...cached.nodes];
     }
 
     const nodes = buildCompositionProjection<CompositionTreeNode>(
@@ -276,7 +280,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       relativePath: relPath,
       nodes
     };
-    return [this.buildStatusNode(), ...nodes];
+    return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index), ...nodes];
   }
 
   private buildStatusNode(): InfoNode {
@@ -345,6 +349,173 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       contextValue: "compositionBuildStatus"
     };
   }
+}
+
+function buildBuildTargetNode(
+  documentUri: vscode.Uri,
+  relativePath: string,
+  facts: ParsedDocumentFacts,
+  index: WorkspaceIndex
+): CompositionTreeNode {
+  const normalizedRel = relativePath.replace(/\\/g, "/");
+  if (/^XML_Templates\//i.test(normalizedRel)) {
+    const outputRel = normalizedRel.replace(/^XML_Templates\//i, "XML/");
+    const outputUri = vscode.Uri.file(documentUri.fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`));
+    return {
+      type: "group",
+      id: "target:output",
+      label: "Target",
+      description: outputRel,
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      icon: new vscode.ThemeIcon("arrow-right"),
+      resourceUri: outputUri,
+      compareLeftUri: documentUri,
+      compareRightUri: outputUri,
+      compareTitle: `SFP Compare: ${normalizedRel} ↔ ${outputRel}`,
+      contextValue: "compositionBuildTarget"
+    };
+  }
+
+  if (/^XML\//i.test(normalizedRel)) {
+    const sourceRel = normalizedRel.replace(/^XML\//i, "XML_Templates/");
+    const sourceUri = vscode.Uri.file(documentUri.fsPath.replace(/[\\/]XML([\\/])/i, `${path.sep}XML_Templates$1`));
+    return {
+      type: "group",
+      id: "target:source",
+      label: "Source",
+      description: sourceRel,
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      icon: new vscode.ThemeIcon("arrow-left"),
+      resourceUri: sourceUri,
+      contextValue: "compositionBuildSource"
+    };
+  }
+
+  const usages = collectUsageLocationsForDocument(documentUri, index);
+  if (usages.length === 0) {
+    return {
+      type: "group",
+      id: "target:usage:none",
+      label: "Target",
+      description: "usages: 0",
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      icon: new vscode.ThemeIcon("references"),
+      contextValue: "compositionBuildTarget"
+    };
+  }
+
+  return {
+    type: "group",
+    id: "target:usage",
+    label: "Target",
+    description: `usages: ${usages.length}`,
+    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    icon: new vscode.ThemeIcon("references"),
+    contextValue: "compositionBuildTarget",
+    children: usages.map((usage, indexNo) => {
+      const rel = vscode.workspace.asRelativePath(usage.location.uri, false).replace(/\\/g, "/");
+      const line = usage.location.range.start.line + 1;
+      const col = usage.location.range.start.character + 1;
+      const isTemplate = /^XML_Templates\//i.test(rel);
+      const outputRel = isTemplate ? rel.replace(/^XML_Templates\//i, "XML/") : undefined;
+      const outputUri = isTemplate
+        ? vscode.Uri.file(usage.location.uri.fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`))
+        : undefined;
+      return {
+        type: "detail",
+        id: `target:usage:${indexNo}:${usage.location.uri.toString()}:${line}:${col}`,
+        label: `${rel}:${line}:${col}`,
+        description: usage.kind,
+        icon: new vscode.ThemeIcon("location"),
+        sourceLocation: usage.location,
+        resourceUri: usage.location.uri,
+        contextValue: "compositionBuildTargetItem",
+        ...(outputUri && outputRel
+          ? {
+              compareLeftUri: usage.location.uri,
+              compareRightUri: outputUri,
+              compareTitle: `SFP Compare: ${rel} ↔ ${outputRel}`
+            }
+          : {})
+      } as DetailNode;
+    })
+  };
+}
+
+function collectUsageLocationsForDocument(
+  documentUri: vscode.Uri,
+  index: WorkspaceIndex
+): Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }> {
+  const out: Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }> = [];
+  const seen = new Set<string>();
+
+  const componentKeys = collectComponentKeysForUri(documentUri, index);
+  if (componentKeys.size === 0) {
+    return out;
+  }
+
+  for (const [uriKey, entryFacts] of index.parsedFactsByUri.entries()) {
+    const uri = vscode.Uri.parse(uriKey);
+    for (const usingRef of entryFacts.usingReferences) {
+      if (!componentKeys.has(usingRef.componentKey)) {
+        continue;
+      }
+      pushLocation(out, seen, uri, usingRef.componentValueRange, "using");
+    }
+    for (const includeRef of entryFacts.includeReferences) {
+      if (!componentKeys.has(includeRef.componentKey)) {
+        continue;
+      }
+      pushLocation(out, seen, uri, includeRef.componentValueRange, "include");
+    }
+    for (const placeholderRef of entryFacts.placeholderReferences) {
+      if (!placeholderRef.componentKey || !componentKeys.has(placeholderRef.componentKey)) {
+        continue;
+      }
+      pushLocation(out, seen, uri, placeholderRef.range, "placeholder");
+    }
+  }
+
+  return out.sort((a, b) => {
+    const left = `${a.location.uri.toString()}:${a.location.range.start.line}:${a.location.range.start.character}`;
+    const right = `${b.location.uri.toString()}:${b.location.range.start.line}:${b.location.range.start.character}`;
+    return left.localeCompare(right);
+  });
+}
+
+function pushLocation(
+  out: Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }>,
+  seen: Set<string>,
+  uri: vscode.Uri,
+  range: vscode.Range,
+  kind: "using" | "include" | "placeholder"
+): void {
+  const key = `${uri.toString()}:${range.start.line}:${range.start.character}:${kind}`;
+  if (seen.has(key)) {
+    return;
+  }
+  seen.add(key);
+  out.push({ location: new vscode.Location(uri, range), kind });
+}
+
+function collectComponentKeysForUri(uri: vscode.Uri, index: WorkspaceIndex): Set<string> {
+  const out = new Set<string>();
+  const direct = index.componentKeyByUri.get(uri.toString());
+  if (direct) {
+    out.add(direct);
+  }
+  const normalizedTarget = toIndexUriKey(uri);
+  for (const [key, componentKey] of index.componentKeyByUri.entries()) {
+    if (key === normalizedTarget) {
+      out.add(componentKey);
+      continue;
+    }
+    const keyUri = key.includes("://") ? vscode.Uri.parse(key) : vscode.Uri.file(key);
+    if (toIndexUriKey(keyUri) === normalizedTarget) {
+      out.add(componentKey);
+    }
+  }
+  return out;
 }
 
 function buildFeatureTree(

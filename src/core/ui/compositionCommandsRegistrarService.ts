@@ -7,6 +7,9 @@ import { applyCompositionPrimitiveQuickFix, CompositionPrimitiveQuickFixPayload 
 type CompositionSourceNode = {
   sourceLocation?: vscode.Location;
   resourceUri?: vscode.Uri;
+  compareLeftUri?: vscode.Uri;
+  compareRightUri?: vscode.Uri;
+  compareTitle?: string;
   label?: string;
 };
 
@@ -37,6 +40,9 @@ export class CompositionCommandsRegistrarService {
       }),
       vscode.commands.registerCommand("sfpXmlLinter.compositionOpenSourceSidePreview", async (node?: CompositionSourceNode) => {
         await this.openCompositionSource(node, "sidePreview");
+      }),
+      vscode.commands.registerCommand("sfpXmlLinter.compositionCompare", async (node?: CompositionSourceNode) => {
+        await this.compareCompositionTarget(node);
       })
     );
 
@@ -57,6 +63,73 @@ export class CompositionCommandsRegistrarService {
         await this.showUsages(node);
       })
     );
+  }
+
+  private async compareCompositionTarget(node?: CompositionSourceNode): Promise<void> {
+    const pair = await this.resolveComparePair(node);
+    if (!pair) {
+      vscode.window.showInformationMessage("SFP XML Linter: Compare target is not available for this item.");
+      return;
+    }
+
+    await vscode.commands.executeCommand("vscode.diff", pair.left, pair.right, pair.title);
+  }
+
+  private async resolveComparePair(node?: CompositionSourceNode): Promise<{ left: vscode.Uri; right: vscode.Uri; title: string } | undefined> {
+    if (node?.compareLeftUri && node?.compareRightUri) {
+      const leftExists = await this.pathExists(node.compareLeftUri.fsPath);
+      const rightExists = await this.pathExists(node.compareRightUri.fsPath);
+      if (leftExists && rightExists) {
+        return {
+          left: node.compareLeftUri,
+          right: node.compareRightUri,
+          title: node.compareTitle ?? `SFP Compare: ${vscode.workspace.asRelativePath(node.compareLeftUri, false)} ↔ ${vscode.workspace.asRelativePath(node.compareRightUri, false)}`
+        };
+      }
+    }
+
+    const uri = node?.sourceLocation?.uri ?? node?.resourceUri;
+    if (!uri || uri.scheme !== "file") {
+      return undefined;
+    }
+
+    const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/");
+    if (/^XML_Templates\//i.test(rel)) {
+      const output = vscode.Uri.file(uri.fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`));
+      const outputExists = await this.pathExists(output.fsPath);
+      if (!outputExists) {
+        return undefined;
+      }
+      return {
+        left: uri,
+        right: output,
+        title: `SFP Compare: ${rel} ↔ ${rel.replace(/^XML_Templates\//i, "XML/")}`
+      };
+    }
+
+    if (/^XML\//i.test(rel)) {
+      const template = vscode.Uri.file(uri.fsPath.replace(/[\\/]XML([\\/])/i, `${path.sep}XML_Templates$1`));
+      const templateExists = await this.pathExists(template.fsPath);
+      if (!templateExists) {
+        return undefined;
+      }
+      return {
+        left: template,
+        right: uri,
+        title: `SFP Compare: ${vscode.workspace.asRelativePath(template, false)} ↔ ${rel}`
+      };
+    }
+
+    return undefined;
+  }
+
+  private async pathExists(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private getCompositionOpenMode(): CompositionOpenMode {

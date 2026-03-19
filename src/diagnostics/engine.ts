@@ -478,6 +478,7 @@ export class DiagnosticsEngine {
     const tracesReady = facts.usingContributionInsertTraces.size > 0;
     const suppressedFull = new Set<string>();
     const suppressedSections = new Map<string, Set<string>>();
+    const crossDocumentImpactByUsingKey = this.collectCrossDocumentUsingImpactByKey(facts, index);
     for (const ref of facts.usingReferences) {
       if (!ref.suppressInheritance) {
         continue;
@@ -550,7 +551,10 @@ export class DiagnosticsEngine {
       if (!impact) {
         continue;
       }
-      if (impact.kind === "unused") {
+      const localImpactKind = impact.kind;
+      const crossImpactKind = crossDocumentImpactByUsingKey.get(getUsingKey(ref.componentKey, ref.sectionValue));
+      const effectiveImpactKind = this.resolveEffectiveUsingImpactKind(localImpactKind, crossImpactKind);
+      if (effectiveImpactKind === "unused") {
         issues.push({
           ruleId: "unused-using",
           range: ref.sectionValueRange ?? ref.componentValueRange,
@@ -559,7 +563,7 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      if (impact.kind === "partial") {
+      if (effectiveImpactKind === "partial") {
         issues.push({
           ruleId: "partial-using",
           range: ref.sectionValueRange ?? ref.componentValueRange,
@@ -572,6 +576,58 @@ export class DiagnosticsEngine {
     this.validateFormOwnedUsingInheritance(facts, index, issues);
     this.validateMissingUsingParams(facts, index, issues, documentComposition);
     this.validateOrphanPlaceholderReferences(facts, index, issues);
+  }
+
+  private collectCrossDocumentUsingImpactByKey(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex
+  ): Map<string, "effective" | "partial" | "unused"> {
+    const out = new Map<string, "effective" | "partial" | "unused">();
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root !== "form" || !facts.formIdent) {
+      return out;
+    }
+
+    for (const [uriKey, relatedFacts] of index.parsedFactsByUri.entries()) {
+      const relatedRoot = (relatedFacts.rootTag ?? "").toLowerCase();
+      if (relatedRoot !== "workflow" && relatedRoot !== "dataview") {
+        continue;
+      }
+
+      const relatedFormIdent = relatedRoot === "workflow"
+        ? (relatedFacts.workflowFormIdent ?? relatedFacts.rootFormIdent)
+        : relatedFacts.rootFormIdent;
+      if (!relatedFormIdent || relatedFormIdent !== facts.formIdent) {
+        continue;
+      }
+
+      const relatedComposition = buildDocumentCompositionModel(relatedFacts, index);
+      for (const usingModel of relatedComposition.usings) {
+        const key = getUsingKey(usingModel.componentKey, usingModel.sectionValue);
+        const relatedKind = usingModel.impact.kind;
+        const previous = out.get(key);
+        out.set(key, this.resolveEffectiveUsingImpactKind(previous, relatedKind));
+      }
+    }
+
+    return out;
+  }
+
+  private resolveEffectiveUsingImpactKind(
+    localKind: "effective" | "partial" | "unused" | undefined,
+    relatedKind: "effective" | "partial" | "unused" | undefined
+  ): "effective" | "partial" | "unused" {
+    const rank = (kind: "effective" | "partial" | "unused" | undefined): number => {
+      if (kind === "effective") {
+        return 3;
+      }
+      if (kind === "partial") {
+        return 2;
+      }
+      return 1;
+    };
+
+    return rank(localKind) >= rank(relatedKind) ? (localKind ?? "unused") : (relatedKind ?? "unused");
   }
 
   private validateMissingUsingParams(
@@ -1078,8 +1134,8 @@ export class DiagnosticsEngine {
       }
 
       const splitInfo = describeLookupIdentSplit(control.ident, targetCandidates);
-      const parsed = parseLookupControlIdent(control.ident, targetCandidates);
-      if (!parsed) {
+      const parsedCandidates = parseLookupControlIdentCandidates(control.ident, targetCandidates);
+      if (parsedCandidates.length === 0) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
@@ -1088,45 +1144,40 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      if (isLookupMulti && !parsed.foreignKey.toLowerCase().endsWith("s")) {
+      const validCandidate = parsedCandidates.find((candidate) => {
+        if (isLookupMulti && !candidate.foreignKey.toLowerCase().endsWith("s")) {
+          return false;
+        }
+        return isLookupCandidateSemanticallyValid(candidate, isLookupMulti, index, metadata);
+      });
+      if (validCandidate) {
+        continue;
+      }
+
+      if (isLookupMulti && !parsedCandidates.some((candidate) => candidate.foreignKey.toLowerCase().endsWith("s"))) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
           message: `Multi-select lookup '${control.ident}' should use plural foreign key suffix ending with 's'.`
         });
+        continue;
       }
 
-      const normalizedForeignKey = isLookupMulti
-        ? trimTrailingPluralS(parsed.foreignKey)
-        : parsed.foreignKey;
-
+      const parsed = parsedCandidates[0];
       if (parsed.targetKind === "system") {
-        if (!isKnownSystemTableForeignKey(metadata, parsed.targetName, normalizedForeignKey)) {
-          issues.push({
-            ruleId: "ident-convention-lookup-control",
-            range: control.range,
-            message: `System table lookup '${control.ident}' should use known system-table column (default 'ID'/'Ident' or configured external columns). ${splitInfo}`
-          });
-        }
-        continue;
-      }
-
-      const targetForm = index.formsByIdent.get(parsed.targetName);
-      if (!targetForm) {
-        continue;
-      }
-
-      const fk = normalizedForeignKey;
-      const isKnownControl = targetForm.controls.has(fk);
-      const isDefaultColumn = metadata.defaultFormColumns.has(fk);
-      const isPreferredSuffix = metadata.preferredForeignKeySuffixes.some((suffix) => endsWithExact(fk, suffix));
-      if (!isKnownControl && !isDefaultColumn && !isPreferredSuffix) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
-          message: `Lookup control '${control.ident}' references '${parsed.targetName}', but foreign key '${parsed.foreignKey}' is not a known control/default column. ${splitInfo}`
+          message: `System table lookup '${control.ident}' should use known system-table column (default 'ID'/'Ident' or configured external columns). ${splitInfo}`
         });
+        continue;
       }
+
+      issues.push({
+        ruleId: "ident-convention-lookup-control",
+        range: control.range,
+        message: `Lookup control '${control.ident}' references '${parsed.targetName}', but foreign key '${parsed.foreignKey}' is not a known control/default column. ${splitInfo}`
+      });
     }
   }
 
@@ -2310,12 +2361,18 @@ function endsWithExact(value: string, suffix: string): boolean {
   return value.endsWith(suffix);
 }
 
-function parseLookupControlIdent(
+type LookupIdentParseCandidate = {
+  targetName: string;
+  targetKind: "form" | "system";
+  foreignKey: string;
+  score: number;
+};
+
+function parseLookupControlIdentCandidates(
   ident: string,
   candidates: Array<{ name: string; kind: "form" | "system" }>
-): { targetName: string; targetKind: "form" | "system"; foreignKey: string } | undefined {
-  let best: { targetName: string; targetKind: "form" | "system"; foreignKey: string; score: number } | undefined;
-
+): LookupIdentParseCandidate[] {
+  const out: LookupIdentParseCandidate[] = [];
   for (const candidate of candidates) {
     const idx = ident.lastIndexOf(candidate.name);
     if (idx < 0) {
@@ -2327,26 +2384,42 @@ function parseLookupControlIdent(
       continue;
     }
 
-    const score = candidate.name.length;
-    if (!best || score > best.score) {
-      best = {
-        targetName: candidate.name,
-        targetKind: candidate.kind,
-        foreignKey,
-        score
-      };
-    }
+    out.push({
+      targetName: candidate.name,
+      targetKind: candidate.kind,
+      foreignKey,
+      score: candidate.name.length
+    });
   }
 
-  if (!best) {
-    return undefined;
+  out.sort((a, b) => b.score - a.score);
+  return out;
+}
+
+function isLookupCandidateSemanticallyValid(
+  parsed: LookupIdentParseCandidate,
+  isLookupMulti: boolean,
+  index: WorkspaceIndex,
+  metadata: SystemMetadata
+): boolean {
+  const normalizedForeignKey = isLookupMulti
+    ? trimTrailingPluralS(parsed.foreignKey)
+    : parsed.foreignKey;
+
+  if (parsed.targetKind === "system") {
+    return isKnownSystemTableForeignKey(metadata, parsed.targetName, normalizedForeignKey);
   }
 
-  return {
-    targetName: best.targetName,
-    targetKind: best.targetKind,
-    foreignKey: best.foreignKey
-  };
+  const targetForm = index.formsByIdent.get(parsed.targetName);
+  if (!targetForm) {
+    return false;
+  }
+
+  const fk = normalizedForeignKey;
+  const isKnownControl = targetForm.controls.has(fk);
+  const isDefaultColumn = metadata.defaultFormColumns.has(fk);
+  const isPreferredSuffix = metadata.preferredForeignKeySuffixes.some((suffix) => endsWithExact(fk, suffix));
+  return isKnownControl || isDefaultColumn || isPreferredSuffix;
 }
 
 function trimTrailingPluralS(value: string): string {
@@ -2361,7 +2434,8 @@ function describeLookupIdentSplit(
   ident: string,
   candidates: Array<{ name: string; kind: "form" | "system" }>
 ): string {
-  const parsed = parseLookupControlIdent(ident, candidates);
+  const parsedCandidates = parseLookupControlIdentCandidates(ident, candidates);
+  const parsed = parsedCandidates[0];
   if (!parsed) {
     return "Split: purpose=?, formOrTable=?, foreignKey=?. Primary table/form candidate not found.";
   }

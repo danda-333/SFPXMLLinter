@@ -174,8 +174,7 @@ export function createValidationModules(deps: ValidationRunnerDeps): ValidationM
         "unknown-using-feature",
         "unknown-using-contribution",
         "contribution-mismatch",
-        "orphan-placeholder",
-        "ident-convention-lookup-control"
+        "orphan-placeholder"
       ],
       ["fact.rootMeta", "fact.workflowRefs", "fact.mappingRefs", "fact.symbolDecls"]
     )
@@ -183,4 +182,3 @@ export function createValidationModules(deps: ValidationRunnerDeps): ValidationM
 
   return modules;
 }
-

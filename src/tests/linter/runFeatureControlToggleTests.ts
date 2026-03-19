@@ -183,6 +183,7 @@ function run(): void {
 
   const featurePath = path.join(workspaceRoot, "XML_Components/Shared/FeatureToggle.feature.xml");
   const formPath = path.join(workspaceRoot, "XML_Templates/100_Test/FeatureToggleForm.xml");
+  const workflowPath = path.join(workspaceRoot, "XML_Templates/100_Test/FeatureToggleFormWorkFlow.xml");
 
   const featureEnabled = [
     "<Feature>",
@@ -219,31 +220,63 @@ function run(): void {
     "</Form>"
   ].join("\n");
 
+  const workflowText = [
+    "<WorkFlow FormIdent=\"FeatureToggleForm\">",
+    "  <ControlShareCodes>",
+    "    <ControlShareCode Ident=\"SharedControlScope\">",
+    "      <Controls>",
+    "        <FormControl Ident=\"FeatureControl\" IsVisible=\"true\" />",
+    "      </Controls>",
+    "    </ControlShareCode>",
+    "  </ControlShareCodes>",
+    "</WorkFlow>"
+  ].join("\n");
+
   const featureEnabledDoc = new MockTextDocument(featurePath, featureEnabled);
   const featureDisabledDoc = new MockTextDocument(featurePath, featureDisabled);
   const formDoc = new MockTextDocument(formPath, formText);
+  const workflowDoc = new MockTextDocument(workflowPath, workflowText);
   const formFacts = parseDocumentFactsFromText(formText);
+  const workflowFacts = parseDocumentFactsFromText(workflowText);
 
   indexer.refreshComponentDocument(featureEnabledDoc as unknown as import("vscode").TextDocument);
+  indexer.refreshFormDocument(formDoc as unknown as import("vscode").TextDocument);
   const pass1 = engine.buildDiagnostics(formDoc as unknown as import("vscode").TextDocument, indexer.getIndex(), {
     parsedFacts: formFacts,
     standaloneMode: true
   });
   assertNoRule(pass1, "unknown-html-template-control-ident");
+  const workflowPass1 = engine.buildDiagnostics(workflowDoc as unknown as import("vscode").TextDocument, indexer.getIndex(), {
+    parsedFacts: workflowFacts,
+    standaloneMode: true
+  });
+  assertNoRule(workflowPass1, "unknown-form-control-ident");
 
   indexer.refreshComponentDocument(featureDisabledDoc as unknown as import("vscode").TextDocument);
+  indexer.refreshFormDocument(formDoc as unknown as import("vscode").TextDocument);
   const pass2 = engine.buildDiagnostics(formDoc as unknown as import("vscode").TextDocument, indexer.getIndex(), {
     parsedFacts: formFacts,
     standaloneMode: true
   });
   assertHasRule(pass2, "unknown-html-template-control-ident");
+  const workflowPass2 = engine.buildDiagnostics(workflowDoc as unknown as import("vscode").TextDocument, indexer.getIndex(), {
+    parsedFacts: workflowFacts,
+    standaloneMode: true
+  });
+  assertHasRule(workflowPass2, "unknown-form-control-ident");
 
   indexer.refreshComponentDocument(featureEnabledDoc as unknown as import("vscode").TextDocument);
+  indexer.refreshFormDocument(formDoc as unknown as import("vscode").TextDocument);
   const pass3 = engine.buildDiagnostics(formDoc as unknown as import("vscode").TextDocument, indexer.getIndex(), {
     parsedFacts: formFacts,
     standaloneMode: true
   });
   assertNoRule(pass3, "unknown-html-template-control-ident");
+  const workflowPass3 = engine.buildDiagnostics(workflowDoc as unknown as import("vscode").TextDocument, indexer.getIndex(), {
+    parsedFacts: workflowFacts,
+    standaloneMode: true
+  });
+  assertNoRule(workflowPass3, "unknown-form-control-ident");
 }
 
 function assertHasRule(diagnostics: readonly import("vscode").Diagnostic[], code: string): void {

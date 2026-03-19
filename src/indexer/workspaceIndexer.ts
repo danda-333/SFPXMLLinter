@@ -3,7 +3,7 @@ import * as nodeFs from "node:fs/promises";
 import { WorkspaceIndex, IndexedComponent, IndexedForm, IndexedComponentContributionSummary } from "./types";
 import { IndexedSymbolProvenanceProvider } from "./types";
 import { globConfiguredXmlFiles, normalizeComponentKey } from "../utils/paths";
-import { parseDocumentFactsFromMaskedText } from "./xmlFacts";
+import { ParsedDocumentFacts, parseDocumentFactsFromMaskedText } from "./xmlFacts";
 import { resolveComponentByKey } from "./componentResolve";
 import { toIndexUriKey } from "./uriKey";
 import { maskXmlComments } from "../utils/xmlComments";
@@ -15,6 +15,7 @@ interface ParsedEntry {
   maskedText: string;
   facts: ReturnType<typeof parseDocumentFactsFromMaskedText>;
   root: string;
+  parseSignature: string;
 }
 
 interface ParsedEntryCacheRecord {
@@ -24,12 +25,31 @@ interface ParsedEntryCacheRecord {
   facts: ReturnType<typeof parseDocumentFactsFromMaskedText>;
   root: string;
   hasIgnoreDirective: boolean;
+  parseSignature: string;
+}
+
+interface UsingTraceCacheRecord {
+  parseSignature: string;
+  contextSignature: string;
+  traces: Map<string, import("./xmlFacts").UsingContributionInsertTrace>;
 }
 
 interface PositionResolver {
   uri: vscode.Uri;
   positionAt(offset: number): vscode.Position;
   getText?: () => string;
+}
+
+export interface RefreshXmlDocumentOptions {
+  composedOutput?: boolean;
+  skipUsingTrace?: boolean;
+  lightweightFormSymbols?: boolean;
+  skipIgnoreDirectiveScan?: boolean;
+}
+
+export interface RefreshXmlBatchProfile {
+  totalMs: number;
+  perRootMs: Record<"form" | "workflow" | "dataview" | "component" | "feature" | "other", number>;
 }
 
 export interface RebuildIndexProgressEvent {
@@ -64,20 +84,14 @@ export class WorkspaceIndexer {
   public constructor(private readonly roots?: readonly string[]) {}
 
   private readonly parsedEntryCacheByUri = new Map<string, ParsedEntryCacheRecord>();
+  private readonly usingTraceCacheByUri = new Map<string, UsingTraceCacheRecord>();
 
   private index: WorkspaceIndex = {
     formsByIdent: new Map<string, IndexedForm>(),
+    formIdentByUri: new Map<string, string>(),
     componentsByKey: new Map<string, IndexedComponent>(),
+    componentKeyByUri: new Map<string, string>(),
     componentKeysByBaseName: new Map<string, Set<string>>(),
-    formIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-    mappingFormIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-    controlReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-    buttonReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-    sectionReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-    componentReferenceLocationsByKey: new Map<string, vscode.Location[]>(),
-    componentContributionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
-    componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
-    componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),
     builtSymbolProvidersByUri: new Map(),
@@ -100,12 +114,134 @@ export class WorkspaceIndexer {
     this.index.builtSymbolProvidersByUri.set(toIndexUriKey(uri), providersBySymbolKey);
   }
 
-  public refreshFormDocument(document: vscode.TextDocument): {
+  public refreshXmlDocument(
+    document: vscode.TextDocument,
+    options?: RefreshXmlDocumentOptions
+  ): {
+    updated: boolean;
+    reason: "updated" | "not-form" | "missing-ident" | "not-component" | "facts-only";
+    rootKind: "form" | "workflow" | "dataview" | "component" | "feature" | "other";
+    formIdent?: string;
+    componentKey?: string;
+    owningFormIdent?: string;
+  } {
+    const maskedText = maskXmlComments(document.getText());
+    const root = options?.composedOutput === true
+      ? extractRootTagFast(maskedText)
+      : (parseDocumentFactsFromMaskedText(maskedText).rootTag ?? "").toLowerCase();
+
+    const cleanupOldByUri = (): void => {
+      this.removeIndexedEntitiesForUri(document.uri);
+    };
+
+    if (root === "form") {
+      const refreshed = this.refreshFormDocument(document, options, maskedText);
+      return {
+        ...refreshed,
+        rootKind: "form"
+      };
+    }
+
+    if (root === "component" || root === "feature") {
+      const refreshed = this.refreshComponentDocument(document);
+      return {
+        ...refreshed,
+        rootKind: root
+      };
+    }
+
+    // For workflow/dataview/other files we still keep parsed facts up to date,
+    // so dependent diagnostics can run against fresh inherited usings/model.
+    const facts = parseDocumentFactsFromMaskedText(maskedText);
+    cleanupOldByUri();
+    this.index.parsedFactsByUri.set(document.uri.toString(), facts);
+    this.index.hasIgnoreDirectiveByUri.set(
+      document.uri.toString(),
+      options?.skipIgnoreDirectiveScan === true ? false : containsIgnoreDirective(document.getText())
+    );
+
+    const owningFormIdent = root === "workflow"
+      ? (facts.workflowFormIdent ?? facts.rootFormIdent)
+      : root === "dataview"
+        ? facts.rootFormIdent
+        : undefined;
+    return {
+      updated: true,
+      reason: "facts-only",
+      rootKind:
+        root === "workflow"
+          ? "workflow"
+          : root === "dataview"
+            ? "dataview"
+            : "other",
+      owningFormIdent
+    };
+  }
+
+  public refreshXmlDocumentsBatch(
+    documents: readonly vscode.TextDocument[],
+    options?: RefreshXmlDocumentOptions
+  ): {
+    updatedCount: number;
+    byRootKind: Record<"form" | "workflow" | "dataview" | "component" | "feature" | "other", number>;
+    owningFormIdents: Set<string>;
+    profile: RefreshXmlBatchProfile;
+  } {
+    let updatedCount = 0;
+    const byRootKind: Record<"form" | "workflow" | "dataview" | "component" | "feature" | "other", number> = {
+      form: 0,
+      workflow: 0,
+      dataview: 0,
+      component: 0,
+      feature: 0,
+      other: 0
+    };
+    const owningFormIdents = new Set<string>();
+    const perRootMs: Record<"form" | "workflow" | "dataview" | "component" | "feature" | "other", number> = {
+      form: 0,
+      workflow: 0,
+      dataview: 0,
+      component: 0,
+      feature: 0,
+      other: 0
+    };
+    const startedAt = Date.now();
+
+    for (const document of documents) {
+      const docStartedAt = Date.now();
+      const result = this.refreshXmlDocument(document, options);
+      const elapsed = Date.now() - docStartedAt;
+      byRootKind[result.rootKind] += 1;
+      perRootMs[result.rootKind] += elapsed;
+      if (result.updated) {
+        updatedCount += 1;
+      }
+      if (result.owningFormIdent) {
+        owningFormIdents.add(result.owningFormIdent);
+      }
+    }
+
+    return {
+      updatedCount,
+      byRootKind,
+      owningFormIdents,
+      profile: {
+        totalMs: Date.now() - startedAt,
+        perRootMs
+      }
+    };
+  }
+
+  public refreshFormDocument(
+    document: vscode.TextDocument,
+    options?: RefreshXmlDocumentOptions,
+    preMaskedText?: string
+  ): {
     updated: boolean;
     reason: "updated" | "not-form" | "missing-ident";
     formIdent?: string;
   } {
-    const maskedText = maskXmlComments(document.getText());
+    const maskedText = preMaskedText ?? maskXmlComments(document.getText());
     const facts = parseDocumentFactsFromMaskedText(maskedText);
     const root = (facts.rootTag ?? "").toLowerCase();
     if (root !== "form") {
@@ -116,40 +252,74 @@ export class WorkspaceIndexer {
       return { updated: false, reason: "missing-ident" };
     }
 
-    const existingIdentByUri = findFormIdentByUri(this.index.formsByIdent, document.uri);
+    const uriKey = toIndexUriKey(document.uri);
+    const existingComponentKeyByUri = this.index.componentKeyByUri.get(uriKey);
+    if (existingComponentKeyByUri) {
+      this.index.componentsByKey.delete(existingComponentKeyByUri);
+      this.index.componentKeyByUri.delete(uriKey);
+      removeBaseNameVariant(
+        this.index.componentKeysByBaseName,
+        this.getBaseNameFromKey(existingComponentKeyByUri),
+        existingComponentKeyByUri
+      );
+    }
+    const existingIdentByUri = this.index.formIdentByUri.get(uriKey);
     if (existingIdentByUri && existingIdentByUri !== facts.formIdent) {
       this.index.formsByIdent.delete(existingIdentByUri);
+      this.index.formIdentByUri.delete(uriKey);
     }
 
-    const formIdentLocation = this.findFormIdentLocation(document, maskedText) ?? new vscode.Location(document.uri, new vscode.Position(0, 0));
-    const controlDefinitions = this.collectAttributeDefinitions(document, /<Control\b([^>]*)>/gi, "Ident", maskedText);
-    const buttonDefinitions = this.collectAttributeDefinitions(document, /<Button\b([^>]*)>/gi, "Ident", maskedText);
-    const sectionDefinitions = this.collectAttributeDefinitions(document, /<Section\b([^>]*)>/gi, "Ident", maskedText);
+    const lightweightFormSymbols = options?.lightweightFormSymbols === true;
+    const formIdentLocation = lightweightFormSymbols
+      ? new vscode.Location(document.uri, new vscode.Position(0, 0))
+      : (this.findFormIdentLocation(document, maskedText) ?? new vscode.Location(document.uri, new vscode.Position(0, 0)));
+    const controlDefinitions = lightweightFormSymbols
+      ? new Map<string, vscode.Location>()
+      : this.collectAttributeDefinitions(document, /<Control\b([^>]*)>/gi, "Ident", maskedText);
+    const buttonDefinitions = lightweightFormSymbols
+      ? new Map<string, vscode.Location>()
+      : this.collectAttributeDefinitions(document, /<Button\b([^>]*)>/gi, "Ident", maskedText);
+    const sectionDefinitions = lightweightFormSymbols
+      ? new Map<string, vscode.Location>()
+      : this.collectAttributeDefinitions(document, /<Section\b([^>]*)>/gi, "Ident", maskedText);
 
     const controls = new Set([...facts.declaredControls]);
     const buttons = new Set([...facts.declaredButtons]);
     const sections = new Set([...facts.declaredSections]);
+    const isComposedOutput = options?.composedOutput === true;
 
-    for (const usingRef of facts.usingReferences) {
-      const component = resolveComponentByKey(this.index, usingRef.componentKey);
-      if (!component) {
-        continue;
+    if (!isComposedOutput) {
+      for (const usingRef of facts.usingReferences) {
+        const component = resolveComponentByKey(this.index, usingRef.componentKey);
+        if (!component) {
+          continue;
+        }
+        if (lightweightFormSymbols) {
+          mergeDefinitionKeys(controls, component.formControlDefinitions);
+          mergeDefinitionKeys(buttons, component.formButtonDefinitions);
+          mergeDefinitionKeys(sections, component.formSectionDefinitions);
+        } else {
+          mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
+          mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
+          mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
+        }
       }
 
-      mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
-      mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
-      mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
-    }
-
-    for (const includeRef of facts.includeReferences) {
-      const component = resolveComponentByKey(this.index, includeRef.componentKey);
-      if (!component) {
-        continue;
+      for (const includeRef of facts.includeReferences) {
+        const component = resolveComponentByKey(this.index, includeRef.componentKey);
+        if (!component) {
+          continue;
+        }
+        if (lightweightFormSymbols) {
+          mergeDefinitionKeys(controls, component.formControlDefinitions);
+          mergeDefinitionKeys(buttons, component.formButtonDefinitions);
+          mergeDefinitionKeys(sections, component.formSectionDefinitions);
+        } else {
+          mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
+          mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
+          mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
+        }
       }
-
-      mergeDefinitions(controls, controlDefinitions, component.formControlDefinitions);
-      mergeDefinitions(buttons, buttonDefinitions, component.formButtonDefinitions);
-      mergeDefinitions(sections, sectionDefinitions, component.formSectionDefinitions);
     }
 
     const form: IndexedForm = {
@@ -164,10 +334,16 @@ export class WorkspaceIndexer {
       sectionDefinitions
     };
 
-    populateUsingInsertTraceFromText(facts, maskedText, this.index);
+    if (!isComposedOutput && options?.skipUsingTrace !== true) {
+      populateUsingInsertTraceFromText(facts, maskedText, this.index);
+    }
     this.index.formsByIdent.set(facts.formIdent, form);
+    this.index.formIdentByUri.set(uriKey, facts.formIdent);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
-    this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
+    this.index.hasIgnoreDirectiveByUri.set(
+      document.uri.toString(),
+      options?.skipIgnoreDirectiveScan === true ? false : containsIgnoreDirective(document.getText())
+    );
     this.index.formsReady = true;
     return { updated: true, reason: "updated", formIdent: facts.formIdent };
   }
@@ -185,9 +361,16 @@ export class WorkspaceIndexer {
     }
 
     const key = this.getComponentKey(document.uri);
-    const oldKey = findComponentKeyByUri(this.index.componentsByKey, document.uri);
+    const uriKey = toIndexUriKey(document.uri);
+    const existingFormIdentByUri = this.index.formIdentByUri.get(uriKey);
+    if (existingFormIdentByUri) {
+      this.index.formsByIdent.delete(existingFormIdentByUri);
+      this.index.formIdentByUri.delete(uriKey);
+    }
+    const oldKey = this.index.componentKeyByUri.get(uriKey);
     if (oldKey && oldKey !== key) {
       this.index.componentsByKey.delete(oldKey);
+      this.index.componentKeyByUri.delete(uriKey);
       removeBaseNameVariant(this.index.componentKeysByBaseName, this.getBaseNameFromKey(oldKey), oldKey);
     }
 
@@ -214,6 +397,7 @@ export class WorkspaceIndexer {
 
     populateUsingInsertTraceFromText(facts, maskedText, this.index);
     this.index.componentsByKey.set(key, component);
+    this.index.componentKeyByUri.set(uriKey, key);
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
     const baseName = this.getBaseNameFromKey(key);
@@ -286,18 +470,10 @@ export class WorkspaceIndexer {
     });
 
     const formsByIdent = new Map<string, IndexedForm>();
+    const formIdentByUri = new Map<string, string>();
     const componentsByKey = new Map<string, IndexedComponent>();
+    const componentKeyByUri = new Map<string, string>();
     const componentKeysByBaseName = new Map<string, Set<string>>();
-    const formIdentReferenceLocations = new Map<string, vscode.Location[]>();
-    const mappingFormIdentReferenceLocations = new Map<string, vscode.Location[]>();
-    const controlReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
-    const buttonReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
-    const sectionReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
-    const componentReferenceLocationsByKey = new Map<string, vscode.Location[]>();
-    const componentContributionReferenceLocationsByKey = new Map<string, Map<string, vscode.Location[]>>();
-    const componentUsageFormIdentsByKey = new Map<string, Set<string>>();
-    const componentContributionUsageFormIdentsByKey = new Map<string, Map<string, Set<string>>>();
-
     const componentEntries = parsedEntries.filter((entry) => entry.root === "component" || entry.root === "feature");
     const componentsStart = Date.now();
     onProgress?.({
@@ -336,6 +512,7 @@ export class WorkspaceIndexer {
       };
 
       componentsByKey.set(key, component);
+      componentKeyByUri.set(toIndexUriKey(entry.uri), key);
       const baseName = this.getBaseNameFromKey(key);
       const variants = componentKeysByBaseName.get(baseName) ?? new Set<string>();
       variants.add(key);
@@ -360,17 +537,10 @@ export class WorkspaceIndexer {
 
     const provisionalIndex: WorkspaceIndex = {
       formsByIdent: new Map<string, IndexedForm>(),
+      formIdentByUri: new Map<string, string>(),
       componentsByKey,
+      componentKeyByUri,
       componentKeysByBaseName,
-      formIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-      mappingFormIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-      controlReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-      buttonReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-      sectionReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-      componentReferenceLocationsByKey: new Map<string, vscode.Location[]>(),
-      componentContributionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
-      componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
-      componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
       parsedFactsByUri: new Map(parsedFactsByUri),
       hasIgnoreDirectiveByUri: new Map(hasIgnoreDirectiveByUri),
       builtSymbolProvidersByUri: new Map(),
@@ -438,6 +608,8 @@ export class WorkspaceIndexer {
 
       formsByIdent.set(entry.facts.formIdent, form);
       provisionalIndex.formsByIdent.set(entry.facts.formIdent, form);
+      formIdentByUri.set(toIndexUriKey(entry.uri), entry.facts.formIdent);
+      provisionalIndex.formIdentByUri.set(toIndexUriKey(entry.uri), entry.facts.formIdent);
       onProgress?.({
         phase: "forms-progress",
         current: i + 1,
@@ -480,198 +652,46 @@ export class WorkspaceIndexer {
 
       return false;
     });
+    const traceContextSignature = this.computeUsingTraceContextSignature(parsedEntries, traceEligibleEntries);
 
     const usingTraceStart = Date.now();
+    let usingTraceCacheHits = 0;
+    let usingTraceComputed = 0;
     for (let i = 0; i < traceEligibleEntries.length; i++) {
       const entry = traceEligibleEntries[i];
-      populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+      const uriKey = entry.uri.toString();
+      const cachedTrace = this.usingTraceCacheByUri.get(uriKey);
+      if (cachedTrace && cachedTrace.parseSignature === entry.parseSignature && cachedTrace.contextSignature === traceContextSignature) {
+        entry.facts.usingContributionInsertTraces = cloneUsingTraceMap(cachedTrace.traces);
+        usingTraceCacheHits++;
+      } else {
+        populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+        this.usingTraceCacheByUri.set(uriKey, {
+          parseSignature: entry.parseSignature,
+          contextSignature: traceContextSignature,
+          traces: cloneUsingTraceMap(entry.facts.usingContributionInsertTraces ?? new Map())
+        });
+        usingTraceComputed++;
+      }
       if ((i + 1) % 80 === 0) {
         await yieldToEventLoop();
       }
     }
     const usingTraceMs = Date.now() - usingTraceStart;
 
-    let processedRefEntries = 0;
-    const referencesStart = Date.now();
-    onProgress?.({
-      phase: "references-start",
-      total: parsedEntries.length,
-      message: `Resolving references (${parsedEntries.length}).`
-    });
-    for (const entry of parsedEntries) {
-      const root = entry.root;
-      const uri = entry.uri;
-      const facts = entry.facts;
-
-      for (const ref of facts.formIdentReferences) {
-        addLocationMapValue(formIdentReferenceLocations, ref.formIdent, new vscode.Location(uri, ref.range));
-      }
-
-      for (const ref of facts.mappingFormIdentReferences) {
-        addLocationMapValue(mappingFormIdentReferenceLocations, ref.formIdent, new vscode.Location(uri, ref.range));
-      }
-
-      for (const ref of facts.usingReferences) {
-        addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
-        if (ref.sectionValue && ref.sectionValueRange) {
-          addNestedLocationMapValue(
-            componentContributionReferenceLocationsByKey,
-            ref.componentKey,
-            ref.sectionValue,
-            new vscode.Location(uri, ref.sectionValueRange)
-          );
-        }
-      }
-
-      for (const ref of facts.includeReferences) {
-        addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
-        if (ref.sectionValue && ref.sectionValueRange) {
-          addNestedLocationMapValue(
-            componentContributionReferenceLocationsByKey,
-            ref.componentKey,
-            ref.sectionValue,
-            new vscode.Location(uri, ref.sectionValueRange)
-          );
-        }
-      }
-
-      const owningFormIdent =
-        root === "workflow"
-          ? facts.workflowFormIdent
-          : root === "dataview"
-            ? facts.rootFormIdent
-            : facts.formIdent;
-      if (owningFormIdent) {
-        for (const ref of collectEffectiveUsingRefs(facts, provisionalIndex)) {
-          addNestedSetMapValue(componentUsageFormIdentsByKey, ref.componentKey, owningFormIdent);
-          if (ref.sectionValue) {
-            addNestedNestedSetMapValue(componentContributionUsageFormIdentsByKey, ref.componentKey, ref.sectionValue, owningFormIdent);
-          }
-        }
-      }
-
-      const owningFormIdentForRefs =
-        root === "workflow"
-          ? facts.workflowFormIdent
-          : root === "dataview"
-            ? facts.rootFormIdent
-            : facts.formIdent;
-      if (root === "workflow" && facts.workflowFormIdent) {
-        for (const ref of facts.workflowReferences) {
-          if (ref.kind === "formControl") {
-            addNestedLocationMapValue(
-              controlReferenceLocationsByFormIdent,
-              facts.workflowFormIdent,
-              ref.ident,
-              new vscode.Location(uri, ref.range)
-            );
-            continue;
-          }
-
-          if (ref.kind === "button") {
-            addNestedLocationMapValue(
-              buttonReferenceLocationsByFormIdent,
-              facts.workflowFormIdent,
-              ref.ident,
-              new vscode.Location(uri, ref.range)
-            );
-            continue;
-          }
-
-          if (ref.kind === "section") {
-            addNestedLocationMapValue(
-              sectionReferenceLocationsByFormIdent,
-              facts.workflowFormIdent,
-              ref.ident,
-              new vscode.Location(uri, ref.range)
-            );
-          }
-        }
-
-        for (const ref of facts.requiredActionIdentReferences) {
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            facts.workflowFormIdent,
-            ref.ident,
-            new vscode.Location(uri, ref.range)
-          );
-        }
-
-        for (const ref of facts.workflowControlIdentReferences) {
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            facts.workflowFormIdent,
-            ref.ident,
-            new vscode.Location(uri, ref.range)
-          );
-        }
-      }
-
-      if (owningFormIdentForRefs) {
-        for (const mappingRef of facts.mappingIdentReferences) {
-          if (mappingRef.kind === "fromIdent") {
-            addNestedLocationMapValue(
-              controlReferenceLocationsByFormIdent,
-              owningFormIdentForRefs,
-              mappingRef.ident,
-              new vscode.Location(uri, mappingRef.range)
-            );
-            continue;
-          }
-
-          const targetFormIdent = mappingRef.mappingFormIdent ?? owningFormIdentForRefs;
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            targetFormIdent,
-            mappingRef.ident,
-            new vscode.Location(uri, mappingRef.range)
-          );
-        }
-      }
-
-      if (root === "form" && facts.formIdent) {
-        for (const htmlRef of facts.htmlControlReferences) {
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            facts.formIdent,
-            htmlRef.ident,
-            new vscode.Location(uri, htmlRef.range)
-          );
-        }
-      }
-
-      processedRefEntries++;
-      if (processedRefEntries % 100 === 0 || processedRefEntries === parsedEntries.length) {
-        onProgress?.({
-          phase: "references-progress",
-          current: processedRefEntries,
-          total: parsedEntries.length
-        });
-      }
-      if (processedRefEntries % 50 === 0) {
-        await yieldToEventLoop();
-      }
-    }
-    const referencesMs = Date.now() - referencesStart;
+    const referencesMs = 0;
     onProgress?.({
       phase: "references-done",
       total: parsedEntries.length,
-      message: `Resolved references for ${parsedEntries.length} files in ${referencesMs} ms.`
+      message: "Legacy reference buckets removed; references resolved from facts/symbols on demand."
     });
 
     this.index = {
       formsByIdent,
+      formIdentByUri,
       componentsByKey,
+      componentKeyByUri,
       componentKeysByBaseName,
-      formIdentReferenceLocations,
-      mappingFormIdentReferenceLocations,
-      controlReferenceLocationsByFormIdent,
-      buttonReferenceLocationsByFormIdent,
-      sectionReferenceLocationsByFormIdent,
-      componentReferenceLocationsByKey,
-      componentContributionReferenceLocationsByKey,
-      componentUsageFormIdentsByKey,
-      componentContributionUsageFormIdentsByKey,
       parsedFactsByUri,
       hasIgnoreDirectiveByUri,
       builtSymbolProvidersByUri: new Map(),
@@ -685,10 +705,30 @@ export class WorkspaceIndexer {
       message:
         `Index ready in ${totalMs} ms: forms=${formsByIdent.size}, components=${componentsByKey.size}, ` +
         `discover=${discoverMs} ms, parse=${parseMs} ms, components=${componentsMs} ms, forms=${formsMs} ms, refs=${referencesMs} ms, ` +
-        `trace=${usingTraceMs} ms (${traceEligibleEntries.length}/${parsedEntries.length}).`
+        `trace=${usingTraceMs} ms (${traceEligibleEntries.length}/${parsedEntries.length}, cache=${usingTraceCacheHits}/${traceEligibleEntries.length}, computed=${usingTraceComputed}).`
     });
 
     return this.index;
+  }
+
+  private removeIndexedEntitiesForUri(uri: vscode.Uri): void {
+    const uriKey = toIndexUriKey(uri);
+    const formIdent = this.index.formIdentByUri.get(uriKey);
+    if (formIdent) {
+      this.index.formsByIdent.delete(formIdent);
+      this.index.formIdentByUri.delete(uriKey);
+    }
+
+    const componentKey = this.index.componentKeyByUri.get(uriKey);
+    if (componentKey) {
+      this.index.componentsByKey.delete(componentKey);
+      this.index.componentKeyByUri.delete(uriKey);
+      removeBaseNameVariant(
+        this.index.componentKeysByBaseName,
+        this.getBaseNameFromKey(componentKey),
+        componentKey
+      );
+    }
   }
 
   private collectFormInjectedDefinitions(document: PositionResolver, preMaskedText?: string): {
@@ -787,6 +827,7 @@ export class WorkspaceIndexer {
   private collectComponentContributionSummaries(preMaskedText?: string): Map<string, IndexedComponentContributionSummary> {
     const text = preMaskedText ?? "";
     const out = new Map<string, IndexedComponentContributionSummary>();
+    const contractExpectedXPathByContribution = collectContributionContractExpectedXPathByContributionName(text);
     const sectionRegex = /<(Contribution|Section)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
     for (const match of text.matchAll(sectionRegex)) {
       const attrsText = match[2] ?? "";
@@ -812,7 +853,12 @@ export class WorkspaceIndexer {
         root,
         rootExpression: rootRaw.length > 0 ? rootRaw : undefined,
         insert: extractAttributeValue(attrsText, "Insert"),
+        isInsertOptional: parseBooleanAttribute(extractAttributeValue(attrsText, "IsInsertOptional")),
         targetXPath: extractAttributeValue(attrsText, "TargetXPath"),
+        expectsXPath: new Set([
+          ...(contractExpectedXPathByContribution.get(name.toLowerCase()) ?? []),
+          ...collectExpectedXPathValuesFromText(body)
+        ]),
         allowMultipleInserts: parseBooleanAttribute(extractAttributeValue(attrsText, "AllowMultipleInserts")),
         hasContent: /\S/.test(body),
         formControlCount: countTagOccurrences(body, /<Control\b[^>]*>/gi),
@@ -982,6 +1028,31 @@ export class WorkspaceIndexer {
     return pieces[pieces.length - 1] ?? key;
   }
 
+  private computeUsingTraceContextSignature(
+    parsedEntries: readonly ParsedEntry[],
+    traceEligibleEntries: readonly ParsedEntry[]
+  ): string {
+    const componentSignatures = parsedEntries
+      .filter((entry) => entry.root === "component" || entry.root === "feature")
+      .map((entry) => `${entry.uri.toString()}@${entry.parseSignature}`)
+      .sort((a, b) => a.localeCompare(b));
+
+    const formSignatures = parsedEntries
+      .filter((entry) => entry.root === "form")
+      .map((entry) => `${entry.uri.toString()}@${entry.parseSignature}`)
+      .sort((a, b) => a.localeCompare(b));
+
+    const traceEligibleSignatures = traceEligibleEntries
+      .map((entry) => `${entry.uri.toString()}@${entry.parseSignature}`)
+      .sort((a, b) => a.localeCompare(b));
+
+    return [
+      `components:${componentSignatures.join(";")}`,
+      `forms:${formSignatures.join(";")}`,
+      `eligible:${traceEligibleSignatures.join(";")}`
+    ].join("|");
+  }
+
   private async readParsedEntry(
     uri: vscode.Uri,
     scope: "all" | "bootstrap",
@@ -1004,7 +1075,8 @@ export class WorkspaceIndexer {
           uri,
           maskedText: cached.maskedText,
           facts: cached.facts,
-          root: cached.root
+          root: cached.root,
+          parseSignature: cached.parseSignature
         };
       }
     }
@@ -1014,6 +1086,9 @@ export class WorkspaceIndexer {
     const facts = parseDocumentFactsFromMaskedText(maskedText);
     const root = (facts.rootTag ?? "").toLowerCase();
     const hasIgnoreDirective = containsIgnoreDirective(text);
+    const parseSignature = signature
+      ? `${Math.trunc(signature.mtimeMs)}:${signature.size}`
+      : `h:${fastHashText(maskedText)}`;
     hasIgnoreDirectiveByUri.set(uriKey, hasIgnoreDirective);
     if (signature) {
       this.parsedEntryCacheByUri.set(uriKey, {
@@ -1022,7 +1097,8 @@ export class WorkspaceIndexer {
         maskedText,
         facts,
         root,
-        hasIgnoreDirective
+        hasIgnoreDirective,
+        parseSignature
       });
     } else {
       this.parsedEntryCacheByUri.delete(uriKey);
@@ -1036,9 +1112,75 @@ export class WorkspaceIndexer {
       uri,
       maskedText,
       facts,
-      root
+      root,
+      parseSignature
     };
   }
+}
+
+function collectContributionContractExpectedXPathByContributionName(text: string): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  const manifestMatch = /<\s*Manifest\b[^>]*>([\s\S]*?)<\/\s*Manifest\s*>/i.exec(text);
+  if (!manifestMatch) {
+    return out;
+  }
+
+  const manifestBody = manifestMatch[1] ?? "";
+  const contractRegex = /<\s*ContributionContract\b([^>]*)>([\s\S]*?)<\/\s*ContributionContract\s*>/gi;
+  for (const contractMatch of manifestBody.matchAll(contractRegex)) {
+    const attrs = contractMatch[1] ?? "";
+    const body = contractMatch[2] ?? "";
+    const forName =
+      extractAttributeValue(attrs, "For") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Id");
+    if (!forName) {
+      continue;
+    }
+    const expectsXPath = collectExpectedXPathValuesFromText(body);
+    if (expectsXPath.length === 0) {
+      continue;
+    }
+    const key = forName.trim().toLowerCase();
+    const existing = out.get(key) ?? [];
+    out.set(key, uniqueStrings([...existing, ...expectsXPath]));
+  }
+
+  return out;
+}
+
+function collectExpectedXPathValuesFromText(text: string): string[] {
+  const out: string[] = [];
+  const blockRegex = /<\s*ExpectsXPath(s)?\b[^>]*>([\s\S]*?)<\/\s*ExpectsXPath(s)?\s*>/gi;
+  for (const block of text.matchAll(blockRegex)) {
+    const body = block[2] ?? "";
+    const xpathRegex = /<\s*XPath\b[^>]*>([\s\S]*?)<\/\s*XPath\s*>/gi;
+    for (const xpathMatch of body.matchAll(xpathRegex)) {
+      const value = (xpathMatch[1] ?? "").trim();
+      if (value.length > 0) {
+        out.push(value);
+      }
+    }
+  }
+  return uniqueStrings(out);
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized) {
+      continue;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(normalized);
+  }
+  return out;
 }
 
 function mergeDefinitions(
@@ -1051,6 +1193,12 @@ function mergeDefinitions(
     if (!targetDefinitions.has(key)) {
       targetDefinitions.set(key, location);
     }
+  }
+}
+
+function mergeDefinitionKeys(idsSet: Set<string>, sourceDefinitions: Map<string, vscode.Location>): void {
+  for (const key of sourceDefinitions.keys()) {
+    idsSet.add(key);
   }
 }
 
@@ -1378,6 +1526,84 @@ function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+function extractRootTagFast(maskedText: string): string {
+  const rootMatch = /<\s*([A-Za-z_][\w:.-]*)\b/.exec(maskedText);
+  const rootRaw = (rootMatch?.[1] ?? "").trim();
+  if (!rootRaw) {
+    return "";
+  }
+  const withoutPrefix = rootRaw.includes(":") ? rootRaw.slice(rootRaw.lastIndexOf(":") + 1) : rootRaw;
+  return withoutPrefix.toLowerCase();
+}
+
+function createLightweightParsedFormFacts(maskedText: string): ParsedDocumentFacts {
+  const formIdentMatch = /<Form\b[^>]*\bIdent\s*=\s*("([^"]*)"|'([^']*)')/i.exec(maskedText);
+  const formIdent = (formIdentMatch?.[2] ?? formIdentMatch?.[3] ?? "").trim();
+  const facts: ParsedDocumentFacts = {
+    rootTag: "Form",
+    rootIdent: formIdent || undefined,
+    formIdent: formIdent || undefined,
+    declaredControls: collectAttributeIdents(maskedText, /<Control\b([^>]*)>/gi, "Ident"),
+    declaredButtons: collectAttributeIdents(maskedText, /<Button\b([^>]*)>/gi, "Ident"),
+    declaredSections: collectAttributeIdents(maskedText, /<Section\b([^>]*)>/gi, "Ident"),
+    workflowReferences: [],
+    usingReferences: [],
+    includeReferences: [],
+    usingContributionInsertCounts: new Map<string, number>(),
+    usingContributionInsertTraces: new Map<string, import("./xmlFacts").UsingContributionInsertTrace>(),
+    placeholderReferences: [],
+    formIdentReferences: [],
+    mappingIdentReferences: [],
+    mappingFormIdentReferences: [],
+    requiredActionIdentReferences: [],
+    workflowControlIdentReferences: [],
+    htmlControlReferences: [],
+    identOccurrences: [],
+    declaredControlShareCodes: new Set<string>(),
+    controlShareCodeDefinitions: new Map<string, vscode.Range>(),
+    declaredActionShareCodes: new Set<string>(),
+    actionShareCodeDefinitions: new Map<string, vscode.Range>(),
+    declaredButtonShareCodes: new Set<string>(),
+    buttonShareCodeDefinitions: new Map<string, vscode.Range>(),
+    buttonShareCodeButtonIdents: new Map<string, Set<string>>(),
+    actionShareCodeReferences: [],
+    declaredControlInfos: [],
+    declaredButtonInfos: [],
+    rootControlScopeKeys: new Set<string>(),
+    rootButtonScopeKeys: new Set<string>(),
+    rootSectionScopeKeys: new Set<string>()
+  };
+  return facts;
+}
+
+function cloneUsingTraceMap(
+  source: ReadonlyMap<string, import("./xmlFacts").UsingContributionInsertTrace>
+): Map<string, import("./xmlFacts").UsingContributionInsertTrace> {
+  const out = new Map<string, import("./xmlFacts").UsingContributionInsertTrace>();
+  for (const [key, value] of source.entries()) {
+    out.set(key, {
+      strategy: value.strategy,
+      finalInsertCount: value.finalInsertCount,
+      placeholderCount: value.placeholderCount,
+      targetXPathExpression: value.targetXPathExpression,
+      targetXPathMatchCount: value.targetXPathMatchCount,
+      targetXPathClampedCount: value.targetXPathClampedCount,
+      allowMultipleInserts: value.allowMultipleInserts,
+      fallbackSymbolCount: value.fallbackSymbolCount
+    });
+  }
+  return out;
+}
+
+function fastHashText(text: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
 async function readWorkspaceFileText(uri: vscode.Uri): Promise<string> {
   const bytes = await vscode.workspace.fs.readFile(uri);
   const text = new TextDecoder("utf-8").decode(bytes);
@@ -1453,28 +1679,6 @@ function offsetToPosition(lineStarts: readonly number[], offset: number, textLen
   const line = Math.max(0, Math.min(lineStarts.length - 1, low));
   const start = lineStarts[line] ?? 0;
   return new vscode.Position(line, safe - start);
-}
-
-function findFormIdentByUri(formsByIdent: Map<string, IndexedForm>, uri: vscode.Uri): string | undefined {
-  const key = uri.toString();
-  for (const [ident, form] of formsByIdent.entries()) {
-    if (form.uri.toString() === key) {
-      return ident;
-    }
-  }
-
-  return undefined;
-}
-
-function findComponentKeyByUri(componentsByKey: Map<string, IndexedComponent>, uri: vscode.Uri): string | undefined {
-  const key = uri.toString();
-  for (const [componentKey, component] of componentsByKey.entries()) {
-    if (component.uri.toString() === key) {
-      return componentKey;
-    }
-  }
-
-  return undefined;
 }
 
 function removeBaseNameVariant(componentKeysByBaseName: Map<string, Set<string>>, baseName: string, key: string): void {

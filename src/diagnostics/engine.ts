@@ -4,14 +4,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseIgnoreState, isRuleIgnored } from "./ignore";
 import { WorkspaceIndex } from "../indexer/types";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
+import { parseDocumentFacts, parseDocumentFactsFromText, WorkflowReference } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots, normalizeComponentKey } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { getSystemMetadata, isKnownSystemTableForeignKey, SystemMetadata } from "../config/systemMetadata";
 import { collectResolvableControlIdents } from "../utils/controlIdents";
 import { maskXmlComments } from "../utils/xmlComments";
 import { getAllFormIdentCandidates, isKnownFormIdent, resolveSystemTableName } from "../utils/formIdents";
-import { FeatureCapabilityReport } from "../composition/model";
+import { EffectiveCompositionItem, FeatureCapabilityReport, FeatureSymbolKind } from "../composition/model";
 import { matchesExpectedXPathInEffectiveModel } from "../composition/effectiveModel";
 import { FeatureManifestRegistry } from "../composition/workspace";
 import { contributionMatchesDocumentRoot, populateUsingInsertTraceFromText } from "../composition/usingImpact";
@@ -27,6 +27,7 @@ export interface RuleDiagnostic {
   ruleId: string;
   message: string;
   range: vscode.Range;
+  relatedInformation?: ReadonlyArray<{ location: vscode.Location; message: string }>;
 }
 
 export interface BuildDiagnosticsOptions {
@@ -39,6 +40,8 @@ export interface BuildDiagnosticsOptions {
   skipConfiguredRootsCheck?: boolean;
   featureRegistry?: FeatureManifestRegistry;
   resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined;
+  injectedWorkflowReferences?: readonly WorkflowReference[];
+  workflowReferenceMode?: "local" | "injected" | "merged";
 }
 
 export class DiagnosticsEngine {
@@ -85,7 +88,16 @@ export class DiagnosticsEngine {
     this.validateIdentConventions(facts, index, issues, metadata);
 
     if (facts.rootTag?.toLowerCase() === "workflow") {
-      this.validateWorkflowReferences(facts, index, issues, metadata, documentComposition, options?.resolveOwningForm);
+      this.validateWorkflowReferences(
+        facts,
+        index,
+        issues,
+        metadata,
+        documentComposition,
+        options?.resolveOwningForm,
+        options?.injectedWorkflowReferences,
+        options?.workflowReferenceMode
+      );
     }
 
     this.validateMappingFormIdentReferences(facts, index, issues, metadata, formIdentCandidates, settings);
@@ -95,7 +107,7 @@ export class DiagnosticsEngine {
     this.validateUsingReferences(facts, index, issues, documentComposition);
     this.validatePrimitiveReferences(document, issues);
     this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
-    this.validateFeatureCompositionReferences(document, facts, issues, featureRegistry);
+    this.validateFeatureCompositionReferences(document, facts, issues, featureRegistry, maskedText);
     if (!fastBackgroundMode) {
       this.validateCommonAttributeTypos(document, issues, maskedText);
       this.validateSqlEqualsSpacing(document, issues, maskedText);
@@ -118,6 +130,11 @@ export class DiagnosticsEngine {
       const diagnostic = new vscode.Diagnostic(issue.range, `[${issue.ruleId}] ${issue.message}`, severity);
       diagnostic.source = "sfp-xml-linter";
       diagnostic.code = issue.ruleId;
+      if (issue.relatedInformation && issue.relatedInformation.length > 0) {
+        diagnostic.relatedInformation = issue.relatedInformation.map(
+          (item) => new vscode.DiagnosticRelatedInformation(item.location, item.message)
+        );
+      }
       diagnostics.push(diagnostic);
     }
 
@@ -216,7 +233,9 @@ export class DiagnosticsEngine {
     issues: RuleDiagnostic[],
     metadata: SystemMetadata,
     documentComposition: DocumentCompositionModel,
-    resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined
+    resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined,
+    injectedWorkflowReferences?: readonly WorkflowReference[],
+    workflowReferenceMode: "local" | "injected" | "merged" = "local"
   ): void {
     const formIdent = facts.workflowFormIdent;
     if (!formIdent) {
@@ -234,14 +253,46 @@ export class DiagnosticsEngine {
     const availableButtonShareCodes = collectWorkflowButtonShareCodes(facts, index, documentComposition);
     const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata, documentComposition, formIndex);
     const availableButtons = collectWorkflowAvailableButtons(facts, index, form, documentComposition, formIndex);
-    for (const ref of facts.workflowReferences) {
+    const injectedRangeFallback =
+      facts.usingReferences[0]?.componentValueRange ??
+      facts.workflowFormIdentRange ??
+      facts.rootFormIdentRange ??
+      new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1));
+
+    const localReferenceKeys = new Set(
+      facts.workflowReferences.map((ref) => `${ref.kind}|${ref.ident}|${ref.scopeKey ?? ""}`.toLowerCase())
+    );
+    const injectedRefs = (injectedWorkflowReferences ?? []).filter((ref) => {
+      const key = `${ref.kind}|${ref.ident}|${ref.scopeKey ?? ""}`.toLowerCase();
+      return !localReferenceKeys.has(key);
+    });
+
+    let allRefs: Array<{ ref: WorkflowReference; injected: boolean }> = [];
+    if (workflowReferenceMode === "injected") {
+      allRefs = injectedRefs.map((ref) => ({ ref, injected: true }));
+      if (allRefs.length === 0) {
+        allRefs = facts.workflowReferences.map((ref) => ({ ref, injected: false }));
+      }
+    } else if (workflowReferenceMode === "merged") {
+      allRefs = [
+        ...facts.workflowReferences.map((ref) => ({ ref, injected: false })),
+        ...injectedRefs.map((ref) => ({ ref, injected: true }))
+      ];
+    } else {
+      allRefs = facts.workflowReferences.map((ref) => ({ ref, injected: false }));
+    }
+
+    for (const item of allRefs) {
+      const ref = item.ref;
+      const range = item.injected ? injectedRangeFallback : ref.range;
+      const injectedPrefix = item.injected ? "Injected " : "";
       if (ref.kind === "formControl") {
         if (!availableControls.has(ref.ident)) {
           issues.push({
             ruleId: "unknown-form-control-ident",
-            range: ref.range,
+            range,
             message: withDidYouMean(
-              `FormControl Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
+              `${injectedPrefix}FormControl Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
               ref.ident,
               form.controls
             )
@@ -255,9 +306,9 @@ export class DiagnosticsEngine {
         if (!availableControlShareCodes.has(key)) {
           issues.push({
             ruleId: "unknown-form-control-ident",
-            range: ref.range,
+            range,
             message: withDidYouMean(
-              `ControlShareCode Ident '${ref.ident}' was not found in WorkFlow ControlShareCodes.`,
+              `${injectedPrefix}ControlShareCode Ident '${ref.ident}' was not found in WorkFlow ControlShareCodes.`,
               ref.ident,
               availableControlShareCodes
             )
@@ -269,9 +320,9 @@ export class DiagnosticsEngine {
       if (ref.kind === "button" && !availableButtons.has(ref.ident)) {
         issues.push({
           ruleId: "unknown-form-button-ident",
-          range: ref.range,
+          range,
           message: withDidYouMean(
-            `Button Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
+            `${injectedPrefix}Button Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
             ref.ident,
             form.buttons
           )
@@ -284,9 +335,9 @@ export class DiagnosticsEngine {
         if (!availableButtonShareCodes.has(key)) {
           issues.push({
             ruleId: "unknown-workflow-button-share-code-ident",
-            range: ref.range,
+            range,
             message: withDidYouMean(
-              `ButtonShareCode Ident '${ref.ident}' was not found in WorkFlow ButtonShareCodes.`,
+              `${injectedPrefix}ButtonShareCode Ident '${ref.ident}' was not found in WorkFlow ButtonShareCodes.`,
               ref.ident,
               availableButtonShareCodes
             )
@@ -298,9 +349,9 @@ export class DiagnosticsEngine {
       if (ref.kind === "section" && !form.sections.has(ref.ident)) {
         issues.push({
           ruleId: "unknown-form-section-ident",
-          range: ref.range,
+          range,
           message: withDidYouMean(
-            `Section Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
+            `${injectedPrefix}Section Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
             ref.ident,
             form.sections
           )
@@ -433,6 +484,9 @@ export class DiagnosticsEngine {
     const tracesReady = facts.usingContributionInsertTraces.size > 0;
     const suppressedFull = new Set<string>();
     const suppressedSections = new Map<string, Set<string>>();
+    const crossDocumentImpactByUsingKey = this.collectCrossDocumentUsingImpactByKey(facts, index);
+    const effectiveItemsCurrentDocument = buildEffectiveItemsFromDocumentComposition(documentComposition, facts);
+    const relatedExpectedXPathContexts = this.collectRelatedExpectedXPathContextsForForm(facts, index);
     for (const ref of facts.usingReferences) {
       if (!ref.suppressInheritance) {
         continue;
@@ -501,11 +555,15 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      const impact = findLocalUsingModelForReference(documentComposition, ref)?.impact;
-      if (!impact) {
+      const usingModel = findLocalUsingModelForReference(documentComposition, ref);
+      const impact = usingModel?.impact;
+      if (!impact || !usingModel) {
         continue;
       }
-      if (impact.kind === "unused") {
+      const localImpactKind = impact.kind;
+      const crossImpactKind = crossDocumentImpactByUsingKey.get(getUsingKey(ref.componentKey, ref.sectionValue));
+      const effectiveImpactKind = this.resolveEffectiveUsingImpactKind(localImpactKind, crossImpactKind);
+      if (effectiveImpactKind === "unused") {
         issues.push({
           ruleId: "unused-using",
           range: ref.sectionValueRange ?? ref.componentValueRange,
@@ -514,12 +572,72 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      if (impact.kind === "partial") {
+      if (effectiveImpactKind === "partial") {
         issues.push({
           ruleId: "partial-using",
           range: ref.sectionValueRange ?? ref.componentValueRange,
           message: impact.message ?? `Using '${ref.rawComponentValue}' is only partially effective.`
         });
+      }
+
+      const usingRange = ref.sectionValueRange ?? ref.componentValueRange;
+      this.validateUsingExpectedXPathsForContext(
+        index,
+        ref.componentKey,
+        ref.rawComponentValue,
+        usingModel.contributions,
+        effectiveItemsCurrentDocument,
+        issues,
+        usingRange,
+        "",
+        undefined,
+        facts
+      );
+      this.validateUsingExpectedXPathsForContext(
+        index,
+        ref.componentKey,
+        ref.rawComponentValue,
+        usingModel.placeholderContributions,
+        effectiveItemsCurrentDocument,
+        issues,
+        usingRange,
+        "",
+        undefined,
+        facts
+      );
+      for (const relatedContext of relatedExpectedXPathContexts) {
+        const relatedUsingModel = relatedContext.composition.usings.find(
+          (item) =>
+            item.componentKey === ref.componentKey &&
+            (item.sectionValue ?? "") === (ref.sectionValue ?? "")
+        );
+        if (!relatedUsingModel || !relatedUsingModel.hasResolvedFeature) {
+          continue;
+        }
+        this.validateUsingExpectedXPathsForContext(
+          index,
+          relatedUsingModel.componentKey,
+          ref.rawComponentValue,
+          relatedUsingModel.contributions,
+          relatedContext.items,
+          issues,
+          usingRange,
+          ` (context: ${relatedContext.label})`,
+          relatedContext.uri,
+          relatedContext.facts
+        );
+        this.validateUsingExpectedXPathsForContext(
+          index,
+          relatedUsingModel.componentKey,
+          ref.rawComponentValue,
+          relatedUsingModel.placeholderContributions,
+          relatedContext.items,
+          issues,
+          usingRange,
+          ` (context: ${relatedContext.label})`,
+          relatedContext.uri,
+          relatedContext.facts
+        );
       }
     }
 
@@ -527,6 +645,212 @@ export class DiagnosticsEngine {
     this.validateFormOwnedUsingInheritance(facts, index, issues);
     this.validateMissingUsingParams(facts, index, issues, documentComposition);
     this.validateOrphanPlaceholderReferences(facts, index, issues);
+  }
+
+  private validateUsingExpectedXPathsForContext(
+    index: WorkspaceIndex,
+    componentKey: string,
+    rawComponentValue: string,
+    contributionModels: ReadonlyArray<DocumentCompositionModel["usings"][number]["contributions"][number]>,
+    items: readonly EffectiveCompositionItem[],
+    issues: RuleDiagnostic[],
+    range: vscode.Range,
+    contextSuffix = "",
+    contextUri?: vscode.Uri,
+    contextFacts?: ReturnType<typeof parseDocumentFacts>
+  ): void {
+    for (const contributionModel of contributionModels) {
+      if (!contributionModel.rootRelevant && !contributionModel.explicit) {
+        continue;
+      }
+      const contributionName = contributionModel.contribution.contributionName;
+      const component = resolveComponentByKey(index, componentKey);
+      const contributionLocation = component?.contributionDefinitions.get(contributionName);
+      const relatedInfo = contributionLocation
+        ? [{ location: contributionLocation, message: `Contribution '${contributionName}' in feature '${rawComponentValue}'` }]
+        : contextUri
+          ? [{ location: new vscode.Location(contextUri, new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0))), message: "Context document" }]
+          : undefined;
+      const contributionTargetXPath = (contributionModel.contribution.targetXPath ?? "").trim();
+      const contributionInsert = (contributionModel.contribution.insert ?? "").trim().toLowerCase();
+      const insertOptional = contributionModel.contribution.isInsertOptional === true;
+      if (!insertOptional && contributionInsert === "placeholder") {
+        const placeholderUsed = contributionModel.insertCount > 0;
+        if (!placeholderUsed) {
+          issues.push({
+            ruleId: "missing-feature-expected-xpath",
+            range,
+            message:
+              `Using '${rawComponentValue}' contribution '${contributionName}' requires at least one placeholder/include usage, ` +
+              `but none was found${contextSuffix}.`,
+            relatedInformation: relatedInfo
+          });
+          continue;
+        }
+      }
+      if (!insertOptional && contributionTargetXPath.length > 0 && contributionInsert !== "placeholder") {
+        const trace = contributionModel.insertTrace;
+        const matchedInContextItems = matchesExpectedXPathInEffectiveModel(contributionTargetXPath, items);
+        const matchedInContextFacts = contextFacts ? matchesExpectedXPathInDocumentFacts(contributionTargetXPath, contextFacts) : false;
+        const targetMatched = trace
+          ? trace.strategy !== "targetXPath" || trace.targetXPathMatchCount > 0 || matchedInContextItems || matchedInContextFacts
+          : contributionModel.insertCount > 0 || matchedInContextItems || matchedInContextFacts;
+        if (!targetMatched) {
+          issues.push({
+            ruleId: "missing-feature-expected-xpath",
+            range,
+            message:
+              `Using '${rawComponentValue}' contribution '${contributionName}' requires existing target XPath ` +
+              `'${contributionTargetXPath}' which was not found${contextSuffix}.`,
+            relatedInformation: relatedInfo
+          });
+          continue;
+        }
+      }
+
+      const expectedXPaths = [...(contributionModel.contribution.expectsXPath ?? [])];
+      if (expectedXPaths.length === 0) {
+        continue;
+      }
+      for (const expectedXPath of expectedXPaths) {
+        if (insertOptional) {
+          continue;
+        }
+        if (contributionTargetXPath.length > 0 && expectedXPath.trim() === contributionTargetXPath) {
+          continue;
+        }
+        if (
+          matchesExpectedXPathInEffectiveModel(expectedXPath, items) ||
+          (contextFacts ? matchesExpectedXPathInDocumentFacts(expectedXPath, contextFacts) : false)
+        ) {
+          continue;
+        }
+        issues.push({
+          ruleId: "missing-feature-expected-xpath",
+          range,
+          message:
+            `Using '${rawComponentValue}' contribution '${contributionName}' requires XPath '${expectedXPath}' ` +
+            `which is not satisfied by effective composition${contextSuffix}.`,
+          relatedInformation: relatedInfo
+        });
+      }
+    }
+  }
+
+  private collectRelatedExpectedXPathContextsForForm(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex
+  ): Array<{ label: string; uri: vscode.Uri; composition: DocumentCompositionModel; items: EffectiveCompositionItem[]; facts: ReturnType<typeof parseDocumentFacts> }> {
+    const out: Array<{ label: string; uri: vscode.Uri; composition: DocumentCompositionModel; items: EffectiveCompositionItem[]; facts: ReturnType<typeof parseDocumentFacts> }> = [];
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root !== "form" || !facts.formIdent) {
+      return out;
+    }
+    const currentUriKey = [...index.parsedFactsByUri.entries()].find((entry) => entry[1] === facts)?.[0];
+    const currentDir = currentUriKey ? dirnameFromUriKey(currentUriKey) : undefined;
+
+    for (const [uriKey, relatedFacts] of index.parsedFactsByUri.entries()) {
+      const relatedRoot = (relatedFacts.rootTag ?? "").toLowerCase();
+      if (relatedRoot !== "workflow" && relatedRoot !== "dataview") {
+        continue;
+      }
+      if (currentDir) {
+        const relatedDir = dirnameFromUriKey(uriKey);
+        if (!relatedDir || relatedDir !== currentDir) {
+          continue;
+        }
+      }
+
+      const relatedFormIdent = relatedRoot === "workflow"
+        ? (relatedFacts.workflowFormIdent ?? relatedFacts.rootFormIdent)
+        : relatedFacts.rootFormIdent;
+      if (!relatedFormIdent || relatedFormIdent !== facts.formIdent) {
+        continue;
+      }
+
+      const relatedUri = uriFromUriKey(uriKey);
+      if (!relatedUri) {
+        continue;
+      }
+      const composition = buildDocumentCompositionModel(relatedFacts, index);
+      let contextUri = relatedUri;
+      let contextFacts = relatedFacts;
+      let contextItems = buildEffectiveItemsFromDocumentComposition(composition, relatedFacts);
+      const runtimeUri = templateUriToRuntimeUri(relatedUri);
+      if (runtimeUri && fs.existsSync(runtimeUri.fsPath)) {
+        try {
+          const runtimeText = fs.readFileSync(runtimeUri.fsPath, "utf8");
+          const runtimeFacts = parseDocumentFactsFromText(runtimeText);
+          const runtimeComposition = buildDocumentCompositionModel(runtimeFacts, index);
+          contextItems = buildEffectiveItemsFromDocumentComposition(runtimeComposition, runtimeFacts);
+          contextUri = runtimeUri;
+          contextFacts = runtimeFacts;
+        } catch {
+          // Keep template context when runtime cannot be loaded.
+        }
+      }
+      out.push({
+        label: formatUriForMessage(contextUri),
+        uri: contextUri,
+        composition,
+        items: contextItems,
+        facts: contextFacts
+      });
+    }
+
+    return out;
+  }
+
+  private collectCrossDocumentUsingImpactByKey(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex
+  ): Map<string, "effective" | "partial" | "unused"> {
+    const out = new Map<string, "effective" | "partial" | "unused">();
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root !== "form" || !facts.formIdent) {
+      return out;
+    }
+
+    for (const [uriKey, relatedFacts] of index.parsedFactsByUri.entries()) {
+      const relatedRoot = (relatedFacts.rootTag ?? "").toLowerCase();
+      if (relatedRoot !== "workflow" && relatedRoot !== "dataview") {
+        continue;
+      }
+
+      const relatedFormIdent = relatedRoot === "workflow"
+        ? (relatedFacts.workflowFormIdent ?? relatedFacts.rootFormIdent)
+        : relatedFacts.rootFormIdent;
+      if (!relatedFormIdent || relatedFormIdent !== facts.formIdent) {
+        continue;
+      }
+
+      const relatedComposition = buildDocumentCompositionModel(relatedFacts, index);
+      for (const usingModel of relatedComposition.usings) {
+        const key = getUsingKey(usingModel.componentKey, usingModel.sectionValue);
+        const relatedKind = usingModel.impact.kind;
+        const previous = out.get(key);
+        out.set(key, this.resolveEffectiveUsingImpactKind(previous, relatedKind));
+      }
+    }
+
+    return out;
+  }
+
+  private resolveEffectiveUsingImpactKind(
+    localKind: "effective" | "partial" | "unused" | undefined,
+    relatedKind: "effective" | "partial" | "unused" | undefined
+  ): "effective" | "partial" | "unused" {
+    const rank = (kind: "effective" | "partial" | "unused" | undefined): number => {
+      if (kind === "effective") {
+        return 3;
+      }
+      if (kind === "partial") {
+        return 2;
+      }
+      return 1;
+    };
+
+    return rank(localKind) >= rank(relatedKind) ? (localKind ?? "unused") : (relatedKind ?? "unused");
   }
 
   private validateMissingUsingParams(
@@ -1033,8 +1357,8 @@ export class DiagnosticsEngine {
       }
 
       const splitInfo = describeLookupIdentSplit(control.ident, targetCandidates);
-      const parsed = parseLookupControlIdent(control.ident, targetCandidates);
-      if (!parsed) {
+      const parsedCandidates = parseLookupControlIdentCandidates(control.ident, targetCandidates);
+      if (parsedCandidates.length === 0) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
@@ -1043,45 +1367,40 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      if (isLookupMulti && !parsed.foreignKey.toLowerCase().endsWith("s")) {
+      const validCandidate = parsedCandidates.find((candidate) => {
+        if (isLookupMulti && !candidate.foreignKey.toLowerCase().endsWith("s")) {
+          return false;
+        }
+        return isLookupCandidateSemanticallyValid(candidate, isLookupMulti, index, metadata);
+      });
+      if (validCandidate) {
+        continue;
+      }
+
+      if (isLookupMulti && !parsedCandidates.some((candidate) => candidate.foreignKey.toLowerCase().endsWith("s"))) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
           message: `Multi-select lookup '${control.ident}' should use plural foreign key suffix ending with 's'.`
         });
+        continue;
       }
 
-      const normalizedForeignKey = isLookupMulti
-        ? trimTrailingPluralS(parsed.foreignKey)
-        : parsed.foreignKey;
-
+      const parsed = parsedCandidates[0];
       if (parsed.targetKind === "system") {
-        if (!isKnownSystemTableForeignKey(metadata, parsed.targetName, normalizedForeignKey)) {
-          issues.push({
-            ruleId: "ident-convention-lookup-control",
-            range: control.range,
-            message: `System table lookup '${control.ident}' should use known system-table column (default 'ID'/'Ident' or configured external columns). ${splitInfo}`
-          });
-        }
-        continue;
-      }
-
-      const targetForm = index.formsByIdent.get(parsed.targetName);
-      if (!targetForm) {
-        continue;
-      }
-
-      const fk = normalizedForeignKey;
-      const isKnownControl = targetForm.controls.has(fk);
-      const isDefaultColumn = metadata.defaultFormColumns.has(fk);
-      const isPreferredSuffix = metadata.preferredForeignKeySuffixes.some((suffix) => endsWithExact(fk, suffix));
-      if (!isKnownControl && !isDefaultColumn && !isPreferredSuffix) {
         issues.push({
           ruleId: "ident-convention-lookup-control",
           range: control.range,
-          message: `Lookup control '${control.ident}' references '${parsed.targetName}', but foreign key '${parsed.foreignKey}' is not a known control/default column. ${splitInfo}`
+          message: `System table lookup '${control.ident}' should use known system-table column (default 'ID'/'Ident' or configured external columns). ${splitInfo}`
         });
+        continue;
       }
+
+      issues.push({
+        ruleId: "ident-convention-lookup-control",
+        range: control.range,
+        message: `Lookup control '${control.ident}' references '${parsed.targetName}', but foreign key '${parsed.foreignKey}' is not a known control/default column. ${splitInfo}`
+      });
     }
   }
 
@@ -1171,16 +1490,21 @@ export class DiagnosticsEngine {
     document: vscode.TextDocument,
     facts: ReturnType<typeof parseDocumentFacts>,
     issues: RuleDiagnostic[],
-    featureRegistry: FeatureManifestRegistry | undefined
+    featureRegistry: FeatureManifestRegistry | undefined,
+    maskedText?: string
   ): void {
-    if (!featureRegistry) {
-      return;
-    }
-
     const root = (facts.rootTag ?? "").toLowerCase();
     const relPath = vscode.workspace.asRelativePath(document.uri, false).replace(/\\/g, "/");
     const isFeatureFile = relPath.toLowerCase().endsWith(".feature.xml");
-    if (root !== "feature" && !isFeatureFile) {
+    const isComponentFile = relPath.toLowerCase().endsWith(".component.xml");
+    if (root !== "feature" && root !== "component" && !isFeatureFile && !isComponentFile) {
+      return;
+    }
+
+    const text = maskedText ?? document.getText();
+    this.validateMissingExplicitProvides(text, document, issues);
+
+    if (!featureRegistry) {
       return;
     }
 
@@ -1194,7 +1518,6 @@ export class DiagnosticsEngine {
     const providedKeys = new Set((effectiveModel?.items ?? []).map((item) => item.key));
     const providedIdents = new Set((effectiveModel?.items ?? []).map((item) => item.ident));
 
-    const text = document.getText();
     for (const ref of collectFeatureRequiresFeatureRefs(text, document)) {
       if (featureRegistry.manifestsByFeature.has(ref.ident)) {
         continue;
@@ -1347,6 +1670,36 @@ export class DiagnosticsEngine {
     }
   }
 
+  private validateMissingExplicitProvides(
+    text: string,
+    document: vscode.TextDocument,
+    issues: RuleDiagnostic[]
+  ): void {
+    const contributionRanges = collectFeatureContributionRanges(text, document);
+    const contributionBlocks = collectFeatureContributionBlocks(text, document);
+    const contractProvides = collectManifestContributionContractProvides(text);
+    for (const [key, block] of contributionBlocks.entries()) {
+      if (block.hasProvidesBlock) {
+        continue;
+      }
+      const manifestProvidesCount = contractProvides.get(key) ?? 0;
+      if (manifestProvidesCount > 0) {
+        continue;
+      }
+      if (!containsImplicitProvidedSymbol(block.content)) {
+        continue;
+      }
+      const range =
+        contributionRanges.get(key) ??
+        new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1));
+      issues.push({
+        ruleId: "missing-explicit-provides",
+        range,
+        message: `Contribution '${block.name ?? key}' contains symbol-like XML with Ident, but has no explicit <Provides>.`
+      });
+    }
+  }
+
   private validatePrimitiveReferences(
     document: vscode.TextDocument,
     issues: RuleDiagnostic[]
@@ -1435,6 +1788,12 @@ interface UsePrimitiveNode {
   range: vscode.Range;
   keyRange?: vscode.Range;
   templateRange?: vscode.Range;
+}
+
+interface FeatureContributionBlock {
+  name?: string;
+  content: string;
+  hasProvidesBlock: boolean;
 }
 
 interface PrimitiveTemplateDefinition {
@@ -1865,20 +2224,92 @@ function collectFeatureContributionRanges(
     const attrsOffset = (match[0] ?? "").indexOf(rawAttrs);
     const attrsStart = (match.index ?? 0) + (attrsOffset >= 0 ? attrsOffset : 0);
     const attrs = parseFeatureXmlAttributes(rawAttrs, text, attrsStart, document);
+    const tagName = match[1] ?? "Contribution";
+    const tagStart = match.index ?? 0;
+    const tagRange = new vscode.Range(document.positionAt(tagStart), document.positionAt(tagStart + tagName.length + 1));
     const name = getAttributeCaseInsensitiveXml(attrs, "Name");
     if (name?.value) {
-      out.set(name.value.toLowerCase(), name.range);
+      out.set(name.value.toLowerCase(), tagRange);
       continue;
     }
 
-    const tagName = match[1] ?? "Contribution";
-    const tagStart = match.index ?? 0;
     out.set(
       tagName.toLowerCase(),
-      new vscode.Range(document.positionAt(tagStart), document.positionAt(tagStart + tagName.length + 1))
+      tagRange
     );
   }
 
+  return out;
+}
+
+function collectFeatureContributionBlocks(
+  text: string,
+  document: vscode.TextDocument
+): Map<string, FeatureContributionBlock> {
+  const out = new Map<string, FeatureContributionBlock>();
+  const contributionRegex = /<\s*(Contribution|Section)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\s*\1\s*>)/gi;
+
+  for (const match of text.matchAll(contributionRegex)) {
+    const rawAttrs = match[2] ?? "";
+    const body = match[3] ?? "";
+    const attrsOffset = (match[0] ?? "").indexOf(rawAttrs);
+    const attrsStart = (match.index ?? 0) + (attrsOffset >= 0 ? attrsOffset : 0);
+    const attrs = parseFeatureXmlAttributes(rawAttrs, text, attrsStart, document);
+    const name = getAttributeCaseInsensitiveXml(attrs, "Name")?.value;
+    if (!name) {
+      continue;
+    }
+
+    out.set(name.toLowerCase(), {
+      name,
+      content: body,
+      hasProvidesBlock: /<\s*Provides\b/i.test(body)
+    });
+  }
+
+  return out;
+}
+
+function containsImplicitProvidedSymbol(content: string): boolean {
+  return /<(Control|Button|Section|ActionShareCode|ButtonShareCode|ControlShareCode|Column|Component|DataSource|dsp:Parameter)\b[^>]*\bIdent\s*=\s*(?:"[^"]*"|'[^']*')/i.test(
+    content
+  );
+}
+
+function collectManifestContributionContractProvides(text: string): Map<string, number> {
+  const out = new Map<string, number>();
+  const manifestMatch = /<\s*Manifest\b[^>]*>([\s\S]*?)<\/\s*Manifest\s*>/i.exec(text);
+  if (!manifestMatch) {
+    return out;
+  }
+  const body = manifestMatch[1] ?? "";
+  const contractRegex = /<\s*ContributionContract\b([^>]*?)>([\s\S]*?)<\/\s*ContributionContract\s*>/gi;
+  for (const match of body.matchAll(contractRegex)) {
+    const attrsRaw = match[1] ?? "";
+    const contractBody = match[2] ?? "";
+    const attrs = parseXmlAttributesLoose(attrsRaw);
+    const name = attrs.get("for") ?? attrs.get("name") ?? attrs.get("id");
+    if (!name) {
+      continue;
+    }
+    const symbolCount = [...contractBody.matchAll(/<\s*Symbol\b[^>]*\/>/gi)].length;
+    const key = name.toLowerCase();
+    const current = out.get(key) ?? 0;
+    out.set(key, Math.max(current, symbolCount));
+  }
+  return out;
+}
+
+function parseXmlAttributesLoose(raw: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const regex = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+  for (const match of raw.matchAll(regex)) {
+    const key = (match[1] ?? "").trim().toLowerCase();
+    if (!key) {
+      continue;
+    }
+    out.set(key, (match[2] ?? match[3] ?? "").trim());
+  }
   return out;
 }
 
@@ -2234,6 +2665,65 @@ function collectWorkflowAvailableButtons(
   return out;
 }
 
+function normalizeUriKeyToComparablePath(uriKey: string): string {
+  const normalized = uriKey.replace(/\\/g, "/");
+  if (!normalized.toLowerCase().startsWith("file://")) {
+    return normalized.toLowerCase();
+  }
+  const withoutScheme = normalized.slice("file://".length);
+  let decoded = withoutScheme;
+  try {
+    decoded = decodeURIComponent(withoutScheme);
+  } catch {
+    decoded = withoutScheme;
+  }
+  return decoded.replace(/^\/([A-Za-z]:)/, "$1").toLowerCase();
+}
+
+function dirnameFromUriKey(uriKey: string): string | undefined {
+  const path = normalizeUriKeyToComparablePath(uriKey);
+  const lastSlash = path.lastIndexOf("/");
+  if (lastSlash <= 0) {
+    return undefined;
+  }
+  return path.slice(0, lastSlash);
+}
+
+function uriFromUriKey(uriKey: string): vscode.Uri | undefined {
+  const normalized = uriKey.replace(/\\/g, "/");
+  if (/^file:\/\//i.test(normalized)) {
+    let withoutScheme = normalized.slice("file://".length);
+    try {
+      withoutScheme = decodeURIComponent(withoutScheme);
+    } catch {
+      // keep as-is
+    }
+    const fsPath = withoutScheme.replace(/^\/([A-Za-z]:)/, "$1");
+    return vscode.Uri.file(fsPath);
+  }
+  try {
+    return vscode.Uri.file(normalized);
+  } catch {
+    return undefined;
+  }
+}
+
+function templateUriToRuntimeUri(uri: vscode.Uri): vscode.Uri | undefined {
+  const fsPath = uri.fsPath;
+  if (!/[\\/]XML_Templates([\\/])/i.test(fsPath)) {
+    return undefined;
+  }
+  return vscode.Uri.file(fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`));
+}
+
+function formatUriForMessage(uri: vscode.Uri): string {
+  const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/");
+  if (rel && rel !== uri.fsPath) {
+    return rel;
+  }
+  return uri.fsPath.replace(/\\/g, "/");
+}
+
 function collectFormEffectiveContributionSymbols(
   form: import("../indexer/types").IndexedForm,
   index: WorkspaceIndex
@@ -2265,12 +2755,18 @@ function endsWithExact(value: string, suffix: string): boolean {
   return value.endsWith(suffix);
 }
 
-function parseLookupControlIdent(
+type LookupIdentParseCandidate = {
+  targetName: string;
+  targetKind: "form" | "system";
+  foreignKey: string;
+  score: number;
+};
+
+function parseLookupControlIdentCandidates(
   ident: string,
   candidates: Array<{ name: string; kind: "form" | "system" }>
-): { targetName: string; targetKind: "form" | "system"; foreignKey: string } | undefined {
-  let best: { targetName: string; targetKind: "form" | "system"; foreignKey: string; score: number } | undefined;
-
+): LookupIdentParseCandidate[] {
+  const out: LookupIdentParseCandidate[] = [];
   for (const candidate of candidates) {
     const idx = ident.lastIndexOf(candidate.name);
     if (idx < 0) {
@@ -2282,26 +2778,42 @@ function parseLookupControlIdent(
       continue;
     }
 
-    const score = candidate.name.length;
-    if (!best || score > best.score) {
-      best = {
-        targetName: candidate.name,
-        targetKind: candidate.kind,
-        foreignKey,
-        score
-      };
-    }
+    out.push({
+      targetName: candidate.name,
+      targetKind: candidate.kind,
+      foreignKey,
+      score: candidate.name.length
+    });
   }
 
-  if (!best) {
-    return undefined;
+  out.sort((a, b) => b.score - a.score);
+  return out;
+}
+
+function isLookupCandidateSemanticallyValid(
+  parsed: LookupIdentParseCandidate,
+  isLookupMulti: boolean,
+  index: WorkspaceIndex,
+  metadata: SystemMetadata
+): boolean {
+  const normalizedForeignKey = isLookupMulti
+    ? trimTrailingPluralS(parsed.foreignKey)
+    : parsed.foreignKey;
+
+  if (parsed.targetKind === "system") {
+    return isKnownSystemTableForeignKey(metadata, parsed.targetName, normalizedForeignKey);
   }
 
-  return {
-    targetName: best.targetName,
-    targetKind: best.targetKind,
-    foreignKey: best.foreignKey
-  };
+  const targetForm = index.formsByIdent.get(parsed.targetName);
+  if (!targetForm) {
+    return false;
+  }
+
+  const fk = normalizedForeignKey;
+  const isKnownControl = targetForm.controls.has(fk);
+  const isDefaultColumn = metadata.defaultFormColumns.has(fk);
+  const isPreferredSuffix = metadata.preferredForeignKeySuffixes.some((suffix) => endsWithExact(fk, suffix));
+  return isKnownControl || isDefaultColumn || isPreferredSuffix;
 }
 
 function trimTrailingPluralS(value: string): string {
@@ -2316,7 +2828,8 @@ function describeLookupIdentSplit(
   ident: string,
   candidates: Array<{ name: string; kind: "form" | "system" }>
 ): string {
-  const parsed = parseLookupControlIdent(ident, candidates);
+  const parsedCandidates = parseLookupControlIdentCandidates(ident, candidates);
+  const parsed = parsedCandidates[0];
   if (!parsed) {
     return "Split: purpose=?, formOrTable=?, foreignKey=?. Primary table/form candidate not found.";
   }
@@ -2582,5 +3095,136 @@ function resolveInjectedSectionScopeKey(targetXPath: string | undefined, rootSco
   }
 
   return fallback;
+}
+
+function buildEffectiveItemsFromDocumentComposition(
+  composition: DocumentCompositionModel,
+  facts: ReturnType<typeof parseDocumentFacts>
+): EffectiveCompositionItem[] {
+  const itemsByKey = new Map<string, EffectiveCompositionItem>();
+  const upsert = (kind: FeatureSymbolKind, ident: string, presence: "local" | "injected" = "injected"): void => {
+    const key = `${kind}:${ident}`;
+    const existing = itemsByKey.get(key);
+    if (existing) {
+      if (existing.presence !== "local" && presence === "local") {
+        existing.presence = "local";
+      }
+      return;
+    }
+    itemsByKey.set(key, {
+      key,
+      kind,
+      ident,
+      contexts: [],
+      presence,
+      usage: "applied",
+      origins: [],
+      notes: []
+    });
+  };
+
+  // Seed with symbols declared directly in the parsed document (runtime/template facts).
+  for (const ident of facts.declaredControls) {
+    upsert("control", ident, "local");
+  }
+  for (const ident of facts.declaredButtons) {
+    upsert("button", ident, "local");
+  }
+  for (const ident of facts.declaredSections) {
+    upsert("section", ident, "local");
+  }
+  for (const ident of facts.declaredActionShareCodes) {
+    upsert("actionShareCode", ident, "local");
+  }
+  for (const ident of facts.declaredControlShareCodes) {
+    upsert("controlShareCode", ident, "local");
+  }
+  for (const ident of facts.declaredButtonShareCodes) {
+    upsert("buttonShareCode", ident, "local");
+  }
+
+  for (const contributionRef of collectSelectedDocumentContributions(composition)) {
+    for (const ident of contributionRef.contribution.formControlIdents) {
+      upsert("control", ident, "injected");
+    }
+    for (const ident of contributionRef.contribution.formButtonIdents) {
+      upsert("button", ident, "injected");
+    }
+    for (const ident of contributionRef.contribution.formSectionIdents) {
+      upsert("section", ident, "injected");
+    }
+    for (const ident of contributionRef.contribution.workflowActionShareCodeIdents) {
+      upsert("actionShareCode", ident, "injected");
+    }
+    for (const ident of contributionRef.contribution.workflowControlShareCodeIdents) {
+      upsert("controlShareCode", ident, "injected");
+    }
+    for (const ident of contributionRef.contribution.workflowButtonShareCodeIdents) {
+      upsert("buttonShareCode", ident, "injected");
+    }
+  }
+
+  return [...itemsByKey.values()];
+}
+
+function matchesExpectedXPathInDocumentFacts(
+  xpath: string,
+  facts: ReturnType<typeof parseDocumentFacts>
+): boolean {
+  const normalized = xpath.trim();
+  if (!normalized) {
+    return true;
+  }
+
+  const identMatches = [...normalized.matchAll(/\/([A-Za-z_:][\w:.-]*)\s*\[\s*@Ident\s*=\s*(['"])(.*?)\2\s*\]/gi)];
+  if (identMatches.length === 0) {
+    return false;
+  }
+
+  for (const identMatch of identMatches) {
+    const elementName = (identMatch[1] ?? "").replace(/^.*:/, "");
+    const ident = identMatch[3] ?? "";
+    if (!ident) {
+      continue;
+    }
+
+    switch (elementName.toLowerCase()) {
+      case "control":
+      case "formcontrol":
+        if (facts.declaredControls.has(ident)) {
+          return true;
+        }
+        break;
+      case "button":
+        if (facts.declaredButtons.has(ident)) {
+          return true;
+        }
+        break;
+      case "section":
+        if (facts.declaredSections.has(ident)) {
+          return true;
+        }
+        break;
+      case "controlsharecode":
+        if (facts.declaredControlShareCodes.has(ident)) {
+          return true;
+        }
+        break;
+      case "actionsharecode":
+        if (facts.declaredActionShareCodes.has(ident)) {
+          return true;
+        }
+        break;
+      case "buttonsharecode":
+        if (facts.declaredButtonShareCodes.has(ident)) {
+          return true;
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  return false;
 }
 

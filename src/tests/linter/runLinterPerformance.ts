@@ -13,6 +13,7 @@ const maxBackgroundValidationMs = Number(process.env.SFP_LINTER_PERF_BG_LIMIT_MS
 const maxXmlRebuildMs = Number(process.env.SFP_LINTER_PERF_REBUILD_LIMIT_MS ?? "5000");
 const maxRealStartupMs = parseOptionalThreshold(process.env.SFP_LINTER_PERF_REAL_STARTUP_LIMIT_MS);
 const openDocsValidationCount = Math.max(0, Number(process.env.SFP_LINTER_PERF_OPEN_DOCS_COUNT ?? "25"));
+const reportJsonPath = process.env.SFP_LINTER_PERF_REPORT_JSON?.trim();
 
 type VscodeMockState = {
   workspaceRoot: string;
@@ -286,6 +287,90 @@ const { loadFeatureManifestRegistryFromRoots } = require("../../composition/work
   loadFeatureManifestRegistryFromRoots: loadFeatureManifestRegistryFromRootsFn;
 };
 
+type DurationStats = {
+  count: number;
+  minMs: number;
+  p50Ms: number;
+  p95Ms: number;
+  maxMs: number;
+  avgMs: number;
+  totalMs: number;
+};
+
+type ParsedIndexDoneDetails = {
+  forms?: number;
+  components?: number;
+  discoverMs?: number;
+  parseMs?: number;
+  componentsMs?: number;
+  formsMs?: number;
+  refsMs?: number;
+  traceMs?: number;
+};
+
+type IndexMetric = {
+  label: string;
+  totalMs: number;
+  doneMessage?: string;
+  doneDetails?: ParsedIndexDoneDetails;
+};
+
+type BackgroundValidationMetric = {
+  totalMs: number;
+  files: number;
+  filesWithDiagnostics: number;
+  diagnosticsCount: number;
+  totalPerFileStats: DurationStats;
+  readPerFileStats: DurationStats;
+  diagnosticsPerFileStats: DurationStats;
+};
+
+type OpenDocsValidationMetric = {
+  totalMs: number;
+  docs: number;
+  diagnosticsCount: number;
+  totalPerDocStats: DurationStats;
+};
+
+type XmlRebuildMetric = {
+  totalMs: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+  cache?: {
+    fastHits: number;
+    fastTotal: number;
+    traceHits: number;
+    traceTotal: number;
+    componentLibrary: "hit" | "miss" | "unknown";
+    raw: string;
+  };
+};
+
+type FeatureRegistryMetric = {
+  totalMs: number;
+  features: number;
+  issues: number;
+};
+
+type RealStartupMetric = {
+  totalMs: number;
+  bootstrapMs: number;
+  fullMs: number;
+  openDocsMs: number;
+  backgroundMs: number;
+  parts: {
+    templateBootstrap: IndexMetric;
+    runtimeBootstrap: IndexMetric;
+    templateFull: IndexMetric;
+    runtimeFull: IndexMetric;
+    registryBootstrap: FeatureRegistryMetric;
+    registryFull: FeatureRegistryMetric;
+    openDocs: OpenDocsValidationMetric;
+    backgroundValidation: BackgroundValidationMetric;
+  };
+};
+
 function computeLineStarts(text: string): number[] {
   const starts: number[] = [0];
   for (let i = 0; i < text.length; i++) {
@@ -307,11 +392,69 @@ function parseOptionalThreshold(raw: string | undefined): number | undefined {
   return value;
 }
 
+function parseIndexDoneDetails(message: string | undefined): ParsedIndexDoneDetails | undefined {
+  if (!message) {
+    return undefined;
+  }
+
+  const readInt = (regex: RegExp): number | undefined => {
+    const match = regex.exec(message);
+    if (!match?.[1]) {
+      return undefined;
+    }
+    const value = Number(match[1]);
+    return Number.isFinite(value) ? value : undefined;
+  };
+
+  return {
+    forms: readInt(/forms=(\d+)/i),
+    components: readInt(/components=(\d+)/i),
+    discoverMs: readInt(/discover=(\d+)\s*ms/i),
+    parseMs: readInt(/parse=(\d+)\s*ms/i),
+    componentsMs: readInt(/components=(\d+)\s*ms/i),
+    formsMs: readInt(/forms=(\d+)\s*ms/i),
+    refsMs: readInt(/refs=(\d+)\s*ms/i),
+    traceMs: readInt(/trace=(\d+)\s*ms/i)
+  };
+}
+
+function summarizeDurations(values: readonly number[]): DurationStats {
+  if (values.length === 0) {
+    return {
+      count: 0,
+      minMs: 0,
+      p50Ms: 0,
+      p95Ms: 0,
+      maxMs: 0,
+      avgMs: 0,
+      totalMs: 0
+    };
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const total = sorted.reduce((acc, value) => acc + value, 0);
+  const percentile = (p: number): number => {
+    const rank = Math.ceil((p / 100) * sorted.length) - 1;
+    const index = Math.max(0, Math.min(sorted.length - 1, rank));
+    return sorted[index];
+  };
+
+  return {
+    count: sorted.length,
+    minMs: sorted[0],
+    p50Ms: percentile(50),
+    p95Ms: percentile(95),
+    maxMs: sorted[sorted.length - 1],
+    avgMs: total / sorted.length,
+    totalMs: total
+  };
+}
+
 async function measureIndex(
   label: string,
   indexer: WorkspaceIndexer,
   scope: "bootstrap" | "all"
-): Promise<number> {
+): Promise<IndexMetric> {
   let lastDoneMessage = "";
   const started = Date.now();
   await indexer.rebuildIndex({
@@ -327,7 +470,12 @@ async function measureIndex(
   if (lastDoneMessage) {
     console.log(`[linter:perf] ${label} details: ${lastDoneMessage}`);
   }
-  return durationMs;
+  return {
+    label,
+    totalMs: durationMs,
+    doneMessage: lastDoneMessage || undefined,
+    doneDetails: parseIndexDoneDetails(lastDoneMessage)
+  };
 }
 
 function getIndexDomainForUri(uri: Uri): "template" | "runtime" | "other" {
@@ -353,23 +501,35 @@ function collectAllLinterUris(): Uri[] {
 async function measureBackgroundValidation(
   templateIndexer: WorkspaceIndexer,
   runtimeIndexer: WorkspaceIndexer
-): Promise<number> {
+): Promise<BackgroundValidationMetric> {
   const engine = new DiagnosticsEngine();
   const uris = collectAllLinterUris().filter((uri) => getIndexDomainForUri(uri) !== "other");
   const CONCURRENCY = 8;
   let diagnosticsCount = 0;
   let filesWithDiagnostics = 0;
+  const totalPerFileMs: number[] = [];
+  const readPerFileMs: number[] = [];
+  const diagnosticsPerFileMs: number[] = [];
 
   const started = Date.now();
   for (let i = 0; i < uris.length; i += CONCURRENCY) {
     const batch = uris.slice(i, i + CONCURRENCY);
     await Promise.all(
       batch.map(async (uri) => {
+        const fileStartedAt = Date.now();
+        const readStartedAt = Date.now();
         const text = readWorkspaceFileText(uri.fsPath);
+        const readMs = Date.now() - readStartedAt;
         const doc = createVirtualXmlDocument(uri, text);
         const domain = getIndexDomainForUri(uri);
         const index = domain === "runtime" ? runtimeIndexer.getIndex() : templateIndexer.getIndex();
+        const diagnosticsStartedAt = Date.now();
         const diagnostics = engine.buildDiagnostics(doc as unknown as import("vscode").TextDocument, index);
+        const diagnosticsMs = Date.now() - diagnosticsStartedAt;
+        const totalMs = Date.now() - fileStartedAt;
+        totalPerFileMs.push(totalMs);
+        readPerFileMs.push(readMs);
+        diagnosticsPerFileMs.push(diagnosticsMs);
         diagnosticsCount += diagnostics.length;
         if (diagnostics.length > 0) {
           filesWithDiagnostics += 1;
@@ -386,10 +546,18 @@ async function measureBackgroundValidation(
   console.log(
     `[linter:perf] background/validation: ${durationMs} ms (files=${uris.length}, filesWithDiagnostics=${filesWithDiagnostics}, diagnostics=${diagnosticsCount})`
   );
-  return durationMs;
+  return {
+    totalMs: durationMs,
+    files: uris.length,
+    filesWithDiagnostics,
+    diagnosticsCount,
+    totalPerFileStats: summarizeDurations(totalPerFileMs),
+    readPerFileStats: summarizeDurations(readPerFileMs),
+    diagnosticsPerFileStats: summarizeDurations(diagnosticsPerFileMs)
+  };
 }
 
-async function measureFeatureRegistryRebuild(): Promise<number> {
+async function measureFeatureRegistryRebuild(): Promise<FeatureRegistryMetric> {
   const roots = [workspaceRoot];
   const started = Date.now();
   const registry = loadFeatureManifestRegistryFromRoots(roots);
@@ -397,17 +565,26 @@ async function measureFeatureRegistryRebuild(): Promise<number> {
   console.log(
     `[linter:perf] composition/registry-rebuild: ${durationMs} ms (features=${registry.manifestsByFeature.size}, issues=${registry.issues.length})`
   );
-  return durationMs;
+  return {
+    totalMs: durationMs,
+    features: registry.manifestsByFeature.size,
+    issues: registry.issues.length
+  };
 }
 
 async function measureOpenDocumentsValidation(
   templateIndexer: WorkspaceIndexer,
   runtimeIndexer: WorkspaceIndexer,
   maxDocs: number
-): Promise<number> {
+): Promise<OpenDocsValidationMetric> {
   if (maxDocs <= 0) {
     console.log("[linter:perf] open-docs/validation: 0 ms (docs=0)");
-    return 0;
+    return {
+      totalMs: 0,
+      docs: 0,
+      diagnosticsCount: 0,
+      totalPerDocStats: summarizeDurations([])
+    };
   }
 
   const engine = new DiagnosticsEngine();
@@ -417,24 +594,33 @@ async function measureOpenDocumentsValidation(
     .slice(0, maxDocs);
 
   let diagnosticsCount = 0;
+  const perDocMs: number[] = [];
   const started = Date.now();
   for (const uri of uris) {
+    const docStartedAt = Date.now();
     const text = readWorkspaceFileText(uri.fsPath);
     const doc = createVirtualXmlDocument(uri, text);
     const domain = getIndexDomainForUri(uri);
     const index = domain === "runtime" ? runtimeIndexer.getIndex() : templateIndexer.getIndex();
     const diagnostics = engine.buildDiagnostics(doc as unknown as import("vscode").TextDocument, index);
+    perDocMs.push(Date.now() - docStartedAt);
     diagnosticsCount += diagnostics.length;
   }
 
   const durationMs = Date.now() - started;
   console.log(`[linter:perf] open-docs/validation: ${durationMs} ms (docs=${uris.length}, diagnostics=${diagnosticsCount})`);
-  return durationMs;
+  return {
+    totalMs: durationMs,
+    docs: uris.length,
+    diagnosticsCount,
+    totalPerDocStats: summarizeDurations(perDocMs)
+  };
 }
 
-async function measureXmlRebuild(): Promise<number> {
+async function measureXmlRebuild(): Promise<XmlRebuildMetric> {
   const workspaceFolder = vscodeMock.workspace.workspaceFolders[0];
   const service = new BuildXmlTemplatesService();
+  let cacheRaw = "";
   const started = Date.now();
   const result = await service.run(workspaceFolder as unknown as import("vscode").WorkspaceFolder, {
     silent: true,
@@ -445,17 +631,57 @@ async function measureXmlRebuild(): Promise<number> {
     generatorsEnabled: true,
     generatorTimeoutMs: 300,
     generatorEnableUserScripts: true,
-    generatorUserScriptsRoots: ["XML_Generators"]
+    generatorUserScriptsRoots: ["XML_Generators"],
+    onLogLine: (line: string) => {
+      if (/^Done\./i.test(line) && line.includes("Cache:")) {
+        cacheRaw = line.trim();
+      }
+    }
   });
   const durationMs = Date.now() - started;
   const summary = result.summary ?? { updated: 0, skipped: 0, errors: 0 };
+  const cache = parseBuildCacheSummary(cacheRaw);
   console.log(
-    `[linter:perf] xml/rebuild: ${durationMs} ms (updated=${summary.updated}, skipped=${summary.skipped}, errors=${summary.errors})`
+    `[linter:perf] xml/rebuild: ${durationMs} ms (updated=${summary.updated}, skipped=${summary.skipped}, errors=${summary.errors}${cache ? `, fast=${cache.fastHits}/${cache.fastTotal}, trace=${cache.traceHits}/${cache.traceTotal}, componentLibrary=${cache.componentLibrary}` : ""})`
   );
-  return durationMs;
+  return {
+    totalMs: durationMs,
+    updated: summary.updated,
+    skipped: summary.skipped,
+    errors: summary.errors,
+    cache
+  };
 }
 
-async function measureRealStartupPipeline(): Promise<number> {
+function parseBuildCacheSummary(line: string): XmlRebuildMetric["cache"] | undefined {
+  const text = line.trim();
+  if (text.length === 0) {
+    return undefined;
+  }
+  const fastMatch = /fast=(\d+)\/(\d+)/i.exec(text);
+  const traceMatch = /trace=(\d+)\/(\d+)/i.exec(text);
+  const componentMatch = /componentLibrary=(hit|miss)/i.exec(text);
+  if (!fastMatch || !traceMatch) {
+    return undefined;
+  }
+
+  const fastHits = Number(fastMatch[1]);
+  const fastTotal = Number(fastMatch[2]);
+  const traceHits = Number(traceMatch[1]);
+  const traceTotal = Number(traceMatch[2]);
+  const componentLibrary = (componentMatch?.[1]?.toLowerCase() ?? "unknown") as "hit" | "miss" | "unknown";
+
+  return {
+    fastHits: Number.isFinite(fastHits) ? fastHits : 0,
+    fastTotal: Number.isFinite(fastTotal) ? fastTotal : 0,
+    traceHits: Number.isFinite(traceHits) ? traceHits : 0,
+    traceTotal: Number.isFinite(traceTotal) ? traceTotal : 0,
+    componentLibrary,
+    raw: text
+  };
+}
+
+async function measureRealStartupPipeline(): Promise<RealStartupMetric> {
   documentCache.clear();
 
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components", "XML_Primitives"]);
@@ -463,23 +689,41 @@ async function measureRealStartupPipeline(): Promise<number> {
 
   const started = Date.now();
 
-  const bootstrapTemplateMs = await measureIndex("startup/template/bootstrap", templateIndexer, "bootstrap");
-  const bootstrapRuntimeMs = await measureIndex("startup/runtime/bootstrap", runtimeIndexer, "bootstrap");
-  const bootstrapRegistryMs = await measureFeatureRegistryRebuild();
+  const bootstrapTemplate = await measureIndex("startup/template/bootstrap", templateIndexer, "bootstrap");
+  const bootstrapRuntime = await measureIndex("startup/runtime/bootstrap", runtimeIndexer, "bootstrap");
+  const bootstrapRegistry = await measureFeatureRegistryRebuild();
 
-  const fullTemplateMs = await measureIndex("startup/template/full", templateIndexer, "all");
-  const fullRuntimeMs = await measureIndex("startup/runtime/full", runtimeIndexer, "all");
-  const fullRegistryMs = await measureFeatureRegistryRebuild();
+  const fullTemplate = await measureIndex("startup/template/full", templateIndexer, "all");
+  const fullRuntime = await measureIndex("startup/runtime/full", runtimeIndexer, "all");
+  const fullRegistry = await measureFeatureRegistryRebuild();
 
-  const openDocsMs = await measureOpenDocumentsValidation(templateIndexer, runtimeIndexer, openDocsValidationCount);
-  const backgroundMs = await measureBackgroundValidation(templateIndexer, runtimeIndexer);
+  const openDocs = await measureOpenDocumentsValidation(templateIndexer, runtimeIndexer, openDocsValidationCount);
+  const background = await measureBackgroundValidation(templateIndexer, runtimeIndexer);
   const totalMs = Date.now() - started;
+  const bootstrapMs = bootstrapTemplate.totalMs + bootstrapRuntime.totalMs + bootstrapRegistry.totalMs;
+  const fullMs = fullTemplate.totalMs + fullRuntime.totalMs + fullRegistry.totalMs;
 
   console.log(
-    `[linter:perf] real-startup: ${totalMs} ms (bootstrap=${bootstrapTemplateMs + bootstrapRuntimeMs + bootstrapRegistryMs} ms, full=${fullTemplateMs + fullRuntimeMs + fullRegistryMs} ms, openDocs=${openDocsMs} ms, background=${backgroundMs} ms)`
+    `[linter:perf] real-startup: ${totalMs} ms (bootstrap=${bootstrapMs} ms, full=${fullMs} ms, openDocs=${openDocs.totalMs} ms, background=${background.totalMs} ms)`
   );
 
-  return totalMs;
+  return {
+    totalMs,
+    bootstrapMs,
+    fullMs,
+    openDocsMs: openDocs.totalMs,
+    backgroundMs: background.totalMs,
+    parts: {
+      templateBootstrap: bootstrapTemplate,
+      runtimeBootstrap: bootstrapRuntime,
+      templateFull: fullTemplate,
+      runtimeFull: fullRuntime,
+      registryBootstrap: bootstrapRegistry,
+      registryFull: fullRegistry,
+      openDocs,
+      backgroundValidation: background
+    }
+  };
 }
 
 function readWorkspaceFileText(filePath: string): string {
@@ -512,31 +756,57 @@ async function run(): Promise<void> {
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
 
-  const templateBootstrapMs = await measureIndex("template/bootstrap", templateIndexer, "bootstrap");
-  const templateFullMs = await measureIndex("template/full", templateIndexer, "all");
-  const runtimeFullMs = await measureIndex("runtime/full", runtimeIndexer, "all");
-  const backgroundValidationMs = await measureBackgroundValidation(templateIndexer, runtimeIndexer);
-  const xmlRebuildMs = await measureXmlRebuild();
-  const realStartupMs = await measureRealStartupPipeline();
+  const templateBootstrap = await measureIndex("template/bootstrap", templateIndexer, "bootstrap");
+  const templateFull = await measureIndex("template/full", templateIndexer, "all");
+  const runtimeFull = await measureIndex("runtime/full", runtimeIndexer, "all");
+  const backgroundValidation = await measureBackgroundValidation(templateIndexer, runtimeIndexer);
+  const xmlRebuild = await measureXmlRebuild();
+  const realStartup = await measureRealStartupPipeline();
+
+  const report = {
+    fixture: workspaceRoot,
+    thresholds: {
+      phaseMs: maxPhaseMs,
+      backgroundValidationMs: maxBackgroundValidationMs,
+      xmlRebuildMs: maxXmlRebuildMs,
+      realStartupMs: maxRealStartupMs
+    },
+    metrics: {
+      templateBootstrap,
+      templateFull,
+      runtimeFull,
+      backgroundValidation,
+      xmlRebuild,
+      realStartup
+    }
+  };
+  console.log("[linter:perf] metrics-summary");
+  console.log(JSON.stringify(report, null, 2));
+  if (reportJsonPath && reportJsonPath.length > 0) {
+    const target = path.resolve(reportJsonPath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    console.log(`[linter:perf] metrics written: ${target}`);
+  }
 
   const violations: string[] = [];
-  if (templateBootstrapMs > maxPhaseMs) {
-    violations.push(`template/bootstrap=${templateBootstrapMs} ms`);
+  if (templateBootstrap.totalMs > maxPhaseMs) {
+    violations.push(`template/bootstrap=${templateBootstrap.totalMs} ms`);
   }
-  if (templateFullMs > maxPhaseMs) {
-    violations.push(`template/full=${templateFullMs} ms`);
+  if (templateFull.totalMs > maxPhaseMs) {
+    violations.push(`template/full=${templateFull.totalMs} ms`);
   }
-  if (runtimeFullMs > maxPhaseMs) {
-    violations.push(`runtime/full=${runtimeFullMs} ms`);
+  if (runtimeFull.totalMs > maxPhaseMs) {
+    violations.push(`runtime/full=${runtimeFull.totalMs} ms`);
   }
-  if (backgroundValidationMs > maxBackgroundValidationMs) {
-    violations.push(`background/validation=${backgroundValidationMs} ms`);
+  if (backgroundValidation.totalMs > maxBackgroundValidationMs) {
+    violations.push(`background/validation=${backgroundValidation.totalMs} ms`);
   }
-  if (xmlRebuildMs > maxXmlRebuildMs) {
-    violations.push(`xml/rebuild=${xmlRebuildMs} ms`);
+  if (xmlRebuild.totalMs > maxXmlRebuildMs) {
+    violations.push(`xml/rebuild=${xmlRebuild.totalMs} ms`);
   }
-  if (maxRealStartupMs && realStartupMs > maxRealStartupMs) {
-    violations.push(`real-startup=${realStartupMs} ms`);
+  if (maxRealStartupMs && realStartup.totalMs > maxRealStartupMs) {
+    violations.push(`real-startup=${realStartup.totalMs} ms`);
   }
 
   if (violations.length > 0) {

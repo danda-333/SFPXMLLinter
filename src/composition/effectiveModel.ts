@@ -638,6 +638,10 @@ function matchesContributionTargetXPath(xpath: string, items: readonly Effective
 
   const normalized = xpath.toLowerCase();
   if (
+    normalized === "//form" ||
+    normalized === "//workflow" ||
+    normalized === "//dataview" ||
+    normalized === "//filter" ||
     normalized.startsWith("//form/") ||
     normalized.startsWith("//workflow/") ||
     normalized.startsWith("//dataview/") ||

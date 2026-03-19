@@ -59,7 +59,8 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "ident-convention-group-button-postfix": "warning",
   "ident-convention-workflow-postfix": "warning",
   "ident-convention-view-postfix": "warning",
-  "ident-convention-lookup-control": "warning"
+  "ident-convention-lookup-control": "warning",
+  "missing-explicit-provides": "information"
 };
 
 const LEGACY_RULE_ALIASES: Record<string, string> = {

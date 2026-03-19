@@ -466,17 +466,12 @@ function createIndex(): import("../../indexer/types").WorkspaceIndex {
         } satisfies import("../../indexer/types").IndexedForm
       ]
     ]),
+    formIdentByUri: new Map([[formUri.toString(), "FormA"]]),
     componentsByKey,
+    componentKeyByUri: new Map(
+      [...componentsByKey.values()].map((component) => [component.uri.toString(), component.key] as const)
+    ),
     componentKeysByBaseName,
-    formIdentReferenceLocations: new Map(),
-    mappingFormIdentReferenceLocations: new Map(),
-    controlReferenceLocationsByFormIdent: new Map(),
-    buttonReferenceLocationsByFormIdent: new Map(),
-    sectionReferenceLocationsByFormIdent: new Map(),
-    componentReferenceLocationsByKey: new Map(),
-    componentContributionReferenceLocationsByKey: new Map(),
-    componentUsageFormIdentsByKey: new Map(),
-    componentContributionUsageFormIdentsByKey: new Map(),
     parsedFactsByUri: new Map([
       [formUri.toString(), parseDocumentFacts(formDocument as unknown as import("vscode").TextDocument)]
     ]),

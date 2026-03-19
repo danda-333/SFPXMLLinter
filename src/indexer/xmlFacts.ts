@@ -452,12 +452,15 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
   if (text.includes("<Using")) {
     for (const m of text.matchAll(/<Using\b([^>]*)>/gi)) {
       const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-      const componentAttr = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+      const componentAttr =
+        getAttributeCaseInsensitive(attrs, "Feature") ??
+        getAttributeCaseInsensitive(attrs, "Component") ??
+        getAttributeCaseInsensitive(attrs, "Name");
       if (!componentAttr?.value || !componentAttr.valueRange) {
         continue;
       }
 
-      const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
+      const sectionAttr = getAttributeCaseInsensitive(attrs, "Contribution") ?? getAttributeCaseInsensitive(attrs, "Section");
       const providedParamNames = collectUsingProvidedParamNames(attrs);
       const suppressInheritance =
         parseBooleanAttribute(attrs.get("SuppressInheritance")?.value) === true ||
@@ -478,12 +481,15 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
   if (text.includes("<Include")) {
     for (const m of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
       const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
-      const componentAttr = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+      const componentAttr =
+        getAttributeCaseInsensitive(attrs, "Feature") ??
+        getAttributeCaseInsensitive(attrs, "Component") ??
+        getAttributeCaseInsensitive(attrs, "Name");
       if (!componentAttr?.value || !componentAttr.valueRange) {
         continue;
       }
 
-      const sectionAttr = attrs.get("Contribution") ?? attrs.get("Section");
+      const sectionAttr = getAttributeCaseInsensitive(attrs, "Contribution") ?? getAttributeCaseInsensitive(attrs, "Section");
       facts.includeReferences.push({
         componentKey: normalizeComponentKey(componentAttr.value),
         rawComponentValue: componentAttr.value,
@@ -504,8 +510,8 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
       }
 
       const fields = parsePlaceholderFields(body);
-      const rawComponentValue = fields.get("Feature") ?? fields.get("Component") ?? fields.get("Name");
-      const contributionValue = fields.get("Contribution") ?? fields.get("Section");
+      const rawComponentValue = getPlaceholderField(fields, "Feature", "Component", "Name");
+      const contributionValue = getPlaceholderField(fields, "Contribution", "Section");
       facts.placeholderReferences.push({
         rawToken: full,
         range: new vscode.Range(indexToPosition(text, start), indexToPosition(text, start + full.length)),
@@ -1182,6 +1188,21 @@ function parsePlaceholderFields(rawBody: string): Map<string, string> {
   }
 
   return out;
+}
+
+function getPlaceholderField(fields: Map<string, string>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    if (fields.has(key)) {
+      return fields.get(key);
+    }
+  }
+  for (const [name, value] of fields.entries()) {
+    const lower = name.toLowerCase();
+    if (keys.some((key) => key.toLowerCase() === lower)) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 function collectUsingProvidedParamNames(attrs: Map<string, XmlAttributeMatch>): string[] {

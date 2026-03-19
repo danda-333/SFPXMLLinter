@@ -27,6 +27,35 @@ export async function loadWorkspaceUserGenerators(
   return loadUserGeneratorsFromFiles(files, onLogLine);
 }
 
+export function computeWorkspaceUserGeneratorsSignature(
+  workspaceRoot: string,
+  roots: readonly string[]
+): string {
+  const files: string[] = [];
+  for (const root of roots) {
+    const absoluteRoot = path.resolve(workspaceRoot, root);
+    if (!fs.existsSync(absoluteRoot) || !fs.statSync(absoluteRoot).isDirectory()) {
+      continue;
+    }
+    collectGeneratorFiles(absoluteRoot, files);
+  }
+  files.sort((a, b) => a.localeCompare(b));
+  if (files.length === 0) {
+    return "none";
+  }
+
+  const entries: string[] = [];
+  for (const file of files) {
+    try {
+      const stat = fs.statSync(file);
+      entries.push(`${file}|${Math.trunc(stat.mtimeMs)}|${stat.size}`);
+    } catch {
+      entries.push(`${file}|missing`);
+    }
+  }
+  return entries.join(";");
+}
+
 export async function loadUserGeneratorsFromFiles(
   files: readonly string[],
   onLogLine?: (line: string) => void

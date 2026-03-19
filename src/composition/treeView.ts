@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseDocumentFacts, ParsedDocumentFacts, UsingContributionInsertTrace } from "../indexer/xmlFacts";
 import { WorkspaceIndex, IndexedComponentContributionSummary, IndexedForm, IndexedSymbolProvenanceProvider } from "../indexer/types";
@@ -17,6 +16,11 @@ import {
 import { FeatureCapabilityReport } from "./model";
 import { normalizeComponentKey } from "../utils/paths";
 import { createPrimitiveQuickFixPayload } from "./primitiveQuickFixPayload";
+import { buildCompositionProjection } from "./treeProjectionAdapter";
+import {
+  collectComponentContributionReferenceLocations,
+  collectComponentReferenceLocations
+} from "../providers/referenceModelUtils";
 
 type CompositionTreeNode =
   | InfoNode
@@ -43,6 +47,13 @@ interface BaseNode {
   contextValue?: string;
   sourceLocation?: vscode.Location;
   usageLocations?: vscode.Location[];
+  sourceNodeId?: string;
+  factKind?: string;
+  symbolKind?: string;
+  statusSourceKey?: string;
+  compareLeftUri?: vscode.Uri;
+  compareRightUri?: vscode.Uri;
+  compareTitle?: string;
 }
 
 interface InfoNode extends BaseNode {
@@ -101,12 +112,25 @@ interface CachedRootTree {
   nodes: CompositionTreeNode[];
 }
 
+interface BuildStatusSummary {
+  scope: "full" | "targeted";
+  totalMs: number;
+  targets: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+  updatedTemplatePaths: readonly string[];
+  updatedOutputPaths: readonly string[];
+}
+
 export class CompositionTreeProvider implements vscode.TreeDataProvider<CompositionTreeNode> {
   private readonly didChangeTreeDataEmitter = new vscode.EventEmitter<CompositionTreeNode | undefined | null | void>();
   private readonly expandedNodeIds = new Set<string>();
   private refreshTimer: NodeJS.Timeout | undefined;
   private readonly refreshDebounceMs = 75;
   private cachedRootTree: CachedRootTree | undefined;
+  private buildState: "ready" | "building" = "ready";
+  private lastBuildSummary: BuildStatusSummary | undefined;
 
   public readonly onDidChangeTreeData = this.didChangeTreeDataEmitter.event;
 
@@ -126,6 +150,19 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       this.cachedRootTree = undefined;
       this.didChangeTreeDataEmitter.fire();
     }, this.refreshDebounceMs);
+  }
+
+  public setBuildState(state: "ready" | "building"): void {
+    if (this.buildState === state) {
+      return;
+    }
+    this.buildState = state;
+    this.didChangeTreeDataEmitter.fire();
+  }
+
+  public setLastBuildSummary(summary: BuildStatusSummary | undefined): void {
+    this.lastBuildSummary = summary;
+    this.didChangeTreeDataEmitter.fire();
   }
 
   public setExpanded(nodeId: string | undefined, expanded: boolean): void {
@@ -186,6 +223,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
     if (!document || document.languageId !== "xml") {
       this.cachedRootTree = undefined;
       return [
+        this.buildStatusNode(),
         infoNode("Open an XML file to inspect feature composition and final injected symbols.")
       ];
     }
@@ -197,6 +235,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
     if (!facts) {
       this.cachedRootTree = undefined;
       return [
+        this.buildStatusNode(),
         infoNode("Index facts are not available for this document yet. Run Revalidate Workspace/Project.")
       ];
     }
@@ -211,58 +250,27 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       cached.registryRef === registry &&
       cached.relativePath === relPath
     ) {
-      return cached.nodes;
+      return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index), ...cached.nodes];
     }
 
-    let nodes: CompositionTreeNode[];
-    const featureReport = findFeatureForRelativePath(registry, relPath);
-    if (featureReport) {
-      nodes = buildFeatureTree(featureReport, registry, index, document.uri);
-      this.cachedRootTree = {
+    const nodes = buildCompositionProjection<CompositionTreeNode>(
+      {
         documentUri,
         documentVersion: document.version,
-        indexRef: index,
-        factsRef: facts,
-        registryRef: registry,
         relativePath: relPath,
-        nodes
-      };
-      return nodes;
-    }
-
-    const regularXmlTree = buildRegularXmlTree(document, facts, index, this.resolveOwningFormForModel);
-    if (regularXmlTree.length > 0) {
-      nodes = regularXmlTree;
-      this.cachedRootTree = {
-        documentUri,
-        documentVersion: document.version,
-        indexRef: index,
-        factsRef: facts,
-        registryRef: registry,
-        relativePath: relPath,
-        nodes
-      };
-      return nodes;
-    }
-
-    const usingTree = buildUsingTree(document, facts, index);
-    if (usingTree.length > 0) {
-      nodes = usingTree;
-      this.cachedRootTree = {
-        documentUri,
-        documentVersion: document.version,
-        indexRef: index,
-        factsRef: facts,
-        registryRef: registry,
-        relativePath: relPath,
-        nodes
-      };
-      return nodes;
-    }
-
-    nodes = [
-      infoNode(`No feature composition or Using impact available for '${relPath}'.`)
-    ];
+        facts,
+        index,
+        registry
+      },
+      {
+        findFeatureForRelativePath,
+        buildFeatureTree: (report, reg, idx, uri) => buildFeatureTree(report, reg, idx, vscode.Uri.parse(uri)),
+        buildRegularXmlTree: (_uri, factsSnapshot, idx) =>
+          buildRegularXmlTree(vscode.Uri.parse(documentUri), relPath, factsSnapshot, idx, this.resolveOwningFormForModel),
+        buildUsingTree: (_uri, factsSnapshot, idx) => buildUsingTree(vscode.Uri.parse(documentUri), factsSnapshot, idx),
+        infoNode
+      }
+    );
     this.cachedRootTree = {
       documentUri,
       documentVersion: document.version,
@@ -272,8 +280,242 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       relativePath: relPath,
       nodes
     };
-    return nodes;
+    return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index), ...nodes];
   }
+
+  private buildStatusNode(): InfoNode {
+    if (this.buildState === "building") {
+      return {
+        type: "info",
+        id: "status:build",
+        label: "Build: Running",
+        description: "template build in progress",
+        icon: new vscode.ThemeIcon("sync~spin"),
+        contextValue: "compositionBuildStatus"
+      };
+    }
+
+    const summary = this.lastBuildSummary;
+    if (summary) {
+      const updateRows: CompositionTreeNode[] = [];
+      updateRows.push(detailNode(`Scope: ${summary.scope}`));
+      updateRows.push(detailNode(`Duration: ${summary.totalMs} ms`));
+      updateRows.push(detailNode(`Targets: ${summary.targets}`));
+      updateRows.push(detailNode(`Summary: updated=${summary.updated}, skipped=${summary.skipped}, errors=${summary.errors}`));
+
+      const outputsNode: GroupNode = {
+        type: "group",
+        id: "status:build:outputs",
+        label: "Updated Outputs",
+        description: String(summary.updatedOutputPaths.length),
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("file-code"),
+        children:
+          summary.updatedOutputPaths.length > 0
+            ? summary.updatedOutputPaths.map((item) => detailNode(item))
+            : [detailNode("none")]
+      };
+      const templatesNode: GroupNode = {
+        type: "group",
+        id: "status:build:templates",
+        label: "Updated Templates",
+        description: String(summary.updatedTemplatePaths.length),
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("symbol-file"),
+        children:
+          summary.updatedTemplatePaths.length > 0
+            ? summary.updatedTemplatePaths.map((item) => detailNode(item))
+            : [detailNode("none")]
+      };
+      updateRows.push(outputsNode, templatesNode);
+      return {
+        type: "info",
+        id: "status:build",
+        label: "Build: Ready",
+        description: `updated=${summary.updated}, skipped=${summary.skipped}, errors=${summary.errors}`,
+        icon: new vscode.ThemeIcon(summary.errors > 0 ? "warning" : "pass"),
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        children: updateRows,
+        contextValue: "compositionBuildStatus"
+      };
+    }
+
+    return {
+      type: "info",
+      id: "status:build",
+      label: "Build: Ready",
+      description: "outputs are up to date",
+      icon: new vscode.ThemeIcon("pass"),
+      contextValue: "compositionBuildStatus"
+    };
+  }
+}
+
+function buildBuildTargetNode(
+  documentUri: vscode.Uri,
+  relativePath: string,
+  facts: ParsedDocumentFacts,
+  index: WorkspaceIndex
+): CompositionTreeNode {
+  const normalizedRel = relativePath.replace(/\\/g, "/");
+  if (/^XML_Templates\//i.test(normalizedRel)) {
+    const outputRel = normalizedRel.replace(/^XML_Templates\//i, "XML/");
+    const outputUri = vscode.Uri.file(documentUri.fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`));
+    return {
+      type: "group",
+      id: "target:output",
+      label: "Target",
+      description: outputRel,
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      icon: new vscode.ThemeIcon("arrow-right"),
+      resourceUri: outputUri,
+      compareLeftUri: documentUri,
+      compareRightUri: outputUri,
+      compareTitle: `SFP Compare: ${normalizedRel} ↔ ${outputRel}`,
+      contextValue: "compositionBuildTarget"
+    };
+  }
+
+  if (/^XML\//i.test(normalizedRel)) {
+    const sourceRel = normalizedRel.replace(/^XML\//i, "XML_Templates/");
+    const sourceUri = vscode.Uri.file(documentUri.fsPath.replace(/[\\/]XML([\\/])/i, `${path.sep}XML_Templates$1`));
+    return {
+      type: "group",
+      id: "target:source",
+      label: "Source",
+      description: sourceRel,
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      icon: new vscode.ThemeIcon("arrow-left"),
+      resourceUri: sourceUri,
+      contextValue: "compositionBuildSource"
+    };
+  }
+
+  const usages = collectUsageLocationsForDocument(documentUri, index);
+  if (usages.length === 0) {
+    return {
+      type: "group",
+      id: "target:usage:none",
+      label: "Target",
+      description: "usages: 0",
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      icon: new vscode.ThemeIcon("references"),
+      contextValue: "compositionBuildTarget"
+    };
+  }
+
+  return {
+    type: "group",
+    id: "target:usage",
+    label: "Target",
+    description: `usages: ${usages.length}`,
+    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    icon: new vscode.ThemeIcon("references"),
+    contextValue: "compositionBuildTarget",
+    children: usages.map((usage, indexNo) => {
+      const rel = vscode.workspace.asRelativePath(usage.location.uri, false).replace(/\\/g, "/");
+      const line = usage.location.range.start.line + 1;
+      const col = usage.location.range.start.character + 1;
+      const isTemplate = /^XML_Templates\//i.test(rel);
+      const outputRel = isTemplate ? rel.replace(/^XML_Templates\//i, "XML/") : undefined;
+      const outputUri = isTemplate
+        ? vscode.Uri.file(usage.location.uri.fsPath.replace(/[\\/]XML_Templates([\\/])/i, `${path.sep}XML$1`))
+        : undefined;
+      return {
+        type: "detail",
+        id: `target:usage:${indexNo}:${usage.location.uri.toString()}:${line}:${col}`,
+        label: `${rel}:${line}:${col}`,
+        description: usage.kind,
+        icon: new vscode.ThemeIcon("location"),
+        sourceLocation: usage.location,
+        resourceUri: usage.location.uri,
+        contextValue: "compositionBuildTargetItem",
+        ...(outputUri && outputRel
+          ? {
+              compareLeftUri: usage.location.uri,
+              compareRightUri: outputUri,
+              compareTitle: `SFP Compare: ${rel} ↔ ${outputRel}`
+            }
+          : {})
+      } as DetailNode;
+    })
+  };
+}
+
+function collectUsageLocationsForDocument(
+  documentUri: vscode.Uri,
+  index: WorkspaceIndex
+): Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }> {
+  const out: Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }> = [];
+  const seen = new Set<string>();
+
+  const componentKeys = collectComponentKeysForUri(documentUri, index);
+  if (componentKeys.size === 0) {
+    return out;
+  }
+
+  for (const [uriKey, entryFacts] of index.parsedFactsByUri.entries()) {
+    const uri = vscode.Uri.parse(uriKey);
+    for (const usingRef of entryFacts.usingReferences) {
+      if (!componentKeys.has(usingRef.componentKey)) {
+        continue;
+      }
+      pushLocation(out, seen, uri, usingRef.componentValueRange, "using");
+    }
+    for (const includeRef of entryFacts.includeReferences) {
+      if (!componentKeys.has(includeRef.componentKey)) {
+        continue;
+      }
+      pushLocation(out, seen, uri, includeRef.componentValueRange, "include");
+    }
+    for (const placeholderRef of entryFacts.placeholderReferences) {
+      if (!placeholderRef.componentKey || !componentKeys.has(placeholderRef.componentKey)) {
+        continue;
+      }
+      pushLocation(out, seen, uri, placeholderRef.range, "placeholder");
+    }
+  }
+
+  return out.sort((a, b) => {
+    const left = `${a.location.uri.toString()}:${a.location.range.start.line}:${a.location.range.start.character}`;
+    const right = `${b.location.uri.toString()}:${b.location.range.start.line}:${b.location.range.start.character}`;
+    return left.localeCompare(right);
+  });
+}
+
+function pushLocation(
+  out: Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }>,
+  seen: Set<string>,
+  uri: vscode.Uri,
+  range: vscode.Range,
+  kind: "using" | "include" | "placeholder"
+): void {
+  const key = `${uri.toString()}:${range.start.line}:${range.start.character}:${kind}`;
+  if (seen.has(key)) {
+    return;
+  }
+  seen.add(key);
+  out.push({ location: new vscode.Location(uri, range), kind });
+}
+
+function collectComponentKeysForUri(uri: vscode.Uri, index: WorkspaceIndex): Set<string> {
+  const out = new Set<string>();
+  const direct = index.componentKeyByUri.get(uri.toString());
+  if (direct) {
+    out.add(direct);
+  }
+  const normalizedTarget = toIndexUriKey(uri);
+  for (const [key, componentKey] of index.componentKeyByUri.entries()) {
+    if (key === normalizedTarget) {
+      out.add(componentKey);
+      continue;
+    }
+    const keyUri = key.includes("://") ? vscode.Uri.parse(key) : vscode.Uri.file(key);
+    if (toIndexUriKey(keyUri) === normalizedTarget) {
+      out.add(componentKey);
+    }
+  }
+  return out;
 }
 
 function buildFeatureTree(
@@ -440,7 +682,8 @@ function buildFeatureTree(
 }
 
 function buildRegularXmlTree(
-  document: vscode.TextDocument,
+  documentUri: vscode.Uri,
+  relativePath: string,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   resolveOwningFormForModel?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined
@@ -451,7 +694,7 @@ function buildRegularXmlTree(
   }
   const composition = buildDocumentCompositionModel(facts, index);
   const children: CompositionTreeNode[] = [];
-  children.push(buildDocumentSummaryNode(document, facts, index, composition, sharedSectionNodeId("Summary")));
+  children.push(buildDocumentSummaryNode(documentUri, facts, index, composition, sharedSectionNodeId("Summary")));
   children.push(buildDocumentStatisticsNode(composition, sharedSectionNodeId("Statistics")));
   children.push(buildActionsNode(root, sharedSectionNodeId("Actions"), composition));
 
@@ -461,13 +704,13 @@ function buildRegularXmlTree(
         ? resolveOwningFormForModel?.(facts.formIdent, index)
         : undefined;
     const finalFormOverlay =
-      resolvedFinalForm && resolvedFinalForm.form.uri.toString() !== document.uri.toString()
+      resolvedFinalForm && resolvedFinalForm.form.uri.toString() !== documentUri.toString()
         ? resolvedFinalForm
         : undefined;
 
-    let controls = aggregateFormControls(document.uri, facts, index, composition);
-    let buttons = aggregateFormButtons(document.uri, facts, index, composition);
-    let sections = aggregateFormSections(document.uri, facts, index, composition);
+    let controls = aggregateFormControls(documentUri, facts, index, composition);
+    let buttons = aggregateFormButtons(documentUri, facts, index, composition);
+    let sections = aggregateFormSections(documentUri, facts, index, composition);
     if (finalFormOverlay) {
       controls = overlayFinalIndexedFormSymbols(controls, finalFormOverlay.form, finalFormOverlay.index, "control");
       buttons = overlayFinalIndexedFormSymbols(buttons, finalFormOverlay.form, finalFormOverlay.index, "button");
@@ -478,34 +721,34 @@ function buildRegularXmlTree(
     children.push(buildSymbolGroup("Sections", sections, "symbol-structure", sharedSectionNodeId("Sections")));
   } else if (root === "workflow") {
     const controlShareCodes = aggregateWorkflowShareCodes(
-      document.uri,
+      documentUri,
       facts,
       index,
       composition,
       (summary) => summary.workflowControlShareCodeIdents,
       [...facts.declaredControlShareCodes],
       facts.controlShareCodeDefinitions,
-      collectWorkflowReferenceLocations(document.uri, facts, "controlShareCode")
+      collectWorkflowReferenceLocations(documentUri, facts, "controlShareCode")
     );
     const buttonShareCodes = aggregateWorkflowShareCodes(
-      document.uri,
+      documentUri,
       facts,
       index,
       composition,
       (summary) => summary.workflowButtonShareCodeIdents,
       [...facts.declaredButtonShareCodes],
       facts.buttonShareCodeDefinitions,
-      collectWorkflowReferenceLocations(document.uri, facts, "buttonShareCode")
+      collectWorkflowReferenceLocations(documentUri, facts, "buttonShareCode")
     );
     const actionShareCodes = aggregateWorkflowShareCodes(
-      document.uri,
+      documentUri,
       facts,
       index,
       composition,
       (summary) => summary.workflowActionShareCodeIdents,
       [...facts.declaredActionShareCodes],
       facts.actionShareCodeDefinitions,
-      collectActionShareCodeReferenceLocations(document.uri, facts)
+      collectActionShareCodeReferenceLocations(documentUri, facts)
     );
 
     children.push(buildSymbolGroup("ControlShareCodes", controlShareCodes, "symbol-key", sharedSectionNodeId("ControlShareCodes")));
@@ -544,7 +787,7 @@ function buildRegularXmlTree(
     }
   }
 
-  const usingTree = buildUsingTree(document, facts, index, composition);
+  const usingTree = buildUsingTree(documentUri, facts, index, composition);
   if (usingTree.length > 0) {
     children.push(...usingTree);
   }
@@ -552,7 +795,7 @@ function buildRegularXmlTree(
   if (includeTree.length > 0) {
     children.push(...includeTree);
   }
-  const placeholderTree = buildPlaceholderTree(document, facts);
+  const placeholderTree = buildPlaceholderTree(documentUri, facts);
   if (placeholderTree.length > 0) {
     children.push(...placeholderTree);
   }
@@ -562,8 +805,8 @@ function buildRegularXmlTree(
       id: sharedSectionNodeId("ModelRoot"),
       type: "group",
       label: root === "form" ? "Final Form Model" : root === "workflow" ? "Final WorkFlow Model" : "Final DataView Model",
-      description: vscode.workspace.asRelativePath(document.uri, false),
-      tooltip: document.uri.fsPath,
+      description: relativePath,
+      tooltip: documentUri.fsPath,
       collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
       icon: new vscode.ThemeIcon(root === "form" ? "file-code" : root === "workflow" ? "symbol-class" : "table"),
       children
@@ -572,7 +815,7 @@ function buildRegularXmlTree(
 }
 
 function buildDocumentSummaryNode(
-  document: vscode.TextDocument,
+  documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   composition: DocumentCompositionModel,
@@ -670,7 +913,7 @@ function buildDocumentStatisticsNode(
 }
 
 function buildUsingTree(
-  document: vscode.TextDocument,
+  documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   compositionModel?: DocumentCompositionModel
@@ -708,16 +951,16 @@ function buildUsingTree(
     }
 
     const contributionRows = usingModel.contributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
+      buildUsingContributionNode(documentUri, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const filteredRows = usingModel.filteredContributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
+      buildUsingContributionNode(documentUri, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const placeholderRows = usingModel.placeholderContributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
+      buildUsingContributionNode(documentUri, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const filteredPlaceholderRows = usingModel.filteredPlaceholderContributions.map((contribution) =>
-      buildUsingContributionNode(document, facts, index, usingModel, component, contribution, resolveUsageLocations)
+      buildUsingContributionNode(documentUri, facts, index, usingModel, component, contribution, resolveUsageLocations)
     );
     const children: CompositionTreeNode[] =
       contributionRows.length > 0 ? [...contributionRows] : [detailNode("No root-relevant contributions found.")];
@@ -750,11 +993,14 @@ function buildUsingTree(
       type: "using",
       label: usingModel.rawComponentValue,
       description: usingModel.source === "inherited" ? `${usingModel.impactStatus}, inherited` : usingModel.impactStatus,
+      statusSourceKey: "composition.using.impactStatus",
       tooltip: usingModel.impact.message ?? usingModel.rawComponentValue,
       collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
       icon: iconForUsage(usingModel.impactStatus),
       contextValue: "compositionUsing",
       resourceUri: component.uri,
+      sourceNodeId: documentUri.toString(),
+      factKind: "fact.usingRefs",
       sourceLocation: usingModel.sectionValue ? component.contributionDefinitions.get(usingModel.sectionValue) : component.componentLocation,
       usageLocations: resolveUsageLocations(usingModel.componentKey, usingModel.sectionValue),
       command: getUsingOpenCommand(component, usingModel.sectionValue),
@@ -788,11 +1034,14 @@ function buildUsingTree(
       type: "using",
       label,
       description: `suppression, blocked=${matchedContributions}`,
+      statusSourceKey: "composition.using.suppression",
       tooltip: `Suppress inherited using for '${label}'.`,
       collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
       icon: new vscode.ThemeIcon("shield"),
       contextValue: "compositionUsing",
       resourceUri: component.uri,
+      sourceNodeId: documentUri.toString(),
+      factKind: "fact.usingRefs",
       sourceLocation: ref.sectionValue ? component.contributionDefinitions.get(ref.sectionValue) : component.componentLocation,
       usageLocations: resolveUsageLocations(ref.componentKey, ref.sectionValue),
       command: getUsingOpenCommand(component, ref.sectionValue),
@@ -845,12 +1094,14 @@ function buildIncludeTree(
       type: "using",
       label: includeRef.rawComponentValue,
       description,
+      statusSourceKey: "composition.include.presence",
       tooltip: contributionName
         ? `Include '${includeRef.rawComponentValue}' contribution '${contributionName}'.`
         : `Include whole feature '${includeRef.rawComponentValue}'.`,
       collapsibleState: vscode.TreeItemCollapsibleState.None,
       icon: contributionExists ? new vscode.ThemeIcon("link") : new vscode.ThemeIcon("warning"),
       contextValue: "compositionUsing",
+      factKind: "fact.includeRefs",
       resourceUri: component.uri,
       sourceLocation: contributionName ? component.contributionDefinitions.get(contributionName) : component.componentLocation,
       command: getUsingOpenCommand(component, contributionName)
@@ -867,7 +1118,7 @@ function buildIncludeTree(
 }
 
 function buildPlaceholderTree(
-  document: vscode.TextDocument,
+  documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>
 ): CompositionTreeNode[] {
   if (facts.placeholderReferences.length === 0) {
@@ -883,8 +1134,10 @@ function buildPlaceholderTree(
       id: `placeholder:${idx}`,
       label,
       description: ref.rawToken,
+      statusSourceKey: "composition.placeholder.token",
+      factKind: "fact.placeholderRefs",
       icon: new vscode.ThemeIcon("references"),
-      command: openLocationCommand(new vscode.Location(document.uri, ref.range), "Open placeholder")
+      command: openLocationCommand(new vscode.Location(documentUri, ref.range), "Open placeholder")
     } satisfies DetailNode;
   });
 
@@ -957,7 +1210,7 @@ function countSuppressedInheritedContributions(
 }
 
 function buildUsingContributionNode(
-  document: vscode.TextDocument,
+  documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   usingModel: { componentKey: string },
@@ -977,7 +1230,7 @@ function buildUsingContributionNode(
   const usageState: "effective" | "unused" = contributionModel.usage;
   const metaGroup = buildUsingContributionMetaGroup(nodeId, contribution, insertTrace);
   const placeholderLocations = collectPlaceholderUsageLocations(
-    document,
+    documentUri,
     facts,
     componentKey,
     contribution.contributionName
@@ -996,6 +1249,7 @@ function buildUsingContributionNode(
     id: nodeId,
     label: contribution.contributionName,
     description: details.join(", "),
+    statusSourceKey: "composition.using.contribution.usage",
     tooltip: [
       contribution.targetXPath ? `TargetXPath: ${contribution.targetXPath}` : undefined,
       contribution.insert ? `Insert: ${contribution.insert}` : undefined,
@@ -1005,6 +1259,7 @@ function buildUsingContributionNode(
     icon: rootRelevant || contributionModel.explicit ? iconForUsage(usageState) : new vscode.ThemeIcon("circle-outline"),
     contextValue: "compositionContribution",
     resourceUri: component.uri,
+    sourceNodeId: documentUri.toString(),
     sourceLocation: location,
     usageLocations: resolveUsageLocations(componentKey, contribution.contributionName),
     children: [metaGroup, ...(placeholderGroup ? [placeholderGroup] : []), ...typeGroups, ...(typeGroups.length === 0 ? [detailNode("No typed symbols.")] : [])]
@@ -1100,34 +1355,9 @@ function buildUsingContributionTypeGroups(
       children: primitiveEntries.map(([primitiveKey, usageCount], idx) => {
         const templateNames = [...(contribution.primitiveTemplateNamesByKey.get(primitiveKey) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
         const effectiveInserts = usageCount * Math.max(1, contributionInsertions);
-        const uri = resolvePrimitiveSourceUri(primitiveKey);
+        const uri = contributionLocation?.uri;
         const providedParams = [...(contribution.primitiveProvidedParamNamesByKey.get(primitiveKey) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
         const providedSlots = [...(contribution.primitiveProvidedSlotNamesByKey.get(primitiveKey) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
-        const contract = uri ? resolvePrimitiveContract(uri, templateNames) : undefined;
-        const requiredParams = [...(contract?.requiredParams ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
-        const requiredSlots = [...(contract?.requiredSlots ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
-        const missingParams = requiredParams.filter((name) => !providedParams.includes(name));
-        const missingSlots = requiredSlots.filter((name) => !providedSlots.includes(name));
-        const missingParamNodes = missingParams.map((name, missingIdx) =>
-          primitiveQuickFixDetailNode(
-            `MissingParam: ${name}`,
-            `${contributionNodeId}:type:primitives:item:${idx}:missing-param:${missingIdx}`,
-            "param",
-            name,
-            primitiveKey,
-            contributionLocation
-          )
-        );
-        const missingSlotNodes = missingSlots.map((name, missingIdx) =>
-          primitiveQuickFixDetailNode(
-            `MissingSlot: ${name}`,
-            `${contributionNodeId}:type:primitives:item:${idx}:missing-slot:${missingIdx}`,
-            "slot",
-            name,
-            primitiveKey,
-            contributionLocation
-          )
-        );
         const cycleNode = primitiveQuickFixDetailNode(
           "CycleFix: Remove cyclic UsePrimitive",
           `${contributionNodeId}:type:primitives:item:${idx}:cycle`,
@@ -1154,14 +1384,12 @@ function buildUsingContributionTypeGroups(
               primitiveKey,
               contributionLocation
             ),
-            detailNode(`RequiredParams: ${requiredParams.length > 0 ? requiredParams.join(", ") : "(none)"}`),
+            detailNode("RequiredParams: unavailable (index-only projection)"),
             detailNode(`ProvidedParams: ${providedParams.length > 0 ? providedParams.join(", ") : "(none)"}`),
-            detailNode(`MissingParams: ${missingParams.length > 0 ? missingParams.join(", ") : "(none)"}`),
-            ...missingParamNodes,
-            detailNode(`RequiredSlots: ${requiredSlots.length > 0 ? requiredSlots.join(", ") : "(none)"}`),
+            detailNode("MissingParams: unavailable (index-only projection)"),
+            detailNode("RequiredSlots: unavailable (index-only projection)"),
             detailNode(`ProvidedSlots: ${providedSlots.length > 0 ? providedSlots.join(", ") : "(none)"}`),
-            detailNode(`MissingSlots: ${missingSlots.length > 0 ? missingSlots.join(", ") : "(none)"}`),
-            ...missingSlotNodes,
+            detailNode("MissingSlots: unavailable (index-only projection)"),
             cycleNode
           ]
         } satisfies GroupNode;
@@ -1229,14 +1457,14 @@ function buildPlaceholderUsageGroup(
 }
 
 function collectPlaceholderUsageLocations(
-  document: vscode.TextDocument,
+  documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
   componentKey: string,
   contributionName: string
 ): vscode.Location[] {
   return facts.placeholderReferences
     .filter((ref) => ref.componentKey === componentKey && (ref.contributionValue ?? "").trim() === contributionName)
-    .map((ref) => new vscode.Location(document.uri, ref.range))
+    .map((ref) => new vscode.Location(documentUri, ref.range))
     .sort(compareLocations);
 }
 
@@ -1455,6 +1683,21 @@ function buildSymbolGroup(label: string, symbols: readonly AggregatedSymbol[], i
             id: `${nodeId}:symbol:${symbol.ident}`,
             label: symbol.ident,
             description: symbol.usageCount !== undefined ? `${symbol.origin}, used ${symbol.usageCount}` : symbol.origin,
+            statusSourceKey: "composition.symbol.origin",
+            symbolKind:
+              label.toLowerCase().includes("control")
+                ? "control"
+                : label.toLowerCase().includes("button")
+                  ? "button"
+                  : label.toLowerCase().includes("section")
+                    ? "section"
+                    : label.toLowerCase().includes("actionsharecode")
+                      ? "actionShareCode"
+                      : label.toLowerCase().includes("controlsharecode")
+                        ? "controlShareCode"
+                        : label.toLowerCase().includes("buttonsharecode")
+                          ? "buttonShareCode"
+                          : undefined,
             tooltip: symbol.source
               ? `${symbol.origin === "inherited" ? "Inherited" : symbol.origin === "injected" ? "Injected" : symbol.origin === "resolved" ? "Resolved" : symbol.origin === "final" ? "Final" : "Local"} from ${symbol.source}`
               : symbol.origin,
@@ -1587,13 +1830,13 @@ function collectFeatureUsageLocations(
 ): vscode.Location[] {
   const seen = new Map<string, vscode.Location>();
   if (entrypointComponentKey) {
-    for (const location of index.componentReferenceLocationsByKey.get(entrypointComponentKey) ?? []) {
+    for (const location of collectComponentReferenceLocations(index, entrypointComponentKey)) {
       pushUniqueLocationMap(seen, location);
     }
   }
   for (const part of report.parts) {
     const componentKey = toIndexedComponentKey(part.file);
-    for (const location of index.componentReferenceLocationsByKey.get(componentKey) ?? []) {
+    for (const location of collectComponentReferenceLocations(index, componentKey)) {
       pushUniqueLocationMap(seen, location);
     }
   }
@@ -1606,11 +1849,11 @@ function collectPartUsageLocations(
   entrypointComponentKey?: string
 ): vscode.Location[] {
   const seen = new Map<string, vscode.Location>();
-  for (const location of index.componentReferenceLocationsByKey.get(partComponentKey) ?? []) {
+  for (const location of collectComponentReferenceLocations(index, partComponentKey)) {
     pushUniqueLocationMap(seen, location);
   }
   if (seen.size === 0 && entrypointComponentKey) {
-    for (const location of index.componentReferenceLocationsByKey.get(entrypointComponentKey) ?? []) {
+    for (const location of collectComponentReferenceLocations(index, entrypointComponentKey)) {
       pushUniqueLocationMap(seen, location);
     }
   }
@@ -1624,12 +1867,12 @@ function collectContributionUsageLocations(
   entrypointComponentKey?: string
 ): vscode.Location[] {
   const seen = new Map<string, vscode.Location>();
-  for (const location of index.componentContributionReferenceLocationsByKey.get(partComponentKey)?.get(contributionName) ?? []) {
+  for (const location of collectComponentContributionReferenceLocations(index, partComponentKey, contributionName)) {
     pushUniqueLocationMap(seen, location);
   }
 
   if (seen.size === 0 && entrypointComponentKey) {
-    for (const location of index.componentReferenceLocationsByKey.get(entrypointComponentKey) ?? []) {
+    for (const location of collectComponentReferenceLocations(index, entrypointComponentKey)) {
       pushUniqueLocationMap(seen, location);
     }
   }
@@ -1646,8 +1889,8 @@ function getUsingUsageLocations(
 ): vscode.Location[] {
   const currentOwner = facts.formIdent ?? facts.workflowFormIdent;
   const locations = contributionName
-    ? index.componentContributionReferenceLocationsByKey.get(componentKey)?.get(contributionName) ?? []
-    : index.componentReferenceLocationsByKey.get(componentKey) ?? [];
+    ? collectComponentContributionReferenceLocations(index, componentKey, contributionName)
+    : collectComponentReferenceLocations(index, componentKey);
   if (!currentOwner) {
     return [...locations].sort(compareLocations);
   }
@@ -1789,114 +2032,6 @@ function toWorkspacePath(relativePath: string, activeUri: vscode.Uri): string {
   }
 
   return vscode.Uri.joinPath(folder.uri, ...relativePath.split("/")).fsPath;
-}
-
-function resolvePrimitiveSourceUri(primitiveKey: string): vscode.Uri | undefined {
-  const normalized = normalizeComponentKey(primitiveKey);
-  const keyWithSlashes = normalized.replace(/\\/g, "/");
-  for (const folder of vscode.workspace.workspaceFolders ?? []) {
-    for (const root of ["XML_Primitives", "XML_Components"]) {
-      const base = path.join(folder.uri.fsPath, root);
-      const candidates = [
-        path.join(base, `${keyWithSlashes}.primitive.xml`),
-        path.join(base, `${keyWithSlashes}.xml`)
-      ];
-      for (const filePath of candidates) {
-        if (fs.existsSync(filePath)) {
-          return vscode.Uri.file(filePath);
-        }
-      }
-    }
-  }
-
-  return undefined;
-}
-
-interface PrimitiveContract {
-  requiredParams: Set<string>;
-  requiredSlots: Set<string>;
-}
-
-const primitiveContractCache = new Map<string, PrimitiveContract>();
-
-function resolvePrimitiveContract(uri: vscode.Uri, selectedTemplateNames: readonly string[]): PrimitiveContract | undefined {
-  const cacheKey = `${uri.toString()}::${selectedTemplateNames.join("|")}`;
-  const cached = primitiveContractCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  if (!fs.existsSync(uri.fsPath)) {
-    return undefined;
-  }
-
-  const text = fs.readFileSync(uri.fsPath, "utf8");
-  const templates = parsePrimitiveTemplateBlocks(text);
-  const selectedTemplates = selectedTemplateNames.length > 0
-    ? templates.filter((template) => selectedTemplateNames.includes(template.name ?? ""))
-    : templates.length > 0
-      ? [templates[0]]
-      : [];
-  const templateText = selectedTemplates.map((template) => template.body).join("\n");
-  const requiredParams = collectRequiredPrimitiveParamNames(text, templateText);
-  const requiredSlots = collectRequiredSlotNames(templateText);
-  const contract: PrimitiveContract = { requiredParams, requiredSlots };
-  primitiveContractCache.set(cacheKey, contract);
-  return contract;
-}
-
-function parsePrimitiveTemplateBlocks(text: string): Array<{ name?: string; body: string }> {
-  const out: Array<{ name?: string; body: string }> = [];
-  for (const match of text.matchAll(/<Template\b([^>]*)>([\s\S]*?)<\/Template>/gi)) {
-    const attrs = match[1] ?? "";
-    const body = match[2] ?? "";
-    out.push({
-      name: extractXmlAttributeValue(attrs, "Name"),
-      body
-    });
-  }
-  return out;
-}
-
-function collectRequiredPrimitiveParamNames(primitiveText: string, templateText: string): Set<string> {
-  const out = new Set<string>();
-  for (const match of primitiveText.matchAll(/<Param\b([^>]*)\/?>/gi)) {
-    const attrs = match[1] ?? "";
-    const name = extractXmlAttributeValue(attrs, "Name");
-    const required = (extractXmlAttributeValue(attrs, "Required") ?? "").trim().toLowerCase();
-    if (name && (required === "true" || required === "1")) {
-      out.add(name);
-    }
-  }
-
-  for (const token of templateText.matchAll(/\{\{([A-Za-z_][\w.-]*)\}\}/g)) {
-    const name = (token[1] ?? "").trim();
-    if (!name || name.toLowerCase().startsWith("slot:")) {
-      continue;
-    }
-    out.add(name);
-  }
-
-  return out;
-}
-
-function collectRequiredSlotNames(templateText: string): Set<string> {
-  const out = new Set<string>();
-  for (const match of templateText.matchAll(/\{\{Slot:([A-Za-z_][\w.-]*)\}\}/g)) {
-    const name = (match[1] ?? "").trim();
-    if (name) {
-      out.add(name);
-    }
-  }
-  return out;
-}
-
-function extractXmlAttributeValue(attrsText: string, name: string): string | undefined {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`\\b${escaped}\\s*=\\s*(\"([^\"]*)\"|'([^']*)')`, "i");
-  const match = regex.exec(attrsText);
-  const value = (match?.[2] ?? match?.[3] ?? "").trim();
-  return value.length > 0 ? value : undefined;
 }
 
 function toUriStartLocation(uri: vscode.Uri): vscode.Location {

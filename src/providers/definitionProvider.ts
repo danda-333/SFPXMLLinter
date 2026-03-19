@@ -1,16 +1,21 @@
-﻿import * as vscode from "vscode";
+import * as vscode from "vscode";
 import { WorkspaceIndex } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
-import { buildDocumentCompositionModel, collectSelectedDocumentContributions, DocumentCompositionModel } from "../composition/documentModel";
+import { buildDocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
+import {
+  findFormDeclaration,
+  findFormSymbolDeclaration,
+  resolveWorkflowDeclaration
+} from "./referenceModelUtils";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 
 export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
-  constructor(private readonly getIndex: IndexAccessor) {}
+  public constructor(private readonly getIndex: IndexAccessor) {}
 
-  provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
+  public provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
     if (!documentInConfiguredRoots(document)) {
       return undefined;
     }
@@ -23,10 +28,9 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
       if (!formRef.range.contains(position)) {
         continue;
       }
-
-      const targetForm = index.formsByIdent.get(formRef.formIdent);
-      if (targetForm) {
-        return targetForm.formIdentLocation;
+      const target = findFormDeclaration(index, formRef.formIdent);
+      if (target) {
+        return target;
       }
     }
 
@@ -34,23 +38,15 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
       if (!mappingFormRef.range.contains(position)) {
         continue;
       }
-
-      const targetForm = index.formsByIdent.get(mappingFormRef.formIdent);
-      if (targetForm) {
-        return targetForm.formIdentLocation;
+      const target = findFormDeclaration(index, mappingFormRef.formIdent);
+      if (target) {
+        return target;
       }
     }
 
     if (facts.rootTag?.toLowerCase() === "workflow") {
-      const workflowForm = facts.workflowFormIdent ? index.formsByIdent.get(facts.workflowFormIdent) : undefined;
-      const workflowControlShareCodeDefinitions = collectWorkflowControlShareCodeDefinitions(index, documentComposition);
-      const workflowButtonShareCodeDefinitions = collectWorkflowButtonShareCodeDefinitions(index, documentComposition);
-      const workflowControlDefinitions = collectWorkflowControlDefinitions(workflowForm, index, documentComposition);
-      const workflowButtonDefinitions = collectWorkflowButtonDefinitions(workflowForm, index, documentComposition);
-      const workflowSectionDefinitions = collectWorkflowSectionDefinitions(workflowForm, index, documentComposition);
-
-      if (workflowForm && inRange(facts.workflowFormIdentRange, position)) {
-        return workflowForm.formIdentLocation;
+      if (inRange(facts.workflowFormIdentRange, position) && facts.workflowFormIdent) {
+        return findFormDeclaration(index, facts.workflowFormIdent);
       }
 
       for (const ref of facts.workflowReferences) {
@@ -58,114 +54,101 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
           continue;
         }
 
-        if (ref.kind !== "controlShareCode" && ref.kind !== "buttonShareCode" && !workflowForm) {
-          continue;
-        }
-
-        const key = ref.ident;
         if (ref.kind === "formControl") {
-          return workflowControlDefinitions.get(key) ?? workflowForm?.formIdentLocation;
-        }
-
-        if (ref.kind === "controlShareCode") {
-          const local = facts.controlShareCodeDefinitions.get(key);
-          if (local) {
-            return new vscode.Location(document.uri, local);
-          }
-
-          const injected = workflowControlShareCodeDefinitions.get(key);
-          if (injected) {
-            return injected;
-          }
-
-          return undefined;
+          return facts.workflowFormIdent
+            ? resolveWorkflowDeclaration(index, facts, documentComposition, "control", ref.ident)
+            : undefined;
         }
 
         if (ref.kind === "button") {
-          return workflowButtonDefinitions.get(key) ?? workflowForm?.formIdentLocation;
-        }
-
-        if (ref.kind === "buttonShareCode") {
-          const local = facts.buttonShareCodeDefinitions.get(key);
-          if (local) {
-            return new vscode.Location(document.uri, local);
-          }
-
-          const injected = workflowButtonShareCodeDefinitions.get(key);
-          if (injected) {
-            return injected;
-          }
-
-          return undefined;
+          return facts.workflowFormIdent
+            ? resolveWorkflowDeclaration(index, facts, documentComposition, "button", ref.ident)
+            : undefined;
         }
 
         if (ref.kind === "section") {
-          return workflowSectionDefinitions.get(key) ?? workflowForm?.formIdentLocation;
+          return facts.workflowFormIdent
+            ? resolveWorkflowDeclaration(index, facts, documentComposition, "section", ref.ident)
+            : undefined;
+        }
+
+        if (ref.kind === "controlShareCode") {
+          const local = facts.controlShareCodeDefinitions.get(ref.ident);
+          if (local) {
+            return new vscode.Location(document.uri, local);
+          }
+          const injected = findInjectedShareCodeDefinition(index, documentComposition, "control", ref.ident);
+          if (injected) {
+            return injected;
+          }
+        }
+
+        if (ref.kind === "buttonShareCode") {
+          const local = facts.buttonShareCodeDefinitions.get(ref.ident);
+          if (local) {
+            return new vscode.Location(document.uri, local);
+          }
+          const injected = findInjectedShareCodeDefinition(index, documentComposition, "button", ref.ident);
+          if (injected) {
+            return injected;
+          }
         }
       }
 
       for (const ref of facts.workflowControlIdentReferences) {
-        if (!ref.range.contains(position)) {
+        if (!ref.range.contains(position) || !facts.workflowFormIdent) {
           continue;
         }
-
-        return workflowControlDefinitions.get(ref.ident) ?? workflowForm?.formIdentLocation;
+        const resolved = resolveWorkflowDeclaration(index, facts, documentComposition, "control", ref.ident);
+        if (resolved) {
+          return resolved;
+        }
       }
     }
 
     const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow"
       ? facts.workflowFormIdent
       : facts.formIdent ?? facts.rootFormIdent;
-    const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
-    const workflowControlDefinitionsForMappings =
-      facts.rootTag?.toLowerCase() === "workflow"
-        ? collectWorkflowControlDefinitions(
-            facts.workflowFormIdent ? index.formsByIdent.get(facts.workflowFormIdent) : undefined,
-            index,
-            documentComposition
-          )
-        : undefined;
     for (const mappingRef of facts.mappingIdentReferences) {
-      if (!mappingRef.range.contains(position) || !owningForm) {
+      if (!mappingRef.range.contains(position) || !owningFormIdent) {
         continue;
       }
 
-      const key = mappingRef.ident;
       if (mappingRef.kind === "fromIdent") {
-        if (workflowControlDefinitionsForMappings?.has(key)) {
-          return workflowControlDefinitionsForMappings.get(key);
+        if (facts.rootTag?.toLowerCase() === "workflow") {
+          return resolveWorkflowDeclaration(index, facts, documentComposition, "control", mappingRef.ident);
         }
-        return owningForm.controlDefinitions.get(key) ?? owningForm.formIdentLocation;
+        return findFormSymbolDeclaration(index, owningFormIdent, "control", mappingRef.ident)
+          ?? findFormDeclaration(index, owningFormIdent);
       }
 
       const targetFormIdent = mappingRef.mappingFormIdent;
-      const targetForm = targetFormIdent ? index.formsByIdent.get(targetFormIdent) : undefined;
-      if (targetForm) {
-        return targetForm.controlDefinitions.get(key) ?? targetForm.formIdentLocation;
+      if (targetFormIdent) {
+        return findFormSymbolDeclaration(index, targetFormIdent, "control", mappingRef.ident)
+          ?? findFormDeclaration(index, targetFormIdent);
       }
 
-      if (workflowControlDefinitionsForMappings?.has(key)) {
-        return workflowControlDefinitionsForMappings.get(key);
+      if (facts.rootTag?.toLowerCase() === "workflow") {
+        return resolveWorkflowDeclaration(index, facts, documentComposition, "control", mappingRef.ident);
       }
 
-      return owningForm.controlDefinitions.get(key) ?? owningForm.formIdentLocation;
+      return findFormSymbolDeclaration(index, owningFormIdent, "control", mappingRef.ident)
+        ?? findFormDeclaration(index, owningFormIdent);
     }
 
     if (facts.rootTag?.toLowerCase() === "form" && facts.formIdent) {
-      const form = index.formsByIdent.get(facts.formIdent);
-      if (form) {
-        for (const ref of facts.htmlControlReferences) {
-          if (!ref.range.contains(position)) {
-            continue;
-          }
-
-          return form.controlDefinitions.get(ref.ident) ?? form.formIdentLocation;
+      for (const ref of facts.htmlControlReferences) {
+        if (!ref.range.contains(position)) {
+          continue;
         }
+        return findFormSymbolDeclaration(index, facts.formIdent, "control", ref.ident)
+          ?? findFormDeclaration(index, facts.formIdent);
+      }
 
-        const htmlControlIdent = resolveHtmlTemplateControlIdentFromTagContext(document, position);
-        if (htmlControlIdent) {
-          return form.controlDefinitions.get(htmlControlIdent) ?? form.formIdentLocation;
-        }
+      const htmlControlIdent = resolveHtmlTemplateControlIdentFromTagContext(document, position);
+      if (htmlControlIdent) {
+        return findFormSymbolDeclaration(index, facts.formIdent, "control", htmlControlIdent)
+          ?? findFormDeclaration(index, facts.formIdent);
       }
     }
 
@@ -193,134 +176,37 @@ function inRange(range: vscode.Range | undefined, position: vscode.Position): bo
   return range ? range.contains(position) : false;
 }
 
-function collectWorkflowControlShareCodeDefinitions(
+function findInjectedShareCodeDefinition(
   index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>();
+  documentComposition: ReturnType<typeof buildDocumentCompositionModel>,
+  kind: "control" | "button",
+  ident: string
+): vscode.Location | undefined {
   for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
     const component = resolveComponentByKey(index, contributionRef.componentKey);
     if (!component) {
       continue;
     }
-
-    for (const ident of contributionRef.contribution.workflowControlShareCodeIdents) {
-      const location = component.workflowControlShareCodeDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
-}
-
-function collectWorkflowButtonShareCodeDefinitions(
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>();
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
+    const facts = index.parsedFactsByUri.get(component.uri.toString());
+    if (!facts) {
       continue;
     }
 
-    for (const ident of contributionRef.contribution.workflowButtonShareCodeIdents) {
-      const location = component.workflowButtonShareCodeDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
+    if (kind === "control") {
+      const range = facts.controlShareCodeDefinitions.get(ident);
+      if (range) {
+        return new vscode.Location(component.uri, range);
       }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
-}
-
-function collectWorkflowControlDefinitions(
-  workflowForm: import("../indexer/types").IndexedForm | undefined,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>();
-  for (const [ident, location] of workflowForm?.controlDefinitions ?? []) {
-    out.set(ident, location);
-  }
-
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
       continue;
     }
 
-    for (const ident of contributionRef.contribution.formControlIdents) {
-      const location = component.formControlDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
+    const range = facts.buttonShareCodeDefinitions.get(ident);
+    if (range) {
+      return new vscode.Location(component.uri, range);
     }
   }
 
-  return out;
-}
-
-function collectWorkflowButtonDefinitions(
-  workflowForm: import("../indexer/types").IndexedForm | undefined,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>();
-  for (const [ident, location] of workflowForm?.buttonDefinitions ?? []) {
-    out.set(ident, location);
-  }
-
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formButtonIdents) {
-      const location = component.formButtonDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
-}
-
-function collectWorkflowSectionDefinitions(
-  workflowForm: import("../indexer/types").IndexedForm | undefined,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>();
-  for (const [ident, location] of workflowForm?.sectionDefinitions ?? []) {
-    out.set(ident, location);
-  }
-
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formSectionIdents) {
-      const location = component.formSectionDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
+  return undefined;
 }
 
 function resolveHtmlTemplateControlIdentFromTagContext(
@@ -419,3 +305,4 @@ function stripPrefix(value: string): string {
   const parts = value.split(":");
   return parts[parts.length - 1];
 }
+

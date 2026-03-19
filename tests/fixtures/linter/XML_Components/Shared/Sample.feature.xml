@@ -9,19 +9,19 @@
     <Button xsi:type="FormButton" Ident="ComponentButton" TitleResourceKey="ComponentButton_Package" IsSave="true" IsVisible="false" />
   </Contribution>
 
-	<Contribution Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append">
+	<Contribution Root="WorkFlow" Name="ControlShareCodes" TargetXPath="//WorkFlow/ControlShareCodes" Insert="append" IsInsertOptional="true">
 
 		<ControlShareCode Ident="ComponentControlShareCode"/>
 		
 	</Contribution>
 
-	<Contribution Root="WorkFlow" Name="ButtonShareCodes" TargetXPath="//WorkFlow/ButtonShareCodes" Insert="append">
+	<Contribution Root="WorkFlow" Name="ButtonShareCodes" TargetXPath="//WorkFlow/ButtonShareCodes" Insert="append" IsInsertOptional="true">
 
 		<ButtonShareCode Ident="ComponentButtonShareCode"/>
 		
 	</Contribution>
 
-	<Contribution Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append">
+	<Contribution Root="WorkFlow" Name="ActionShareCodes" TargetXPath="//WorkFlow/ActionShareCodes" Insert="append" IsInsertOptional="true">
 
 		<ActionShareCode Ident="ComponentActionShareCode"/>
 		

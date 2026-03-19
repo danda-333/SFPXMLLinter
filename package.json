@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -33,11 +33,14 @@
     "onCommand:sfpXmlLinter.showBuildQueueLog",
     "onCommand:sfpXmlLinter.showIndexLog",
     "onCommand:sfpXmlLinter.showCompositionLog",
+    "onCommand:sfpXmlLinter.showPipelineStats",
+    "onCommand:sfpXmlLinter.exportTrace",
     "onCommand:sfpXmlLinter.generateFeatureManifestBootstrap",
     "onCommand:sfpXmlLinter.refreshCompositionView",
     "onCommand:sfpXmlLinter.compositionOpenSource",
     "onCommand:sfpXmlLinter.compositionOpenSourceBeside",
     "onCommand:sfpXmlLinter.compositionOpenSourceSidePreview",
+    "onCommand:sfpXmlLinter.compositionCompare",
     "onCommand:sfpXmlLinter.compositionShowUsages",
     "onCommand:sfpXmlLinter.rebuildIndex",
     "onCommand:sfpXmlLinter.revalidateWorkspace",
@@ -90,11 +93,13 @@
     "commands": [
       {
         "command": "sfpXmlLinter.buildXmlTemplates",
-        "title": "SFP XML Linter: Build XML Templates (Current / Selection)"
+        "title": "SFP XML Linter: Build XML Templates (Current / Selection)",
+        "icon": "$(refresh)"
       },
       {
         "command": "sfpXmlLinter.buildXmlTemplatesAll",
-        "title": "SFP XML Linter: Build XML Templates (All)"
+        "title": "SFP XML Linter: Build XML Templates (All)",
+        "icon": "$(sync)"
       },
       {
         "command": "sfpXmlLinter.compareTemplateWithBuiltXml",
@@ -119,6 +124,14 @@
       {
         "command": "sfpXmlLinter.showCompositionLog",
         "title": "SFP XML Linter: Show Composition Log"
+      },
+      {
+        "command": "sfpXmlLinter.showPipelineStats",
+        "title": "SFP XML Linter: Show Pipeline Stats"
+      },
+      {
+        "command": "sfpXmlLinter.exportTrace",
+        "title": "SFP XML Linter: Export Pipeline Trace"
       },
       {
         "command": "sfpXmlLinter.generateFeatureManifestBootstrap",
@@ -147,6 +160,11 @@
         "command": "sfpXmlLinter.compositionShowUsages",
         "title": "SFP XML Linter: Composition Show Usages",
         "icon": "$(references)"
+      },
+      {
+        "command": "sfpXmlLinter.compositionCompare",
+        "title": "SFP XML Linter: Composition Compare",
+        "icon": "$(diff)"
       },
       {
         "command": "sfpXmlLinter.workspaceDiagnosticsReport",
@@ -194,6 +212,41 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "sfpXmlLinter.buildXmlTemplates",
+          "when": "view == sfpXmlLinter.compositionView && viewItem == compositionBuildStatus",
+          "group": "inline@1"
+        },
+        {
+          "command": "sfpXmlLinter.buildXmlTemplatesAll",
+          "when": "view == sfpXmlLinter.compositionView && viewItem == compositionBuildStatus",
+          "group": "inline@2"
+        },
+        {
+          "command": "sfpXmlLinter.compositionOpenSource",
+          "when": "view == sfpXmlLinter.compositionView && viewItem == compositionBuildTarget",
+          "group": "inline@1"
+        },
+        {
+          "command": "sfpXmlLinter.compositionOpenSource",
+          "when": "view == sfpXmlLinter.compositionView && viewItem == compositionBuildSource",
+          "group": "inline@1"
+        },
+        {
+          "command": "sfpXmlLinter.compositionCompare",
+          "when": "view == sfpXmlLinter.compositionView && viewItem == compositionBuildTarget",
+          "group": "inline@2"
+        },
+        {
+          "command": "sfpXmlLinter.compositionOpenSource",
+          "when": "view == sfpXmlLinter.compositionView && viewItem == compositionBuildTargetItem",
+          "group": "inline@1"
+        },
+        {
+          "command": "sfpXmlLinter.compositionCompare",
+          "when": "view == sfpXmlLinter.compositionView && viewItem == compositionBuildTargetItem",
+          "group": "inline@2"
+        },
         {
           "command": "sfpXmlLinter.compositionOpenSource",
           "when": "view == sfpXmlLinter.compositionView && viewItem =~ /^composition(Feature|FeaturePart|Contribution|Using|Symbol)$/",
@@ -293,6 +346,7 @@
             "missing-feature-expectation": "warning",
             "missing-feature-expected-xpath": "warning",
             "duplicate-feature-provider": "warning",
+            "missing-explicit-provides": "information",
             "ordering-conflict": "warning",
             "orphan-feature-part": "warning",
             "incomplete-feature": "warning",
@@ -444,11 +498,11 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test:formatter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runFormatterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runSelectionFormatterTests.js",
-    "test:linter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runIgnoreCodeActionProviderTests.js",
+    "test:linter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runIgnoreCodeActionProviderTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runComposedWorkflowReferenceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runFeatureControlToggleTests.js",
     "test:providers": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/providers/runCompletionProviderTests.js",
     "test:all": "npm run test:providers && npm run test:linter && npm run test:composition && npm run test:templates",
     "test:linter:perf": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterPerformance.js",
-    "test:composition": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionWorkspaceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionDiagnosticsTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionBootstrapTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runDocumentCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionOrderingFixtureTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runPrimitiveQuickFixCommandTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runTreeQuickFixPayloadTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runWorkspaceIndexerUsageTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runXmlFactsPrimitiveButtonTests.js",
+    "test:composition": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionWorkspaceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionDiagnosticsTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionBootstrapTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runDocumentCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionOrderingFixtureTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runPrimitiveQuickFixCommandTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runTreeQuickFixPayloadTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runTreeProjectionAdapterTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runWorkspaceIndexerUsageTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runXmlFactsPrimitiveButtonTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runWorkspaceIndexerComposedFactsRegressionTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runUpdateRunnerTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runUpdateOrchestratorTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runDefaultFactsAndSymbolsBootstrapTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runValidationHostDependencyTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runSymbolRegistryQueryTests.js",
     "test:templates:core": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateCoreTests.js && node -r ./out/tests/testConsoleColors.js out/tests/template/runTemplateGeneratorsTests.js",
     "test:templates:perf": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runTemplateGeneratorsPerformanceCheckpoint.js",
     "test:templates:service": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateServiceTests.js",

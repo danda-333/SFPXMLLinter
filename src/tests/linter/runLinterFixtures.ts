@@ -430,10 +430,6 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     });
   }
 
-  const emptyMapLocations = new Map<string, Location[]>();
-  const emptyNestedRef = new Map<string, Map<string, Location[]>>();
-  const emptyUsageMap = new Map<string, Set<string>>();
-  const emptyNestedUsage = new Map<string, Map<string, Set<string>>>();
   const parsedFactsByUri = new Map<string, ParsedDocumentFacts>();
   for (const entry of parsedEntries) {
     parsedFactsByUri.set(entry.doc.uri.toString(), entry.facts);
@@ -443,15 +439,6 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
     formsByIdent: formsByIdent as unknown as Map<string, import("../../indexer/types").IndexedForm>,
     componentsByKey: componentsByKey as unknown as Map<string, import("../../indexer/types").IndexedComponent>,
     componentKeysByBaseName,
-    formIdentReferenceLocations: emptyMapLocations as unknown as Map<string, import("vscode").Location[]>,
-    mappingFormIdentReferenceLocations: new Map<string, import("vscode").Location[]>(),
-    controlReferenceLocationsByFormIdent: new Map<string, Map<string, import("vscode").Location[]>>(),
-    buttonReferenceLocationsByFormIdent: new Map<string, Map<string, import("vscode").Location[]>>(),
-    sectionReferenceLocationsByFormIdent: new Map<string, Map<string, import("vscode").Location[]>>(),
-    componentReferenceLocationsByKey: emptyMapLocations as unknown as Map<string, import("vscode").Location[]>,
-    componentContributionReferenceLocationsByKey: emptyNestedRef as unknown as Map<string, Map<string, import("vscode").Location[]>>,
-    componentUsageFormIdentsByKey: emptyUsageMap,
-    componentContributionUsageFormIdentsByKey: emptyNestedUsage,
     parsedFactsByUri,
     hasIgnoreDirectiveByUri: new Map(),
     formsReady: true,

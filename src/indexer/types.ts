@@ -78,15 +78,6 @@ export interface WorkspaceIndex {
   formsByIdent: Map<string, IndexedForm>;
   componentsByKey: Map<string, IndexedComponent>;
   componentKeysByBaseName: Map<string, Set<string>>;
-  formIdentReferenceLocations: Map<string, vscode.Location[]>;
-  mappingFormIdentReferenceLocations: Map<string, vscode.Location[]>;
-  controlReferenceLocationsByFormIdent: Map<string, Map<string, vscode.Location[]>>;
-  buttonReferenceLocationsByFormIdent: Map<string, Map<string, vscode.Location[]>>;
-  sectionReferenceLocationsByFormIdent: Map<string, Map<string, vscode.Location[]>>;
-  componentReferenceLocationsByKey: Map<string, vscode.Location[]>;
-  componentContributionReferenceLocationsByKey: Map<string, Map<string, vscode.Location[]>>;
-  componentUsageFormIdentsByKey: Map<string, Set<string>>;
-  componentContributionUsageFormIdentsByKey: Map<string, Map<string, Set<string>>>;
   parsedFactsByUri: Map<string, ParsedDocumentFacts>;
   hasIgnoreDirectiveByUri: Map<string, boolean>;
   builtSymbolProvidersByUri?: Map<string, Map<string, IndexedSymbolProvenanceProvider[]>>;

@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import Module = require("node:module");
+import { collectEffectiveUsingRefs } from "../../utils/effectiveUsings";
 
 const fixtureRoot = path.resolve(__dirname, "../../../tests/fixtures/indexer-usage");
 
@@ -115,15 +116,19 @@ async function run(): Promise<void> {
   const indexer = new WorkspaceIndexer(["XML_Templates", "XML_Components"]);
   const index = await indexer.rebuildIndex();
 
-  const featureUsage = index.componentUsageFormIdentsByKey.get("Shared/Sample");
-  assert.ok(featureUsage);
-  assert.equal(featureUsage?.has("FormA"), true, "Expected Shared/Sample usage for FormA.");
+  const explicitUri = Uri.file(path.join(fixtureRoot, "XML_Templates", "100_FormA", "FormAWorkFlow.ExplicitControls.xml")).toString();
+  const explicitFacts = index.parsedFactsByUri.get(explicitUri);
+  assert.ok(explicitFacts, "Expected ExplicitControls workflow facts.");
+  const refs = collectEffectiveUsingRefs(explicitFacts!, index).filter((ref) => ref.componentKey === "Shared/Sample");
+  assert.equal(refs.length > 0, true, "Expected Shared/Sample effective usage in explicit workflow.");
+  assert.equal(refs.some((ref) => ref.sectionValue === "Controls"), true, "Expected explicit Controls contribution usage.");
 
-  const contributionUsage = index.componentContributionUsageFormIdentsByKey.get("Shared/Sample");
-  assert.ok(contributionUsage);
-  assert.equal(contributionUsage?.get("Controls")?.has("FormA"), true, "Expected explicit Controls contribution usage.");
+  const suppressUri = Uri.file(path.join(fixtureRoot, "XML_Templates", "100_FormA", "FormAWorkFlow.SuppressSection.xml")).toString();
+  const suppressFacts = index.parsedFactsByUri.get(suppressUri);
+  assert.ok(suppressFacts, "Expected SuppressSection workflow facts.");
+  const suppressRefs = collectEffectiveUsingRefs(suppressFacts!, index).filter((ref) => ref.componentKey === "Shared/Sample");
   assert.equal(
-    contributionUsage?.get("ControlShareCodes")?.has("FormA") ?? false,
+    suppressRefs.some((ref) => ref.sectionValue === "ControlShareCodes"),
     false,
     "Suppressed ControlShareCodes should not appear as effective contribution usage."
   );

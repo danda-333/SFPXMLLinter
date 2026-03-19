@@ -1,0 +1,262 @@
+import * as vscode from "vscode";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { BuildRunOptions, BuildXmlTemplatesService } from "../../template/buildXmlTemplatesService";
+import {
+  BuildTemplateEvaluation,
+  BuildTemplateMutationTelemetry,
+  CompositionTelemetryCollector
+} from "./compositionTelemetryService";
+import { TemplateBuildRunMode } from "./templateBuildRunOptionsFactory";
+
+export interface ManualTemplateBuildCommandsServiceDeps {
+  buildService: BuildXmlTemplatesService;
+  getTemplateBuilderMode: () => TemplateBuildRunMode;
+  createBuildTelemetryCollector: () => CompositionTelemetryCollector;
+  createBuildRunOptions: (
+    silent: boolean,
+    mode: TemplateBuildRunMode,
+    onTemplateEvaluated?: (
+      relativeTemplatePath: string,
+      status: "update" | "nochange" | "error",
+      templateText: string,
+      debugLines: readonly string[]
+    ) => void,
+    onTemplateMutations?: (
+      relativeTemplatePath: string,
+      outputRelativePath: string,
+      outputFsPath: string,
+      mutations: readonly import("../../template/buildXmlTemplatesCore").TemplateMutationRecord[]
+    ) => void
+  ) => BuildRunOptions;
+  queueReindexAll: () => Promise<void>;
+  applyBuildMutationTelemetry: (
+    mutationsByTemplate: ReadonlyMap<string, BuildTemplateMutationTelemetry>
+  ) => void;
+  logBuildCompositionSnapshot: (
+    sourceLabel: string,
+    evaluations: ReadonlyMap<string, BuildTemplateEvaluation>,
+    mode: TemplateBuildRunMode
+  ) => void;
+  logBuild: (message: string) => void;
+  isInFolder: (uri: vscode.Uri, folderName: string) => boolean;
+  toRelativePath: (uriOrPath: vscode.Uri | string) => string;
+}
+
+export class ManualTemplateBuildCommandsService {
+  public constructor(private readonly deps: ManualTemplateBuildCommandsServiceDeps) {}
+
+  public async runBuildCurrentOrSelection(uri?: vscode.Uri, uris?: vscode.Uri[]): Promise<void> {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (!folder) {
+      vscode.window.showWarningMessage("No workspace folder is open.");
+      return;
+    }
+
+    try {
+      this.deps.logBuild("MANUAL build current/selection START");
+      const mode = this.deps.getTemplateBuilderMode();
+      const telemetry = this.deps.createBuildTelemetryCollector();
+      const selection = this.collectBuildSelectionUris(uri, uris);
+      const targetUris = selection.length > 0 ? selection : this.getActiveDocumentUriFallback();
+
+      if (targetUris.length === 0) {
+        this.deps.logBuild("No current/selected resource -> FULL fallback");
+        await this.deps.buildService.run(
+          folder,
+          this.deps.createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+        );
+        await this.deps.queueReindexAll();
+        this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
+        this.deps.logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
+        this.deps.logBuild("MANUAL build current/selection DONE (full fallback)");
+        return;
+      }
+
+      const templateTargets = new Set<string>();
+      let usedFullFallback = false;
+
+      for (const targetUri of targetUris) {
+        if (this.deps.isInFolder(targetUri, "XML_Templates")) {
+          templateTargets.add(targetUri.fsPath);
+          continue;
+        }
+
+        if (this.deps.isInFolder(targetUri, "XML_Components") || this.deps.isInFolder(targetUri, "XML_Primitives")) {
+          const dependentTemplates = await this.deps.buildService.findTemplatesUsingComponent(folder, targetUri.fsPath);
+          if (dependentTemplates.length === 0) {
+            usedFullFallback = true;
+            this.deps.logBuild(
+              `Selection in XML_Components/XML_Primitives has no dependents: ${this.deps.toRelativePath(targetUri)} -> FULL fallback`
+            );
+            break;
+          }
+
+          for (const dependent of dependentTemplates) {
+            templateTargets.add(dependent);
+          }
+          continue;
+        }
+
+        usedFullFallback = true;
+        this.deps.logBuild(`Selection outside template roots: ${this.deps.toRelativePath(targetUri)} -> FULL fallback`);
+        break;
+      }
+
+      if (usedFullFallback || templateTargets.size === 0) {
+        await this.deps.buildService.run(
+          folder,
+          this.deps.createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+        );
+        await this.deps.queueReindexAll();
+        this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
+        this.deps.logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
+        this.deps.logBuild("MANUAL build current/selection DONE (full fallback)");
+        return;
+      }
+
+      for (const targetPath of templateTargets) {
+        this.deps.logBuild(`MANUAL target build: ${this.deps.toRelativePath(targetPath)}`);
+        await this.deps.buildService.runForPath(
+          folder,
+          targetPath,
+          this.deps.createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+        );
+      }
+      await this.deps.queueReindexAll();
+      this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
+      this.deps.logBuildCompositionSnapshot("manual-current", telemetry.entries, mode);
+      this.deps.logBuild("MANUAL build current/selection DONE");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`BuildXmlTemplates failed: ${message}`);
+      this.deps.logBuild(`MANUAL build current/selection ERROR: ${message}`);
+    }
+  }
+
+  public async runBuildAll(): Promise<void> {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (!folder) {
+      vscode.window.showWarningMessage("No workspace folder is open.");
+      return;
+    }
+
+    try {
+      this.deps.logBuild("MANUAL build all START");
+      const mode = this.deps.getTemplateBuilderMode();
+      const telemetry = this.deps.createBuildTelemetryCollector();
+      await this.deps.buildService.run(
+        folder,
+        this.deps.createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+      );
+      await this.deps.queueReindexAll();
+      this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
+      this.deps.logBuildCompositionSnapshot("manual-all", telemetry.entries, mode);
+      this.deps.logBuild("MANUAL build all DONE");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`BuildXmlTemplates (all) failed: ${message}`);
+      this.deps.logBuild(`MANUAL build all ERROR: ${message}`);
+    }
+  }
+
+  public async compareTemplateWithBuiltXml(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    const document = editor?.document;
+    if (!document || document.languageId !== "xml") {
+      vscode.window.showWarningMessage("Open an XML document first.");
+      return;
+    }
+
+    const folder = vscode.workspace.getWorkspaceFolder(document.uri) ?? vscode.workspace.workspaceFolders?.[0];
+    if (!folder) {
+      vscode.window.showWarningMessage("No workspace folder is open.");
+      return;
+    }
+
+    let templateUri: vscode.Uri | undefined;
+    if (this.deps.isInFolder(document.uri, "XML_Templates")) {
+      templateUri = document.uri;
+    } else if (this.deps.isInFolder(document.uri, "XML")) {
+      const templatePath = document.uri.fsPath.replace(/[\\/]XML([\\/])/i, `${path.sep}XML_Templates$1`);
+      if (await this.pathExists(templatePath)) {
+        templateUri = vscode.Uri.file(templatePath);
+      }
+    }
+
+    if (!templateUri) {
+      vscode.window.showWarningMessage("Current XML is not under XML_Templates/XML or matching template file was not found.");
+      return;
+    }
+
+    try {
+      const mode = this.deps.getTemplateBuilderMode();
+      const options = this.deps.createBuildRunOptions(true, mode);
+      const sourceIsTemplate = templateUri.toString() === document.uri.toString();
+      const renderedXml = await this.deps.buildService.renderTemplateToFinalXml(
+        folder,
+        templateUri,
+        options,
+        sourceIsTemplate ? document.getText() : undefined
+      );
+      const renderedDoc = await vscode.workspace.openTextDocument({
+        language: "xml",
+        content: renderedXml
+      });
+
+      const leftLabel = vscode.workspace.asRelativePath(document.uri, false);
+      const title = `SFP Compare: ${leftLabel} ↔ Built XML`;
+      await vscode.commands.executeCommand("vscode.diff", document.uri, renderedDoc.uri, title);
+      this.deps.logBuild(`Compare opened: ${leftLabel} -> built from ${vscode.workspace.asRelativePath(templateUri, false)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Template compare failed: ${message}`);
+      this.deps.logBuild(`COMPARE ERROR: ${message}`);
+    }
+  }
+
+  private collectBuildSelectionUris(uri?: vscode.Uri, uris?: vscode.Uri[]): vscode.Uri[] {
+    if (Array.isArray(uris) && uris.length > 0) {
+      return this.dedupeUris(uris);
+    }
+
+    if (Array.isArray(uri)) {
+      return this.dedupeUris(uri);
+    }
+
+    if (uri) {
+      return [uri];
+    }
+
+    return [];
+  }
+
+  private getActiveDocumentUriFallback(): vscode.Uri[] {
+    const active = vscode.window.activeTextEditor?.document.uri;
+    return active ? [active] : [];
+  }
+
+  private dedupeUris(uris: vscode.Uri[]): vscode.Uri[] {
+    const seen = new Set<string>();
+    const out: vscode.Uri[] = [];
+    for (const item of uris) {
+      const key = item.toString();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      out.push(item);
+    }
+    return out;
+  }
+
+  private async pathExists(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+

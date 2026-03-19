@@ -1,11 +1,21 @@
 import * as vscode from "vscode";
 import { WorkspaceIndex, IndexedForm } from "../indexer/types";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
+import { parseDocumentFacts, parseDocumentFactsFromText } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots } from "../utils/paths";
-import { resolveComponentByKey } from "../indexer/componentResolve";
-import { buildDocumentCompositionModel, collectSelectedDocumentContributions, DocumentCompositionModel } from "../composition/documentModel";
+import { buildDocumentCompositionModel } from "../composition/documentModel";
+import {
+  collectFormIdentReferenceLocations,
+  collectHtmlControlReferenceLocations,
+  collectWorkflowReferenceLocations,
+  findFormDeclaration,
+  findFormSymbolDeclaration,
+  FormSymbolKind,
+  resolveWorkflowDeclaration
+} from "./referenceModelUtils";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
+type FactsAccessor = (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText>;
+type SymbolReferencesAccessor = (kind: string, ident: string) => readonly vscode.Location[];
 type RenameKind = "form" | "control" | "button" | "section";
 
 interface RenameTarget {
@@ -16,9 +26,13 @@ interface RenameTarget {
 }
 
 export class SfpXmlRenameProvider implements vscode.RenameProvider {
-  constructor(private readonly getIndex: IndexAccessor) {}
+  public constructor(
+    private readonly getIndex: IndexAccessor,
+    private readonly getFactsForDocument?: FactsAccessor,
+    private readonly getSymbolReferences?: SymbolReferencesAccessor
+  ) {}
 
-  async prepareRename(
+  public async prepareRename(
     document: vscode.TextDocument,
     position: vscode.Position
   ): Promise<vscode.Range | { range: vscode.Range; placeholder: string }> {
@@ -30,7 +44,7 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
     return { range: target.declaration.range, placeholder: target.oldIdent };
   }
 
-  async provideRenameEdits(
+  public async provideRenameEdits(
     document: vscode.TextDocument,
     position: vscode.Position,
     newName: string
@@ -51,27 +65,23 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
     pushRenameLocation(edit, seen, target.declaration, normalizedNewName);
 
     if (target.kind === "form") {
-      for (const location of index.formIdentReferenceLocations.get(target.oldIdent) ?? []) {
+      for (const location of collectFormIdentReferenceLocations(index, target.oldIdent)) {
         pushRenameLocation(edit, seen, location, normalizedNewName);
       }
-
-      for (const location of index.mappingFormIdentReferenceLocations.get(target.oldIdent) ?? []) {
-        pushRenameLocation(edit, seen, location, normalizedNewName);
-      }
-
       return edit;
     }
 
-    const byForm =
-      target.kind === "control"
-        ? index.controlReferenceLocationsByFormIdent
-        : target.kind === "button"
-          ? index.buttonReferenceLocationsByFormIdent
-          : index.sectionReferenceLocationsByFormIdent;
-
-    const refs = byForm.get(target.formIdent)?.get(target.oldIdent) ?? [];
-    for (const location of refs) {
+    const formKind = target.kind as FormSymbolKind;
+    for (const location of this.getSymbolReferences?.(target.kind, target.oldIdent) ?? []) {
       pushRenameLocation(edit, seen, location, normalizedNewName);
+    }
+    for (const location of collectWorkflowReferenceLocations(index, target.formIdent, formKind, target.oldIdent)) {
+      pushRenameLocation(edit, seen, location, normalizedNewName);
+    }
+    if (target.kind === "control") {
+      for (const location of collectHtmlControlReferenceLocations(index, target.formIdent, target.oldIdent)) {
+        pushRenameLocation(edit, seen, location, normalizedNewName);
+      }
     }
 
     return edit;
@@ -83,21 +93,22 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
     }
 
     const index = this.getIndex(document.uri);
-    const facts = parseDocumentFacts(document);
+    const facts = this.getFactsForDocument?.(document) ?? parseDocumentFacts(document);
     const documentComposition = buildDocumentCompositionModel(facts, index);
 
     const formEntry = findFormByUri(index, document.uri);
     if (formEntry) {
-      if (formEntry.formIdentLocation.range.contains(position)) {
+      const declaration = findFormDeclaration(index, formEntry.ident) ?? formEntry.formIdentLocation;
+      if (declaration.range.contains(position)) {
         return {
           formIdent: formEntry.ident,
           oldIdent: formEntry.ident,
           kind: "form",
-          declaration: formEntry.formIdentLocation
+          declaration
         };
       }
 
-      const fromForm = findTargetInFormDefinitions(formEntry, position);
+      const fromForm = findTargetInFormDefinitions(formEntry, facts, position);
       if (fromForm) {
         return fromForm;
       }
@@ -107,17 +118,15 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
       if (!ref.range.contains(position)) {
         continue;
       }
-
-      const form = index.formsByIdent.get(ref.formIdent);
-      if (!form) {
+      const declaration = findFormDeclaration(index, ref.formIdent);
+      if (!declaration) {
         continue;
       }
-
       return {
-        formIdent: form.ident,
-        oldIdent: form.ident,
+        formIdent: ref.formIdent,
+        oldIdent: ref.formIdent,
         kind: "form",
-        declaration: form.formIdentLocation
+        declaration
       };
     }
 
@@ -125,29 +134,19 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
       if (!ref.range.contains(position)) {
         continue;
       }
-
-      const form = index.formsByIdent.get(ref.formIdent);
-      if (!form) {
+      const declaration = findFormDeclaration(index, ref.formIdent);
+      if (!declaration) {
         continue;
       }
-
       return {
-        formIdent: form.ident,
-        oldIdent: form.ident,
+        formIdent: ref.formIdent,
+        oldIdent: ref.formIdent,
         kind: "form",
-        declaration: form.formIdentLocation
+        declaration
       };
     }
 
     if (facts.rootTag?.toLowerCase() === "workflow" && facts.workflowFormIdent) {
-      const form = index.formsByIdent.get(facts.workflowFormIdent);
-      if (!form) {
-        return undefined;
-      }
-      const workflowControlDefinitions = collectWorkflowControlDefinitions(form, index, documentComposition);
-      const workflowButtonDefinitions = collectWorkflowButtonDefinitions(form, index, documentComposition);
-      const workflowSectionDefinitions = collectWorkflowSectionDefinitions(form, index, documentComposition);
-
       for (const ref of facts.workflowReferences) {
         if (!ref.range.contains(position)) {
           continue;
@@ -158,19 +157,13 @@ export class SfpXmlRenameProvider implements vscode.RenameProvider {
           continue;
         }
 
-        const declaration = getWorkflowDeclarationForKind(
-          kind,
-          ref.ident,
-          workflowControlDefinitions,
-          workflowButtonDefinitions,
-          workflowSectionDefinitions
-        );
+        const declaration = resolveWorkflowDeclaration(index, facts, documentComposition, kind, ref.ident);
         if (!declaration) {
           continue;
         }
 
         return {
-          formIdent: form.ident,
+          formIdent: facts.workflowFormIdent,
           oldIdent: ref.ident,
           kind,
           declaration
@@ -188,40 +181,43 @@ function findFormByUri(index: WorkspaceIndex, uri: vscode.Uri): IndexedForm | un
       return form;
     }
   }
-
   return undefined;
 }
 
-function findTargetInFormDefinitions(form: IndexedForm, position: vscode.Position): RenameTarget | undefined {
-  for (const [ident, location] of form.controlDefinitions.entries()) {
-    if (location.range.contains(position)) {
+function findTargetInFormDefinitions(
+  form: IndexedForm,
+  facts: ReturnType<typeof parseDocumentFacts>,
+  position: vscode.Position
+): RenameTarget | undefined {
+  for (const info of facts.declaredControlInfos) {
+    if (info.range.contains(position)) {
       return {
         formIdent: form.ident,
-        oldIdent: ident,
+        oldIdent: info.ident,
         kind: "control",
-        declaration: location
+        declaration: new vscode.Location(form.uri, info.range)
       };
     }
   }
 
-  for (const [ident, location] of form.buttonDefinitions.entries()) {
-    if (location.range.contains(position)) {
+  for (const info of facts.declaredButtonInfos) {
+    if (info.range.contains(position)) {
       return {
         formIdent: form.ident,
-        oldIdent: ident,
+        oldIdent: info.ident,
         kind: "button",
-        declaration: location
+        declaration: new vscode.Location(form.uri, info.range)
       };
     }
   }
 
-  for (const [ident, location] of form.sectionDefinitions.entries()) {
-    if (location.range.contains(position)) {
+  for (const occurrence of facts.identOccurrences) {
+    if (occurrence.kind === "section" && occurrence.range.contains(position)) {
       return {
         formIdent: form.ident,
-        oldIdent: ident,
+        oldIdent: occurrence.ident,
         kind: "section",
-        declaration: location
+        declaration: new vscode.Location(form.uri, occurrence.range)
       };
     }
   }
@@ -233,122 +229,13 @@ function toRenameKind(kind: "formControl" | "controlShareCode" | "button" | "but
   if (kind === "formControl") {
     return "control";
   }
-
   if (kind === "button") {
     return "button";
   }
-
   if (kind === "section") {
     return "section";
   }
-
   return undefined;
-}
-
-function getDeclarationForKind(
-  form: IndexedForm,
-  kind: Exclude<RenameKind, "form">,
-  identKey: string
-): vscode.Location | undefined {
-  if (kind === "control") {
-    return form.controlDefinitions.get(identKey);
-  }
-
-  if (kind === "button") {
-    return form.buttonDefinitions.get(identKey);
-  }
-
-  return form.sectionDefinitions.get(identKey);
-}
-
-function getWorkflowDeclarationForKind(
-  kind: Exclude<RenameKind, "form">,
-  identKey: string,
-  controlDefinitions: ReadonlyMap<string, vscode.Location>,
-  buttonDefinitions: ReadonlyMap<string, vscode.Location>,
-  sectionDefinitions: ReadonlyMap<string, vscode.Location>
-): vscode.Location | undefined {
-  if (kind === "control") {
-    return controlDefinitions.get(identKey);
-  }
-
-  if (kind === "button") {
-    return buttonDefinitions.get(identKey);
-  }
-
-  return sectionDefinitions.get(identKey);
-}
-
-function collectWorkflowControlDefinitions(
-  form: IndexedForm,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>(form.controlDefinitions);
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formControlIdents) {
-      const location = component.formControlDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
-}
-
-function collectWorkflowButtonDefinitions(
-  form: IndexedForm,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>(form.buttonDefinitions);
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formButtonIdents) {
-      const location = component.formButtonDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
-}
-
-function collectWorkflowSectionDefinitions(
-  form: IndexedForm,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>(form.sectionDefinitions);
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formSectionIdents) {
-      const location = component.formSectionDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
 }
 
 function pushRenameLocation(
@@ -361,7 +248,6 @@ function pushRenameLocation(
   if (seen.has(key)) {
     return;
   }
-
   seen.add(key);
   edit.replace(location.uri, location.range, newName);
 }

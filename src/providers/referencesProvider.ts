@@ -1,13 +1,27 @@
 import * as vscode from "vscode";
 import { WorkspaceIndex, IndexedComponent, IndexedForm } from "../indexer/types";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
-import { documentInConfiguredRoots } from "../utils/paths";
+import { parseDocumentFacts, parseDocumentFactsFromText } from "../indexer/xmlFacts";
+import { documentInConfiguredRoots, normalizeComponentKey } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { getSystemMetadata } from "../config/systemMetadata";
 import { getEquivalentFormIdentKeys, resolveSystemTableName } from "../utils/formIdents";
-import { buildDocumentCompositionModel, collectSelectedDocumentContributions, DocumentCompositionModel } from "../composition/documentModel";
+import { buildDocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
+import {
+  collectComponentContributionReferenceLocations,
+  collectComponentReferenceLocations,
+  collectFormIdentReferenceLocations,
+  collectHtmlControlReferenceLocations,
+  collectWorkflowReferenceLocations,
+  findFormDeclaration,
+  findFormSymbolDeclaration,
+  FormSymbolKind,
+  resolveWorkflowDeclaration
+} from "./referenceModelUtils";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
+type FactsAccessor = (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText>;
+type SymbolReferencesAccessor = (kind: string, ident: string) => readonly vscode.Location[];
+
 type TargetKind =
   | "form"
   | "control"
@@ -28,9 +42,13 @@ interface ReferenceTarget {
 }
 
 export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
-  constructor(private readonly getIndex: IndexAccessor) {}
+  public constructor(
+    private readonly getIndex: IndexAccessor,
+    private readonly getFactsForDocument?: FactsAccessor,
+    private readonly getSymbolReferences?: SymbolReferencesAccessor
+  ) {}
 
-  provideReferences(
+  public provideReferences(
     document: vscode.TextDocument,
     position: vscode.Position,
     context: vscode.ReferenceContext
@@ -51,28 +69,22 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     if (target.kind === "form") {
       const metadata = getSystemMetadata();
       for (const formIdentKey of getEquivalentFormIdentKeys(target.ident, metadata)) {
-        for (const location of index.formIdentReferenceLocations.get(formIdentKey) ?? []) {
-          pushUniqueLocation(out, seen, location);
-        }
-
-        for (const location of index.mappingFormIdentReferenceLocations.get(formIdentKey) ?? []) {
+        for (const location of collectFormIdentReferenceLocations(index, formIdentKey)) {
           pushUniqueLocation(out, seen, location);
         }
       }
-
       return out;
     }
 
     if (target.kind === "component") {
-      for (const location of index.componentReferenceLocationsByKey.get(target.ident) ?? []) {
+      for (const location of collectComponentReferenceLocations(index, target.ident)) {
         pushUniqueLocation(out, seen, location);
       }
       return out;
     }
 
     if (target.kind === "componentSection") {
-      const componentKey = target.componentKey ?? "";
-      for (const location of index.componentContributionReferenceLocationsByKey.get(componentKey)?.get(target.ident) ?? []) {
+      for (const location of collectComponentContributionReferenceLocations(index, target.componentKey ?? "", target.ident)) {
         pushUniqueLocation(out, seen, location);
       }
       return out;
@@ -83,32 +95,31 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       target.kind === "componentButtonDeclaration" ||
       target.kind === "componentSectionDeclaration"
     ) {
-      const componentKey = target.componentKey ?? "";
-      const formIdents = collectFormIdentsForComponentDeclarationTarget(index, componentKey, target.ident, target.kind);
-      for (const formIdent of formIdents) {
-        const byForm =
-          target.kind === "componentControlDeclaration"
-            ? index.controlReferenceLocationsByFormIdent
-            : target.kind === "componentButtonDeclaration"
-              ? index.buttonReferenceLocationsByFormIdent
-              : index.sectionReferenceLocationsByFormIdent;
-        for (const location of byForm.get(formIdent)?.get(target.ident) ?? []) {
-          pushUniqueLocation(out, seen, location);
-        }
-      }
+      const formKind: FormSymbolKind =
+        target.kind === "componentControlDeclaration"
+          ? "control"
+          : target.kind === "componentButtonDeclaration"
+            ? "button"
+            : "section";
 
+      for (const location of collectWorkflowReferencesForComponentDeclarationTarget(index, target.componentKey ?? "", target.ident, formKind)) {
+        pushUniqueLocation(out, seen, location);
+      }
       return out;
     }
 
-    const byForm =
-      target.kind === "control"
-        ? index.controlReferenceLocationsByFormIdent
-        : target.kind === "button"
-          ? index.buttonReferenceLocationsByFormIdent
-          : index.sectionReferenceLocationsByFormIdent;
-
-    for (const location of byForm.get(target.formIdent)?.get(target.ident) ?? []) {
+    for (const location of this.getSymbolReferences?.(target.kind, target.ident) ?? []) {
       pushUniqueLocation(out, seen, location);
+    }
+
+    const formKind = target.kind as FormSymbolKind;
+    for (const location of collectWorkflowReferenceLocations(index, target.formIdent, formKind, target.ident)) {
+      pushUniqueLocation(out, seen, location);
+    }
+    if (target.kind === "control") {
+      for (const location of collectHtmlControlReferenceLocations(index, target.formIdent, target.ident)) {
+        pushUniqueLocation(out, seen, location);
+      }
     }
 
     return out;
@@ -120,21 +131,22 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     }
 
     const index = this.getIndex(document.uri);
-    const facts = parseDocumentFacts(document);
+    const facts = this.getFactsForDocument?.(document) ?? parseDocumentFacts(document);
     const documentComposition = buildDocumentCompositionModel(facts, index);
 
     const formEntry = findFormByUri(index, document.uri);
     if (formEntry) {
-      if (formEntry.formIdentLocation.range.contains(position)) {
+      const formDeclaration = findFormDeclaration(index, formEntry.ident) ?? formEntry.formIdentLocation;
+      if (formDeclaration.range.contains(position)) {
         return {
           formIdent: formEntry.ident,
           ident: formEntry.ident,
           kind: "form",
-          declaration: formEntry.formIdentLocation
+          declaration: formDeclaration
         };
       }
 
-      const local = findTargetInFormDefinitions(formEntry, position);
+      const local = findTargetInFormDefinitions(formEntry, facts, position);
       if (local) {
         return local;
       }
@@ -144,15 +156,9 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       if (!ref.range.contains(position)) {
         continue;
       }
-
-      const form = index.formsByIdent.get(ref.formIdent);
-      if (form) {
-        return {
-          formIdent: form.ident,
-          ident: form.ident,
-          kind: "form",
-          declaration: form.formIdentLocation
-        };
+      const declaration = findFormDeclaration(index, ref.formIdent);
+      if (declaration) {
+        return { formIdent: ref.formIdent, ident: ref.formIdent, kind: "form", declaration };
       }
 
       const systemTable = resolveSystemTableName(ref.formIdent, getSystemMetadata());
@@ -170,15 +176,9 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       if (!ref.range.contains(position)) {
         continue;
       }
-
-      const form = index.formsByIdent.get(ref.formIdent);
-      if (form) {
-        return {
-          formIdent: form.ident,
-          ident: form.ident,
-          kind: "form",
-          declaration: form.formIdentLocation
-        };
+      const declaration = findFormDeclaration(index, ref.formIdent);
+      if (declaration) {
+        return { formIdent: ref.formIdent, ident: ref.formIdent, kind: "form", declaration };
       }
 
       const systemTable = resolveSystemTableName(ref.formIdent, getSystemMetadata());
@@ -195,43 +195,22 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     for (const usingRef of facts.usingReferences) {
       if (usingRef.componentValueRange.contains(position)) {
         const component = resolveComponentByKey(index, usingRef.componentKey);
-        if (component) {
-          return {
-            formIdent: "",
-            ident: usingRef.componentKey,
-            kind: "component",
-            declaration: component.componentLocation
-          };
-        }
-
         return {
           formIdent: "",
           ident: usingRef.componentKey,
           kind: "component",
-          declaration: new vscode.Location(document.uri, usingRef.componentValueRange)
+          declaration: component?.componentLocation ?? new vscode.Location(document.uri, usingRef.componentValueRange)
         };
       }
 
       if (usingRef.sectionValue && usingRef.sectionValueRange?.contains(position)) {
         const component = resolveComponentByKey(index, usingRef.componentKey);
-        if (component) {
-          const sectionDecl = component.contributionDefinitions.get(usingRef.sectionValue);
-          if (sectionDecl) {
-            return {
-              formIdent: "",
-              ident: usingRef.sectionValue,
-              kind: "componentSection",
-              declaration: sectionDecl,
-              componentKey: usingRef.componentKey
-            };
-          }
-        }
-
+        const declaration = component?.contributionDefinitions.get(usingRef.sectionValue) ?? new vscode.Location(document.uri, usingRef.sectionValueRange);
         return {
           formIdent: "",
           ident: usingRef.sectionValue,
           kind: "componentSection",
-          declaration: new vscode.Location(document.uri, usingRef.sectionValueRange),
+          declaration,
           componentKey: usingRef.componentKey
         };
       }
@@ -252,100 +231,76 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
         }
 
         for (const [section, location] of component.contributionDefinitions.entries()) {
-          if (!location.range.contains(position)) {
-            continue;
+          if (location.range.contains(position)) {
+            return {
+              formIdent: "",
+              ident: section,
+              kind: "componentSection",
+              declaration: location,
+              componentKey: component.key
+            };
           }
-
-          return {
-            formIdent: "",
-            ident: section,
-            kind: "componentSection",
-            declaration: location,
-            componentKey: component.key
-          };
         }
 
-        for (const [ident, location] of component.formControlDefinitions.entries()) {
-          if (!location.range.contains(position)) {
-            continue;
+        for (const info of facts.declaredControlInfos) {
+          if (info.range.contains(position)) {
+            return {
+              formIdent: "",
+              ident: info.ident,
+              kind: "componentControlDeclaration",
+              declaration: new vscode.Location(document.uri, info.range),
+              componentKey: component.key
+            };
           }
-
-          return {
-            formIdent: "",
-            ident,
-            kind: "componentControlDeclaration",
-            declaration: location,
-            componentKey: component.key
-          };
         }
 
-        for (const [ident, location] of component.formButtonDefinitions.entries()) {
-          if (!location.range.contains(position)) {
-            continue;
+        for (const info of facts.declaredButtonInfos) {
+          if (info.range.contains(position)) {
+            return {
+              formIdent: "",
+              ident: info.ident,
+              kind: "componentButtonDeclaration",
+              declaration: new vscode.Location(document.uri, info.range),
+              componentKey: component.key
+            };
           }
-
-          return {
-            formIdent: "",
-            ident,
-            kind: "componentButtonDeclaration",
-            declaration: location,
-            componentKey: component.key
-          };
         }
 
-        for (const [ident, location] of component.formSectionDefinitions.entries()) {
-          if (!location.range.contains(position)) {
-            continue;
+        for (const occurrence of facts.identOccurrences) {
+          if (occurrence.kind === "section" && occurrence.range.contains(position)) {
+            return {
+              formIdent: "",
+              ident: occurrence.ident,
+              kind: "componentSectionDeclaration",
+              declaration: new vscode.Location(document.uri, occurrence.range),
+              componentKey: component.key
+            };
           }
-
-          return {
-            formIdent: "",
-            ident,
-            kind: "componentSectionDeclaration",
-            declaration: location,
-            componentKey: component.key
-          };
         }
       }
     }
 
     if (facts.rootTag?.toLowerCase() === "form" && facts.formIdent) {
-      const form = index.formsByIdent.get(facts.formIdent);
-      if (form) {
-        for (const ref of facts.htmlControlReferences) {
-          if (!ref.range.contains(position)) {
-            continue;
-          }
-
-          const declaration = form.controlDefinitions.get(ref.ident);
-          if (!declaration) {
-            continue;
-          }
-
-          return {
-            formIdent: form.ident,
-            ident: ref.ident,
-            kind: "control",
-            declaration
-          };
+      for (const ref of facts.htmlControlReferences) {
+        if (!ref.range.contains(position)) {
+          continue;
         }
 
-        const fromTagContext = resolveHtmlTemplateControlTargetFromTagContext(document, position, form);
-        if (fromTagContext) {
-          return fromTagContext;
+        const declaration = findFormSymbolDeclaration(index, facts.formIdent, "control", ref.ident);
+        if (!declaration) {
+          continue;
         }
+
+        return {
+          formIdent: facts.formIdent,
+          ident: ref.ident,
+          kind: "control",
+          declaration
+        };
       }
     }
 
     if (facts.rootTag?.toLowerCase() === "workflow" && facts.workflowFormIdent) {
-      const form = index.formsByIdent.get(facts.workflowFormIdent);
-      if (!form) {
-        return undefined;
-      }
-      const workflowControlDefinitions = collectWorkflowControlDefinitions(form, index, documentComposition);
-      const workflowButtonDefinitions = collectWorkflowButtonDefinitions(form, index, documentComposition);
-      const workflowSectionDefinitions = collectWorkflowSectionDefinitions(form, index, documentComposition);
-
       for (const ref of facts.workflowReferences) {
         if (!ref.range.contains(position)) {
           continue;
@@ -356,19 +311,13 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
           continue;
         }
 
-        const declaration = getWorkflowDeclarationForKind(
-          kind,
-          ref.ident,
-          workflowControlDefinitions,
-          workflowButtonDefinitions,
-          workflowSectionDefinitions
-        );
+        const declaration = resolveWorkflowDeclaration(index, facts, documentComposition, kind, ref.ident);
         if (!declaration) {
           continue;
         }
 
         return {
-          formIdent: form.ident,
+          formIdent: facts.workflowFormIdent,
           ident: ref.ident,
           kind,
           declaration
@@ -380,13 +329,45 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
   }
 }
 
+function collectWorkflowReferencesForComponentDeclarationTarget(
+  index: WorkspaceIndex,
+  componentKey: string,
+  ident: string,
+  kind: FormSymbolKind
+): vscode.Location[] {
+  const normalized = normalizeComponentKey(componentKey);
+  const out: vscode.Location[] = [];
+  for (const facts of index.parsedFactsByUri.values()) {
+    if ((facts.rootTag ?? "").toLowerCase() !== "workflow" || !facts.workflowFormIdent) {
+      continue;
+    }
+
+    const composition = buildDocumentCompositionModel(facts, index);
+    const contains = collectSelectedDocumentContributions(composition).some((entry) => {
+      if (normalizeComponentKey(entry.componentKey) !== normalized) {
+        return false;
+      }
+      return kind === "control"
+        ? entry.contribution.formControlIdents.has(ident)
+        : kind === "button"
+          ? entry.contribution.formButtonIdents.has(ident)
+          : entry.contribution.formSectionIdents.has(ident);
+    });
+    if (!contains) {
+      continue;
+    }
+
+    out.push(...collectWorkflowReferenceLocations(index, facts.workflowFormIdent, kind, ident));
+  }
+  return out;
+}
+
 function findFormByUri(index: WorkspaceIndex, uri: vscode.Uri): IndexedForm | undefined {
   for (const form of index.formsByIdent.values()) {
     if (form.uri.toString() === uri.toString()) {
       return form;
     }
   }
-
   return undefined;
 }
 
@@ -396,40 +377,43 @@ function findComponentByUri(index: WorkspaceIndex, uri: vscode.Uri): IndexedComp
       return component;
     }
   }
-
   return undefined;
 }
 
-function findTargetInFormDefinitions(form: IndexedForm, position: vscode.Position): ReferenceTarget | undefined {
-  for (const [ident, location] of form.controlDefinitions.entries()) {
-    if (location.range.contains(position)) {
+function findTargetInFormDefinitions(
+  form: IndexedForm,
+  facts: ReturnType<typeof parseDocumentFacts>,
+  position: vscode.Position
+): ReferenceTarget | undefined {
+  for (const info of facts.declaredControlInfos) {
+    if (info.range.contains(position)) {
       return {
         formIdent: form.ident,
-        ident,
+        ident: info.ident,
         kind: "control",
-        declaration: location
+        declaration: new vscode.Location(form.uri, info.range)
       };
     }
   }
 
-  for (const [ident, location] of form.buttonDefinitions.entries()) {
-    if (location.range.contains(position)) {
+  for (const info of facts.declaredButtonInfos) {
+    if (info.range.contains(position)) {
       return {
         formIdent: form.ident,
-        ident,
+        ident: info.ident,
         kind: "button",
-        declaration: location
+        declaration: new vscode.Location(form.uri, info.range)
       };
     }
   }
 
-  for (const [ident, location] of form.sectionDefinitions.entries()) {
-    if (location.range.contains(position)) {
+  for (const occurrence of facts.identOccurrences) {
+    if (occurrence.kind === "section" && occurrence.range.contains(position)) {
       return {
         formIdent: form.ident,
-        ident,
+        ident: occurrence.ident,
         kind: "section",
-        declaration: location
+        declaration: new vscode.Location(form.uri, occurrence.range)
       };
     }
   }
@@ -437,177 +421,17 @@ function findTargetInFormDefinitions(form: IndexedForm, position: vscode.Positio
   return undefined;
 }
 
-function toTargetKind(kind: "formControl" | "controlShareCode" | "button" | "buttonShareCode" | "section"): Exclude<TargetKind, "form"> | undefined {
+function toTargetKind(kind: "formControl" | "controlShareCode" | "button" | "buttonShareCode" | "section"): FormSymbolKind | undefined {
   if (kind === "formControl") {
     return "control";
   }
-
   if (kind === "button") {
     return "button";
   }
-
   if (kind === "section") {
     return "section";
   }
-
   return undefined;
-}
-
-function getDeclarationForKind(
-  form: IndexedForm,
-  kind: Exclude<TargetKind, "form">,
-  identKey: string
-): vscode.Location | undefined {
-  if (kind === "control") {
-    return form.controlDefinitions.get(identKey);
-  }
-
-  if (kind === "button") {
-    return form.buttonDefinitions.get(identKey);
-  }
-
-  return form.sectionDefinitions.get(identKey);
-}
-
-function getWorkflowDeclarationForKind(
-  kind: Exclude<TargetKind, "form">,
-  identKey: string,
-  controlDefinitions: ReadonlyMap<string, vscode.Location>,
-  buttonDefinitions: ReadonlyMap<string, vscode.Location>,
-  sectionDefinitions: ReadonlyMap<string, vscode.Location>
-): vscode.Location | undefined {
-  if (kind === "control") {
-    return controlDefinitions.get(identKey);
-  }
-
-  if (kind === "button") {
-    return buttonDefinitions.get(identKey);
-  }
-
-  return sectionDefinitions.get(identKey);
-}
-
-function collectWorkflowControlDefinitions(
-  form: IndexedForm,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>(form.controlDefinitions);
-
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formControlIdents) {
-      const location = component.formControlDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
-}
-
-function collectFormIdentsForComponentDeclarationTarget(
-  index: WorkspaceIndex,
-  componentKey: string,
-  ident: string,
-  kind: "componentControlDeclaration" | "componentButtonDeclaration" | "componentSectionDeclaration"
-): Set<string> {
-  const component = resolveComponentByKey(index, componentKey);
-  if (!component) {
-    return index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
-  }
-
-  const relevantContributionNames: string[] = [];
-  for (const contribution of component.contributionSummaries.values()) {
-    const idents =
-      kind === "componentControlDeclaration"
-        ? contribution.formControlIdents
-        : kind === "componentButtonDeclaration"
-          ? contribution.formButtonIdents
-          : contribution.formSectionIdents;
-    if (!idents.has(ident)) {
-      continue;
-    }
-    relevantContributionNames.push(contribution.contributionName);
-  }
-
-  if (relevantContributionNames.length === 0) {
-    return index.componentUsageFormIdentsByKey.get(componentKey) ?? new Set<string>();
-  }
-
-  const usageByContribution = index.componentContributionUsageFormIdentsByKey.get(componentKey);
-  if (!usageByContribution) {
-    return new Set<string>();
-  }
-
-  const out = new Set<string>();
-  for (const contributionName of relevantContributionNames) {
-    const contributionFormIdents = usageByContribution.get(contributionName);
-    if (!contributionFormIdents) {
-      continue;
-    }
-    for (const formIdent of contributionFormIdents) {
-      out.add(formIdent);
-    }
-  }
-
-  return out;
-}
-
-function collectWorkflowButtonDefinitions(
-  form: IndexedForm,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>(form.buttonDefinitions);
-
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formButtonIdents) {
-      const location = component.formButtonDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
-}
-
-function collectWorkflowSectionDefinitions(
-  form: IndexedForm,
-  index: WorkspaceIndex,
-  documentComposition: DocumentCompositionModel
-): Map<string, vscode.Location> {
-  const out = new Map<string, vscode.Location>(form.sectionDefinitions);
-
-  for (const contributionRef of collectSelectedDocumentContributions(documentComposition)) {
-    const component = resolveComponentByKey(index, contributionRef.componentKey);
-    if (!component) {
-      continue;
-    }
-
-    for (const ident of contributionRef.contribution.formSectionIdents) {
-      const location = component.formSectionDefinitions.get(ident);
-      if (!location || out.has(ident)) {
-        continue;
-      }
-      out.set(ident, location);
-    }
-  }
-
-  return out;
 }
 
 function pushUniqueLocation(target: vscode.Location[], seen: Set<string>, location: vscode.Location): void {
@@ -615,7 +439,6 @@ function pushUniqueLocation(target: vscode.Location[], seen: Set<string>, locati
   if (seen.has(key)) {
     return;
   }
-
   seen.add(key);
   target.push(location);
 }
@@ -636,127 +459,4 @@ function findComponentTagNameRange(document: vscode.TextDocument): vscode.Range 
   const start = (match.index ?? 0) + match[0].indexOf(raw);
   const end = start + raw.length;
   return new vscode.Range(document.positionAt(start), document.positionAt(end));
-}
-
-function resolveHtmlTemplateControlTargetFromTagContext(
-  document: vscode.TextDocument,
-  position: vscode.Position,
-  form: IndexedForm
-): ReferenceTarget | undefined {
-  const context = getHtmlTemplateTagContext(document, position);
-  if (!context) {
-    return undefined;
-  }
-
-  const declaration = form.controlDefinitions.get(context.ident);
-  if (!declaration) {
-    return undefined;
-  }
-
-  return {
-    formIdent: form.ident,
-    ident: context.ident,
-    kind: "control",
-    declaration
-  };
-}
-
-interface HtmlTemplateTagContext {
-  ident: string;
-}
-
-function getHtmlTemplateTagContext(document: vscode.TextDocument, position: vscode.Position): HtmlTemplateTagContext | undefined {
-  const text = document.getText();
-  const offset = document.offsetAt(position);
-
-  const lt = text.lastIndexOf("<", offset);
-  if (lt < 0) {
-    return undefined;
-  }
-
-  const gtBefore = text.lastIndexOf(">", offset);
-  if (gtBefore > lt) {
-    return undefined;
-  }
-
-  const gt = text.indexOf(">", lt);
-  if (gt < 0 || offset > gt) {
-    return undefined;
-  }
-
-  const fragment = text.slice(lt, gt + 1);
-  if (/^<\s*\//.test(fragment)) {
-    return undefined;
-  }
-
-  const tagMatch = /^<\s*([A-Za-z_][\w:.-]*)\b([\s\S]*?)\/?\s*>$/.exec(fragment);
-  if (!tagMatch) {
-    return undefined;
-  }
-
-  const rawTag = tagMatch[1];
-  const attrsRaw = tagMatch[2] ?? "";
-  const tagName = stripPrefix(rawTag);
-  const tagLower = tagName.toLowerCase();
-  if (tagLower !== "control" && tagLower !== "controllabel" && tagLower !== "controlplaceholder") {
-    return undefined;
-  }
-
-  const tagNameStart = lt + fragment.indexOf(rawTag);
-  const tagNameEnd = tagNameStart + rawTag.length;
-  const isOnTagName = offset >= tagNameStart && offset <= tagNameEnd;
-
-  const attrsStartOffset = fragment.indexOf(attrsRaw);
-  const attrsStart = lt + (attrsStartOffset >= 0 ? attrsStartOffset : 0);
-  const attrs = parseAttributeInfos(attrsRaw, attrsStart);
-
-  const expectedAttr = tagLower === "control" ? "id" : "controlid";
-  const attr = attrs.find((a) => a.name.toLowerCase() === expectedAttr) ?? (tagLower === "control" ? attrs.find((a) => a.name.toLowerCase() === "controlid") : undefined);
-  if (!attr?.value) {
-    return undefined;
-  }
-
-  const isOnAttrName = offset >= attr.nameStart && offset <= attr.nameEnd;
-  const isOnAttrValue = offset >= attr.valueStart && offset <= attr.valueEnd;
-  if (!isOnTagName && !isOnAttrName && !isOnAttrValue) {
-    return undefined;
-  }
-
-  return { ident: attr.value };
-}
-
-interface AttributeInfo {
-  name: string;
-  value: string;
-  nameStart: number;
-  nameEnd: number;
-  valueStart: number;
-  valueEnd: number;
-}
-
-function parseAttributeInfos(rawAttrs: string, attrsStart: number): AttributeInfo[] {
-  const out: AttributeInfo[] = [];
-  const regex = /([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(rawAttrs)) !== null) {
-    const name = match[1];
-    const value = match[3] ?? match[4] ?? "";
-    const valueOffsetInMatch = match[0].indexOf(value);
-    if (valueOffsetInMatch < 0) {
-      continue;
-    }
-
-    const nameStart = attrsStart + match.index;
-    const nameEnd = nameStart + name.length;
-    const valueStart = attrsStart + match.index + valueOffsetInMatch;
-    const valueEnd = valueStart + value.length;
-    out.push({ name, value, nameStart, nameEnd, valueStart, valueEnd });
-  }
-
-  return out;
-}
-
-function stripPrefix(value: string): string {
-  const parts = value.split(":");
-  return parts[parts.length - 1];
 }

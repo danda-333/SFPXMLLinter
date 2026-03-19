@@ -1,19 +1,20 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import {
   buildComponentLibrary,
   extractUsingComponentRefs,
   normalizePath,
-  renderTemplateText,
   renderTemplateWithTrace,
-  stripXmlComponentExtension
+  stripXmlComponentExtension,
+  type RenderTemplateResult
 } from "./buildXmlTemplatesCore";
 import type { TemplateMutationRecord } from "./buildXmlTemplatesCore";
 import { applyTemplateOutputQuality, TemplateBuilderProvenanceMode } from "./outputQuality";
 import { runTemplateGenerators } from "./generators";
-import { loadWorkspaceUserGenerators } from "./generators/userGeneratorLoader";
+import { computeWorkspaceUserGeneratorsSignature, loadWorkspaceUserGenerators } from "./generators/userGeneratorLoader";
 
-interface BuildRunOptions {
+export interface BuildRunOptions {
   silent?: boolean;
   mode?: "fast" | "debug" | "release";
   postBuildFormat?: boolean;
@@ -38,6 +39,7 @@ interface BuildRunOptions {
     outputFsPath: string,
     mutations: readonly TemplateMutationRecord[]
   ) => void;
+  onPerformanceStats?: (stats: BuildRunPerformanceStats) => void;
   inheritedUsingsByFormIdent?: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]>;
 }
 
@@ -49,6 +51,31 @@ export interface BuildRunSummary {
 
 export interface BuildRunResult {
   summary?: BuildRunSummary;
+}
+
+export interface BuildRunIoStats {
+  readCount: number;
+  readBytes: number;
+  readMs: number;
+  writeCount: number;
+  writeBytes: number;
+  writeMs: number;
+  statCount: number;
+  statMs: number;
+}
+
+export interface BuildRunPerformanceStats {
+  durationMs: number;
+  templates: number;
+  summary: BuildRunSummary;
+  cache: {
+    fastHit: number;
+    fastMiss: number;
+    traceHit: number;
+    traceMiss: number;
+    componentLibrary: "hit" | "miss";
+  };
+  io: BuildRunIoStats;
 }
 
 export interface TemplateMutationTelemetryEntry {
@@ -70,6 +97,37 @@ interface ParsedUsingEntry {
   attributes: ReadonlyArray<{ name: string; value: string }>;
 }
 
+interface CachedTemplateTraceResult {
+  signature: string;
+  templateText: string;
+  renderResult: RenderTemplateResult;
+}
+
+interface CachedTemplateBuildResult {
+  fastSignature: string;
+  templateText: string;
+  debugLines: readonly string[];
+  mutations: readonly TemplateMutationRecord[];
+  outputRelativePath: string;
+  outputFsPath: string;
+  outputMtimeMs: number;
+  outputSize: number;
+}
+
+interface CachedComponentLibrarySnapshot {
+  signature: string;
+  library: ReturnType<typeof buildComponentLibrary>;
+  cacheHit: boolean;
+  dirty: boolean;
+}
+
+interface BuildCacheStats {
+  fastHit: number;
+  fastMiss: number;
+  traceHit: number;
+  traceMiss: number;
+}
+
 export interface TemplateInheritedUsingEntry {
   featureKey: string;
   contributionKey?: string;
@@ -79,6 +137,20 @@ export interface TemplateInheritedUsingEntry {
 }
 
 export class BuildXmlTemplatesService {
+  private readonly componentLibraryCacheByWorkspace = new Map<string, CachedComponentLibrarySnapshot>();
+  private readonly templateTraceCache = new Map<string, CachedTemplateTraceResult>();
+  private readonly templateBuildFastCache = new Map<string, CachedTemplateBuildResult>();
+
+  public invalidateComponentLibraryCache(workspaceFolder: vscode.WorkspaceFolder): void {
+    const workspaceKey = workspaceKeyFromFolder(workspaceFolder);
+    const cached = this.componentLibraryCacheByWorkspace.get(workspaceKey);
+    if (!cached) {
+      return;
+    }
+    cached.dirty = true;
+    this.componentLibraryCacheByWorkspace.set(workspaceKey, cached);
+  }
+
   public async collectTemplateMutationTelemetry(
     workspaceFolder: vscode.WorkspaceFolder,
     options: BuildRunOptions = {},
@@ -89,18 +161,22 @@ export class BuildXmlTemplatesService {
       return [];
     }
 
-    const componentLibrary = await this.buildWorkspaceComponentLibrary(workspaceFolder);
+    const componentLibrarySnapshot = await this.buildWorkspaceComponentLibrary(workspaceFolder);
+    const componentLibrary = componentLibrarySnapshot.library;
     const out: TemplateMutationTelemetryEntry[] = [];
     for (const templateUri of templateUris) {
       const relPath = relativeTemplatePath(workspaceFolder, templateUri);
       const templateText = await readWorkspaceTextFile(templateUri);
       const inheritedUsingsXml = buildInheritedUsingsXml(templateText, options.inheritedUsingsByFormIdent);
-      const renderResult = renderTemplateWithTrace(
+      const renderResult = this.getOrCreateTemplateTraceResult(
+        workspaceFolder,
+        relPath,
         templateText,
         componentLibrary,
-        12,
-        options.mode === "debug" ? options.onLogLine : undefined,
-        inheritedUsingsXml
+        componentLibrarySnapshot.signature,
+        inheritedUsingsXml,
+        undefined,
+        options.mode === "debug" ? options.onLogLine : undefined
       );
       const outputUri = templateToRuntimeUri(templateUri);
       const outputRelativePath = vscode.workspace.asRelativePath(outputUri, false).replace(/\\/g, "/");
@@ -121,17 +197,21 @@ export class BuildXmlTemplatesService {
     options: BuildRunOptions = {},
     templateTextOverride?: string
   ): Promise<string> {
-    const componentLibrary = await this.buildWorkspaceComponentLibrary(workspaceFolder);
+    const componentLibrarySnapshot = await this.buildWorkspaceComponentLibrary(workspaceFolder);
+    const componentLibrary = componentLibrarySnapshot.library;
     const relPath = relativeTemplatePath(workspaceFolder, templateUri);
     const templateText = templateTextOverride ?? await readWorkspaceTextFile(templateUri);
     const inheritedUsingsXml = buildInheritedUsingsXml(templateText, options.inheritedUsingsByFormIdent);
-    const renderedRaw = renderTemplateText(
+    const renderedRaw = this.getOrCreateTemplateTraceResult(
+      workspaceFolder,
+      relPath,
       templateText,
       componentLibrary,
-      12,
-      options.mode === "debug" ? options.onLogLine : undefined,
-      inheritedUsingsXml
-    );
+      componentLibrarySnapshot.signature,
+      inheritedUsingsXml,
+      undefined,
+      options.mode === "debug" ? options.onLogLine : undefined
+    ).xml;
 
     const userGenerators = options.generatorEnableUserScripts === false
       ? []
@@ -177,6 +257,14 @@ export class BuildXmlTemplatesService {
     return this.runInternal(workspaceFolder, targetPath, options);
   }
 
+  public async runForPaths(
+    workspaceFolder: vscode.WorkspaceFolder,
+    targetPaths: readonly string[],
+    options: BuildRunOptions = {}
+  ): Promise<BuildRunResult> {
+    return this.runInternal(workspaceFolder, [...targetPaths], options);
+  }
+
   public async findTemplatesUsingComponent(workspaceFolder: vscode.WorkspaceFolder, componentFilePath: string): Promise<string[]> {
     const normalizedComponentPath = normalizePath(componentFilePath);
     const componentsRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
@@ -209,22 +297,33 @@ export class BuildXmlTemplatesService {
 
   private async runInternal(
     workspaceFolder: vscode.WorkspaceFolder,
-    targetPath: string | undefined,
+    targetPathOrPaths: string | readonly string[] | undefined,
     options: BuildRunOptions
   ): Promise<BuildRunResult> {
-    const templateUris = await collectTemplateTargets(workspaceFolder, targetPath);
-    const componentLibrary = await this.buildWorkspaceComponentLibrary(workspaceFolder);
-    const templateTextByUri = new Map<string, string>();
-    for (const templateUri of templateUris) {
-      const text = await readWorkspaceTextFile(templateUri);
-      templateTextByUri.set(templateUri.toString(), text);
-    }
+    const runStartedAt = Date.now();
+    const ioStats = createEmptyIoStats();
+    const templateUris = await collectTemplateTargets(workspaceFolder, targetPathOrPaths);
+    const componentLibrarySnapshot = await this.buildWorkspaceComponentLibrary(workspaceFolder, ioStats);
+    const componentLibrary = componentLibrarySnapshot.library;
+    const cacheStats: BuildCacheStats = {
+      fastHit: 0,
+      fastMiss: 0,
+      traceHit: 0,
+      traceMiss: 0
+    };
+    const workspaceKey = workspaceKeyFromFolder(workspaceFolder);
+    const inheritedUsingsSignature = computeInheritedUsingsSignature(options.inheritedUsingsByFormIdent);
+    const generatorUserScriptsRoots = options.generatorUserScriptsRoots ?? ["XML_Generators"];
+    const generatorScriptsSignature = options.generatorEnableUserScripts === false
+      ? "disabled"
+      : computeWorkspaceUserGeneratorsSignature(workspaceFolder.uri.fsPath, generatorUserScriptsRoots);
+    const runSettingsSignature = computeRunSettingsSignature(options, inheritedUsingsSignature, generatorScriptsSignature);
 
     const userGenerators = options.generatorEnableUserScripts === false
       ? []
       : await loadWorkspaceUserGenerators(
           workspaceFolder.uri.fsPath,
-          options.generatorUserScriptsRoots ?? ["XML_Generators"],
+          generatorUserScriptsRoots,
           options.onLogLine
         );
     const summary: BuildRunSummary = { updated: 0, skipped: 0, errors: 0 };
@@ -237,21 +336,41 @@ export class BuildXmlTemplatesService {
       options.onLogLine?.(`[${current}/${total}] ${relPath}`);
 
       try {
-        const templateText = templateTextByUri.get(templateUri.toString()) ?? await readWorkspaceTextFile(templateUri);
+        const templateText = await readWorkspaceTextFileTracked(templateUri, ioStats);
         const inheritedUsingsXml = buildInheritedUsingsXml(templateText, options.inheritedUsingsByFormIdent);
+        const fastSignature = hashText([
+          `component:${componentLibrarySnapshot.signature}`,
+          `run:${runSettingsSignature}`,
+          `template:${templateUri.toString()}`,
+          `template-content:${templateText}`,
+          `inherited:${inheritedUsingsXml ?? ""}`
+        ].join("\n"));
+        const outputUri = templateToRuntimeUri(templateUri);
+        const outputRelativePath = vscode.workspace.asRelativePath(outputUri, false).replace(/\\/g, "/");
+        const fastCacheKey = `${workspaceKey}::${normalizePath(templateUri.fsPath)}`;
+        const fastCacheHit = await this.tryFastSkipFromCache(fastCacheKey, fastSignature, outputUri, relPath, options, summary, ioStats);
+        if (fastCacheHit) {
+          cacheStats.fastHit++;
+          continue;
+        }
+        cacheStats.fastMiss++;
+
         const debugLines: string[] = [];
         const debugMode = options.mode === "debug";
-        const renderResult = renderTemplateWithTrace(
+        const renderResult = this.getOrCreateTemplateTraceResult(
+          workspaceFolder,
+          relPath,
           templateText,
           componentLibrary,
-          12,
+          componentLibrarySnapshot.signature,
+          inheritedUsingsXml,
+          cacheStats,
           debugMode
             ? (line) => {
                 debugLines.push(line);
                 options.onLogLine?.(`DEBUG: ${line}`);
               }
-            : undefined,
-          inheritedUsingsXml
+            : undefined
         );
         const renderedRaw = renderResult.xml;
         const generated = runTemplateGenerators(
@@ -284,9 +403,7 @@ export class BuildXmlTemplatesService {
           relativeTemplatePath: relPath,
           formatterMaxConsecutiveBlankLines: Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)
         });
-        const outputUri = templateToRuntimeUri(templateUri);
-        const outputRelativePath = vscode.workspace.asRelativePath(outputUri, false).replace(/\\/g, "/");
-        const existing = await readWorkspaceTextFile(outputUri).catch(() => undefined);
+        const existing = await readWorkspaceTextFileTracked(outputUri, ioStats).catch(() => undefined);
 
         if (existing === rendered) {
           summary.skipped++;
@@ -294,16 +411,36 @@ export class BuildXmlTemplatesService {
           options.onFileStatus?.(relPath, "nochange");
           options.onTemplateEvaluated?.(relPath, "nochange", templateText, debugLines);
           options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations);
+          await this.updateFastCacheEntry(
+            fastCacheKey,
+            fastSignature,
+            outputUri,
+            templateText,
+            debugLines,
+            outputRelativePath,
+            renderResult.mutations,
+            ioStats
+          );
           continue;
         }
 
         await ensureParentDirectory(outputUri);
-        await vscode.workspace.fs.writeFile(outputUri, Buffer.from(rendered, "utf8"));
+        await writeWorkspaceTextFileTracked(outputUri, rendered, ioStats);
         summary.updated++;
         options.onLogLine?.("UPDATED");
         options.onFileStatus?.(relPath, "update");
         options.onTemplateEvaluated?.(relPath, "update", templateText, debugLines);
         options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations);
+        await this.updateFastCacheEntry(
+          fastCacheKey,
+          fastSignature,
+          outputUri,
+          templateText,
+          debugLines,
+          outputRelativePath,
+          renderResult.mutations,
+          ioStats
+        );
       } catch (error) {
         summary.errors++;
         const message = error instanceof Error ? error.message : String(error);
@@ -312,12 +449,29 @@ export class BuildXmlTemplatesService {
       }
     }
 
-    options.onLogLine?.(`Done. Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`);
+    options.onLogLine?.(
+      `Done. Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}, Cache: fast=${cacheStats.fastHit}/${cacheStats.fastHit + cacheStats.fastMiss}, trace=${cacheStats.traceHit}/${cacheStats.traceHit + cacheStats.traceMiss}, componentLibrary=${componentLibrarySnapshot.cacheHit ? "hit" : "miss"}`
+    );
+    options.onPerformanceStats?.({
+      durationMs: Date.now() - runStartedAt,
+      templates: templateUris.length,
+      summary,
+      cache: {
+        fastHit: cacheStats.fastHit,
+        fastMiss: cacheStats.fastMiss,
+        traceHit: cacheStats.traceHit,
+        traceMiss: cacheStats.traceMiss,
+        componentLibrary: componentLibrarySnapshot.cacheHit ? "hit" : "miss"
+      },
+      io: ioStats
+    });
 
     if (!options.silent) {
       const summaryText = formatSummaryText(summary);
-      if (targetPath && targetPath.trim().length > 0) {
-        vscode.window.showInformationMessage(`BuildXmlTemplates finished for: ${path.basename(targetPath)}. ${summaryText}`);
+      if (Array.isArray(targetPathOrPaths) && targetPathOrPaths.length > 0) {
+        vscode.window.showInformationMessage(`BuildXmlTemplates finished for ${targetPathOrPaths.length} template(s). ${summaryText}`);
+      } else if (typeof targetPathOrPaths === "string" && targetPathOrPaths.trim().length > 0) {
+        vscode.window.showInformationMessage(`BuildXmlTemplates finished for: ${path.basename(targetPathOrPaths)}. ${summaryText}`);
       } else {
         vscode.window.showInformationMessage(`BuildXmlTemplates finished for all templates. ${summaryText}`);
       }
@@ -326,41 +480,186 @@ export class BuildXmlTemplatesService {
     return { summary };
   }
 
-  private async buildWorkspaceComponentLibrary(workspaceFolder: vscode.WorkspaceFolder): Promise<ReturnType<typeof buildComponentLibrary>> {
+  private async buildWorkspaceComponentLibrary(
+    workspaceFolder: vscode.WorkspaceFolder,
+    ioStats?: BuildRunIoStats
+  ): Promise<CachedComponentLibrarySnapshot> {
+    const workspaceKey = workspaceKeyFromFolder(workspaceFolder);
+    const cached = this.componentLibraryCacheByWorkspace.get(workspaceKey);
+    if (cached && !cached.dirty) {
+      return {
+        signature: cached.signature,
+        library: cached.library,
+        cacheHit: true,
+        dirty: false
+      };
+    }
     const componentUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Components/**/*.xml"));
     const primitiveUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Primitives/**/*.xml"));
+    const allUris = [...componentUris, ...primitiveUris];
     const componentSources: Array<{ key: string; text: string; origin: string }> = [];
-    for (const uri of [...componentUris, ...primitiveUris]) {
+    for (const uri of allUris) {
       const key = componentLikeKeyFromUri(workspaceFolder, uri);
       if (!key) {
         continue;
       }
-      const text = await readWorkspaceTextFile(uri);
+      const text = await readWorkspaceTextFileTracked(uri, ioStats);
       componentSources.push({
         key,
         text,
         origin: uri.fsPath
       });
     }
-    return buildComponentLibrary(componentSources);
+    componentSources.sort((a, b) => a.key.localeCompare(b.key));
+    const signature = hashText(componentSources.map((item) => `${item.key}:${hashText(item.text)}`).join(";"));
+    const snapshot: CachedComponentLibrarySnapshot = {
+      signature,
+      library: buildComponentLibrary(componentSources),
+      cacheHit: false,
+      dirty: false
+    };
+    this.componentLibraryCacheByWorkspace.set(workspaceKey, snapshot);
+    return snapshot;
+  }
+
+  private getOrCreateTemplateTraceResult(
+    workspaceFolder: vscode.WorkspaceFolder,
+    relativeTemplatePath: string,
+    templateText: string,
+    componentLibrary: ReturnType<typeof buildComponentLibrary>,
+    componentLibrarySignature: string,
+    inheritedUsingsXml?: string,
+    cacheStats?: BuildCacheStats,
+    onDebugLog?: (line: string) => void
+  ): RenderTemplateResult {
+    const cacheSignature = hashText([
+      workspaceKeyFromFolder(workspaceFolder),
+      relativeTemplatePath,
+      componentLibrarySignature,
+      templateText,
+      inheritedUsingsXml ?? ""
+    ].join("\n"));
+    const cached = this.templateTraceCache.get(cacheSignature);
+    if (cached && cached.signature === cacheSignature && cached.templateText === templateText) {
+      cacheStats && (cacheStats.traceHit += 1);
+      return cached.renderResult;
+    }
+    cacheStats && (cacheStats.traceMiss += 1);
+
+    const renderResult = renderTemplateWithTrace(
+      templateText,
+      componentLibrary,
+      12,
+      onDebugLog,
+      inheritedUsingsXml
+    );
+    this.templateTraceCache.set(cacheSignature, {
+      signature: cacheSignature,
+      templateText,
+      renderResult
+    });
+    return renderResult;
+  }
+
+  private async tryFastSkipFromCache(
+    fastCacheKey: string,
+    fastSignature: string,
+    outputUri: vscode.Uri,
+    relativeTemplatePath: string,
+    options: BuildRunOptions,
+    summary: BuildRunSummary,
+    ioStats?: BuildRunIoStats
+  ): Promise<boolean> {
+    const cached = this.templateBuildFastCache.get(fastCacheKey);
+    if (!cached || cached.fastSignature !== fastSignature) {
+      return false;
+    }
+
+    const outputStat = await safeStatTracked(outputUri, ioStats);
+    if (!outputStat) {
+      return false;
+    }
+    if (cached.outputMtimeMs !== outputStat.mtime || cached.outputSize !== outputStat.size) {
+      return false;
+    }
+
+    summary.skipped++;
+    options.onLogLine?.("SKIPPED (cache)");
+    options.onFileStatus?.(relativeTemplatePath, "nochange");
+    options.onTemplateEvaluated?.(relativeTemplatePath, "nochange", cached.templateText, cached.debugLines);
+    options.onTemplateMutations?.(
+      relativeTemplatePath,
+      cached.outputRelativePath,
+      cached.outputFsPath,
+      cached.mutations
+    );
+    return true;
+  }
+
+  private async updateFastCacheEntry(
+    fastCacheKey: string,
+    fastSignature: string,
+    outputUri: vscode.Uri,
+    templateText: string,
+    debugLines: readonly string[],
+    outputRelativePath: string,
+    mutations: readonly TemplateMutationRecord[],
+    ioStats?: BuildRunIoStats
+  ): Promise<void> {
+    const stat = await safeStatTracked(outputUri, ioStats);
+    if (!stat) {
+      return;
+    }
+    this.templateBuildFastCache.set(fastCacheKey, {
+      fastSignature,
+      templateText,
+      debugLines: [...debugLines],
+      mutations: [...mutations],
+      outputRelativePath,
+      outputFsPath: outputUri.fsPath,
+      outputMtimeMs: stat.mtime,
+      outputSize: stat.size
+    });
   }
 }
 
-async function collectTemplateTargets(workspaceFolder: vscode.WorkspaceFolder, targetPath: string | undefined): Promise<vscode.Uri[]> {
-  if (targetPath && targetPath.trim().length > 0) {
-    const normalized = normalizePath(targetPath);
-    const maybeTemplate = normalized.toLowerCase().includes("/xml_templates/")
-      ? vscode.Uri.file(targetPath)
-      : normalized.toLowerCase().includes("/xml/")
-        ? vscode.Uri.file(targetPath.replace(/[\\/]XML[\\/]/i, `${path.sep}XML_Templates${path.sep}`))
-        : undefined;
+async function collectTemplateTargets(
+  workspaceFolder: vscode.WorkspaceFolder,
+  targetPathOrPaths: string | readonly string[] | undefined
+): Promise<vscode.Uri[]> {
+  if (Array.isArray(targetPathOrPaths) && targetPathOrPaths.length > 0) {
+    const out = new Map<string, vscode.Uri>();
+    for (const item of targetPathOrPaths) {
+      const templateUri = resolveMaybeTemplateUri(item);
+      if (!templateUri) {
+        continue;
+      }
+      out.set(templateUri.fsPath.toLowerCase(), templateUri);
+    }
+    return [...out.values()];
+  }
 
-    if (maybeTemplate && maybeTemplate.fsPath.toLowerCase().endsWith(".xml")) {
+  if (typeof targetPathOrPaths === "string" && targetPathOrPaths.trim().length > 0) {
+    const maybeTemplate = resolveMaybeTemplateUri(targetPathOrPaths);
+    if (maybeTemplate) {
       return [maybeTemplate];
     }
   }
 
   return vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Templates/**/*.xml"));
+}
+
+function resolveMaybeTemplateUri(targetPath: string): vscode.Uri | undefined {
+  const normalized = normalizePath(targetPath);
+  const maybeTemplate = normalized.toLowerCase().includes("/xml_templates/")
+    ? vscode.Uri.file(targetPath)
+    : normalized.toLowerCase().includes("/xml/")
+      ? vscode.Uri.file(targetPath.replace(/[\\/]XML[\\/]/i, `${path.sep}XML_Templates${path.sep}`))
+      : undefined;
+  if (maybeTemplate && maybeTemplate.fsPath.toLowerCase().endsWith(".xml")) {
+    return maybeTemplate;
+  }
+  return undefined;
 }
 
 function componentLikeKeyFromUri(workspaceFolder: vscode.WorkspaceFolder, uri: vscode.Uri): string | undefined {
@@ -598,6 +897,81 @@ function formatSummaryText(summary: BuildRunSummary): string {
   return `Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`;
 }
 
+function workspaceKeyFromFolder(workspaceFolder: vscode.WorkspaceFolder): string {
+  return normalizePath(workspaceFolder.uri.fsPath).toLowerCase();
+}
+
+function computeRunSettingsSignature(
+  options: BuildRunOptions,
+  inheritedUsingsSignature: string,
+  generatorScriptsSignature: string
+): string {
+  return hashText([
+    `mode:${options.mode ?? "debug"}`,
+    `postBuildFormat:${options.postBuildFormat === true}`,
+    `provenanceMode:${options.provenanceMode ?? "off"}`,
+    `provenanceLabel:${options.provenanceLabel ?? ""}`,
+    `blankLines:${Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)}`,
+    `generatorsEnabled:${options.generatorsEnabled !== false}`,
+    `generatorTimeout:${Math.max(50, options.generatorTimeoutMs ?? 150)}`,
+    `generatorEnableUserScripts:${options.generatorEnableUserScripts !== false}`,
+    `generatorRoots:${(options.generatorUserScriptsRoots ?? ["XML_Generators"]).join("|")}`,
+    `generatorScriptsSignature:${generatorScriptsSignature}`,
+    `inheritedUsingsSignature:${inheritedUsingsSignature}`
+  ].join("\n"));
+}
+
+function computeInheritedUsingsSignature(
+  map: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]> | undefined
+): string {
+  if (!map || map.size === 0) {
+    return "none";
+  }
+
+  const rows: string[] = [];
+  const formIdents = [...map.keys()].sort((a, b) => a.localeCompare(b));
+  for (const formIdent of formIdents) {
+    const entries = [...(map.get(formIdent) ?? [])];
+    entries.sort((a, b) => {
+      const left = `${a.featureKey}|${a.contributionKey ?? ""}|${a.rawComponentValue ?? ""}`;
+      const right = `${b.featureKey}|${b.contributionKey ?? ""}|${b.rawComponentValue ?? ""}`;
+      return left.localeCompare(right);
+    });
+    for (const entry of entries) {
+      const attrs = [...(entry.attributes ?? [])]
+        .map((attr) => `${attr.name}=${attr.value}`)
+        .sort((a, b) => a.localeCompare(b))
+        .join(",");
+      rows.push([
+        formIdent,
+        entry.featureKey,
+        entry.contributionKey ?? "",
+        entry.suppressInheritance === true ? "1" : "0",
+        entry.rawComponentValue ?? "",
+        attrs
+      ].join("|"));
+    }
+  }
+  return hashText(rows.join("\n"));
+}
+
+function hashText(value: string): string {
+  return createHash("sha1").update(value).digest("hex");
+}
+
+function createEmptyIoStats(): BuildRunIoStats {
+  return {
+    readCount: 0,
+    readBytes: 0,
+    readMs: 0,
+    writeCount: 0,
+    writeBytes: 0,
+    writeMs: 0,
+    statCount: 0,
+    statMs: 0
+  };
+}
+
 async function ensureParentDirectory(uri: vscode.Uri): Promise<void> {
   const parent = vscode.Uri.file(path.dirname(uri.fsPath));
   try {
@@ -610,4 +984,52 @@ async function ensureParentDirectory(uri: vscode.Uri): Promise<void> {
 async function readWorkspaceTextFile(uri: vscode.Uri): Promise<string> {
   const bytes = await vscode.workspace.fs.readFile(uri);
   return Buffer.from(bytes).toString("utf8");
+}
+
+async function readWorkspaceTextFileTracked(uri: vscode.Uri, ioStats?: BuildRunIoStats): Promise<string> {
+  const startedAt = Date.now();
+  const bytes = await vscode.workspace.fs.readFile(uri);
+  if (ioStats) {
+    ioStats.readCount += 1;
+    ioStats.readBytes += bytes.byteLength;
+    ioStats.readMs += Date.now() - startedAt;
+  }
+  return Buffer.from(bytes).toString("utf8");
+}
+
+async function writeWorkspaceTextFileTracked(uri: vscode.Uri, text: string, ioStats?: BuildRunIoStats): Promise<void> {
+  const bytes = Buffer.from(text, "utf8");
+  const startedAt = Date.now();
+  await vscode.workspace.fs.writeFile(uri, bytes);
+  if (ioStats) {
+    ioStats.writeCount += 1;
+    ioStats.writeBytes += bytes.byteLength;
+    ioStats.writeMs += Date.now() - startedAt;
+  }
+}
+
+async function safeStat(uri: vscode.Uri): Promise<vscode.FileStat | undefined> {
+  try {
+    return await vscode.workspace.fs.stat(uri);
+  } catch {
+    return undefined;
+  }
+}
+
+async function safeStatTracked(uri: vscode.Uri, ioStats?: BuildRunIoStats): Promise<vscode.FileStat | undefined> {
+  const startedAt = Date.now();
+  try {
+    const stat = await vscode.workspace.fs.stat(uri);
+    if (ioStats) {
+      ioStats.statCount += 1;
+      ioStats.statMs += Date.now() - startedAt;
+    }
+    return stat;
+  } catch {
+    if (ioStats) {
+      ioStats.statCount += 1;
+      ioStats.statMs += Date.now() - startedAt;
+    }
+    return undefined;
+  }
 }

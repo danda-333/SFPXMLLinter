@@ -33,6 +33,8 @@
     "onCommand:sfpXmlLinter.showBuildQueueLog",
     "onCommand:sfpXmlLinter.showIndexLog",
     "onCommand:sfpXmlLinter.showCompositionLog",
+    "onCommand:sfpXmlLinter.showPipelineStats",
+    "onCommand:sfpXmlLinter.exportTrace",
     "onCommand:sfpXmlLinter.generateFeatureManifestBootstrap",
     "onCommand:sfpXmlLinter.refreshCompositionView",
     "onCommand:sfpXmlLinter.compositionOpenSource",
@@ -119,6 +121,14 @@
       {
         "command": "sfpXmlLinter.showCompositionLog",
         "title": "SFP XML Linter: Show Composition Log"
+      },
+      {
+        "command": "sfpXmlLinter.showPipelineStats",
+        "title": "SFP XML Linter: Show Pipeline Stats"
+      },
+      {
+        "command": "sfpXmlLinter.exportTrace",
+        "title": "SFP XML Linter: Export Pipeline Trace"
       },
       {
         "command": "sfpXmlLinter.generateFeatureManifestBootstrap",
@@ -444,11 +454,11 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test:formatter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runFormatterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runSelectionFormatterTests.js",
-    "test:linter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runIgnoreCodeActionProviderTests.js",
+    "test:linter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runIgnoreCodeActionProviderTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runComposedWorkflowReferenceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runFeatureControlToggleTests.js",
     "test:providers": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/providers/runCompletionProviderTests.js",
     "test:all": "npm run test:providers && npm run test:linter && npm run test:composition && npm run test:templates",
     "test:linter:perf": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterPerformance.js",
-    "test:composition": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionWorkspaceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionDiagnosticsTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionBootstrapTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runDocumentCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionOrderingFixtureTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runPrimitiveQuickFixCommandTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runTreeQuickFixPayloadTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runWorkspaceIndexerUsageTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runXmlFactsPrimitiveButtonTests.js",
+    "test:composition": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionWorkspaceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionDiagnosticsTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionBootstrapTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runDocumentCompositionModelTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runCompositionOrderingFixtureTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runPrimitiveQuickFixCommandTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runTreeQuickFixPayloadTests.js && node -r ./out/tests/testConsoleColors.js out/tests/composition/runTreeProjectionAdapterTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runWorkspaceIndexerUsageTests.js && node -r ./out/tests/testConsoleColors.js out/tests/indexer/runXmlFactsPrimitiveButtonTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runUpdateRunnerTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runUpdateOrchestratorTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runDefaultFactsAndSymbolsBootstrapTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runValidationHostDependencyTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runSymbolRegistryQueryTests.js",
     "test:templates:core": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateCoreTests.js && node -r ./out/tests/testConsoleColors.js out/tests/template/runTemplateGeneratorsTests.js",
     "test:templates:perf": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runTemplateGeneratorsPerformanceCheckpoint.js",
     "test:templates:service": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/template/runBuildTemplateServiceTests.js",

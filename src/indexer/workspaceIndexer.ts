@@ -15,6 +15,7 @@ interface ParsedEntry {
   maskedText: string;
   facts: ReturnType<typeof parseDocumentFactsFromMaskedText>;
   root: string;
+  parseSignature: string;
 }
 
 interface ParsedEntryCacheRecord {
@@ -24,6 +25,13 @@ interface ParsedEntryCacheRecord {
   facts: ReturnType<typeof parseDocumentFactsFromMaskedText>;
   root: string;
   hasIgnoreDirective: boolean;
+  parseSignature: string;
+}
+
+interface UsingTraceCacheRecord {
+  parseSignature: string;
+  contextSignature: string;
+  traces: Map<string, import("./xmlFacts").UsingContributionInsertTrace>;
 }
 
 interface PositionResolver {
@@ -64,20 +72,12 @@ export class WorkspaceIndexer {
   public constructor(private readonly roots?: readonly string[]) {}
 
   private readonly parsedEntryCacheByUri = new Map<string, ParsedEntryCacheRecord>();
+  private readonly usingTraceCacheByUri = new Map<string, UsingTraceCacheRecord>();
 
   private index: WorkspaceIndex = {
     formsByIdent: new Map<string, IndexedForm>(),
     componentsByKey: new Map<string, IndexedComponent>(),
     componentKeysByBaseName: new Map<string, Set<string>>(),
-    formIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-    mappingFormIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-    controlReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-    buttonReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-    sectionReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-    componentReferenceLocationsByKey: new Map<string, vscode.Location[]>(),
-    componentContributionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
-    componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
-    componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),
     builtSymbolProvidersByUri: new Map(),
@@ -98,6 +98,74 @@ export class WorkspaceIndexer {
       this.index.builtSymbolProvidersByUri = new Map();
     }
     this.index.builtSymbolProvidersByUri.set(toIndexUriKey(uri), providersBySymbolKey);
+  }
+
+  public refreshXmlDocument(document: vscode.TextDocument): {
+    updated: boolean;
+    reason: "updated" | "not-form" | "missing-ident" | "not-component" | "facts-only";
+    rootKind: "form" | "workflow" | "dataview" | "component" | "feature" | "other";
+    formIdent?: string;
+    componentKey?: string;
+    owningFormIdent?: string;
+  } {
+    const maskedText = maskXmlComments(document.getText());
+    const facts = parseDocumentFactsFromMaskedText(maskedText);
+    const root = (facts.rootTag ?? "").toLowerCase();
+
+    const cleanupOldByUri = (): void => {
+      const existingIdentByUri = findFormIdentByUri(this.index.formsByIdent, document.uri);
+      if (existingIdentByUri) {
+        this.index.formsByIdent.delete(existingIdentByUri);
+      }
+      const existingComponentKeyByUri = findComponentKeyByUri(this.index.componentsByKey, document.uri);
+      if (existingComponentKeyByUri) {
+        this.index.componentsByKey.delete(existingComponentKeyByUri);
+        removeBaseNameVariant(
+          this.index.componentKeysByBaseName,
+          this.getBaseNameFromKey(existingComponentKeyByUri),
+          existingComponentKeyByUri
+        );
+      }
+    };
+
+    if (root === "form") {
+      const refreshed = this.refreshFormDocument(document);
+      return {
+        ...refreshed,
+        rootKind: "form"
+      };
+    }
+
+    if (root === "component" || root === "feature") {
+      const refreshed = this.refreshComponentDocument(document);
+      return {
+        ...refreshed,
+        rootKind: root
+      };
+    }
+
+    // For workflow/dataview/other files we still keep parsed facts up to date,
+    // so dependent diagnostics can run against fresh inherited usings/model.
+    cleanupOldByUri();
+    this.index.parsedFactsByUri.set(document.uri.toString(), facts);
+    this.index.hasIgnoreDirectiveByUri.set(document.uri.toString(), containsIgnoreDirective(document.getText()));
+
+    const owningFormIdent = root === "workflow"
+      ? (facts.workflowFormIdent ?? facts.rootFormIdent)
+      : root === "dataview"
+        ? facts.rootFormIdent
+        : undefined;
+    return {
+      updated: true,
+      reason: "facts-only",
+      rootKind:
+        root === "workflow"
+          ? "workflow"
+          : root === "dataview"
+            ? "dataview"
+            : "other",
+      owningFormIdent
+    };
   }
 
   public refreshFormDocument(document: vscode.TextDocument): {
@@ -288,16 +356,6 @@ export class WorkspaceIndexer {
     const formsByIdent = new Map<string, IndexedForm>();
     const componentsByKey = new Map<string, IndexedComponent>();
     const componentKeysByBaseName = new Map<string, Set<string>>();
-    const formIdentReferenceLocations = new Map<string, vscode.Location[]>();
-    const mappingFormIdentReferenceLocations = new Map<string, vscode.Location[]>();
-    const controlReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
-    const buttonReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
-    const sectionReferenceLocationsByFormIdent = new Map<string, Map<string, vscode.Location[]>>();
-    const componentReferenceLocationsByKey = new Map<string, vscode.Location[]>();
-    const componentContributionReferenceLocationsByKey = new Map<string, Map<string, vscode.Location[]>>();
-    const componentUsageFormIdentsByKey = new Map<string, Set<string>>();
-    const componentContributionUsageFormIdentsByKey = new Map<string, Map<string, Set<string>>>();
-
     const componentEntries = parsedEntries.filter((entry) => entry.root === "component" || entry.root === "feature");
     const componentsStart = Date.now();
     onProgress?.({
@@ -362,15 +420,6 @@ export class WorkspaceIndexer {
       formsByIdent: new Map<string, IndexedForm>(),
       componentsByKey,
       componentKeysByBaseName,
-      formIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-      mappingFormIdentReferenceLocations: new Map<string, vscode.Location[]>(),
-      controlReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-      buttonReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-      sectionReferenceLocationsByFormIdent: new Map<string, Map<string, vscode.Location[]>>(),
-      componentReferenceLocationsByKey: new Map<string, vscode.Location[]>(),
-      componentContributionReferenceLocationsByKey: new Map<string, Map<string, vscode.Location[]>>(),
-      componentUsageFormIdentsByKey: new Map<string, Set<string>>(),
-      componentContributionUsageFormIdentsByKey: new Map<string, Map<string, Set<string>>>(),
       parsedFactsByUri: new Map(parsedFactsByUri),
       hasIgnoreDirectiveByUri: new Map(hasIgnoreDirectiveByUri),
       builtSymbolProvidersByUri: new Map(),
@@ -480,198 +529,44 @@ export class WorkspaceIndexer {
 
       return false;
     });
+    const traceContextSignature = this.computeUsingTraceContextSignature(parsedEntries, traceEligibleEntries);
 
     const usingTraceStart = Date.now();
+    let usingTraceCacheHits = 0;
+    let usingTraceComputed = 0;
     for (let i = 0; i < traceEligibleEntries.length; i++) {
       const entry = traceEligibleEntries[i];
-      populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+      const uriKey = entry.uri.toString();
+      const cachedTrace = this.usingTraceCacheByUri.get(uriKey);
+      if (cachedTrace && cachedTrace.parseSignature === entry.parseSignature && cachedTrace.contextSignature === traceContextSignature) {
+        entry.facts.usingContributionInsertTraces = cloneUsingTraceMap(cachedTrace.traces);
+        usingTraceCacheHits++;
+      } else {
+        populateUsingInsertTraceFromText(entry.facts, entry.maskedText, provisionalIndex);
+        this.usingTraceCacheByUri.set(uriKey, {
+          parseSignature: entry.parseSignature,
+          contextSignature: traceContextSignature,
+          traces: cloneUsingTraceMap(entry.facts.usingContributionInsertTraces ?? new Map())
+        });
+        usingTraceComputed++;
+      }
       if ((i + 1) % 80 === 0) {
         await yieldToEventLoop();
       }
     }
     const usingTraceMs = Date.now() - usingTraceStart;
 
-    let processedRefEntries = 0;
-    const referencesStart = Date.now();
-    onProgress?.({
-      phase: "references-start",
-      total: parsedEntries.length,
-      message: `Resolving references (${parsedEntries.length}).`
-    });
-    for (const entry of parsedEntries) {
-      const root = entry.root;
-      const uri = entry.uri;
-      const facts = entry.facts;
-
-      for (const ref of facts.formIdentReferences) {
-        addLocationMapValue(formIdentReferenceLocations, ref.formIdent, new vscode.Location(uri, ref.range));
-      }
-
-      for (const ref of facts.mappingFormIdentReferences) {
-        addLocationMapValue(mappingFormIdentReferenceLocations, ref.formIdent, new vscode.Location(uri, ref.range));
-      }
-
-      for (const ref of facts.usingReferences) {
-        addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
-        if (ref.sectionValue && ref.sectionValueRange) {
-          addNestedLocationMapValue(
-            componentContributionReferenceLocationsByKey,
-            ref.componentKey,
-            ref.sectionValue,
-            new vscode.Location(uri, ref.sectionValueRange)
-          );
-        }
-      }
-
-      for (const ref of facts.includeReferences) {
-        addLocationMapValue(componentReferenceLocationsByKey, ref.componentKey, new vscode.Location(uri, ref.componentValueRange));
-        if (ref.sectionValue && ref.sectionValueRange) {
-          addNestedLocationMapValue(
-            componentContributionReferenceLocationsByKey,
-            ref.componentKey,
-            ref.sectionValue,
-            new vscode.Location(uri, ref.sectionValueRange)
-          );
-        }
-      }
-
-      const owningFormIdent =
-        root === "workflow"
-          ? facts.workflowFormIdent
-          : root === "dataview"
-            ? facts.rootFormIdent
-            : facts.formIdent;
-      if (owningFormIdent) {
-        for (const ref of collectEffectiveUsingRefs(facts, provisionalIndex)) {
-          addNestedSetMapValue(componentUsageFormIdentsByKey, ref.componentKey, owningFormIdent);
-          if (ref.sectionValue) {
-            addNestedNestedSetMapValue(componentContributionUsageFormIdentsByKey, ref.componentKey, ref.sectionValue, owningFormIdent);
-          }
-        }
-      }
-
-      const owningFormIdentForRefs =
-        root === "workflow"
-          ? facts.workflowFormIdent
-          : root === "dataview"
-            ? facts.rootFormIdent
-            : facts.formIdent;
-      if (root === "workflow" && facts.workflowFormIdent) {
-        for (const ref of facts.workflowReferences) {
-          if (ref.kind === "formControl") {
-            addNestedLocationMapValue(
-              controlReferenceLocationsByFormIdent,
-              facts.workflowFormIdent,
-              ref.ident,
-              new vscode.Location(uri, ref.range)
-            );
-            continue;
-          }
-
-          if (ref.kind === "button") {
-            addNestedLocationMapValue(
-              buttonReferenceLocationsByFormIdent,
-              facts.workflowFormIdent,
-              ref.ident,
-              new vscode.Location(uri, ref.range)
-            );
-            continue;
-          }
-
-          if (ref.kind === "section") {
-            addNestedLocationMapValue(
-              sectionReferenceLocationsByFormIdent,
-              facts.workflowFormIdent,
-              ref.ident,
-              new vscode.Location(uri, ref.range)
-            );
-          }
-        }
-
-        for (const ref of facts.requiredActionIdentReferences) {
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            facts.workflowFormIdent,
-            ref.ident,
-            new vscode.Location(uri, ref.range)
-          );
-        }
-
-        for (const ref of facts.workflowControlIdentReferences) {
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            facts.workflowFormIdent,
-            ref.ident,
-            new vscode.Location(uri, ref.range)
-          );
-        }
-      }
-
-      if (owningFormIdentForRefs) {
-        for (const mappingRef of facts.mappingIdentReferences) {
-          if (mappingRef.kind === "fromIdent") {
-            addNestedLocationMapValue(
-              controlReferenceLocationsByFormIdent,
-              owningFormIdentForRefs,
-              mappingRef.ident,
-              new vscode.Location(uri, mappingRef.range)
-            );
-            continue;
-          }
-
-          const targetFormIdent = mappingRef.mappingFormIdent ?? owningFormIdentForRefs;
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            targetFormIdent,
-            mappingRef.ident,
-            new vscode.Location(uri, mappingRef.range)
-          );
-        }
-      }
-
-      if (root === "form" && facts.formIdent) {
-        for (const htmlRef of facts.htmlControlReferences) {
-          addNestedLocationMapValue(
-            controlReferenceLocationsByFormIdent,
-            facts.formIdent,
-            htmlRef.ident,
-            new vscode.Location(uri, htmlRef.range)
-          );
-        }
-      }
-
-      processedRefEntries++;
-      if (processedRefEntries % 100 === 0 || processedRefEntries === parsedEntries.length) {
-        onProgress?.({
-          phase: "references-progress",
-          current: processedRefEntries,
-          total: parsedEntries.length
-        });
-      }
-      if (processedRefEntries % 50 === 0) {
-        await yieldToEventLoop();
-      }
-    }
-    const referencesMs = Date.now() - referencesStart;
+    const referencesMs = 0;
     onProgress?.({
       phase: "references-done",
       total: parsedEntries.length,
-      message: `Resolved references for ${parsedEntries.length} files in ${referencesMs} ms.`
+      message: "Legacy reference buckets removed; references resolved from facts/symbols on demand."
     });
 
     this.index = {
       formsByIdent,
       componentsByKey,
       componentKeysByBaseName,
-      formIdentReferenceLocations,
-      mappingFormIdentReferenceLocations,
-      controlReferenceLocationsByFormIdent,
-      buttonReferenceLocationsByFormIdent,
-      sectionReferenceLocationsByFormIdent,
-      componentReferenceLocationsByKey,
-      componentContributionReferenceLocationsByKey,
-      componentUsageFormIdentsByKey,
-      componentContributionUsageFormIdentsByKey,
       parsedFactsByUri,
       hasIgnoreDirectiveByUri,
       builtSymbolProvidersByUri: new Map(),
@@ -685,7 +580,7 @@ export class WorkspaceIndexer {
       message:
         `Index ready in ${totalMs} ms: forms=${formsByIdent.size}, components=${componentsByKey.size}, ` +
         `discover=${discoverMs} ms, parse=${parseMs} ms, components=${componentsMs} ms, forms=${formsMs} ms, refs=${referencesMs} ms, ` +
-        `trace=${usingTraceMs} ms (${traceEligibleEntries.length}/${parsedEntries.length}).`
+        `trace=${usingTraceMs} ms (${traceEligibleEntries.length}/${parsedEntries.length}, cache=${usingTraceCacheHits}/${traceEligibleEntries.length}, computed=${usingTraceComputed}).`
     });
 
     return this.index;
@@ -982,6 +877,31 @@ export class WorkspaceIndexer {
     return pieces[pieces.length - 1] ?? key;
   }
 
+  private computeUsingTraceContextSignature(
+    parsedEntries: readonly ParsedEntry[],
+    traceEligibleEntries: readonly ParsedEntry[]
+  ): string {
+    const componentSignatures = parsedEntries
+      .filter((entry) => entry.root === "component" || entry.root === "feature")
+      .map((entry) => `${entry.uri.toString()}@${entry.parseSignature}`)
+      .sort((a, b) => a.localeCompare(b));
+
+    const formSignatures = parsedEntries
+      .filter((entry) => entry.root === "form")
+      .map((entry) => `${entry.uri.toString()}@${entry.parseSignature}`)
+      .sort((a, b) => a.localeCompare(b));
+
+    const traceEligibleSignatures = traceEligibleEntries
+      .map((entry) => `${entry.uri.toString()}@${entry.parseSignature}`)
+      .sort((a, b) => a.localeCompare(b));
+
+    return [
+      `components:${componentSignatures.join(";")}`,
+      `forms:${formSignatures.join(";")}`,
+      `eligible:${traceEligibleSignatures.join(";")}`
+    ].join("|");
+  }
+
   private async readParsedEntry(
     uri: vscode.Uri,
     scope: "all" | "bootstrap",
@@ -1004,7 +924,8 @@ export class WorkspaceIndexer {
           uri,
           maskedText: cached.maskedText,
           facts: cached.facts,
-          root: cached.root
+          root: cached.root,
+          parseSignature: cached.parseSignature
         };
       }
     }
@@ -1014,6 +935,9 @@ export class WorkspaceIndexer {
     const facts = parseDocumentFactsFromMaskedText(maskedText);
     const root = (facts.rootTag ?? "").toLowerCase();
     const hasIgnoreDirective = containsIgnoreDirective(text);
+    const parseSignature = signature
+      ? `${Math.trunc(signature.mtimeMs)}:${signature.size}`
+      : `h:${fastHashText(maskedText)}`;
     hasIgnoreDirectiveByUri.set(uriKey, hasIgnoreDirective);
     if (signature) {
       this.parsedEntryCacheByUri.set(uriKey, {
@@ -1022,7 +946,8 @@ export class WorkspaceIndexer {
         maskedText,
         facts,
         root,
-        hasIgnoreDirective
+        hasIgnoreDirective,
+        parseSignature
       });
     } else {
       this.parsedEntryCacheByUri.delete(uriKey);
@@ -1036,7 +961,8 @@ export class WorkspaceIndexer {
       uri,
       maskedText,
       facts,
-      root
+      root,
+      parseSignature
     };
   }
 }
@@ -1376,6 +1302,34 @@ function containsIgnoreDirective(text: string): boolean {
 
 function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function cloneUsingTraceMap(
+  source: ReadonlyMap<string, import("./xmlFacts").UsingContributionInsertTrace>
+): Map<string, import("./xmlFacts").UsingContributionInsertTrace> {
+  const out = new Map<string, import("./xmlFacts").UsingContributionInsertTrace>();
+  for (const [key, value] of source.entries()) {
+    out.set(key, {
+      strategy: value.strategy,
+      finalInsertCount: value.finalInsertCount,
+      placeholderCount: value.placeholderCount,
+      targetXPathExpression: value.targetXPathExpression,
+      targetXPathMatchCount: value.targetXPathMatchCount,
+      targetXPathClampedCount: value.targetXPathClampedCount,
+      allowMultipleInserts: value.allowMultipleInserts,
+      fallbackSymbolCount: value.fallbackSymbolCount
+    });
+  }
+  return out;
+}
+
+function fastHashText(text: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
 }
 
 async function readWorkspaceFileText(uri: vscode.Uri): Promise<string> {

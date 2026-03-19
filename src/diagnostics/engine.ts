@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseIgnoreState, isRuleIgnored } from "./ignore";
 import { WorkspaceIndex } from "../indexer/types";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
+import { parseDocumentFacts, WorkflowReference } from "../indexer/xmlFacts";
 import { documentInConfiguredRoots, normalizeComponentKey } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { getSystemMetadata, isKnownSystemTableForeignKey, SystemMetadata } from "../config/systemMetadata";
@@ -39,6 +39,8 @@ export interface BuildDiagnosticsOptions {
   skipConfiguredRootsCheck?: boolean;
   featureRegistry?: FeatureManifestRegistry;
   resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined;
+  injectedWorkflowReferences?: readonly WorkflowReference[];
+  workflowReferenceMode?: "local" | "injected" | "merged";
 }
 
 export class DiagnosticsEngine {
@@ -85,7 +87,16 @@ export class DiagnosticsEngine {
     this.validateIdentConventions(facts, index, issues, metadata);
 
     if (facts.rootTag?.toLowerCase() === "workflow") {
-      this.validateWorkflowReferences(facts, index, issues, metadata, documentComposition, options?.resolveOwningForm);
+      this.validateWorkflowReferences(
+        facts,
+        index,
+        issues,
+        metadata,
+        documentComposition,
+        options?.resolveOwningForm,
+        options?.injectedWorkflowReferences,
+        options?.workflowReferenceMode
+      );
     }
 
     this.validateMappingFormIdentReferences(facts, index, issues, metadata, formIdentCandidates, settings);
@@ -216,7 +227,9 @@ export class DiagnosticsEngine {
     issues: RuleDiagnostic[],
     metadata: SystemMetadata,
     documentComposition: DocumentCompositionModel,
-    resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined
+    resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined,
+    injectedWorkflowReferences?: readonly WorkflowReference[],
+    workflowReferenceMode: "local" | "injected" | "merged" = "local"
   ): void {
     const formIdent = facts.workflowFormIdent;
     if (!formIdent) {
@@ -234,14 +247,46 @@ export class DiagnosticsEngine {
     const availableButtonShareCodes = collectWorkflowButtonShareCodes(facts, index, documentComposition);
     const availableControls = collectWorkflowAvailableControls(facts, index, form, metadata, documentComposition, formIndex);
     const availableButtons = collectWorkflowAvailableButtons(facts, index, form, documentComposition, formIndex);
-    for (const ref of facts.workflowReferences) {
+    const injectedRangeFallback =
+      facts.usingReferences[0]?.componentValueRange ??
+      facts.workflowFormIdentRange ??
+      facts.rootFormIdentRange ??
+      new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1));
+
+    const localReferenceKeys = new Set(
+      facts.workflowReferences.map((ref) => `${ref.kind}|${ref.ident}|${ref.scopeKey ?? ""}`.toLowerCase())
+    );
+    const injectedRefs = (injectedWorkflowReferences ?? []).filter((ref) => {
+      const key = `${ref.kind}|${ref.ident}|${ref.scopeKey ?? ""}`.toLowerCase();
+      return !localReferenceKeys.has(key);
+    });
+
+    let allRefs: Array<{ ref: WorkflowReference; injected: boolean }> = [];
+    if (workflowReferenceMode === "injected") {
+      allRefs = injectedRefs.map((ref) => ({ ref, injected: true }));
+      if (allRefs.length === 0) {
+        allRefs = facts.workflowReferences.map((ref) => ({ ref, injected: false }));
+      }
+    } else if (workflowReferenceMode === "merged") {
+      allRefs = [
+        ...facts.workflowReferences.map((ref) => ({ ref, injected: false })),
+        ...injectedRefs.map((ref) => ({ ref, injected: true }))
+      ];
+    } else {
+      allRefs = facts.workflowReferences.map((ref) => ({ ref, injected: false }));
+    }
+
+    for (const item of allRefs) {
+      const ref = item.ref;
+      const range = item.injected ? injectedRangeFallback : ref.range;
+      const injectedPrefix = item.injected ? "Injected " : "";
       if (ref.kind === "formControl") {
         if (!availableControls.has(ref.ident)) {
           issues.push({
             ruleId: "unknown-form-control-ident",
-            range: ref.range,
+            range,
             message: withDidYouMean(
-              `FormControl Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
+              `${injectedPrefix}FormControl Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
               ref.ident,
               form.controls
             )
@@ -255,9 +300,9 @@ export class DiagnosticsEngine {
         if (!availableControlShareCodes.has(key)) {
           issues.push({
             ruleId: "unknown-form-control-ident",
-            range: ref.range,
+            range,
             message: withDidYouMean(
-              `ControlShareCode Ident '${ref.ident}' was not found in WorkFlow ControlShareCodes.`,
+              `${injectedPrefix}ControlShareCode Ident '${ref.ident}' was not found in WorkFlow ControlShareCodes.`,
               ref.ident,
               availableControlShareCodes
             )
@@ -269,9 +314,9 @@ export class DiagnosticsEngine {
       if (ref.kind === "button" && !availableButtons.has(ref.ident)) {
         issues.push({
           ruleId: "unknown-form-button-ident",
-          range: ref.range,
+          range,
           message: withDidYouMean(
-            `Button Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
+            `${injectedPrefix}Button Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
             ref.ident,
             form.buttons
           )
@@ -284,9 +329,9 @@ export class DiagnosticsEngine {
         if (!availableButtonShareCodes.has(key)) {
           issues.push({
             ruleId: "unknown-workflow-button-share-code-ident",
-            range: ref.range,
+            range,
             message: withDidYouMean(
-              `ButtonShareCode Ident '${ref.ident}' was not found in WorkFlow ButtonShareCodes.`,
+              `${injectedPrefix}ButtonShareCode Ident '${ref.ident}' was not found in WorkFlow ButtonShareCodes.`,
               ref.ident,
               availableButtonShareCodes
             )
@@ -298,9 +343,9 @@ export class DiagnosticsEngine {
       if (ref.kind === "section" && !form.sections.has(ref.ident)) {
         issues.push({
           ruleId: "unknown-form-section-ident",
-          range: ref.range,
+          range,
           message: withDidYouMean(
-            `Section Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
+            `${injectedPrefix}Section Ident '${ref.ident}' was not found in Form '${form.ident}'.`,
             ref.ident,
             form.sections
           )

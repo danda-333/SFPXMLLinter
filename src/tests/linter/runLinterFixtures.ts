@@ -547,6 +547,7 @@ function collectComponentContributionSummaries(text: string): Map<string, import
       root,
       rootExpression: rootRaw.length > 0 ? rootRaw : undefined,
       insert: extractAttributeValue(attrs, "Insert"),
+      isInsertOptional: parseBooleanAttribute(extractAttributeValue(attrs, "IsInsertOptional")),
       targetXPath: extractAttributeValue(attrs, "TargetXPath"),
       allowMultipleInserts: parseBooleanAttribute(extractAttributeValue(attrs, "AllowMultipleInserts")),
       hasContent: /\S/.test(body),

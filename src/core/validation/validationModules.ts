@@ -133,6 +133,7 @@ export function createValidationModules(deps: ValidationRunnerDeps): ValidationM
         "missing-feature-expectation",
         "missing-feature-expected-xpath",
         "duplicate-feature-provider",
+        "missing-explicit-provides",
         "missing-feature-dependency",
         "ordering-conflict",
         "orphan-feature-part",

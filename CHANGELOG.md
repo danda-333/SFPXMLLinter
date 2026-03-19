@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.1.13
+
+- Expected XPath diagnostics:
+  - fixed `missing-feature-expected-xpath` evaluation against related runtime context (`XML/...`) to reduce false positives.
+  - improved XPath matching for `[@Ident='...']` predicates appearing in the middle of XPath expressions.
+  - added fallback matching against parsed runtime facts for share code/control/button/section targets.
+- Problems related information:
+  - `missing-feature-expected-xpath` now links primarily to the source contribution definition in feature/component files.
+  - context document link is kept as fallback when contribution location is unavailable.
+- Feature contribution usage:
+  - fixed `unused-feature-contribution` false positives for root-level target paths (`//Form`, `//WorkFlow`, `//DataView`, `//Filter`).
+
 ## 0.1.11
 
 - Provenance tracing and TreeView origin improvements:

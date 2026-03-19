@@ -4,7 +4,7 @@
   "description": "IntelliSense, diagnostics, references, and template tooling for SFP XML projects.",
   "publisher": "DanielSasek",
   "license": "MIT",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -346,6 +346,7 @@
             "missing-feature-expectation": "warning",
             "missing-feature-expected-xpath": "warning",
             "duplicate-feature-provider": "warning",
+            "missing-explicit-provides": "information",
             "ordering-conflict": "warning",
             "orphan-feature-part": "warning",
             "incomplete-feature": "warning",

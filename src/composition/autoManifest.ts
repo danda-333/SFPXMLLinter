@@ -201,7 +201,6 @@ function collectContributions(text: string, contractsByKey: ReadonlyMap<string, 
       ...(insert ? { insert } : {}),
       contexts: parseContributionContexts(attrs.get("Root")),
       provides: uniqueSymbols([
-        ...inferProvidesFromContribution(content),
         ...inlineContract.provides,
         ...(contract?.provides ?? [])
       ]),
@@ -394,32 +393,6 @@ function buildContributionId(
   index: number
 ): string {
   return [name, targetXPath, insert, kind, index.toString()].filter((value) => value && value.length > 0).join("|");
-}
-
-function inferProvidesFromContribution(content: string): FeatureManifestSymbolRef[] {
-  const symbols: FeatureManifestSymbolRef[] = [];
-  collectByRegex(symbols, content, /<Control\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "control");
-  collectByRegex(symbols, content, /<Button\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "button");
-  collectByRegex(symbols, content, /<Section\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "section");
-  collectByRegex(symbols, content, /<ActionShareCode\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "actionShareCode");
-  collectByRegex(symbols, content, /<ButtonShareCode\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "buttonShareCode");
-  collectByRegex(symbols, content, /<ControlShareCode\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "controlShareCode");
-  collectByRegex(symbols, content, /<Column\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "column");
-  collectByRegex(symbols, content, /<Component\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "component");
-  collectByRegex(symbols, content, /<DataSource\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "datasource");
-  collectByRegex(symbols, content, /<dsp:Parameter\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "parameter");
-  return uniqueSymbols(symbols);
-}
-
-function collectByRegex(target: FeatureManifestSymbolRef[], content: string, regex: RegExp, kind: FeatureSymbolKind): void {
-  for (const match of content.matchAll(regex)) {
-    const ident = (match[1] ?? match[2] ?? "").trim();
-    if (!ident) {
-      continue;
-    }
-
-    target.push({ kind, ident });
-  }
 }
 
 function inferContributionKind(

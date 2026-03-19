@@ -827,6 +827,7 @@ export class WorkspaceIndexer {
   private collectComponentContributionSummaries(preMaskedText?: string): Map<string, IndexedComponentContributionSummary> {
     const text = preMaskedText ?? "";
     const out = new Map<string, IndexedComponentContributionSummary>();
+    const contractExpectedXPathByContribution = collectContributionContractExpectedXPathByContributionName(text);
     const sectionRegex = /<(Contribution|Section)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
     for (const match of text.matchAll(sectionRegex)) {
       const attrsText = match[2] ?? "";
@@ -852,7 +853,12 @@ export class WorkspaceIndexer {
         root,
         rootExpression: rootRaw.length > 0 ? rootRaw : undefined,
         insert: extractAttributeValue(attrsText, "Insert"),
+        isInsertOptional: parseBooleanAttribute(extractAttributeValue(attrsText, "IsInsertOptional")),
         targetXPath: extractAttributeValue(attrsText, "TargetXPath"),
+        expectsXPath: new Set([
+          ...(contractExpectedXPathByContribution.get(name.toLowerCase()) ?? []),
+          ...collectExpectedXPathValuesFromText(body)
+        ]),
         allowMultipleInserts: parseBooleanAttribute(extractAttributeValue(attrsText, "AllowMultipleInserts")),
         hasContent: /\S/.test(body),
         formControlCount: countTagOccurrences(body, /<Control\b[^>]*>/gi),
@@ -1110,6 +1116,71 @@ export class WorkspaceIndexer {
       parseSignature
     };
   }
+}
+
+function collectContributionContractExpectedXPathByContributionName(text: string): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  const manifestMatch = /<\s*Manifest\b[^>]*>([\s\S]*?)<\/\s*Manifest\s*>/i.exec(text);
+  if (!manifestMatch) {
+    return out;
+  }
+
+  const manifestBody = manifestMatch[1] ?? "";
+  const contractRegex = /<\s*ContributionContract\b([^>]*)>([\s\S]*?)<\/\s*ContributionContract\s*>/gi;
+  for (const contractMatch of manifestBody.matchAll(contractRegex)) {
+    const attrs = contractMatch[1] ?? "";
+    const body = contractMatch[2] ?? "";
+    const forName =
+      extractAttributeValue(attrs, "For") ??
+      extractAttributeValue(attrs, "Name") ??
+      extractAttributeValue(attrs, "Id");
+    if (!forName) {
+      continue;
+    }
+    const expectsXPath = collectExpectedXPathValuesFromText(body);
+    if (expectsXPath.length === 0) {
+      continue;
+    }
+    const key = forName.trim().toLowerCase();
+    const existing = out.get(key) ?? [];
+    out.set(key, uniqueStrings([...existing, ...expectsXPath]));
+  }
+
+  return out;
+}
+
+function collectExpectedXPathValuesFromText(text: string): string[] {
+  const out: string[] = [];
+  const blockRegex = /<\s*ExpectsXPath(s)?\b[^>]*>([\s\S]*?)<\/\s*ExpectsXPath(s)?\s*>/gi;
+  for (const block of text.matchAll(blockRegex)) {
+    const body = block[2] ?? "";
+    const xpathRegex = /<\s*XPath\b[^>]*>([\s\S]*?)<\/\s*XPath\s*>/gi;
+    for (const xpathMatch of body.matchAll(xpathRegex)) {
+      const value = (xpathMatch[1] ?? "").trim();
+      if (value.length > 0) {
+        out.push(value);
+      }
+    }
+  }
+  return uniqueStrings(out);
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized) {
+      continue;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(normalized);
+  }
+  return out;
 }
 
 function mergeDefinitions(

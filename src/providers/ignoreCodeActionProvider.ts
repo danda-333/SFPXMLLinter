@@ -89,6 +89,12 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
               actions.push(removeUsePrimitiveAction);
             }
             actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
+          } else if (code === "missing-explicit-provides") {
+            const addProvidesAction = this.createAddExplicitProvidesAction(document, diagnostic);
+            if (addProvidesAction) {
+              actions.push(addProvidesAction);
+            }
+            actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
           } else {
             actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
           }
@@ -359,6 +365,41 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     return action;
   }
 
+  private createAddExplicitProvidesAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const fullText = document.getText();
+    const offset = document.offsetAt(diagnostic.range.start);
+    const node = findContributionNodeAtOffset(fullText, offset);
+    if (!node) {
+      return undefined;
+    }
+
+    const symbols = inferProvidedSymbolsFromContributionBody(node.body);
+    if (symbols.length === 0) {
+      return undefined;
+    }
+    const contributionName = node.name ?? extractContributionNameFromMessage(diagnostic.message);
+    if (!contributionName) {
+      return undefined;
+    }
+    const updatedText = upsertManifestContributionContract(fullText, contributionName, symbols);
+    if (!updatedText || updatedText === fullText) {
+      return undefined;
+    }
+
+    const action = new vscode.CodeAction("Add explicit <Provides> symbols", vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diagnostic];
+    action.isPreferred = true;
+    const edit = new vscode.WorkspaceEdit();
+    const startPos = new vscode.Position(0, 0);
+    const endPos = positionAtInText(fullText, fullText.length);
+    edit.replace(document.uri, new vscode.Range(startPos, endPos), updatedText);
+    action.edit = edit;
+    return action;
+  }
+
   private createRemoveUsingLineAction(
     document: vscode.TextDocument,
     diagnostic: vscode.Diagnostic,
@@ -520,6 +561,264 @@ function extractPrimitiveKeyFromMessage(message: string): string | undefined {
   const match = /Primitive '([^']+)'/i.exec(message);
   const value = (match?.[1] ?? "").trim();
   return value.length > 0 ? value : undefined;
+}
+
+type SymbolKind =
+  | "control"
+  | "button"
+  | "section"
+  | "actionShareCode"
+  | "buttonShareCode"
+  | "controlShareCode"
+  | "column"
+  | "component"
+  | "datasource"
+  | "parameter";
+
+type ContributionNode = {
+  start: number;
+  end: number;
+  tag: "Contribution" | "Section";
+  name?: string;
+  openTag: string;
+  body: string;
+  closeStart: number;
+  selfClosing: boolean;
+  indent: string;
+};
+
+function findContributionNodeAtOffset(text: string, offset: number): ContributionNode | undefined {
+  const regex = /<\s*(Contribution|Section)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\s*\1\s*>)/gi;
+  for (const match of text.matchAll(regex)) {
+    const start = match.index ?? 0;
+    const full = match[0] ?? "";
+    const end = start + full.length;
+    if (offset < start || offset > end) {
+      continue;
+    }
+
+    const tag = ((match[1] ?? "Contribution") as "Contribution" | "Section");
+    const attrs = parseAttributes(match[2] ?? "");
+    const name = attrs.get("name");
+    const selfClosing = /\/>\s*$/.test(full);
+    const openTagEnd = full.indexOf(">") + 1;
+    const openTag = openTagEnd > 0 ? full.slice(0, openTagEnd) : full;
+    const body = selfClosing ? "" : (match[3] ?? "");
+    const closeStartLocal = selfClosing ? full.length : full.lastIndexOf(`</${tag}`);
+    const closeStart = start + (closeStartLocal >= 0 ? closeStartLocal : full.length);
+    const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+    const linePrefix = text.slice(lineStart, start);
+    const indent = (/^[ \t]*/.exec(linePrefix)?.[0]) ?? "";
+
+    return { start, end, tag, name, openTag, body, closeStart, selfClosing, indent };
+  }
+  return undefined;
+}
+
+function inferProvidedSymbolsFromContributionBody(body: string): Array<{ kind: SymbolKind; ident: string }> {
+  const out: Array<{ kind: SymbolKind; ident: string }> = [];
+  collectByRegex(out, body, /<Control\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "control");
+  collectByRegex(out, body, /<Button\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "button");
+  collectByRegex(out, body, /<Section\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "section");
+  collectByRegex(out, body, /<ActionShareCode\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "actionShareCode");
+  collectByRegex(out, body, /<ButtonShareCode\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "buttonShareCode");
+  collectByRegex(out, body, /<ControlShareCode\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "controlShareCode");
+  collectByRegex(out, body, /<Column\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "column");
+  collectByRegex(out, body, /<Component\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "component");
+  collectByRegex(out, body, /<DataSource\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "datasource");
+  collectByRegex(out, body, /<dsp:Parameter\b[^>]*\bIdent\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, "parameter");
+
+  const seen = new Set<string>();
+  const dedup: Array<{ kind: SymbolKind; ident: string }> = [];
+  for (const symbol of out) {
+    const key = `${symbol.kind}:${symbol.ident}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    dedup.push(symbol);
+  }
+  return dedup;
+}
+
+function collectByRegex(
+  out: Array<{ kind: SymbolKind; ident: string }>,
+  content: string,
+  regex: RegExp,
+  kind: SymbolKind
+): void {
+  for (const match of content.matchAll(regex)) {
+    const ident = (match[1] ?? match[2] ?? "").trim();
+    if (!ident) {
+      continue;
+    }
+    out.push({ kind, ident });
+  }
+}
+
+function parseAttributes(raw: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const regex = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+  for (const match of raw.matchAll(regex)) {
+    const key = (match[1] ?? "").trim().toLowerCase();
+    if (!key) {
+      continue;
+    }
+    out.set(key, (match[2] ?? match[3] ?? "").trim());
+  }
+  return out;
+}
+
+function extractContributionNameFromMessage(message: string): string | undefined {
+  const match = /Contribution '([^']+)'/i.exec(message);
+  const value = (match?.[1] ?? "").trim();
+  return value.length > 0 ? value : undefined;
+}
+
+function upsertManifestContributionContract(
+  text: string,
+  contributionName: string,
+  symbols: ReadonlyArray<{ kind: SymbolKind; ident: string }>
+): string | undefined {
+  const newline = text.includes("\r\n") ? "\r\n" : "\n";
+  const indentUnit = detectIndentUnit(text);
+  const manifestRegex = /<\s*Manifest\b[^>]*>([\s\S]*?)<\/\s*Manifest\s*>/i;
+  const manifestMatch = manifestRegex.exec(text);
+  if (!manifestMatch || typeof manifestMatch.index !== "number") {
+    const rootMatch = /<\s*(Feature|Component)\b[^>]*>/i.exec(text);
+    if (!rootMatch || typeof rootMatch.index !== "number") {
+      return undefined;
+    }
+    const rootStart = rootMatch.index;
+    const rootLineStart = text.lastIndexOf("\n", rootStart - 1) + 1;
+    const rootIndent = (/^[ \t]*/.exec(text.slice(rootLineStart, rootStart))?.[0]) ?? "";
+    const manifestIndent = `${rootIndent}${indentUnit}`;
+    const contractIndent = `${manifestIndent}${indentUnit}`;
+    const contract = buildContributionContractBlock(contractIndent, indentUnit, contributionName, symbols, newline);
+    const insertion = `${newline}${manifestIndent}<Manifest>${newline}${contract}${manifestIndent}</Manifest>${newline}`;
+    const insertOffset = rootStart + rootMatch[0].length;
+    return `${text.slice(0, insertOffset)}${insertion}${text.slice(insertOffset)}`;
+  }
+
+  const manifestFull = manifestMatch[0] ?? "";
+  const manifestStart = manifestMatch.index;
+  const manifestBody = manifestMatch[1] ?? "";
+  const bodyOffset = manifestFull.indexOf(manifestBody);
+  const bodyStart = manifestStart + (bodyOffset >= 0 ? bodyOffset : 0);
+  const bodyEnd = bodyStart + manifestBody.length;
+  const manifestLineStart = text.lastIndexOf("\n", manifestStart - 1) + 1;
+  const manifestIndent = (/^[ \t]*/.exec(text.slice(manifestLineStart, manifestStart))?.[0]) ?? "";
+  const contractIndent = `${manifestIndent}${indentUnit}`;
+
+  const contractRegex = /<\s*ContributionContract\b([^>]*?)>([\s\S]*?)<\/\s*ContributionContract\s*>/gi;
+  for (const contractMatch of manifestBody.matchAll(contractRegex)) {
+    const attrs = parseAttributes(contractMatch[1] ?? "");
+    const forName = attrs.get("for") ?? attrs.get("name") ?? attrs.get("id");
+    if (forName !== contributionName) {
+      continue;
+    }
+    const contractFull = contractMatch[0] ?? "";
+    const contractLocalStart = contractMatch.index ?? 0;
+    const contractGlobalStart = bodyStart + contractLocalStart;
+    const merged = upsertProvidesIntoContract(contractFull, symbols, indentUnit, newline, `${contractIndent}${indentUnit}`);
+    if (!merged || merged === contractFull) {
+      return text;
+    }
+    return `${text.slice(0, contractGlobalStart)}${merged}${text.slice(contractGlobalStart + contractFull.length)}`;
+  }
+
+  const contract = buildContributionContractBlock(contractIndent, indentUnit, contributionName, symbols, newline);
+  const prefix = manifestBody.trim().length === 0 ? "" : newline;
+  const suffix = manifestBody.trim().length === 0 ? "" : newline;
+  return `${text.slice(0, bodyEnd)}${prefix}${contract}${suffix}${text.slice(bodyEnd)}`;
+}
+
+function upsertProvidesIntoContract(
+  contractXml: string,
+  symbols: ReadonlyArray<{ kind: SymbolKind; ident: string }>,
+  indentUnit: string,
+  newline: string,
+  baseIndent: string
+): string | undefined {
+  const provideRegex = /<\s*Provides\b[^>]*>([\s\S]*?)<\/\s*Provides\s*>/i;
+  const provideMatch = provideRegex.exec(contractXml);
+  if (!provideMatch || typeof provideMatch.index !== "number") {
+    const block = buildProvidesBlock(baseIndent, indentUnit, symbols, newline);
+    const closeRegex = /<\/\s*ContributionContract\s*>/i;
+    const closeMatch = closeRegex.exec(contractXml);
+    if (!closeMatch || typeof closeMatch.index !== "number") {
+      return undefined;
+    }
+    return `${contractXml.slice(0, closeMatch.index)}${newline}${block}${newline}${baseIndent}</ContributionContract>`;
+  }
+
+  const existingKeys = new Set<string>();
+  const symbolRegex = /<\s*Symbol\b([^>]*?)\/>/gi;
+  for (const symbolMatch of (provideMatch[0] ?? "").matchAll(symbolRegex)) {
+    const attrs = parseAttributes(symbolMatch[1] ?? "");
+    const kind = attrs.get("kind");
+    const ident = attrs.get("ident");
+    if (!kind || !ident) {
+      continue;
+    }
+    existingKeys.add(`${kind}:${ident}`);
+  }
+  const missing = symbols.filter((symbol) => !existingKeys.has(`${symbol.kind}:${symbol.ident}`));
+  if (missing.length === 0) {
+    return contractXml;
+  }
+
+  const closeProvidesRegex = /<\/\s*Provides\s*>/i;
+  const closeMatch = closeProvidesRegex.exec(contractXml);
+  if (!closeMatch || typeof closeMatch.index !== "number") {
+    return contractXml;
+  }
+  const symbolIndent = `${baseIndent}${indentUnit}`;
+  const lines = missing.map((symbol) => `${symbolIndent}<Symbol Kind="${symbol.kind}" Ident="${symbol.ident}" />`).join(newline);
+  const insertion = `${newline}${lines}`;
+  return `${contractXml.slice(0, closeMatch.index)}${insertion}${contractXml.slice(closeMatch.index)}`;
+}
+
+function buildContributionContractBlock(
+  contractIndent: string,
+  indentUnit: string,
+  contributionName: string,
+  symbols: ReadonlyArray<{ kind: SymbolKind; ident: string }>,
+  newline: string
+): string {
+  const providesBlock = buildProvidesBlock(`${contractIndent}${indentUnit}`, indentUnit, symbols, newline);
+  return `${contractIndent}<ContributionContract For="${contributionName}">${newline}${providesBlock}${newline}${contractIndent}</ContributionContract>`;
+}
+
+function buildProvidesBlock(
+  providesIndent: string,
+  indentUnit: string,
+  symbols: ReadonlyArray<{ kind: SymbolKind; ident: string }>,
+  newline: string
+): string {
+  const symbolIndent = `${providesIndent}${indentUnit}`;
+  const lines = symbols.map((symbol) => `${symbolIndent}<Symbol Kind="${symbol.kind}" Ident="${symbol.ident}" />`);
+  return `${providesIndent}<Provides>${newline}${lines.join(newline)}${newline}${providesIndent}</Provides>`;
+}
+
+function detectIndentUnit(text: string): string {
+  if (/\n\t+<\w/.test(text)) {
+    return "\t";
+  }
+  return "  ";
+}
+
+function positionAtInText(text: string, offset: number): vscode.Position {
+  const safe = Math.max(0, Math.min(text.length, offset));
+  let line = 0;
+  let lineStart = 0;
+  for (let i = 0; i < safe; i++) {
+    if (text.charCodeAt(i) === 10) {
+      line++;
+      lineStart = i + 1;
+    }
+  }
+  return new vscode.Position(line, safe - lineStart);
 }
 
 function extractPrimitiveSlotFromMessage(message: string): string | undefined {

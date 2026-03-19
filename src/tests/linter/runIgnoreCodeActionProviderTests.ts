@@ -143,6 +143,25 @@ class MockTextDocument {
     const lineStart = this.lineStarts[Math.max(0, Math.min(this.lineCount - 1, position.line))] ?? 0;
     return Math.max(0, Math.min(this.text.length, lineStart + position.character));
   }
+
+  public positionAt(offset: number): Position {
+    const safe = Math.max(0, Math.min(this.text.length, offset));
+    let low = 0;
+    let high = this.lineStarts.length - 1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      const start = this.lineStarts[mid];
+      const next = mid + 1 < this.lineStarts.length ? this.lineStarts[mid + 1] : Number.MAX_SAFE_INTEGER;
+      if (safe < start) {
+        high = mid - 1;
+      } else if (safe >= next) {
+        low = mid + 1;
+      } else {
+        return new Position(mid, safe - start);
+      }
+    }
+    return new Position(0, safe);
+  }
 }
 
 const workspaceRoot = path.resolve(__dirname, "../../../tests/fixtures/linter");
@@ -207,6 +226,7 @@ function run(): void {
   testPrimitiveMissingSlotAction(provider);
   testPrimitiveMissingParamAction(provider);
   testPrimitiveCycleAction(provider);
+  testMissingExplicitProvidesAction(provider);
 
   console.log("Ignore code action provider tests passed.");
 }
@@ -285,6 +305,32 @@ function testPrimitiveCycleAction(provider: InstanceType<typeof SfpXmlIgnoreCode
   assert.ok(cycleAction, "Expected remove cyclic UsePrimitive quick-fix action.");
   const replace = cycleAction?.edit?.operations.find((op) => op.type === "replace");
   assert.ok(replace && replace.type === "replace" && replace.text === "", "Cycle quick-fix should remove UsePrimitive node.");
+}
+
+function testMissingExplicitProvidesAction(provider: InstanceType<typeof SfpXmlIgnoreCodeActionProvider>): void {
+  const snippet = "<Contribution Name=\"Buttons\"><Button Ident=\"SaveButton\" /></Contribution>";
+  const text = `<Feature>\n  <${"Manifest"} />\n  ${snippet}\n</Feature>`;
+  const doc = createDoc("tests/fixtures/linter/XML_Components/Shared/CodeActionMissingProvides.feature.xml", text);
+  const range = findSnippetRange(text, "Name=\"Buttons\"");
+  const diagnostic = new Diagnostic(
+    range,
+    "[missing-explicit-provides] Contribution 'Buttons' contains symbol-like XML with Ident, but has no explicit <Provides>."
+  );
+  diagnostic.source = "sfp-xml-linter";
+  diagnostic.code = "missing-explicit-provides";
+
+  const actions = provider.provideCodeActions(
+    doc as unknown as import("vscode").TextDocument,
+    range as unknown as import("vscode").Range,
+    toCodeActionContext([diagnostic])
+  ) as CodeAction[];
+  const addAction = actions.find((action) => action.title === "Add explicit <Provides> symbols");
+  assert.ok(addAction, "Expected add explicit provides quick-fix action.");
+  const editOp = addAction?.edit?.operations.find((op) => op.type === "replace" || op.type === "insert");
+  assert.ok(editOp, "Expected insert/replace edit for contribution node.");
+  const editedText = editOp?.type === "replace" || editOp?.type === "insert" ? editOp.text : "";
+  assert.ok(editedText.includes("<Provides>"), "Quick-fix should add <Provides> block.");
+  assert.ok(editedText.includes("<Symbol Kind=\"button\" Ident=\"SaveButton\" />"), "Quick-fix should include inferred button symbol.");
 }
 
 function createDoc(relPath: string, text: string): MockTextDocument {

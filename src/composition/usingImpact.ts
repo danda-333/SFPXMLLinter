@@ -193,15 +193,36 @@ export function populateUsingInsertTraceFromText(
   const counts = new Map<string, number>();
   const traces = new Map<string, import("../indexer/xmlFacts").UsingContributionInsertTrace>();
   const placeholderCounts = new Map<string, number>();
+  const wildcardPlaceholderCounts = new Map<string, number>();
+  const includeCounts = new Map<string, number>();
+  const wildcardIncludeCounts = new Map<string, number>();
   for (const ref of facts.placeholderReferences) {
     const componentKey = ref.componentKey;
     const contributionName = (ref.contributionValue ?? "").trim();
-    if (!componentKey || !contributionName) {
+    if (!componentKey) {
       continue;
     }
 
-    const key = `${componentKey}::${contributionName}`;
-    placeholderCounts.set(key, (placeholderCounts.get(key) ?? 0) + 1);
+    if (contributionName) {
+      const key = `${componentKey}::${contributionName}`;
+      placeholderCounts.set(key, (placeholderCounts.get(key) ?? 0) + 1);
+    } else {
+      wildcardPlaceholderCounts.set(componentKey, (wildcardPlaceholderCounts.get(componentKey) ?? 0) + 1);
+    }
+  }
+  for (const includeRef of facts.includeReferences) {
+    const componentKey = includeRef.componentKey;
+    const contributionName = (includeRef.sectionValue ?? "").trim();
+    if (!componentKey) {
+      continue;
+    }
+
+    if (contributionName) {
+      const key = `${componentKey}::${contributionName}`;
+      includeCounts.set(key, (includeCounts.get(key) ?? 0) + 1);
+    } else {
+      wildcardIncludeCounts.set(componentKey, (wildcardIncludeCounts.get(componentKey) ?? 0) + 1);
+    }
   }
 
   const processedUsingKeys = new Set<string>();
@@ -228,7 +249,11 @@ export function populateUsingInsertTraceFromText(
     for (const contribution of contributions) {
       const key = `${usingRef.componentKey}::${contribution.contributionName}`;
       const insertMode = (contribution.insert ?? "").trim().toLowerCase();
-      const placeholderCount = placeholderCounts.get(key) ?? 0;
+      const placeholderCount =
+        (placeholderCounts.get(key) ?? 0) +
+        (includeCounts.get(key) ?? 0) +
+        (wildcardPlaceholderCounts.get(usingRef.componentKey) ?? 0) +
+        (wildcardIncludeCounts.get(usingRef.componentKey) ?? 0);
 
       if (insertMode === "placeholder") {
         counts.set(key, placeholderCount);

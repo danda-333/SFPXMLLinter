@@ -51,7 +51,9 @@ export interface IndexedComponentContributionSummary {
   root?: "form" | "workflow" | "other";
   rootExpression?: string;
   insert?: string;
+  isInsertOptional?: boolean;
   targetXPath?: string;
+  expectsXPath?: Set<string>;
   allowMultipleInserts?: boolean;
   hasContent: boolean;
   formControlCount: number;

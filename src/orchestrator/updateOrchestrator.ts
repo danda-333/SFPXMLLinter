@@ -38,10 +38,43 @@ export interface SavePerformanceEvent {
 
 export class UpdateOrchestrator {
   private saveCycleCounter = 0;
+  private readonly saveTaskByUri = new Map<string, Promise<void>>();
 
   public constructor(private readonly hooks: UpdateOrchestratorHooks) {}
 
+  public async waitForSaveIdle(): Promise<void> {
+    while (true) {
+      const pendingSaves = [...this.saveTaskByUri.values()];
+      if (pendingSaves.length === 0) {
+        return;
+      }
+      await Promise.all([...pendingSaves].map((task) => task.catch(() => undefined)));
+    }
+  }
+
   public async handleDocumentSave(document: vscode.TextDocument, hadContentChanges: boolean): Promise<void> {
+    const key = document.uri.toString();
+    const prev = this.saveTaskByUri.get(key) ?? Promise.resolve();
+    const next = prev
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          await this.runDocumentSave(document, hadContentChanges);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.hooks.log(`save pipeline ERROR ${vscode.workspace.asRelativePath(document.uri, false)}: ${message}`);
+        }
+      })
+      .finally(() => {
+        if (this.saveTaskByUri.get(key) === next) {
+          this.saveTaskByUri.delete(key);
+        }
+      });
+
+    this.saveTaskByUri.set(key, next);
+  }
+
+  private async runDocumentSave(document: vscode.TextDocument, hadContentChanges: boolean): Promise<void> {
     if (!hadContentChanges) {
       return;
     }
@@ -101,14 +134,26 @@ export class UpdateOrchestrator {
 
     if (affectedFormIdents.size > 0) {
       const sourceLabel = `${cycleId}:${refresh.rootKind}:${rel}`;
+      const dependencyStartedAt = Date.now();
       const dependency = this.hooks.enqueueDependentValidationForFormIdents(affectedFormIdents, sourceLabel);
+      if (dependency) {
+        this.hooks.log(
+          `${cycleId} dependency validation queued forms=${dependency.forms}, files=${dependency.files}, immediateOpen=${dependency.immediateOpen}, low=${dependency.queuedLow}, in ${dependency.durationMs} ms`
+        );
+      }
       this.hooks.onSavePerformance?.({
         cycleId,
         phase: "dependency-queued",
         document,
         elapsedMs: Date.now() - cycleStartedAt,
         refresh,
-        dependency
+        dependency: dependency ?? {
+          forms: affectedFormIdents.size,
+          files: 0,
+          immediateOpen: 0,
+          queuedLow: 0,
+          durationMs: Date.now() - dependencyStartedAt
+        }
       });
     }
     const totalMs = Date.now() - cycleStartedAt;

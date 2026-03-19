@@ -76,7 +76,9 @@ export interface IndexedComponentContributionSummary {
 
 export interface WorkspaceIndex {
   formsByIdent: Map<string, IndexedForm>;
+  formIdentByUri: Map<string, string>;
   componentsByKey: Map<string, IndexedComponent>;
+  componentKeyByUri: Map<string, string>;
   componentKeysByBaseName: Map<string, Set<string>>;
   parsedFactsByUri: Map<string, ParsedDocumentFacts>;
   hasIgnoreDirectiveByUri: Map<string, boolean>;

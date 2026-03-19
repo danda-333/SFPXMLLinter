@@ -10,7 +10,7 @@ export interface TemplateBuildPlannerServiceDeps {
   logBuild: (message: string) => void;
   queueTemplateBuild: (workspaceFolder: vscode.WorkspaceFolder, targetPath?: string) => Promise<void>;
   queueTemplateBuildBatch: (workspaceFolder: vscode.WorkspaceFolder, targetPaths: readonly string[]) => Promise<void>;
-  queueTemplateBuildBatchDeferred: (workspaceFolder: vscode.WorkspaceFolder, targetPaths: readonly string[]) => void;
+  queueTemplateBuildBatchDeferred: (workspaceFolder: vscode.WorkspaceFolder, targetPaths: readonly string[]) => Promise<void>;
   waitForTemplateBuildIdle: () => Promise<void>;
   getOpenTemplatePaths: (workspaceFolder: vscode.WorkspaceFolder) => ReadonlySet<string>;
   collectTemplatePathsForFormIdentFromIndex: (formIdent: string) => string[];
@@ -46,12 +46,12 @@ export class TemplateBuildPlannerService {
     return { immediate, deferred };
   }
 
-  private queueDeferredTemplateTargets(workspaceFolder: vscode.WorkspaceFolder, targetPaths: readonly string[]): void {
+  private async queueDeferredTemplateTargets(workspaceFolder: vscode.WorkspaceFolder, targetPaths: readonly string[]): Promise<void> {
     if (targetPaths.length === 0) {
       return;
     }
     this.deps.logBuild(`Dependents deferred: ${targetPaths.length}`);
-    this.deps.queueTemplateBuildBatchDeferred(workspaceFolder, targetPaths);
+    await this.deps.queueTemplateBuildBatchDeferred(workspaceFolder, targetPaths);
   }
 
   public async maybeAutoBuildTemplates(document: vscode.TextDocument, componentKeyHint?: string): Promise<void> {
@@ -108,7 +108,10 @@ export class TemplateBuildPlannerService {
         this.enqueueTemplateTargets(workspaceFolder, immediate);
         await this.deps.waitForTemplateBuildIdle();
       }
-      this.queueDeferredTemplateTargets(workspaceFolder, deferred);
+      await this.queueDeferredTemplateTargets(workspaceFolder, deferred);
+      if (deferred.length > 0) {
+        await this.deps.waitForTemplateBuildIdle();
+      }
       return;
     }
 
@@ -129,6 +132,9 @@ export class TemplateBuildPlannerService {
       this.enqueueTemplateTargets(workspaceFolder, immediate);
       await this.deps.waitForTemplateBuildIdle();
     }
-    this.queueDeferredTemplateTargets(workspaceFolder, deferred);
+    await this.queueDeferredTemplateTargets(workspaceFolder, deferred);
+    if (deferred.length > 0) {
+      await this.deps.waitForTemplateBuildIdle();
+    }
   }
 }

@@ -89,6 +89,7 @@ async function testBuildCompletesBeforeDependentValidationEnqueue(): Promise<voi
     } as never,
     true
   );
+  await orchestrator.waitForSaveIdle();
 
   assert.deepEqual(callOrder, ["refresh", "build-start", "build-done", "enqueue"]);
 }
@@ -156,6 +157,7 @@ async function testNonRelevantUriOnlyTriggersBuild(): Promise<void> {
   });
 
   await orchestrator.handleDocumentSave({ uri: Uri.file("C:/repo/Other.txt") } as never, true);
+  await orchestrator.waitForSaveIdle();
   assert.deepEqual(calls, ["build"]);
 }
 

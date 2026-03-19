@@ -32,7 +32,8 @@ export class TemplateBuildRunOptionsFactory {
       relativeTemplatePath: string,
       outputRelativePath: string,
       outputFsPath: string,
-      mutations: readonly TemplateMutationRecord[]
+      mutations: readonly TemplateMutationRecord[],
+      renderedOutputText?: string
     ) => void
   ): BuildRunOptions {
     const onTemplateEvaluatedSafe =

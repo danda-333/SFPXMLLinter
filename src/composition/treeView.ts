@@ -114,6 +114,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
   private refreshTimer: NodeJS.Timeout | undefined;
   private readonly refreshDebounceMs = 75;
   private cachedRootTree: CachedRootTree | undefined;
+  private buildState: "ready" | "building" = "ready";
 
   public readonly onDidChangeTreeData = this.didChangeTreeDataEmitter.event;
 
@@ -133,6 +134,14 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       this.cachedRootTree = undefined;
       this.didChangeTreeDataEmitter.fire();
     }, this.refreshDebounceMs);
+  }
+
+  public setBuildState(state: "ready" | "building"): void {
+    if (this.buildState === state) {
+      return;
+    }
+    this.buildState = state;
+    this.didChangeTreeDataEmitter.fire();
   }
 
   public setExpanded(nodeId: string | undefined, expanded: boolean): void {
@@ -193,6 +202,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
     if (!document || document.languageId !== "xml") {
       this.cachedRootTree = undefined;
       return [
+        this.buildStatusNode(),
         infoNode("Open an XML file to inspect feature composition and final injected symbols.")
       ];
     }
@@ -204,6 +214,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
     if (!facts) {
       this.cachedRootTree = undefined;
       return [
+        this.buildStatusNode(),
         infoNode("Index facts are not available for this document yet. Run Revalidate Workspace/Project.")
       ];
     }
@@ -218,7 +229,7 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       cached.registryRef === registry &&
       cached.relativePath === relPath
     ) {
-      return cached.nodes;
+      return [this.buildStatusNode(), ...cached.nodes];
     }
 
     const nodes = buildCompositionProjection<CompositionTreeNode>(
@@ -248,7 +259,27 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       relativePath: relPath,
       nodes
     };
-    return nodes;
+    return [this.buildStatusNode(), ...nodes];
+  }
+
+  private buildStatusNode(): InfoNode {
+    if (this.buildState === "building") {
+      return {
+        type: "info",
+        id: "status:build",
+        label: "Build: Running",
+        description: "template build in progress",
+        icon: new vscode.ThemeIcon("sync~spin")
+      };
+    }
+
+    return {
+      type: "info",
+      id: "status:build",
+      label: "Build: Ready",
+      description: "outputs are up to date",
+      icon: new vscode.ThemeIcon("pass")
+    };
   }
 }
 

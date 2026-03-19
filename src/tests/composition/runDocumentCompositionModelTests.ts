@@ -132,7 +132,9 @@ function run(): void {
 function createEmptyIndex(): WorkspaceIndex {
   return {
     formsByIdent: new Map(),
+    formIdentByUri: new Map(),
     componentsByKey: new Map(),
+    componentKeyByUri: new Map(),
     componentKeysByBaseName: new Map(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),

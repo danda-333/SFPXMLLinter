@@ -466,7 +466,11 @@ function createIndex(): import("../../indexer/types").WorkspaceIndex {
         } satisfies import("../../indexer/types").IndexedForm
       ]
     ]),
+    formIdentByUri: new Map([[formUri.toString(), "FormA"]]),
     componentsByKey,
+    componentKeyByUri: new Map(
+      [...componentsByKey.values()].map((component) => [component.uri.toString(), component.key] as const)
+    ),
     componentKeysByBaseName,
     parsedFactsByUri: new Map([
       [formUri.toString(), parseDocumentFacts(formDocument as unknown as import("vscode").TextDocument)]

@@ -15,6 +15,7 @@ export type BuildTemplateMutationTelemetry = {
   outputRelativePath: string;
   outputFsPath: string;
   mutations: readonly TemplateMutationRecord[];
+  renderedOutputText?: string;
 };
 
 export interface CompositionTelemetryCollector {
@@ -30,7 +31,8 @@ export interface CompositionTelemetryCollector {
     relativeTemplatePath: string,
     outputRelativePath: string,
     outputFsPath: string,
-    mutations: readonly TemplateMutationRecord[]
+    mutations: readonly TemplateMutationRecord[],
+    renderedOutputText?: string
   ) => void;
 }
 
@@ -65,12 +67,14 @@ export class CompositionTelemetryService {
         relativeTemplatePath: string,
         outputRelativePath: string,
         outputFsPath: string,
-        mutations: readonly TemplateMutationRecord[]
+        mutations: readonly TemplateMutationRecord[],
+        renderedOutputText?: string
       ) => {
         mutationsByTemplate.set(relativeTemplatePath, {
           outputRelativePath,
           outputFsPath,
-          mutations
+          mutations,
+          renderedOutputText
         });
       }
     };

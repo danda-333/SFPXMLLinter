@@ -16,7 +16,8 @@ export interface TemplateBuildTelemetryCollector {
     relativeTemplatePath: string,
     outputRelativePath: string,
     outputFsPath: string,
-    mutations: readonly any[]
+    mutations: readonly any[],
+    renderedOutputText?: string
   ) => void;
 }
 
@@ -46,6 +47,8 @@ export interface TemplateBuildOrchestratorDeps {
     mode: TemplateBuilderMode
   ) => void;
   onAutoBuildPerformance?: (stats: TemplateBuildAutoPerformanceStats) => void;
+  onBuildOutputsReady?: (stats: TemplateBuildOutputsReadyStats) => void;
+  onBuildWorkerStateChanged?: (state: "idle" | "running") => void;
 }
 
 export interface TemplateBuildAutoPerformanceStats {
@@ -67,6 +70,13 @@ export interface TemplateBuildAutoPerformanceStats {
     runtimeRefreshedCount: number;
     runtimeRefreshDeferred: boolean;
   };
+}
+
+export interface TemplateBuildOutputsReadyStats {
+  durationMs: number;
+  executedFullBuild: boolean;
+  builtTargetCount: number;
+  summary: BuildSummaryLike;
 }
 
 interface BuildSummaryLike {
@@ -135,6 +145,7 @@ export class TemplateBuildOrchestrator {
   private async runWorker(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
     const workerStartedAt = Date.now();
     this.isTemplateBuildRunning = true;
+    this.deps.onBuildWorkerStateChanged?.("running");
     this.deps.logBuild("Worker START");
     const mode = this.deps.getTemplateBuilderMode();
     let executedBuild = false;
@@ -219,28 +230,20 @@ export class TemplateBuildOrchestrator {
             );
             const runtimeRefreshStartedAt = Date.now();
             const updatedMutations = filterMutationTelemetryByTemplateKeys(telemetry.mutationsByTemplate, updatedTemplateKeys);
-            runtimeRefreshDeferred = true;
-            this.deps.logIndex(
-              `POST-BUILD incremental runtime refresh deferred outputs=${updatedMutations.size}`
-            );
-            void this.deps
-              .refreshRuntimeIndexFromBuildOutputs(updatedMutations)
-              .then((count) => {
-                const duration = Date.now() - runtimeRefreshStartedAt;
-                if (count > 0) {
-                  this.deps.logIndex(
-                    `POST-BUILD incremental runtime refresh DONE count=${count} in ${duration} ms`
-                  );
-                } else {
-                  this.deps.logIndex(
-                    `POST-BUILD incremental runtime refresh DONE count=0 in ${duration} ms`
-                  );
-                }
-              })
-              .catch((error) => {
-                const message = error instanceof Error ? error.message : String(error);
-                this.deps.logIndex(`POST-BUILD incremental runtime refresh ERROR: ${message}`);
-              });
+            runtimeRefreshDeferred = false;
+            const runtimeCount = await this.deps.refreshRuntimeIndexFromBuildOutputs(updatedMutations);
+            postBuildRuntimeRefreshMs += Date.now() - runtimeRefreshStartedAt;
+            const duration = Date.now() - runtimeRefreshStartedAt;
+            if (runtimeCount > 0) {
+              this.deps.logIndex(
+                `POST-BUILD incremental runtime refresh DONE count=${runtimeCount} in ${duration} ms`
+              );
+            } else {
+              this.deps.logIndex(
+                `POST-BUILD incremental runtime refresh DONE count=0 in ${duration} ms`
+              );
+            }
+            runtimeRefreshedCount = runtimeCount;
           }
         }
 
@@ -272,6 +275,12 @@ export class TemplateBuildOrchestrator {
             runtimeRefreshDeferred
           }
         });
+        this.deps.onBuildOutputsReady?.({
+          durationMs: Date.now() - workerStartedAt,
+          executedFullBuild,
+          builtTargetCount: builtTargetPaths.size,
+          summary: { ...aggregatedSummary }
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -279,6 +288,7 @@ export class TemplateBuildOrchestrator {
       this.deps.logBuild(`BUILD ERROR: ${message}`);
     } finally {
       this.isTemplateBuildRunning = false;
+      this.deps.onBuildWorkerStateChanged?.("idle");
       this.deps.logBuild("Worker IDLE");
       this.resolveIdleWaiters();
     }

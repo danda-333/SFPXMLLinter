@@ -444,7 +444,9 @@ function assertLacksRule(diagnostics: readonly import("vscode").Diagnostic[], ru
 function createEmptyIndex(): import("../../indexer/types").WorkspaceIndex {
   return {
     formsByIdent: new Map(),
+    formIdentByUri: new Map(),
     componentsByKey: new Map(),
+    componentKeyByUri: new Map(),
     componentKeysByBaseName: new Map(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),

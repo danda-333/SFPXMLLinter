@@ -251,7 +251,9 @@ function computeLineStarts(text: string): number[] {
 function createEmptyIndex(): import("../../indexer/types").WorkspaceIndex {
   return {
     formsByIdent: new Map(),
+    formIdentByUri: new Map(),
     componentsByKey: new Map(),
+    componentKeyByUri: new Map(),
     componentKeysByBaseName: new Map(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),

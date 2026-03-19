@@ -37,9 +37,11 @@ export interface BuildRunOptions {
     relativeTemplatePath: string,
     outputRelativePath: string,
     outputFsPath: string,
-    mutations: readonly TemplateMutationRecord[]
+    mutations: readonly TemplateMutationRecord[],
+    renderedOutputText?: string
   ) => void;
   onPerformanceStats?: (stats: BuildRunPerformanceStats) => void;
+  buildConcurrency?: number;
   inheritedUsingsByFormIdent?: ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]>;
 }
 
@@ -57,11 +59,14 @@ export interface BuildRunIoStats {
   readCount: number;
   readBytes: number;
   readMs: number;
+  readWallMs: number;
   writeCount: number;
   writeBytes: number;
   writeMs: number;
+  writeWallMs: number;
   statCount: number;
   statMs: number;
+  statWallMs: number;
 }
 
 export interface BuildRunPerformanceStats {
@@ -83,6 +88,7 @@ export interface TemplateMutationTelemetryEntry {
   outputRelativePath: string;
   outputFsPath: string;
   mutations: readonly TemplateMutationRecord[];
+  renderedOutputText?: string;
 }
 
 interface ParsedTemplateRoot {
@@ -108,6 +114,7 @@ interface CachedTemplateBuildResult {
   templateText: string;
   debugLines: readonly string[];
   mutations: readonly TemplateMutationRecord[];
+  renderedOutputText?: string;
   outputRelativePath: string;
   outputFsPath: string;
   outputMtimeMs: number;
@@ -117,8 +124,10 @@ interface CachedTemplateBuildResult {
 interface CachedComponentLibrarySnapshot {
   signature: string;
   library: ReturnType<typeof buildComponentLibrary>;
+  sourceByKey: Map<string, { text: string; origin: string }>;
   cacheHit: boolean;
   dirty: boolean;
+  dirtyPaths?: Set<string>;
 }
 
 interface BuildCacheStats {
@@ -141,13 +150,18 @@ export class BuildXmlTemplatesService {
   private readonly templateTraceCache = new Map<string, CachedTemplateTraceResult>();
   private readonly templateBuildFastCache = new Map<string, CachedTemplateBuildResult>();
 
-  public invalidateComponentLibraryCache(workspaceFolder: vscode.WorkspaceFolder): void {
+  public invalidateComponentLibraryCache(workspaceFolder: vscode.WorkspaceFolder, changedPath?: string): void {
     const workspaceKey = workspaceKeyFromFolder(workspaceFolder);
     const cached = this.componentLibraryCacheByWorkspace.get(workspaceKey);
     if (!cached) {
       return;
     }
     cached.dirty = true;
+    if (changedPath && changedPath.trim().length > 0) {
+      const dirtyPaths = cached.dirtyPaths ?? new Set<string>();
+      dirtyPaths.add(normalizePath(changedPath));
+      cached.dirtyPaths = dirtyPaths;
+    }
     this.componentLibraryCacheByWorkspace.set(workspaceKey, cached);
   }
 
@@ -280,19 +294,24 @@ export class BuildXmlTemplatesService {
     const targetBaseName = relNoExt.split("/").pop() ?? relNoExt;
 
     const templateUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Templates/**/*.xml"));
-    const out = new Set<string>();
+    const exact = new Set<string>();
+    const byBaseName = new Set<string>();
 
     for (const uri of templateUris) {
       const text = await readWorkspaceTextFile(uri);
       for (const usingRef of extractUsingComponentRefs(text)) {
-        if (usingRef === relNoExt || usingRef.split("/").pop() === targetBaseName) {
-          out.add(uri.fsPath);
+        if (usingRef === relNoExt) {
+          exact.add(uri.fsPath);
           break;
+        }
+        if (usingRef.split("/").pop() === targetBaseName) {
+          byBaseName.add(uri.fsPath);
         }
       }
     }
 
-    return [...out].sort((a, b) => a.localeCompare(b));
+    const out = exact.size > 0 ? [...exact] : [...byBaseName];
+    return out.sort((a, b) => a.localeCompare(b));
   }
 
   private async runInternal(
@@ -329,8 +348,11 @@ export class BuildXmlTemplatesService {
     const summary: BuildRunSummary = { updated: 0, skipped: 0, errors: 0 };
     const total = templateUris.length;
     let current = 0;
+    const isTargetedBuild = !!targetPathOrPaths;
+    const desiredConcurrency = Math.max(1, Math.trunc(options.buildConcurrency ?? (isTargetedBuild ? 4 : 2)));
+    const concurrency = Math.min(desiredConcurrency, Math.max(1, total));
 
-    for (const templateUri of templateUris) {
+    await forEachWithConcurrency(templateUris, concurrency, async (templateUri) => {
       current++;
       const relPath = relativeTemplatePath(workspaceFolder, templateUri);
       options.onLogLine?.(`[${current}/${total}] ${relPath}`);
@@ -351,7 +373,7 @@ export class BuildXmlTemplatesService {
         const fastCacheHit = await this.tryFastSkipFromCache(fastCacheKey, fastSignature, outputUri, relPath, options, summary, ioStats);
         if (fastCacheHit) {
           cacheStats.fastHit++;
-          continue;
+          return;
         }
         cacheStats.fastMiss++;
 
@@ -410,7 +432,7 @@ export class BuildXmlTemplatesService {
           options.onLogLine?.("SKIPPED");
           options.onFileStatus?.(relPath, "nochange");
           options.onTemplateEvaluated?.(relPath, "nochange", templateText, debugLines);
-          options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations);
+          options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations, rendered);
           await this.updateFastCacheEntry(
             fastCacheKey,
             fastSignature,
@@ -419,9 +441,10 @@ export class BuildXmlTemplatesService {
             debugLines,
             outputRelativePath,
             renderResult.mutations,
+            rendered,
             ioStats
           );
-          continue;
+          return;
         }
 
         await ensureParentDirectory(outputUri);
@@ -430,7 +453,7 @@ export class BuildXmlTemplatesService {
         options.onLogLine?.("UPDATED");
         options.onFileStatus?.(relPath, "update");
         options.onTemplateEvaluated?.(relPath, "update", templateText, debugLines);
-        options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations);
+        options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations, rendered);
         await this.updateFastCacheEntry(
           fastCacheKey,
           fastSignature,
@@ -439,6 +462,7 @@ export class BuildXmlTemplatesService {
           debugLines,
           outputRelativePath,
           renderResult.mutations,
+          rendered,
           ioStats
         );
       } catch (error) {
@@ -447,7 +471,7 @@ export class BuildXmlTemplatesService {
         options.onLogLine?.(`ERROR: ${message}`);
         options.onFileStatus?.(relPath, "error");
       }
-    }
+    });
 
     options.onLogLine?.(
       `Done. Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}, Cache: fast=${cacheStats.fastHit}/${cacheStats.fastHit + cacheStats.fastMiss}, trace=${cacheStats.traceHit}/${cacheStats.traceHit + cacheStats.traceMiss}, componentLibrary=${componentLibrarySnapshot.cacheHit ? "hit" : "miss"}`
@@ -490,14 +514,46 @@ export class BuildXmlTemplatesService {
       return {
         signature: cached.signature,
         library: cached.library,
+        sourceByKey: cached.sourceByKey,
         cacheHit: true,
-        dirty: false
+        dirty: false,
+        dirtyPaths: cached.dirtyPaths
       };
+    }
+    if (cached?.dirty && cached.sourceByKey && cached.sourceByKey.size > 0 && cached.dirtyPaths && cached.dirtyPaths.size > 0) {
+      const sourceByKey = new Map(cached.sourceByKey);
+      for (const dirtyPath of cached.dirtyPaths) {
+        const key = componentLikeKeyFromFsPath(workspaceFolder, dirtyPath);
+        if (!key) {
+          continue;
+        }
+        try {
+          const text = await readWorkspaceTextFileTracked(vscode.Uri.file(dirtyPath), ioStats);
+          sourceByKey.set(key, { text, origin: dirtyPath });
+        } catch {
+          sourceByKey.delete(key);
+        }
+      }
+      const componentSources = [...sourceByKey.entries()]
+        .map(([key, value]) => ({ key, text: value.text, origin: value.origin }))
+        .sort((a, b) => a.key.localeCompare(b.key));
+      const signature = hashText(componentSources.map((item) => `${item.key}:${hashText(item.text)}`).join(";"));
+      const snapshot: CachedComponentLibrarySnapshot = {
+        signature,
+        library: buildComponentLibrary(componentSources),
+        sourceByKey,
+        cacheHit: false,
+        dirty: false,
+        dirtyPaths: new Set()
+      };
+      this.componentLibraryCacheByWorkspace.set(workspaceKey, snapshot);
+      return snapshot;
     }
     const componentUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Components/**/*.xml"));
     const primitiveUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, "XML_Primitives/**/*.xml"));
     const allUris = [...componentUris, ...primitiveUris];
     const componentSources: Array<{ key: string; text: string; origin: string }> = [];
+    const sourceByKey = new Map<string, { text: string; origin: string }>();
     for (const uri of allUris) {
       const key = componentLikeKeyFromUri(workspaceFolder, uri);
       if (!key) {
@@ -509,14 +565,17 @@ export class BuildXmlTemplatesService {
         text,
         origin: uri.fsPath
       });
+      sourceByKey.set(key, { text, origin: uri.fsPath });
     }
     componentSources.sort((a, b) => a.key.localeCompare(b.key));
     const signature = hashText(componentSources.map((item) => `${item.key}:${hashText(item.text)}`).join(";"));
     const snapshot: CachedComponentLibrarySnapshot = {
       signature,
       library: buildComponentLibrary(componentSources),
+      sourceByKey,
       cacheHit: false,
-      dirty: false
+      dirty: false,
+      dirtyPaths: new Set()
     };
     this.componentLibraryCacheByWorkspace.set(workspaceKey, snapshot);
     return snapshot;
@@ -591,7 +650,8 @@ export class BuildXmlTemplatesService {
       relativeTemplatePath,
       cached.outputRelativePath,
       cached.outputFsPath,
-      cached.mutations
+      cached.mutations,
+      cached.renderedOutputText
     );
     return true;
   }
@@ -604,6 +664,7 @@ export class BuildXmlTemplatesService {
     debugLines: readonly string[],
     outputRelativePath: string,
     mutations: readonly TemplateMutationRecord[],
+    renderedOutputText: string | undefined,
     ioStats?: BuildRunIoStats
   ): Promise<void> {
     const stat = await safeStatTracked(outputUri, ioStats);
@@ -615,12 +676,42 @@ export class BuildXmlTemplatesService {
       templateText,
       debugLines: [...debugLines],
       mutations: [...mutations],
+      renderedOutputText,
       outputRelativePath,
       outputFsPath: outputUri.fsPath,
       outputMtimeMs: stat.mtime,
       outputSize: stat.size
     });
   }
+}
+
+async function forEachWithConcurrency<T>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) {
+    return;
+  }
+
+  const limit = Math.max(1, Math.min(concurrency, items.length));
+  let cursor = 0;
+  const runners: Promise<void>[] = [];
+  for (let i = 0; i < limit; i++) {
+    runners.push(
+      (async () => {
+        while (true) {
+          const index = cursor++;
+          if (index >= items.length) {
+            return;
+          }
+          await worker(items[index], index);
+        }
+      })()
+    );
+  }
+
+  await Promise.all(runners);
 }
 
 async function collectTemplateTargets(
@@ -893,6 +984,21 @@ function parseBooleanAttribute(value: string | undefined): boolean {
   return normalized === "true" || normalized === "1" || normalized === "yes";
 }
 
+function componentLikeKeyFromFsPath(workspaceFolder: vscode.WorkspaceFolder, fsPath: string): string | undefined {
+  const root = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
+  const primitivesRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Primitives"));
+  const current = normalizePath(fsPath);
+  if (current.startsWith(`${root}/`)) {
+    const rel = current.slice(root.length + 1);
+    return stripXmlComponentExtension(rel);
+  }
+  if (current.startsWith(`${primitivesRoot}/`)) {
+    const rel = current.slice(primitivesRoot.length + 1);
+    return stripXmlComponentExtension(rel);
+  }
+  return undefined;
+}
+
 function formatSummaryText(summary: BuildRunSummary): string {
   return `Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`;
 }
@@ -964,11 +1070,14 @@ function createEmptyIoStats(): BuildRunIoStats {
     readCount: 0,
     readBytes: 0,
     readMs: 0,
+    readWallMs: 0,
     writeCount: 0,
     writeBytes: 0,
     writeMs: 0,
+    writeWallMs: 0,
     statCount: 0,
-    statMs: 0
+    statMs: 0,
+    statWallMs: 0
   };
 }
 
@@ -989,10 +1098,12 @@ async function readWorkspaceTextFile(uri: vscode.Uri): Promise<string> {
 async function readWorkspaceTextFileTracked(uri: vscode.Uri, ioStats?: BuildRunIoStats): Promise<string> {
   const startedAt = Date.now();
   const bytes = await vscode.workspace.fs.readFile(uri);
+  const endedAt = Date.now();
   if (ioStats) {
     ioStats.readCount += 1;
     ioStats.readBytes += bytes.byteLength;
-    ioStats.readMs += Date.now() - startedAt;
+    ioStats.readMs += endedAt - startedAt;
+    ioStats.readWallMs = Math.max(ioStats.readWallMs, endedAt - startedAt);
   }
   return Buffer.from(bytes).toString("utf8");
 }
@@ -1001,10 +1112,12 @@ async function writeWorkspaceTextFileTracked(uri: vscode.Uri, text: string, ioSt
   const bytes = Buffer.from(text, "utf8");
   const startedAt = Date.now();
   await vscode.workspace.fs.writeFile(uri, bytes);
+  const endedAt = Date.now();
   if (ioStats) {
     ioStats.writeCount += 1;
     ioStats.writeBytes += bytes.byteLength;
-    ioStats.writeMs += Date.now() - startedAt;
+    ioStats.writeMs += endedAt - startedAt;
+    ioStats.writeWallMs = Math.max(ioStats.writeWallMs, endedAt - startedAt);
   }
 }
 
@@ -1020,15 +1133,19 @@ async function safeStatTracked(uri: vscode.Uri, ioStats?: BuildRunIoStats): Prom
   const startedAt = Date.now();
   try {
     const stat = await vscode.workspace.fs.stat(uri);
+    const endedAt = Date.now();
     if (ioStats) {
       ioStats.statCount += 1;
-      ioStats.statMs += Date.now() - startedAt;
+      ioStats.statMs += endedAt - startedAt;
+      ioStats.statWallMs = Math.max(ioStats.statWallMs, endedAt - startedAt);
     }
     return stat;
   } catch {
+    const endedAt = Date.now();
     if (ioStats) {
       ioStats.statCount += 1;
-      ioStats.statMs += Date.now() - startedAt;
+      ioStats.statMs += endedAt - startedAt;
+      ioStats.statWallMs = Math.max(ioStats.statWallMs, endedAt - startedAt);
     }
     return undefined;
   }

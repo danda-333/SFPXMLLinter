@@ -437,7 +437,9 @@ function buildIndex(docs: Map<string, MockTextDocument>): WorkspaceIndex {
 
   const index: WorkspaceIndex = {
     formsByIdent: formsByIdent as unknown as Map<string, import("../../indexer/types").IndexedForm>,
+    formIdentByUri: new Map<string, string>(),
     componentsByKey: componentsByKey as unknown as Map<string, import("../../indexer/types").IndexedComponent>,
+    componentKeyByUri: new Map<string, string>(),
     componentKeysByBaseName,
     parsedFactsByUri,
     hasIgnoreDirectiveByUri: new Map(),

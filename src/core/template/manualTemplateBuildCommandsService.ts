@@ -26,7 +26,8 @@ export interface ManualTemplateBuildCommandsServiceDeps {
       relativeTemplatePath: string,
       outputRelativePath: string,
       outputFsPath: string,
-      mutations: readonly import("../../template/buildXmlTemplatesCore").TemplateMutationRecord[]
+      mutations: readonly import("../../template/buildXmlTemplatesCore").TemplateMutationRecord[],
+      renderedOutputText?: string
     ) => void
   ) => BuildRunOptions;
   queueReindexAll: () => Promise<void>;
@@ -41,6 +42,7 @@ export interface ManualTemplateBuildCommandsServiceDeps {
   logBuild: (message: string) => void;
   isInFolder: (uri: vscode.Uri, folderName: string) => boolean;
   toRelativePath: (uriOrPath: vscode.Uri | string) => string;
+  onBuildStateChanged?: (state: "idle" | "running") => void;
 }
 
 export class ManualTemplateBuildCommandsService {
@@ -53,6 +55,7 @@ export class ManualTemplateBuildCommandsService {
       return;
     }
 
+    this.deps.onBuildStateChanged?.("running");
     try {
       this.deps.logBuild("MANUAL build current/selection START");
       const mode = this.deps.getTemplateBuilderMode();
@@ -131,6 +134,8 @@ export class ManualTemplateBuildCommandsService {
       const message = error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(`BuildXmlTemplates failed: ${message}`);
       this.deps.logBuild(`MANUAL build current/selection ERROR: ${message}`);
+    } finally {
+      this.deps.onBuildStateChanged?.("idle");
     }
   }
 
@@ -141,6 +146,7 @@ export class ManualTemplateBuildCommandsService {
       return;
     }
 
+    this.deps.onBuildStateChanged?.("running");
     try {
       this.deps.logBuild("MANUAL build all START");
       const mode = this.deps.getTemplateBuilderMode();
@@ -157,6 +163,8 @@ export class ManualTemplateBuildCommandsService {
       const message = error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(`BuildXmlTemplates (all) failed: ${message}`);
       this.deps.logBuild(`MANUAL build all ERROR: ${message}`);
+    } finally {
+      this.deps.onBuildStateChanged?.("idle");
     }
   }
 
@@ -189,6 +197,7 @@ export class ManualTemplateBuildCommandsService {
       return;
     }
 
+    this.deps.onBuildStateChanged?.("running");
     try {
       const mode = this.deps.getTemplateBuilderMode();
       const options = this.deps.createBuildRunOptions(true, mode);
@@ -212,6 +221,8 @@ export class ManualTemplateBuildCommandsService {
       const message = error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(`Template compare failed: ${message}`);
       this.deps.logBuild(`COMPARE ERROR: ${message}`);
+    } finally {
+      this.deps.onBuildStateChanged?.("idle");
     }
   }
 
@@ -259,4 +270,3 @@ export class ManualTemplateBuildCommandsService {
     }
   }
 }
-

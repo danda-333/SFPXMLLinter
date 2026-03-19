@@ -14,6 +14,7 @@ import { TemplateMutationRecord } from "./template/buildXmlTemplatesCore";
 import { globConfiguredXmlFiles } from "./utils/paths";
 import { getSettings, SfpXmlLinterSettings } from "./config/settings";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "./indexer/xmlFacts";
+import { toIndexUriKey } from "./indexer/uriKey";
 import { formatXmlTolerant } from "./formatter";
 import { WorkspaceIndex, IndexedForm, IndexedSymbolProvenanceProvider } from "./indexer/types";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
@@ -98,11 +99,12 @@ function isComposedReferenceRule(code: unknown): boolean {
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const DEBUG_PREFIX = "[SFP-DBG]";
   const diagnostics = vscode.languages.createDiagnosticCollection("sfpXmlLinter");
-  const buildOutput = vscode.window.createOutputChannel("SFP XML Linter Build");
-  const indexOutput = vscode.window.createOutputChannel("SFP XML Linter Index");
-  const formatterOutput = vscode.window.createOutputChannel("SFP XML Linter Formatter");
-  const compositionOutput = vscode.window.createOutputChannel("SFP XML Linter Composition");
-  const performanceOutput = vscode.window.createOutputChannel("SFP XML Linter Performance");
+  const unifiedOutput = vscode.window.createOutputChannel("SFP XML Linter");
+  const buildOutput = unifiedOutput;
+  const indexOutput = unifiedOutput;
+  const formatterOutput = unifiedOutput;
+  const compositionOutput = unifiedOutput;
+  const performanceOutput = unifiedOutput;
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components", "XML_Primitives"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
   const featureRegistryStore = new FeatureRegistryStore();
@@ -147,6 +149,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return vscode.workspace.asRelativePath(uriOrPath, false);
       }
       return vscode.workspace.asRelativePath(uriOrPath, false);
+    },
+    onBuildStateChanged: (state) => {
+      compositionTreeProvider.setBuildState(state === "running" ? "building" : "ready");
     }
   });
   const pipelineUiCommandsService = new PipelineUiCommandsService({
@@ -176,7 +181,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
   const emptyIndex: WorkspaceIndex = {
     formsByIdent: new Map(),
+    formIdentByUri: new Map(),
     componentsByKey: new Map(),
+    componentKeyByUri: new Map(),
     componentKeysByBaseName: new Map(),
     parsedFactsByUri: new Map(),
     hasIgnoreDirectiveByUri: new Map(),
@@ -275,10 +282,43 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     compositionLogNonEffectiveUsings: (payload) => pipelineUiCommandsService.compositionLogNonEffectiveUsings(payload)
   });
   let hasInitialIndex = false;
+  type SavePerfAggregate = {
+    rel: string;
+    refreshElapsedMs?: number;
+    refreshRoot?: string;
+    refreshReason?: string;
+    buildDoneElapsedMs?: number;
+    dependencyElapsedMs?: number;
+    depForms?: number;
+    depFiles?: number;
+    depImmediate?: number;
+    depLow?: number;
+    depDurationMs?: number;
+    buildRunCount: number;
+    buildRunTemplates: number;
+    buildRunDurationMs: number;
+    buildRunUpdated: number;
+    buildRunSkipped: number;
+    buildRunErrors: number;
+    buildRunReadMs: number;
+    buildRunWriteMs: number;
+    buildRunStatMs: number;
+    buildRunReadPeakMs: number;
+    buildRunWritePeakMs: number;
+    buildRunStatPeakMs: number;
+    buildRunFastHit: number;
+    buildRunFastTotal: number;
+    buildRunTraceHit: number;
+    buildRunTraceTotal: number;
+    buildRunComponentLibraryHit: number;
+    buildRunComponentLibraryMiss: number;
+    autoRunBuildMs?: number;
+    autoPostReindexMs?: number;
+    autoPostFormsMs?: number;
+    autoPostRuntimeMs?: number;
+  };
   let currentSavePerformanceCycleId: string | undefined;
-  const deferredTemplateFormRefreshQueue = new Map<string, vscode.Uri>();
-  let deferredTemplateFormRefreshTimer: NodeJS.Timeout | undefined;
-  let deferredTemplateFormRefreshRunning = false;
+  const savePerfByCycle = new Map<string, SavePerfAggregate>();
   const internalValidationOpens = new Set<string>();
   const pendingContentChangesSinceLastSave = new Set<string>();
   let sqlSuggestTriggerTimer: NodeJS.Timeout | undefined;
@@ -303,11 +343,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const getProjectKeyForUri = (uri: vscode.Uri): string | undefined => getProjectKeyForUriFromSettings(uri, getSettings());
 
   context.subscriptions.push(diagnostics);
-  context.subscriptions.push(buildOutput);
-  context.subscriptions.push(indexOutput);
-  context.subscriptions.push(formatterOutput);
-  context.subscriptions.push(compositionOutput);
-  context.subscriptions.push(performanceOutput);
+  context.subscriptions.push(unifiedOutput);
   context.subscriptions.push(compositionTreeView);
   context.subscriptions.push(
     compositionTreeView.onDidExpandElement((event) => {
@@ -346,38 +382,41 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
-  function logBuild(message: string): void {
+  function appendUnifiedLog(message: string): void {
     const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
-    buildOutput.appendLine(line);
+    unifiedOutput.appendLine(line);
     console.log(line);
+  }
+
+  function isReadyLogMessage(message: string): boolean {
+    return message.startsWith("REINDEX all passes DONE");
+  }
+
+  function logBuild(_message: string): void {
+    // Build details are emitted only through aggregated save/build performance logs.
   }
 
   function logIndex(message: string): void {
-    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
-    indexOutput.appendLine(line);
-    console.log(line);
+    if (!isReadyLogMessage(message)) {
+      return;
+    }
+    appendUnifiedLog(`linter ready: ${message}`);
   }
 
-  function logFormatter(message: string): void {
-    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
-    formatterOutput.appendLine(line);
-    console.log(line);
+  function logFormatter(_message: string): void {
+    // Formatter diagnostics are intentionally suppressed in unified concise mode.
   }
 
   function logSingleFile(message: string): void {
     logIndex(`[single-file] ${message}`);
   }
 
-  function logComposition(message: string): void {
-    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
-    compositionOutput.appendLine(line);
-    console.log(line);
+  function logComposition(_message: string): void {
+    // Composition diagnostics are intentionally suppressed in unified concise mode.
   }
 
   function logPerformance(message: string): void {
-    const line = `[${new Date().toLocaleTimeString()}] ${DEBUG_PREFIX} ${message}`;
-    performanceOutput.appendLine(line);
-    console.log(line);
+    appendUnifiedLog(message);
   }
 
   function formatIndexProgress(event: RebuildIndexProgressEvent): string {
@@ -685,7 +724,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     const runtimeUri = vscode.Uri.file(runtimePath);
     const runtimeIndex = runtimeIndexer.getIndex();
-    const runtimeFacts = runtimeIndex.parsedFactsByUri.get(runtimeUri.toString());
+    const runtimeFacts = getParsedFactsByUri(runtimeIndex, runtimeUri);
     if (!runtimeFacts) {
       const key = `${templateUri.toString()}=>${runtimeUri.toString()}`;
       if (!missingComposedRuntimeFactsLogged.has(key)) {
@@ -709,6 +748,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }, "source");
     const referenceDiagnostics = composedDiagnostics.filter((item) => isComposedReferenceRule(item.code));
     return remapComposedDiagnosticsToTemplate(referenceDiagnostics, templateFacts);
+  }
+
+  function getParsedFactsByUri(
+    index: WorkspaceIndex,
+    uri: vscode.Uri
+  ): ReturnType<typeof parseDocumentFactsFromText> | undefined {
+    const direct = index.parsedFactsByUri.get(uri.toString());
+    if (direct) {
+      return direct;
+    }
+
+    const normalizedTarget = toIndexUriKey(uri);
+    for (const [key, facts] of index.parsedFactsByUri.entries()) {
+      if (key === normalizedTarget) {
+        return facts;
+      }
+
+      const keyUri = key.includes("://")
+        ? vscode.Uri.parse(key)
+        : vscode.Uri.file(key);
+      if (toIndexUriKey(keyUri) === normalizedTarget) {
+        return facts;
+      }
+    }
+
+    return undefined;
   }
 
   function buildDiagnosticsForDocument(
@@ -753,7 +818,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       relativeTemplatePath: string,
       outputRelativePath: string,
       outputFsPath: string,
-      mutations: readonly TemplateMutationRecord[]
+      mutations: readonly TemplateMutationRecord[],
+      renderedOutputText?: string
     ) => void
   ) {
     return templateBuildRunOptionsFactory.createBuildRunOptions(
@@ -767,42 +833,57 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   async function refreshRuntimeIndexFromBuildOutputs(
     mutationsByTemplate: ReadonlyMap<string, BuildTemplateMutationTelemetry>
   ): Promise<number> {
-    const outputUris = new Map<string, vscode.Uri>();
+    const documentsByUri = new Map<string, vscode.TextDocument>();
+    const readFromFsUris = new Map<string, vscode.Uri>();
+    let openedCount = 0;
+    let inMemoryCount = 0;
     for (const telemetry of mutationsByTemplate.values()) {
       const outputUri = vscode.Uri.file(telemetry.outputFsPath);
       if (!isInFolder(outputUri, "XML")) {
         continue;
       }
-      outputUris.set(outputUri.toString(), outputUri);
+      const uriKey = outputUri.toString();
+      const opened = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uriKey);
+      if (opened) {
+        documentsByUri.set(uriKey, opened);
+        openedCount++;
+        continue;
+      }
+      if (typeof telemetry.renderedOutputText === "string") {
+        documentsByUri.set(uriKey, createVirtualXmlDocument(outputUri, telemetry.renderedOutputText));
+        inMemoryCount++;
+        continue;
+      }
+      readFromFsUris.set(uriKey, outputUri);
     }
 
-    if (outputUris.size === 0) {
-      return 0;
-    }
-
-    let refreshed = 0;
-    for (const uri of outputUris.values()) {
+    const fsReadStartedAt = Date.now();
+    await forEachWithConcurrency([...readFromFsUris.values()], 6, async (uri) => {
       try {
-        let document = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
-        if (!document) {
-          const text = await readWorkspaceFileText(uri);
-          document = createVirtualXmlDocument(uri, text);
-        }
-
-        if (!document) {
-          continue;
-        }
-
-        const result = runtimeIndexer.refreshXmlDocument(document);
-        if (result.updated) {
-          refreshed++;
-        }
+        const text = await readWorkspaceFileText(uri);
+        documentsByUri.set(uri.toString(), createVirtualXmlDocument(uri, text));
       } catch {
         // Ignore transient race conditions (file locked/deleted while build is in progress).
       }
+    });
+    const fsReadMs = Date.now() - fsReadStartedAt;
+
+    if (documentsByUri.size === 0) {
+      return 0;
     }
 
-    return refreshed;
+    const batchResult = runtimeIndexer.refreshXmlDocumentsBatch([...documentsByUri.values()], {
+      composedOutput: true,
+      skipUsingTrace: true,
+      lightweightFormSymbols: true,
+      skipIgnoreDirectiveScan: true
+    });
+    const rootProfile = batchResult.profile.perRootMs;
+    logPerformance(
+      `build runtime-refresh | docs=${documentsByUri.size} | opened=${openedCount} | inMem=${inMemoryCount} | fs=${readFromFsUris.size} (${fsReadMs}ms) | ` +
+      `index=${batchResult.profile.totalMs}ms(form=${rootProfile.form}ms,wf=${rootProfile.workflow}ms,dv=${rootProfile.dataview}ms,other=${rootProfile.other}ms)`
+    );
+    return batchResult.updatedCount;
   }
 
   async function openTextDocumentWithInternalFlag(uri: vscode.Uri): Promise<vscode.TextDocument | undefined> {
@@ -931,15 +1012,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!currentSavePerformanceCycleId) {
         return;
       }
-      logPerformance(
-        `[${currentSavePerformanceCycleId}] build-run templates=${stats.templates} duration=${stats.durationMs} ms, ` +
-        `summary=updated:${stats.summary.updated},skipped:${stats.summary.skipped},errors:${stats.summary.errors}, ` +
-        `cache=fast:${stats.cache.fastHit}/${stats.cache.fastHit + stats.cache.fastMiss},` +
-        `trace:${stats.cache.traceHit}/${stats.cache.traceHit + stats.cache.traceMiss},componentLibrary:${stats.cache.componentLibrary}, ` +
-        `io=read:${stats.io.readCount}/${Math.round(stats.io.readBytes / 1024)}KiB/${stats.io.readMs}ms,` +
-        `write:${stats.io.writeCount}/${Math.round(stats.io.writeBytes / 1024)}KiB/${stats.io.writeMs}ms,` +
-        `stat:${stats.io.statCount}/${stats.io.statMs}ms`
-      );
+      const aggregate = savePerfByCycle.get(currentSavePerformanceCycleId);
+      if (!aggregate) {
+        return;
+      }
+      aggregate.buildRunCount += 1;
+      aggregate.buildRunTemplates += stats.templates;
+      aggregate.buildRunDurationMs += stats.durationMs;
+      aggregate.buildRunUpdated += stats.summary.updated;
+      aggregate.buildRunSkipped += stats.summary.skipped;
+      aggregate.buildRunErrors += stats.summary.errors;
+      aggregate.buildRunReadMs += stats.io.readMs;
+      aggregate.buildRunWriteMs += stats.io.writeMs;
+      aggregate.buildRunStatMs += stats.io.statMs;
+      aggregate.buildRunReadPeakMs = Math.max(aggregate.buildRunReadPeakMs, stats.io.readWallMs);
+      aggregate.buildRunWritePeakMs = Math.max(aggregate.buildRunWritePeakMs, stats.io.writeWallMs);
+      aggregate.buildRunStatPeakMs = Math.max(aggregate.buildRunStatPeakMs, stats.io.statWallMs);
+      aggregate.buildRunFastHit += stats.cache.fastHit;
+      aggregate.buildRunFastTotal += stats.cache.fastHit + stats.cache.fastMiss;
+      aggregate.buildRunTraceHit += stats.cache.traceHit;
+      aggregate.buildRunTraceTotal += stats.cache.traceHit + stats.cache.traceMiss;
+      if (stats.cache.componentLibrary === "hit") {
+        aggregate.buildRunComponentLibraryHit += 1;
+      } else {
+        aggregate.buildRunComponentLibraryMiss += 1;
+      }
     }
   });
 
@@ -974,14 +1071,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!currentSavePerformanceCycleId) {
         return;
       }
+      const aggregate = savePerfByCycle.get(currentSavePerformanceCycleId);
+      if (!aggregate) {
+        return;
+      }
+      aggregate.autoRunBuildMs = stats.phases.runBuildMs;
+      aggregate.autoPostReindexMs = stats.phases.postBuildReindexMs;
+      aggregate.autoPostFormsMs = stats.phases.postBuildFormRefreshMs;
+      aggregate.autoPostRuntimeMs = stats.phases.postBuildRuntimeRefreshMs;
+    },
+    onBuildOutputsReady: (stats) => {
       logPerformance(
-        `[${currentSavePerformanceCycleId}] auto-build phases total=${stats.durationMs} ms, run=${stats.phases.runBuildMs} ms, ` +
-        `postReindex=${stats.phases.postBuildReindexMs} ms, postForms=${stats.phases.postBuildFormRefreshMs} ms, ` +
-        `postRuntime=${stats.phases.postBuildRuntimeRefreshMs} ms, applyTelemetry=${stats.phases.applyMutationTelemetryMs} ms, ` +
-        `composition=${stats.phases.compositionSnapshotMs} ms, targets=${stats.builtTargetCount}, updatedTargets=${stats.refresh.updatedTargetPathsCount}, ` +
-        `refreshedForms=${stats.refresh.formRefreshedCount}, refreshedRuntime=${stats.refresh.runtimeRefreshedCount}, ` +
-        `summary=updated:${stats.summary.updated},skipped:${stats.summary.skipped},errors:${stats.summary.errors}`
+        `build ready | scope=${stats.executedFullBuild ? "full" : "targeted"} | total=${stats.durationMs}ms | ` +
+        `targets=${stats.builtTargetCount} | updated=${stats.summary.updated} | skipped=${stats.summary.skipped} | errors=${stats.summary.errors}`
       );
+    },
+    onBuildWorkerStateChanged: (state) => {
+      compositionTreeProvider.setBuildState(state === "running" ? "building" : "ready");
     }
   });
 
@@ -993,10 +1099,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logBuild: (message) => logBuild(message),
     queueTemplateBuild: (workspaceFolder, targetPath) => queueTemplateBuild(workspaceFolder, targetPath),
     queueTemplateBuildBatch: (workspaceFolder, targetPaths) => queueTemplateBuildBatch(workspaceFolder, targetPaths),
-    queueTemplateBuildBatchDeferred: (workspaceFolder, targetPaths) => {
-      setTimeout(() => {
-        void queueTemplateBuildBatch(workspaceFolder, targetPaths);
-      }, 0);
+    queueTemplateBuildBatchDeferred: async (workspaceFolder, targetPaths) => {
+      await queueTemplateBuildBatch(workspaceFolder, targetPaths);
     },
     waitForTemplateBuildIdle: () => waitForTemplateBuildIdle(),
     getOpenTemplatePaths: (workspaceFolder) => {
@@ -1225,113 +1329,47 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function refreshFormsFromTemplateTargets(targetPaths: readonly string[]): Promise<number> {
-    const immediateDocs: vscode.TextDocument[] = [];
-    const deferredUris: vscode.Uri[] = [];
-    for (const targetPath of targetPaths) {
+    const targetDocs = new Map<string, vscode.TextDocument>();
+    await forEachWithConcurrency(targetPaths, 6, async (targetPath) => {
       const uri = vscode.Uri.file(targetPath);
       try {
         let doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
-        let opened = true;
         if (!doc) {
           const text = await readWorkspaceFileText(uri);
           doc = createVirtualXmlDocument(uri, text);
-          opened = false;
         }
 
         const root = (parseDocumentFacts(doc).rootTag ?? "").toLowerCase();
         if (root !== "form") {
-          continue;
+          return;
         }
 
-        if (opened) {
-          immediateDocs.push(doc);
-        } else {
-          deferredUris.push(uri);
-        }
+        targetDocs.set(uri.toString(), doc);
       } catch {
         // Ignore transient file states during/after build.
       }
+    });
+
+    if (targetDocs.size === 0) {
+      return 0;
     }
 
-    let refreshed = 0;
-    for (const doc of immediateDocs) {
-      if (refreshTemplateFormDocument(doc)) {
-        refreshed++;
-      }
-    }
+    const docs = [...targetDocs.values()];
+    const batchResult = templateIndexer.refreshXmlDocumentsBatch(docs, {
+      lightweightFormSymbols: true
+    });
 
-    if (deferredUris.length > 0) {
-      enqueueDeferredTemplateFormRefresh(deferredUris);
-      logIndex(`POST-BUILD deferred form refresh queued count=${deferredUris.length}`);
-    }
-
-    return refreshed;
-  }
-
-  function refreshTemplateFormDocument(doc: vscode.TextDocument): boolean {
-    const result = templateIndexer.refreshXmlDocument(doc);
-    if (!result.updated) {
-      return false;
-    }
-
-    const openedDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === doc.uri.toString());
-    if (openedDoc) {
-      validateDocument(openedDoc);
-      if (isUserOpenDocument(openedDoc.uri)) {
-        enqueueValidation(openedDoc.uri, "high");
-      }
-    }
-    return true;
-  }
-
-  function enqueueDeferredTemplateFormRefresh(uris: readonly vscode.Uri[]): void {
-    for (const uri of uris) {
-      deferredTemplateFormRefreshQueue.set(uri.toString(), uri);
-    }
-    scheduleDeferredTemplateFormRefresh();
-  }
-
-  function scheduleDeferredTemplateFormRefresh(): void {
-    if (deferredTemplateFormRefreshTimer || deferredTemplateFormRefreshRunning) {
-      return;
-    }
-    deferredTemplateFormRefreshTimer = setTimeout(() => {
-      deferredTemplateFormRefreshTimer = undefined;
-      void runDeferredTemplateFormRefresh();
-    }, 120);
-  }
-
-  async function runDeferredTemplateFormRefresh(): Promise<void> {
-    if (deferredTemplateFormRefreshRunning || deferredTemplateFormRefreshQueue.size === 0) {
-      return;
-    }
-    deferredTemplateFormRefreshRunning = true;
-    const startedAt = Date.now();
-    let refreshed = 0;
-    try {
-      const uris = [...deferredTemplateFormRefreshQueue.values()];
-      deferredTemplateFormRefreshQueue.clear();
-      for (const uri of uris) {
-        try {
-          let doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
-          if (!doc) {
-            const text = await readWorkspaceFileText(uri);
-            doc = createVirtualXmlDocument(uri, text);
-          }
-          if (refreshTemplateFormDocument(doc)) {
-            refreshed++;
-          }
-        } catch {
-          // ignore
+    for (const doc of docs) {
+      const openedDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === doc.uri.toString());
+      if (openedDoc) {
+        validateDocument(openedDoc);
+        if (isUserOpenDocument(openedDoc.uri)) {
+          enqueueValidation(openedDoc.uri, "high");
         }
       }
-      logIndex(`POST-BUILD deferred form refresh DONE refreshed=${refreshed}/${uris.length} in ${Date.now() - startedAt} ms`);
-    } finally {
-      deferredTemplateFormRefreshRunning = false;
-      if (deferredTemplateFormRefreshQueue.size > 0) {
-        scheduleDeferredTemplateFormRefresh();
-      }
     }
+
+    return batchResult.updatedCount;
   }
 
   function isInFolder(uri: vscode.Uri, folderName: string): boolean {
@@ -1344,9 +1382,36 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await templateBuildPlanner.maybeAutoBuildTemplates(document, componentKeyHint);
   }
 
+  async function forEachWithConcurrency<T>(
+    items: readonly T[],
+    concurrency: number,
+    worker: (item: T, index: number) => Promise<void>
+  ): Promise<void> {
+    if (items.length === 0) {
+      return;
+    }
+
+    const limit = Math.max(1, Math.min(concurrency, items.length));
+    let cursor = 0;
+    const runners: Promise<void>[] = [];
+    for (let i = 0; i < limit; i++) {
+      runners.push((async () => {
+        while (true) {
+          const index = cursor++;
+          if (index >= items.length) {
+            break;
+          }
+          await worker(items[index], index);
+        }
+      })());
+    }
+    await Promise.all(runners);
+  }
+
   function collectDependentTemplatesFromIndex(componentKey: string): string[] {
     const idx = templateIndexer.getIndex();
     const candidateKeys = collectCandidateComponentKeys(idx, componentKey);
+    const canAffectNonFormRoots = componentCanAffectNonFormRoots(idx, candidateKeys);
 
     const result = new Set<string>();
     const affectedFormIdents = new Set<string>();
@@ -1362,33 +1427,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (usingHit || includeHit || placeholderHit) {
         result.add(uri.fsPath);
         const root = (facts.rootTag ?? "").toLowerCase();
-        const owningFormIdent =
-          root === "form"
-            ? facts.formIdent
-            : root === "workflow"
-              ? (facts.workflowFormIdent ?? facts.rootFormIdent)
-              : root === "dataview"
-                ? facts.rootFormIdent
-                : undefined;
+        const owningFormIdent = root === "form" ? facts.formIdent : undefined;
         if (owningFormIdent) {
           affectedFormIdents.add(owningFormIdent);
         }
       }
     }
 
-    if (affectedFormIdents.size > 0) {
+    if (affectedFormIdents.size > 0 && canAffectNonFormRoots) {
       for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
         const root = (facts.rootTag ?? "").toLowerCase();
-        if (root !== "form" && root !== "workflow" && root !== "dataview") {
+        if (root !== "workflow" && root !== "dataview") {
           continue;
         }
 
         const owningFormIdent =
-          root === "form"
-            ? facts.formIdent
-            : root === "workflow"
-              ? (facts.workflowFormIdent ?? facts.rootFormIdent)
-              : facts.rootFormIdent;
+          root === "workflow"
+            ? (facts.workflowFormIdent ?? facts.rootFormIdent)
+            : facts.rootFormIdent;
         if (!owningFormIdent || !affectedFormIdents.has(owningFormIdent)) {
           continue;
         }
@@ -1402,6 +1458,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     return [...result].sort((a, b) => a.localeCompare(b));
+  }
+
+  function componentCanAffectNonFormRoots(index: WorkspaceIndex, candidateKeys: ReadonlySet<string>): boolean {
+    for (const key of candidateKeys) {
+      const component = index.componentsByKey.get(key);
+      if (!component) {
+        // Unknown component metadata -> keep safe behavior.
+        return true;
+      }
+      for (const summary of component.contributionSummaries.values()) {
+        const rootExpr = (summary.rootExpression ?? "").toLowerCase();
+        if (summary.root === "workflow" || rootExpr.includes("workflow")) {
+          return true;
+        }
+        if (rootExpr.includes("dataview")) {
+          return true;
+        }
+        if (summary.root === "other" && summary.hasContent) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   function buildInheritedUsingsSnapshotFromIndex(): ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]> {
@@ -1490,8 +1569,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     getRuntimeIndex: () => runtimeIndexer.getIndex(),
     isReindexRelevantUri: (uri) => isReindexRelevantUri(uri),
     shouldValidateUriForActiveProjects: (uri) => shouldValidateUriForActiveProjects(uri),
-    enqueueValidationHigh: (uri) => enqueueValidation(uri, "high"),
-    enqueueValidationLow: (uri) => enqueueValidation(uri, "low"),
+    enqueueValidationHigh: (uri, options) => enqueueValidation(uri, "high", options),
+    enqueueValidationLow: (uri, options) => enqueueValidation(uri, "low", options),
     logIndex: (message) => logIndex(message)
   });
 
@@ -1518,36 +1597,83 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const rel = vscode.workspace.asRelativePath(event.document.uri, false);
       if (event.phase === "start") {
         currentSavePerformanceCycleId = event.cycleId;
-        logPerformance(`[${event.cycleId}] save START ${rel}`);
+        savePerfByCycle.set(event.cycleId, {
+          rel,
+          buildRunCount: 0,
+          buildRunTemplates: 0,
+          buildRunDurationMs: 0,
+          buildRunUpdated: 0,
+          buildRunSkipped: 0,
+          buildRunErrors: 0,
+          buildRunReadMs: 0,
+          buildRunWriteMs: 0,
+          buildRunStatMs: 0,
+          buildRunReadPeakMs: 0,
+          buildRunWritePeakMs: 0,
+          buildRunStatPeakMs: 0,
+          buildRunFastHit: 0,
+          buildRunFastTotal: 0,
+          buildRunTraceHit: 0,
+          buildRunTraceTotal: 0,
+          buildRunComponentLibraryHit: 0,
+          buildRunComponentLibraryMiss: 0
+        });
+        return;
+      }
+      const aggregate = savePerfByCycle.get(event.cycleId);
+      if (!aggregate) {
         return;
       }
       if (event.phase === "refresh") {
         const refresh = event.refresh;
-        logPerformance(
-          `[${event.cycleId}] refresh elapsed=${event.elapsedMs} ms` +
-          (refresh ? ` root=${refresh.rootKind} reason=${refresh.reason}` : "")
-        );
+        aggregate.refreshElapsedMs = event.elapsedMs;
+        aggregate.refreshRoot = refresh?.rootKind;
+        aggregate.refreshReason = refresh?.reason;
         return;
       }
       if (event.phase === "build-done") {
-        logPerformance(`[${event.cycleId}] build-done elapsed=${event.elapsedMs} ms`);
+        aggregate.buildDoneElapsedMs = event.elapsedMs;
         return;
       }
       if (event.phase === "dependency-queued") {
         const dep = event.dependency;
-        if (!dep) {
-          logPerformance(`[${event.cycleId}] dependency-queued elapsed=${event.elapsedMs} ms (none)`);
-          return;
-        }
-        logPerformance(
-          `[${event.cycleId}] dependency-queued elapsed=${event.elapsedMs} ms ` +
-          `forms=${dep.forms} files=${dep.files} immediate=${dep.immediateOpen} low=${dep.queuedLow} duration=${dep.durationMs} ms`
-        );
+        aggregate.dependencyElapsedMs = event.elapsedMs;
+        aggregate.depForms = dep?.forms;
+        aggregate.depFiles = dep?.files;
+        aggregate.depImmediate = dep?.immediateOpen;
+        aggregate.depLow = dep?.queuedLow;
+        aggregate.depDurationMs = dep?.durationMs;
         return;
       }
       if (event.phase === "done") {
-        logPerformance(`[${event.cycleId}] save DONE total=${event.elapsedMs} ms`);
+        const parts: string[] = [
+          `build run=${event.cycleId}`,
+          `file=${aggregate.rel}`,
+          `total=${event.elapsedMs}ms`,
+          `refresh=${aggregate.refreshElapsedMs ?? 0}ms(${aggregate.refreshRoot ?? "n/a"}/${aggregate.refreshReason ?? "n/a"})`,
+          `build=${aggregate.buildDoneElapsedMs ?? 0}ms`,
+          `dep=${aggregate.dependencyElapsedMs ?? 0}ms(forms=${aggregate.depForms ?? 0},files=${aggregate.depFiles ?? 0},imm=${aggregate.depImmediate ?? 0},low=${aggregate.depLow ?? 0},queue=${aggregate.depDurationMs ?? 0}ms)`,
+          `runs=${aggregate.buildRunCount}`,
+          `runTpl=${aggregate.buildRunTemplates}`,
+          `runMs=${aggregate.buildRunDurationMs}ms`,
+          `sum=upd:${aggregate.buildRunUpdated}/skip:${aggregate.buildRunSkipped}/err:${aggregate.buildRunErrors}`,
+          `ioSum=read:${aggregate.buildRunReadMs}ms,write:${aggregate.buildRunWriteMs}ms,stat:${aggregate.buildRunStatMs}ms`,
+          `ioPeak=read:${aggregate.buildRunReadPeakMs}ms,write:${aggregate.buildRunWritePeakMs}ms,stat:${aggregate.buildRunStatPeakMs}ms`,
+          `cache=fast:${aggregate.buildRunFastHit}/${aggregate.buildRunFastTotal},trace:${aggregate.buildRunTraceHit}/${aggregate.buildRunTraceTotal},lib:h${aggregate.buildRunComponentLibraryHit}/m${aggregate.buildRunComponentLibraryMiss}`
+        ];
+        if (
+          aggregate.autoRunBuildMs !== undefined
+          || aggregate.autoPostReindexMs !== undefined
+          || aggregate.autoPostFormsMs !== undefined
+          || aggregate.autoPostRuntimeMs !== undefined
+        ) {
+          parts.push(
+            `phases=run:${aggregate.autoRunBuildMs ?? 0}ms,reindex:${aggregate.autoPostReindexMs ?? 0}ms,forms:${aggregate.autoPostFormsMs ?? 0}ms,runtime:${aggregate.autoPostRuntimeMs ?? 0}ms`
+          );
+        }
+        logPerformance(parts.join(" | "));
         currentSavePerformanceCycleId = undefined;
+        savePerfByCycle.delete(event.cycleId);
       }
     }
   });
@@ -1793,7 +1919,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       workspaceFolder &&
       (isInFolder(document.uri, "XML_Components") || isInFolder(document.uri, "XML_Primitives"))
     ) {
-      buildService.invalidateComponentLibraryCache(workspaceFolder);
+      buildService.invalidateComponentLibraryCache(workspaceFolder, document.uri.fsPath);
     }
     await updateOrchestrator.handleDocumentSave(document, hadContentChanges);
   }
@@ -1808,7 +1934,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (isInFolder(uri, "XML_Components") || isInFolder(uri, "XML_Primitives")) {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
         if (workspaceFolder) {
-          buildService.invalidateComponentLibraryCache(workspaceFolder);
+          buildService.invalidateComponentLibraryCache(workspaceFolder, uri.fsPath);
         }
       }
     }
@@ -1829,7 +1955,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (isInFolder(uri, "XML_Components") || isInFolder(uri, "XML_Primitives")) {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
         if (workspaceFolder) {
-          buildService.invalidateComponentLibraryCache(workspaceFolder);
+          buildService.invalidateComponentLibraryCache(workspaceFolder, uri.fsPath);
         }
       }
     }
@@ -1852,7 +1978,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (isInFolder(uri, "XML_Components") || isInFolder(uri, "XML_Primitives")) {
           const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
           if (workspaceFolder) {
-            buildService.invalidateComponentLibraryCache(workspaceFolder);
+            buildService.invalidateComponentLibraryCache(workspaceFolder, uri.fsPath);
           }
         }
       }

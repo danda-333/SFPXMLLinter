@@ -10,6 +10,16 @@ Unify internal extension logic around one in-memory model, where:
 
 This document defines the proposed data model and extension points.
 
+## Standalone Facts Exception (Contract)
+
+- Single source of truth is the indexed/composed model.
+- Normal runtime consumers (TreeView, providers, dependency validation, planner) must use strict-accessor facts resolution.
+- One explicit exception exists for non-indexed standalone XML:
+  - `src/core/validation/documentValidationService.ts` may parse document facts directly via `parseFactsStandalone(...)`.
+- This exception is intentionally narrow and guarded:
+  - no other runtime consumer may call `parseDocumentFacts(...)` directly,
+  - no consumer-side fallback parse logic outside the standalone boundary.
+
 ## Top-Level Model (v2: Node-Based)
 
 ```ts
@@ -752,12 +762,37 @@ Support commands:
 - Phase 4 completed: Tree projection adapter, references/rename/definition providers, and completion symbol hooks read from shared model services.
 - Phase 5 completed for core goals: performance metrics/traces are available and legacy validation module wiring has been removed.
 
+## Execution Status Addendum (2026-03-20)
+
+- Index access was consolidated behind `src/core/model/indexAccess.ts` for both point lookups and iteration-style reads.
+- Direct consumer reads of `formsByIdent` / `parsedFactsByUri` were removed from runtime providers/services and routed through shared access helpers.
+- URI key parsing for index iteration was unified into `src/core/model/indexUriParser.ts` (single parsing rule shared by diagnostics, tree, providers, orchestrator-adjacent services).
+- `runSingleSourceGuardTests` was tightened to also block direct `.entries()` / `.values()` access patterns outside model access helpers.
+
 Validation gates used for this status:
 
 - `npm run compile`
 - `npm run test:providers`
 - `npm run test:linter`
 - `npm run test:composition`
+
+## Execution Status Addendum (2026-03-21)
+
+- Runtime consumers were further aligned with single-source access helpers:
+  - `getComponentVariantKeys(...)`
+  - `getIndexedComponentKeys(...)`
+  - `getIndexedComponents(...)`
+  - `countIndexedForms(...)`
+  - `countIndexedParsedFacts(...)`
+  - `hasIndexedFormIdent(...)`
+- Single-source guard scope was expanded to block additional direct legacy-map reads outside sanctioned boundaries.
+- Single-writer guard scope was expanded to registration-time mutation surfaces (`factRegistry.register`, `symbolRegistry.registerResolver`), with bootstrap registration retained in a dedicated allowlisted boundary.
+- Runtime model/fact/symbol write path is now centralized via `core/model/modelWriteGateway.ts` (extension no longer calls core mutation methods directly).
+- Update orchestrator tests now explicitly cover:
+  - post-save ordering contract (`build` before dependency queue, dependency queue before `onPostSave`)
+  - same-URI save serialization contract.
+- TreeView cache validity now includes `model.version` (prevents mixed-snapshot render when facts/symbols change without document text/version change).
+- Composed-sensitive rule `missing-feature-expected-xpath` now runs in composed-reference mode (resolved from runtime/composed context, not template source-only pass).
 
 ### Phase 1: Core Runtime Framework
 

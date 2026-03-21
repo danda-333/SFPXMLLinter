@@ -23,7 +23,9 @@ export interface LanguageProvidersRegistrarServiceDeps {
   diagnostics: vscode.DiagnosticCollection;
   documentationHoverResolver: DocumentationHoverResolver;
   getIndexForUri: (uri: vscode.Uri | undefined) => WorkspaceIndex;
-  getFactsForDocument: (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText>;
+  getFactsForDocument: (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
+  getFactsForUri: (uri: vscode.Uri) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
+  getModelVersion: () => number;
   getSymbolIdentsForUriKind: (uri: vscode.Uri, kind: string) => readonly string[];
   getSymbolReferenceLocationsByKindIdent: (kind: string, ident: string) => readonly vscode.Location[];
   resolveOwningFormForDiagnostics: (
@@ -59,7 +61,9 @@ export class LanguageProvidersRegistrarService {
           (uri) => this.deps.getIndexForUri(uri),
           (formIdent, preferredIndex) => this.deps.resolveOwningFormForDiagnostics(formIdent, preferredIndex),
           (document) => this.deps.getFactsForDocument(document),
-          (uri, kind) => this.deps.getSymbolIdentsForUriKind(uri, kind)
+          (uri, index) => this.deps.getFactsForUri(uri),
+          (uri, kind) => this.deps.getSymbolIdentsForUriKind(uri, kind),
+          () => this.deps.getModelVersion()
         ),
         "<",
         " ",
@@ -74,16 +78,28 @@ export class LanguageProvidersRegistrarService {
         new SfpXmlReferencesProvider(
           (uri) => this.deps.getIndexForUri(uri),
           (document) => this.deps.getFactsForDocument(document),
-          (kind, ident) => this.deps.getSymbolReferenceLocationsByKindIdent(kind, ident)
+          (uri) => this.deps.getFactsForUri(uri),
+          (kind, ident) => this.deps.getSymbolReferenceLocationsByKindIdent(kind, ident),
+          () => this.deps.getModelVersion()
         )
       ),
-      vscode.languages.registerDefinitionProvider({ language: "xml" }, new SfpXmlDefinitionProvider((uri) => this.deps.getIndexForUri(uri))),
+      vscode.languages.registerDefinitionProvider(
+        { language: "xml" },
+        new SfpXmlDefinitionProvider(
+          (uri) => this.deps.getIndexForUri(uri),
+          (document) => this.deps.getFactsForDocument(document),
+          (uri) => this.deps.getFactsForUri(uri),
+          () => this.deps.getModelVersion()
+        )
+      ),
       vscode.languages.registerRenameProvider(
         { language: "xml" },
         new SfpXmlRenameProvider(
           (uri) => this.deps.getIndexForUri(uri),
           (document) => this.deps.getFactsForDocument(document),
-          (kind, ident) => this.deps.getSymbolReferenceLocationsByKindIdent(kind, ident)
+          (uri) => this.deps.getFactsForUri(uri),
+          (kind, ident) => this.deps.getSymbolReferenceLocationsByKindIdent(kind, ident),
+          () => this.deps.getModelVersion()
         )
       ),
       vscode.languages.registerDocumentSemanticTokensProvider(

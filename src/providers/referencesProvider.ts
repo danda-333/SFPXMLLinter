@@ -7,6 +7,7 @@ import { getSystemMetadata } from "../config/systemMetadata";
 import { getEquivalentFormIdentKeys, resolveSystemTableName } from "../utils/formIdents";
 import { buildDocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
 import {
+  FactsByUriAccessor,
   collectComponentContributionReferenceLocations,
   collectComponentReferenceLocations,
   collectFormIdentReferenceLocations,
@@ -17,10 +18,14 @@ import {
   FormSymbolKind,
   resolveWorkflowDeclaration
 } from "./referenceModelUtils";
+import { getIndexedComponents, getIndexedForms, getParsedFactsEntries } from "../core/model/indexAccess";
+import { parseIndexUriKey } from "../core/model/indexUriParser";
+import { resolveDocumentFacts } from "../core/model/factsResolution";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
-type FactsAccessor = (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText>;
+type FactsAccessor = (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
 type SymbolReferencesAccessor = (kind: string, ident: string) => readonly vscode.Location[];
+type ModelVersionAccessor = () => number;
 
 type TargetKind =
   | "form"
@@ -45,10 +50,20 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
   public constructor(
     private readonly getIndex: IndexAccessor,
     private readonly getFactsForDocument?: FactsAccessor,
-    private readonly getSymbolReferences?: SymbolReferencesAccessor
+    private readonly getFactsForUri?: FactsByUriAccessor,
+    private readonly getSymbolReferences?: SymbolReferencesAccessor,
+    private readonly getModelVersion?: ModelVersionAccessor
   ) {}
 
   public provideReferences(
+    document: vscode.TextDocument,
+    position: vscode.Position,
+    context: vscode.ReferenceContext
+  ): vscode.ProviderResult<vscode.Location[]> {
+    return this.withConsistentSnapshot(() => this.provideReferencesInternal(document, position, context));
+  }
+
+  private provideReferencesInternal(
     document: vscode.TextDocument,
     position: vscode.Position,
     context: vscode.ReferenceContext
@@ -69,7 +84,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     if (target.kind === "form") {
       const metadata = getSystemMetadata();
       for (const formIdentKey of getEquivalentFormIdentKeys(target.ident, metadata)) {
-        for (const location of collectFormIdentReferenceLocations(index, formIdentKey)) {
+        for (const location of collectFormIdentReferenceLocations(index, formIdentKey, this.getFactsForUri)) {
           pushUniqueLocation(out, seen, location);
         }
       }
@@ -77,14 +92,14 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     }
 
     if (target.kind === "component") {
-      for (const location of collectComponentReferenceLocations(index, target.ident)) {
+      for (const location of collectComponentReferenceLocations(index, target.ident, this.getFactsForUri)) {
         pushUniqueLocation(out, seen, location);
       }
       return out;
     }
 
     if (target.kind === "componentSection") {
-      for (const location of collectComponentContributionReferenceLocations(index, target.componentKey ?? "", target.ident)) {
+      for (const location of collectComponentContributionReferenceLocations(index, target.componentKey ?? "", target.ident, this.getFactsForUri)) {
         pushUniqueLocation(out, seen, location);
       }
       return out;
@@ -102,7 +117,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
             ? "button"
             : "section";
 
-      for (const location of collectWorkflowReferencesForComponentDeclarationTarget(index, target.componentKey ?? "", target.ident, formKind)) {
+      for (const location of collectWorkflowReferencesForComponentDeclarationTarget(index, target.componentKey ?? "", target.ident, formKind, this.getFactsForUri)) {
         pushUniqueLocation(out, seen, location);
       }
       return out;
@@ -113,11 +128,11 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     }
 
     const formKind = target.kind as FormSymbolKind;
-    for (const location of collectWorkflowReferenceLocations(index, target.formIdent, formKind, target.ident)) {
+    for (const location of collectWorkflowReferenceLocations(index, target.formIdent, formKind, target.ident, this.getFactsForUri)) {
       pushUniqueLocation(out, seen, location);
     }
     if (target.kind === "control") {
-      for (const location of collectHtmlControlReferenceLocations(index, target.formIdent, target.ident)) {
+      for (const location of collectHtmlControlReferenceLocations(index, target.formIdent, target.ident, this.getFactsForUri)) {
         pushUniqueLocation(out, seen, location);
       }
     }
@@ -131,12 +146,20 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     }
 
     const index = this.getIndex(document.uri);
-    const facts = this.getFactsForDocument?.(document) ?? parseDocumentFacts(document);
+    const facts = resolveDocumentFacts(document, index, {
+      getFactsForDocument: this.getFactsForDocument,
+      getFactsForUri: this.getFactsForUri ? ((uri, _index) => this.getFactsForUri?.(uri)) : undefined,
+      parseFacts: parseDocumentFacts,
+      mode: "strict-accessor"
+    });
+    if (!facts) {
+      return undefined;
+    }
     const documentComposition = buildDocumentCompositionModel(facts, index);
 
     const formEntry = findFormByUri(index, document.uri);
     if (formEntry) {
-      const formDeclaration = findFormDeclaration(index, formEntry.ident) ?? formEntry.formIdentLocation;
+      const formDeclaration = findFormDeclaration(index, formEntry.ident, this.getFactsForUri) ?? formEntry.formIdentLocation;
       if (formDeclaration.range.contains(position)) {
         return {
           formIdent: formEntry.ident,
@@ -156,7 +179,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       if (!ref.range.contains(position)) {
         continue;
       }
-      const declaration = findFormDeclaration(index, ref.formIdent);
+      const declaration = findFormDeclaration(index, ref.formIdent, this.getFactsForUri);
       if (declaration) {
         return { formIdent: ref.formIdent, ident: ref.formIdent, kind: "form", declaration };
       }
@@ -176,7 +199,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       if (!ref.range.contains(position)) {
         continue;
       }
-      const declaration = findFormDeclaration(index, ref.formIdent);
+      const declaration = findFormDeclaration(index, ref.formIdent, this.getFactsForUri);
       if (declaration) {
         return { formIdent: ref.formIdent, ident: ref.formIdent, kind: "form", declaration };
       }
@@ -286,7 +309,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
           continue;
         }
 
-        const declaration = findFormSymbolDeclaration(index, facts.formIdent, "control", ref.ident);
+        const declaration = findFormSymbolDeclaration(index, facts.formIdent, "control", ref.ident, this.getFactsForUri);
         if (!declaration) {
           continue;
         }
@@ -311,7 +334,7 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
           continue;
         }
 
-        const declaration = resolveWorkflowDeclaration(index, facts, documentComposition, kind, ref.ident);
+        const declaration = resolveWorkflowDeclaration(index, facts, documentComposition, kind, ref.ident, this.getFactsForUri);
         if (!declaration) {
           continue;
         }
@@ -327,17 +350,33 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
 
     return undefined;
   }
+
+  private withConsistentSnapshot<T>(compute: () => T): T {
+    if (!this.getModelVersion) {
+      return compute();
+    }
+    const start = this.getModelVersion();
+    const first = compute();
+    const end = this.getModelVersion();
+    if (start === end) {
+      return first;
+    }
+    return compute();
+  }
 }
 
 function collectWorkflowReferencesForComponentDeclarationTarget(
   index: WorkspaceIndex,
   componentKey: string,
   ident: string,
-  kind: FormSymbolKind
+  kind: FormSymbolKind,
+  getFactsForUri?: FactsByUriAccessor
 ): vscode.Location[] {
   const normalized = normalizeComponentKey(componentKey);
   const out: vscode.Location[] = [];
-  for (const facts of index.parsedFactsByUri.values()) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey, "strict-accessor")) {
+    const uri = entry.uri;
+    const facts = entry.facts;
     if ((facts.rootTag ?? "").toLowerCase() !== "workflow" || !facts.workflowFormIdent) {
       continue;
     }
@@ -357,13 +396,13 @@ function collectWorkflowReferencesForComponentDeclarationTarget(
       continue;
     }
 
-    out.push(...collectWorkflowReferenceLocations(index, facts.workflowFormIdent, kind, ident));
+    out.push(...collectWorkflowReferenceLocations(index, facts.workflowFormIdent, kind, ident, getFactsForUri));
   }
   return out;
 }
 
 function findFormByUri(index: WorkspaceIndex, uri: vscode.Uri): IndexedForm | undefined {
-  for (const form of index.formsByIdent.values()) {
+  for (const form of getIndexedForms(index)) {
     if (form.uri.toString() === uri.toString()) {
       return form;
     }
@@ -372,7 +411,7 @@ function findFormByUri(index: WorkspaceIndex, uri: vscode.Uri): IndexedForm | un
 }
 
 function findComponentByUri(index: WorkspaceIndex, uri: vscode.Uri): IndexedComponent | undefined {
-  for (const component of index.componentsByKey.values()) {
+  for (const component of getIndexedComponents(index)) {
     if (component.uri.toString() === uri.toString()) {
       return component;
     }

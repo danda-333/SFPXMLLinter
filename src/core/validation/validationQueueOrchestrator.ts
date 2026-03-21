@@ -6,7 +6,6 @@ import { IndexedValidationOutcome } from "./documentValidationService";
 export interface ValidationQueueOrchestratorDeps {
   log: (message: string) => void;
   publishDiagnosticsBatch: (updates: ReadonlyArray<[vscode.Uri, readonly vscode.Diagnostic[] | undefined]>) => void;
-  validateUri: (uri: vscode.Uri) => Promise<void>;
   computeIndexedValidationOutcome: (
     uri: vscode.Uri,
     options?: {
@@ -29,6 +28,7 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
   private readonly highPriorityValidationSet = new Set<string>();
   private readonly lowPriorityValidationQueue: string[] = [];
   private readonly lowPriorityValidationSet = new Set<string>();
+  private readonly validationGenerationByKey = new Map<string, number>();
   private isValidationWorkerRunning = false;
   private lowPriorityValidationStartTimer: NodeJS.Timeout | undefined;
 
@@ -47,10 +47,21 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
     }
 
     const key = uri.toString();
+    const hasQueuedHigh = this.highPriorityValidationSet.has(key);
     if (options?.force === true) {
-      this.removeQueuedValidationByKey(key);
+      // Never allow low-priority force enqueue to cancel an already queued high-priority validation.
+      // This preserves save-driven deterministic ordering (high first) and avoids stale diagnostics windows.
+      if (!(priority === "low" && hasQueuedHigh)) {
+        const nextGeneration = (this.validationGenerationByKey.get(key) ?? 0) + 1;
+        this.validationGenerationByKey.set(key, nextGeneration);
+        this.removeQueuedValidationByKey(key);
+      }
+    } else if (!this.validationGenerationByKey.has(key)) {
+      this.validationGenerationByKey.set(key, 0);
     }
     if (priority === "high") {
+      const nextGeneration = (this.validationGenerationByKey.get(key) ?? 0) + 1;
+      this.validationGenerationByKey.set(key, nextGeneration);
       if (this.highPriorityValidationSet.has(key)) {
         return;
       }
@@ -137,7 +148,25 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
           }
           this.highPriorityValidationSet.delete(key);
           const uri = vscode.Uri.parse(key);
-          await this.deps.validateUri(uri);
+          const generation = this.validationGenerationByKey.get(key) ?? 0;
+          const outcome = await this.deps.computeIndexedValidationOutcome(uri, {
+            preferFsRead: true,
+            settingsSnapshot: backgroundSettingsSnapshot,
+            metadataSnapshot: backgroundMetadataSnapshot
+          });
+          if (generation !== (this.validationGenerationByKey.get(key) ?? 0)) {
+            continue;
+          }
+          if (outcome) {
+            this.deps.publishDiagnosticsBatch([[outcome.uri, outcome.diagnostics]]);
+            if (outcome.shouldLog) {
+              const outcomeKey = outcome.uri.toString();
+              if (this.deps.getIndexedValidationLogSignature(outcomeKey) !== outcome.signature) {
+                this.deps.setIndexedValidationLogSignature(outcomeKey, outcome.signature);
+                this.deps.log(`validate indexed DONE: ${outcome.relOrPath} diagnostics=${outcome.diagnostics.length}`);
+              }
+            }
+          }
           processed++;
           continue;
         }
@@ -158,21 +187,29 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
         }
 
         const computeStartedAt = Date.now();
-        const outcomes: Array<IndexedValidationOutcome | undefined> = [];
-        for (const key of batch) {
-          const uri = vscode.Uri.parse(key);
-          const outcome = await this.deps.computeIndexedValidationOutcome(uri, {
-            preferFsRead: true,
-            settingsSnapshot: backgroundSettingsSnapshot,
-            metadataSnapshot: backgroundMetadataSnapshot
-          });
-          outcomes.push(outcome);
-        }
+        const outcomes = await Promise.all(
+          batch.map(async (key): Promise<{ key: string; generation: number; outcome: IndexedValidationOutcome | undefined }> => {
+            const uri = vscode.Uri.parse(key);
+            const generation = this.validationGenerationByKey.get(key) ?? 0;
+            const outcome = await this.deps.computeIndexedValidationOutcome(uri, {
+              preferFsRead: true,
+              settingsSnapshot: backgroundSettingsSnapshot,
+              metadataSnapshot: backgroundMetadataSnapshot
+            });
+            return { key, generation, outcome };
+          })
+        );
         lowComputeMs += Date.now() - computeStartedAt;
 
         const publishStartedAt = Date.now();
         const updates: Array<[vscode.Uri, readonly vscode.Diagnostic[] | undefined]> = [];
-        for (const outcome of outcomes) {
+        for (const item of outcomes) {
+          const currentGeneration = this.validationGenerationByKey.get(item.key) ?? 0;
+          if (currentGeneration !== item.generation) {
+            continue;
+          }
+
+          const outcome = item.outcome;
           if (!outcome) {
             continue;
           }

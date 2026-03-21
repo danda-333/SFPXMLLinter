@@ -131,7 +131,6 @@ export function createValidationModules(deps: ValidationRunnerDeps): ValidationM
       [
         "unknown-feature-requirement",
         "missing-feature-expectation",
-        "missing-feature-expected-xpath",
         "duplicate-feature-provider",
         "missing-explicit-provides",
         "missing-feature-dependency",
@@ -175,7 +174,8 @@ export function createValidationModules(deps: ValidationRunnerDeps): ValidationM
         "unknown-using-feature",
         "unknown-using-contribution",
         "contribution-mismatch",
-        "orphan-placeholder"
+        "orphan-placeholder",
+        "missing-feature-expected-xpath"
       ],
       ["fact.rootMeta", "fact.workflowRefs", "fact.mappingRefs", "fact.symbolDecls"]
     )

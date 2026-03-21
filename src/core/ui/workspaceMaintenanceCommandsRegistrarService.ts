@@ -18,7 +18,8 @@ export interface WorkspaceMaintenanceCommandsRegistrarServiceDeps {
   rebuildRuntimeIndex: () => Promise<void>;
   globConfiguredXmlFiles: () => Promise<vscode.Uri[]>;
   getIndexForUri: (uri: vscode.Uri) => WorkspaceIndex;
-  parseDocumentFacts: (document: vscode.TextDocument) => unknown;
+  getFactsForUri?: (uri: vscode.Uri, index: WorkspaceIndex) => unknown;
+  parseFacts: (document: vscode.TextDocument) => unknown;
   buildDiagnosticsForDocument: (document: vscode.TextDocument, index: WorkspaceIndex, facts: unknown) => vscode.Diagnostic[];
   createFormatterOptions: (editorOptions: vscode.TextEditorOptions, document: vscode.TextDocument) => FormatterOptions;
   formatDocument: (source: string, options: FormatterOptions) => {
@@ -83,7 +84,7 @@ export class WorkspaceMaintenanceCommandsRegistrarService {
         for (const uri of uris) {
           const doc = await vscode.workspace.openTextDocument(uri);
           const currentIndex = this.deps.getIndexForUri(uri);
-          const facts = currentIndex.parsedFactsByUri.get(uri.toString()) ?? this.deps.parseDocumentFacts(doc);
+          const facts = this.deps.getFactsForUri?.(uri, currentIndex) ?? this.deps.parseFacts(doc);
           const ds = this.deps.buildDiagnosticsForDocument(doc, currentIndex, facts);
           if (ds.length === 0) {
             continue;

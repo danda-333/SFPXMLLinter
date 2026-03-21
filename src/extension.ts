@@ -1,5 +1,6 @@
 ﻿import * as vscode from "vscode";
 import * as path from "node:path";
+import * as fs from "node:fs";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
 import { DiagnosticsEngine } from "./diagnostics/engine";
 import { documentInConfiguredRoots, getXmlIndexDomainByUri, XmlIndexDomain } from "./utils/paths";
@@ -14,9 +15,9 @@ import { TemplateMutationRecord } from "./template/buildXmlTemplatesCore";
 import { globConfiguredXmlFiles } from "./utils/paths";
 import { getSettings, SfpXmlLinterSettings } from "./config/settings";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "./indexer/xmlFacts";
-import { toIndexUriKey } from "./indexer/uriKey";
 import { formatXmlTolerant } from "./formatter";
 import { WorkspaceIndex, IndexedForm, IndexedSymbolProvenanceProvider } from "./indexer/types";
+import { resolveComponentByKey } from "./indexer/componentResolve";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
 import { FeatureRegistryStore } from "./composition/registry";
 import { CompositionTreeProvider } from "./composition/treeView";
@@ -26,14 +27,24 @@ import { ModuleHost } from "./core/pipeline/moduleHost";
 import { PipelineMetricsStore } from "./core/pipeline/metrics";
 import { UpdateRunner } from "./core/pipeline/updateRunner";
 import { ModelCore } from "./core/model/modelCore";
+import { ComposedDocumentSnapshotRegistry } from "./core/model/composedDocumentSnapshotRegistry";
 import { FactRegistry } from "./core/facts/factRegistry";
 import { registerDefaultFactsAndSymbols } from "./core/facts/registerDefaultFactsAndSymbols";
 import { SymbolRegistry } from "./core/symbols/symbolRegistry";
+import { ModelWriteGateway } from "./core/model/modelWriteGateway";
+import {
+  getComponentVariantKeys,
+  getIndexedFormByIdent,
+  getParsedFactsByUri as getParsedFactsByUriFromIndexAccess,
+  getParsedFactsEntries
+} from "./core/model/indexAccess";
+import { parseIndexUriKey } from "./core/model/indexUriParser";
+import { resolveDocumentFacts } from "./core/model/factsResolution";
 import { ValidationHost } from "./core/validation/validationHost";
 import { createValidationModules } from "./core/validation/validationModules";
 import { ValidationRequest } from "./core/validation/types";
 import { ValidationQueueOrchestrator } from "./core/validation/validationQueueOrchestrator";
-import { DocumentValidationService } from "./core/validation/documentValidationService";
+import { DocumentValidationService, parseFactsStandalone } from "./core/validation/documentValidationService";
 import { DependencyValidationService } from "./core/validation/dependencyValidationService";
 import { ReindexService } from "./core/index/reindexService";
 import { ProjectScopeService } from "./core/scope/projectScopeService";
@@ -84,6 +95,7 @@ const REFERENCE_REQUIRED_RULES = new Set<string>([
   "unknown-using-contribution",
   "contribution-mismatch",
   "orphan-placeholder",
+  "missing-feature-expected-xpath",
 ]);
 
 function getDiagnosticCodeValue(code: unknown): string | undefined {
@@ -107,11 +119,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components", "XML_Primitives"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
   const featureRegistryStore = new FeatureRegistryStore();
+  const composedSnapshotRegistry = new ComposedDocumentSnapshotRegistry();
+  let getModelVersionForTree = () => 0;
   const compositionTreeProvider = new CompositionTreeProvider(
     () => vscode.window.activeTextEditor?.document,
     (uri) => getIndexForUri(uri),
     () => featureRegistryStore.getRegistry(),
-    (formIdent, preferredIndex) => resolveOwningFormForDiagnostics(formIdent, preferredIndex)
+    (formIdent, preferredIndex) => resolveOwningFormForDiagnostics(formIdent, preferredIndex),
+    composedSnapshotRegistry,
+    (document) => refreshComposedSnapshotsForDocument(document),
+    () => getModelVersionForTree()
   );
   const compositionTreeView = vscode.window.createTreeView("sfpXmlLinter.compositionView", {
     treeDataProvider: compositionTreeProvider,
@@ -215,8 +232,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     getFactsForDocument: (document) => {
       const uriKey = document.uri.toString();
       const fromRegistry = factRegistry.getFact(uriKey, "fact.parsedDocument", "provider:language") as ReturnType<typeof parseDocumentFactsFromText> | undefined;
-      return fromRegistry ?? parseDocumentFacts(document);
+      return fromRegistry;
     },
+    getFactsForUri: (uri) => {
+      const fromRegistry = factRegistry.getFact(uri.toString(), "fact.parsedDocument", "provider:language");
+      return fromRegistry as ReturnType<typeof parseDocumentFactsFromText> | undefined;
+    },
+    getModelVersion: () => modelCore.getVersion(),
     getSymbolIdentsForUriKind: (uri, kind) => {
       const defs = symbolRegistry.getDefsByKind(uri.toString(), kind);
       return defs.map((def) => def.ident);
@@ -261,7 +283,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     },
     globConfiguredXmlFiles: () => globConfiguredXmlFiles(),
     getIndexForUri: (uri) => getIndexerForUri(uri).getIndex(),
-    parseDocumentFacts: (document) => parseDocumentFacts(document),
+    getFactsForUri: (uri) =>
+      factRegistry.getFact(uri.toString(), "fact.parsedDocument", "command:workspaceMaintenance"),
+    parseFacts: parseDocumentFacts,
     buildDiagnosticsForDocument: (document, index, facts) =>
       buildDiagnosticsForDocument(
         document,
@@ -543,25 +567,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // react to component/feature changes that affect generated XML.
     if (domain === "template") {
       const runtimeIndex = runtimeIndexer.getIndex();
-      const runtimeForm = runtimeIndex.formsByIdent.get(formIdent);
+      const runtimeForm = getIndexedFormByIdent(runtimeIndex, formIdent);
       if (runtimeForm) {
         return { form: runtimeForm, index: runtimeIndex };
       }
     }
 
-    const preferredForm = preferredIndex.formsByIdent.get(formIdent);
+    const preferredForm = getIndexedFormByIdent(preferredIndex, formIdent);
     if (preferredForm) {
       return { form: preferredForm, index: preferredIndex };
     }
 
     const runtimeIndex = runtimeIndexer.getIndex();
-    const runtimeForm = runtimeIndex.formsByIdent.get(formIdent);
+    const runtimeForm = getIndexedFormByIdent(runtimeIndex, formIdent);
     if (runtimeForm) {
       return { form: runtimeForm, index: runtimeIndex };
     }
 
     const templateIndex = templateIndexer.getIndex();
-    const templateForm = templateIndex.formsByIdent.get(formIdent);
+    const templateForm = getIndexedFormByIdent(templateIndex, formIdent);
     if (templateForm) {
       return { form: templateForm, index: templateIndex };
     }
@@ -756,7 +780,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       settingsSnapshot: options?.settingsSnapshot,
       metadataSnapshot: options?.metadataSnapshot,
       skipConfiguredRootsCheck: true
-    }, "source");
+    }, "composed-reference");
     const referenceDiagnostics = composedDiagnostics.filter((item) => isComposedReferenceRule(item.code));
     return remapComposedDiagnosticsToTemplate(referenceDiagnostics, templateFacts);
   }
@@ -765,26 +789,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     index: WorkspaceIndex,
     uri: vscode.Uri
   ): ReturnType<typeof parseDocumentFactsFromText> | undefined {
-    const direct = index.parsedFactsByUri.get(uri.toString());
-    if (direct) {
-      return direct;
-    }
-
-    const normalizedTarget = toIndexUriKey(uri);
-    for (const [key, facts] of index.parsedFactsByUri.entries()) {
-      if (key === normalizedTarget) {
-        return facts;
-      }
-
-      const keyUri = key.includes("://")
-        ? vscode.Uri.parse(key)
-        : vscode.Uri.file(key);
-      if (toIndexUriKey(keyUri) === normalizedTarget) {
-        return facts;
-      }
-    }
-
-    return undefined;
+    return getParsedFactsByUriFromIndexAccess(
+      index,
+      uri,
+      (targetUri) =>
+        factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:getParsedFactsByUri") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+      "strict-accessor"
+    );
   }
 
   function buildDiagnosticsForDocument(
@@ -793,6 +804,78 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     facts: ReturnType<typeof parseDocumentFactsFromText>,
     options?: { settingsSnapshot?: SfpXmlLinterSettings; metadataSnapshot?: SystemMetadata }
   ): vscode.Diagnostic[] {
+    // Keep composed snapshots hot for the currently validated document/form so all
+    // cross-document checks (ExpectedXPath, related usings) read a fresh single source.
+    const owningFormIdent = (() => {
+      const root = (facts.rootTag ?? "").toLowerCase();
+      if (root === "form") {
+        return facts.formIdent;
+      }
+      if (root === "workflow") {
+        return facts.workflowFormIdent ?? facts.rootFormIdent;
+      }
+      if (root === "dataview") {
+        return facts.rootFormIdent;
+      }
+      return undefined;
+    })();
+    const refreshUris: vscode.Uri[] = [document.uri];
+    if (owningFormIdent) {
+      const templateIndex = templateIndexer.getIndex();
+      const runtimeIndex = runtimeIndexer.getIndex();
+      for (const entry of getParsedFactsEntries(
+        templateIndex,
+        (uri, idx) =>
+          getParsedFactsByUriFromIndexAccess(
+            idx,
+            uri,
+            (targetUri) =>
+              factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:buildDiagnosticsRefresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+            "strict-accessor"
+          ),
+        parseIndexUriKey,
+        "strict-accessor"
+      )) {
+        const uri = entry.uri;
+        const parsedFacts = entry.facts;
+        const parsedRoot = (parsedFacts.rootTag ?? "").toLowerCase();
+        const parsedOwning =
+          parsedRoot === "form"
+            ? parsedFacts.formIdent
+            : parsedRoot === "workflow"
+              ? (parsedFacts.workflowFormIdent ?? parsedFacts.rootFormIdent)
+              : parsedRoot === "dataview"
+                ? parsedFacts.rootFormIdent
+                : undefined;
+        if (!parsedOwning || parsedOwning !== owningFormIdent) {
+          continue;
+        }
+        refreshUris.push(uri);
+      }
+      composedSnapshotRegistry.refreshForFormIdents(new Set([owningFormIdent]), {
+        templateIndex,
+        runtimeIndex,
+        readFileText: (uri) => {
+          try {
+            return fs.readFileSync(uri.fsPath, "utf8");
+          } catch {
+            return undefined;
+          }
+        }
+      });
+    }
+    composedSnapshotRegistry.refreshForUris(refreshUris, {
+      templateIndex: templateIndexer.getIndex(),
+      runtimeIndex: runtimeIndexer.getIndex(),
+      readFileText: (uri) => {
+        try {
+          return fs.readFileSync(uri.fsPath, "utf8");
+        } catch {
+          return undefined;
+        }
+      }
+    });
+
     const request: ValidationRequest = {
       document,
       index: currentIndex,
@@ -942,6 +1025,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     clearDiagnostics: (uri) => diagnostics.delete(uri),
     setDiagnostics: (uri, result) => diagnostics.set(uri, result),
     getIndexForUri: (uri) => getIndexerForUri(uri).getIndex(),
+    getFactsForUri: (uri) => {
+      const fromRegistry = factRegistry.getFact(uri.toString(), "fact.parsedDocument", "validation:document");
+      return fromRegistry as ReturnType<typeof parseDocumentFactsFromText> | undefined;
+    },
     buildDiagnosticsForDocument: (document, currentIndex, facts, options) =>
       buildDiagnosticsForDocument(document, currentIndex, facts, options),
     shouldValidateUriForActiveProjects: (uri) => shouldValidateUriForActiveProjects(uri),
@@ -963,7 +1050,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const validationQueue = new ValidationQueueOrchestrator({
     log: (message) => logIndex(message),
     publishDiagnosticsBatch: (updates) => diagnostics.set(updates),
-    validateUri: (uri) => validateUri(uri),
     computeIndexedValidationOutcome: (uri, options) => computeIndexedValidationOutcome(uri, options),
     shouldValidateUriForActiveProjects: (uri) => shouldValidateUriForActiveProjects(uri),
     getBackgroundSettingsSnapshot: () => getSettings(),
@@ -1144,7 +1230,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     collectTemplatePathsForFormIdentFromIndex: (formIdent) => collectTemplatePathsForFormIdentFromIndex(formIdent),
     collectDependentTemplatesFromIndex: (componentKey) => collectDependentTemplatesFromIndex(componentKey),
     findTemplatesUsingComponent: (workspaceFolder, componentPath) =>
-      buildService.findTemplatesUsingComponent(workspaceFolder, componentPath)
+      buildService.findTemplatesUsingComponent(workspaceFolder, componentPath),
+    getIndexForUri: (uri) => getIndexForUri(uri),
+    getFactsForDocument: (document) => {
+      const fromRegistry = factRegistry.getFact(document.uri.toString(), "fact.parsedDocument", "template:planner");
+      return fromRegistry as ReturnType<typeof parseDocumentFactsFromText> | undefined;
+    },
+    getFactsForUri: (uri, index) =>
+      getParsedFactsByUriFromIndexAccess(
+        index,
+        uri,
+        (targetUri) =>
+          factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "template:planner") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        "strict-accessor"
+      )
   });
 
   provenanceHydrationService = new ProvenanceHydrationService({
@@ -1360,7 +1459,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           doc = createVirtualXmlDocument(uri, text);
         }
 
-        const root = (parseDocumentFacts(doc).rootTag ?? "").toLowerCase();
+      const facts = resolveDocumentFacts(doc, getIndexForUri(uri), {
+        getFactsForUri: (targetUri, index) =>
+          getParsedFactsByUriFromIndexAccess(
+            index,
+            targetUri,
+              (factsUri) =>
+                factRegistry.getFact(factsUri.toString(), "fact.parsedDocument", "build:refreshForms") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+              "strict-accessor"
+            ),
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseFactsStandalone(doc);
+        const root = (facts?.rootTag ?? "").toLowerCase();
         if (root !== "form") {
           return;
         }
@@ -1431,13 +1542,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function collectDependentTemplatesFromIndex(componentKey: string): string[] {
     const idx = templateIndexer.getIndex();
-    const candidateKeys = collectCandidateComponentKeys(idx, componentKey);
+    const candidateKeys = getComponentVariantKeys(idx, componentKey);
     const canAffectNonFormRoots = componentCanAffectNonFormRoots(idx, candidateKeys);
 
     const result = new Set<string>();
     const affectedFormIdents = new Set<string>();
-    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
-      const uri = vscode.Uri.parse(uriKey);
+    for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
+      const uri = entry.uri;
+      const facts = entry.facts;
       if (!isInFolder(uri, "XML_Templates")) {
         continue;
       }
@@ -1456,7 +1568,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     if (affectedFormIdents.size > 0 && canAffectNonFormRoots) {
-      for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+      for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
+        const facts = entry.facts;
         const root = (facts.rootTag ?? "").toLowerCase();
         if (root !== "workflow" && root !== "dataview") {
           continue;
@@ -1470,7 +1583,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           continue;
         }
 
-        const uri = vscode.Uri.parse(uriKey);
+        const uri = entry.uri;
         if (!isInFolder(uri, "XML_Templates")) {
           continue;
         }
@@ -1483,7 +1596,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function componentCanAffectNonFormRoots(index: WorkspaceIndex, candidateKeys: ReadonlySet<string>): boolean {
     for (const key of candidateKeys) {
-      const component = index.componentsByKey.get(key);
+      const component = resolveComponentByKey(index, key);
       if (!component) {
         // Unknown component metadata -> keep safe behavior.
         return true;
@@ -1507,13 +1620,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   function buildInheritedUsingsSnapshotFromIndex(): ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]> {
     const idx = templateIndexer.getIndex();
     const out = new Map<string, TemplateInheritedUsingEntry[]>();
-    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+    for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
+      const facts = entry.facts;
       const root = (facts.rootTag ?? "").toLowerCase();
       if (root !== "form" || !facts.formIdent) {
         continue;
       }
 
-      const uri = vscode.Uri.parse(uriKey);
+      const uri = entry.uri;
       if (!isInFolder(uri, "XML_Templates")) {
         continue;
       }
@@ -1539,7 +1653,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   function collectTemplatePathsForFormIdentFromIndex(formIdent: string): string[] {
     const idx = templateIndexer.getIndex();
     const result = new Set<string>();
-    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+    for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
+      const facts = entry.facts;
       const root = (facts.rootTag ?? "").toLowerCase();
       if (root !== "form" && root !== "workflow" && root !== "dataview") {
         continue;
@@ -1555,7 +1670,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         continue;
       }
 
-      const uri = vscode.Uri.parse(uriKey);
+      const uri = entry.uri;
       if (!isInFolder(uri, "XML_Templates")) {
         continue;
       }
@@ -1566,20 +1681,66 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     return [...result].sort((a, b) => a.localeCompare(b));
   }
 
-  function collectCandidateComponentKeys(index: WorkspaceIndex, componentKey: string): Set<string> {
-    const out = new Set<string>([componentKey]);
-    const baseName = componentKey.split("/").pop() ?? componentKey;
-    const variants = index.componentKeysByBaseName.get(baseName);
-    if (variants) {
-      for (const variant of variants) {
-        out.add(variant);
-      }
-    }
-    return out;
-  }
-
   function validateDocument(document: vscode.TextDocument): void {
     documentValidationService.validateDocument(document);
+  }
+
+  function refreshComposedSnapshotsForDocument(document: vscode.TextDocument): void {
+    if (document.uri.scheme !== "file") {
+      return;
+    }
+    const deps = {
+      templateIndex: templateIndexer.getIndex(),
+      runtimeIndex: runtimeIndexer.getIndex()
+    };
+    const facts = resolveDocumentFacts(document, getIndexForUri(document.uri), {
+      getFactsForUri: (uri, index) =>
+        getParsedFactsByUriFromIndexAccess(
+          index,
+          uri,
+          (targetUri) =>
+            factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "snapshot:refresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+          "strict-accessor"
+        ),
+      parseFacts: parseDocumentFacts,
+      mode: "strict-accessor"
+    });
+    if (!facts) {
+      return;
+    }
+    const root = (facts.rootTag ?? "").toLowerCase();
+    const owningFormIdent = root === "form"
+      ? facts.formIdent
+      : root === "workflow"
+        ? (facts.workflowFormIdent ?? facts.rootFormIdent)
+        : root === "dataview"
+          ? facts.rootFormIdent
+          : undefined;
+    if (owningFormIdent) {
+      composedSnapshotRegistry.refreshForFormIdents(new Set([owningFormIdent]), deps);
+    }
+    composedSnapshotRegistry.refreshForUris([document.uri], deps);
+  }
+
+  function refreshComposedSnapshotsForSave(
+    cycleId: string,
+    document: vscode.TextDocument,
+    affectedFormIdents: ReadonlySet<string>
+  ): void {
+    const refreshStartedAt = Date.now();
+    const deps = {
+      templateIndex: templateIndexer.getIndex(),
+      runtimeIndex: runtimeIndexer.getIndex()
+    };
+    let refreshed = 0;
+    if (affectedFormIdents.size > 0) {
+      refreshed += composedSnapshotRegistry.refreshForFormIdents(affectedFormIdents, deps);
+    }
+    refreshed += composedSnapshotRegistry.refreshForUris([document.uri], deps);
+    const stats = composedSnapshotRegistry.getStats();
+    logIndex(
+      `${cycleId} snapshot refresh docs=${refreshed} in ${Date.now() - refreshStartedAt} ms (total=${stats.snapshots}, forms=${stats.forms})`
+    );
   }
 
   hoverDocsWatcherService.refresh();
@@ -1588,6 +1749,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   dependencyValidationService = new DependencyValidationService({
     getTemplateIndex: () => templateIndexer.getIndex(),
     getRuntimeIndex: () => runtimeIndexer.getIndex(),
+    getFactsForUri: (uri) => {
+      const fromRegistry = factRegistry.getFact(uri.toString(), "fact.parsedDocument", "validation:dependency");
+      return fromRegistry as ReturnType<typeof parseDocumentFactsFromText> | undefined;
+    },
     isReindexRelevantUri: (uri) => isReindexRelevantUri(uri),
     shouldValidateUriForActiveProjects: (uri) => shouldValidateUriForActiveProjects(uri),
     enqueueValidationHigh: (uri, options) => enqueueValidation(uri, "high", options),
@@ -1696,6 +1861,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         currentSavePerformanceCycleId = undefined;
         savePerfByCycle.delete(event.cycleId);
       }
+    },
+    onPostSave: (context) => {
+      refreshComposedSnapshotsForSave(context.cycleId, context.document, context.affectedFormIdents);
     }
   });
 
@@ -1703,15 +1871,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const pipelineMetrics = new PipelineMetricsStore(600);
   const updateRunner = new UpdateRunner(pipelineModuleHost, pipelineMetrics, (line) => logIndex(line));
   const modelCore = new ModelCore();
+  getModelVersionForTree = () => modelCore.getVersion();
+  const modelWriteGateway = new ModelWriteGateway({
+    modelCore,
+    factRegistry,
+    symbolRegistry
+  });
   const resolveParsedFacts = (nodeId: string): ReturnType<typeof parseDocumentFactsFromText> | undefined => {
     const uri = vscode.Uri.parse(nodeId);
     const opened = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     if (opened) {
-      return parseDocumentFacts(opened);
+      return resolveDocumentFacts(opened, getIndexForUri(uri), {
+        getFactsForUri: (targetUri, index) =>
+          getParsedFactsByUriFromIndexAccess(
+            index,
+            targetUri,
+            undefined,
+            "index-fallback"
+          ),
+        parseFacts: parseDocumentFacts,
+        mode: "fallback-parse"
+      });
     }
 
     const indexer = getIndexerForUri(uri);
-    return indexer.getIndex().parsedFactsByUri.get(uri.toString());
+    return getParsedFactsByUriFromIndexAccess(
+      indexer.getIndex(),
+      uri
+    );
   };
 
   registerDefaultFactsAndSymbols({
@@ -1740,7 +1927,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     const uriKey = document.uri.toString();
     const nodeKind = document.languageId === "xml" ? "document" : "virtual";
-    modelCore.upsertNode({
+    modelWriteGateway.upsertNode({
       id: uriKey,
       kind: nodeKind,
       source: {
@@ -1753,8 +1940,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         versionToken: `${document.version}`
       }
     });
-    factRegistry.invalidateNode(uriKey);
-    symbolRegistry.refreshNode(uriKey);
   }
 
   function upsertModelNodeFromUri(uri: vscode.Uri, provider: "file" | "generator" | "runtime" = "file"): void {
@@ -1762,7 +1947,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     const uriKey = uri.toString();
-    modelCore.upsertNode({
+    modelWriteGateway.upsertNode({
       id: uriKey,
       kind: "document",
       source: {
@@ -1771,14 +1956,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         identityKey: uriKey
       }
     });
-    factRegistry.invalidateNode(uriKey);
-    symbolRegistry.refreshNode(uriKey);
   }
 
   pipelineModuleHost.register(new ModelSyncModule({
     upsertModelNodeFromDocument,
     upsertModelNodeFromUri,
-    removeModelNodeByUri: (uri) => modelCore.removeNode(uri.toString())
+    removeModelNodeByUri: (uri) => modelWriteGateway.removeNode(uri.toString())
   }));
 
   for (const module of createValidationModules({
@@ -1790,6 +1973,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         standaloneMode: request.standaloneMode,
         skipConfiguredRootsCheck: request.skipConfiguredRootsCheck,
         featureRegistry: featureRegistryStore.getRegistry(),
+        composedSnapshotRegistry,
         resolveOwningForm: (formIdent) =>
           resolveOwningFormForDiagnostics(formIdent, request.index, request.document.uri),
         workflowReferenceMode: "local"

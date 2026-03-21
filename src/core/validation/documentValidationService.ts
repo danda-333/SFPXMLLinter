@@ -3,6 +3,7 @@ import { SfpXmlLinterSettings } from "../../config/settings";
 import { WorkspaceIndex } from "../../indexer/types";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "../../indexer/xmlFacts";
 import { SystemMetadata } from "../../config/systemMetadata";
+import { resolveDocumentFacts } from "../model/factsResolution";
 
 export interface IndexedValidationOutcome {
   uri: vscode.Uri;
@@ -22,6 +23,7 @@ export interface DocumentValidationServiceDeps {
   clearDiagnostics: (uri: vscode.Uri) => void;
   setDiagnostics: (uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[]) => void;
   getIndexForUri: (uri: vscode.Uri) => WorkspaceIndex;
+  getFactsForUri?: (uri: vscode.Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
   buildDiagnosticsForDocument: (
     document: vscode.TextDocument,
     currentIndex: WorkspaceIndex,
@@ -84,10 +86,15 @@ export class DocumentValidationService {
       }
 
       this.deps.logSingleFile(`validate standalone START: ${relOrPath}`);
+      const standaloneFacts = this.resolveFactsFromDocument(document, this.deps.emptyIndex, "fallback-parse");
+      if (!standaloneFacts) {
+        this.deps.clearDiagnostics(document.uri);
+        return;
+      }
       const standaloneDiagnostics = this.deps.buildDiagnosticsForDocument(
         document,
         this.deps.emptyIndex,
-        parseDocumentFacts(document)
+        standaloneFacts
       ).filter(this.deps.referenceRuleFilter);
       this.deps.setDiagnostics(document.uri, standaloneDiagnostics);
       this.standaloneValidationVersionByUri.set(docKey, document.version);
@@ -108,7 +115,11 @@ export class DocumentValidationService {
     }
 
     const currentIndex = this.deps.getIndexForUri(document.uri);
-    const parsedFacts = parseDocumentFacts(document);
+    const parsedFacts = this.resolveFactsFromDocument(document, currentIndex, "strict-accessor");
+    if (!parsedFacts) {
+      this.deps.clearDiagnostics(document.uri);
+      return;
+    }
     const result = this.deps.buildDiagnosticsForDocument(document, currentIndex, parsedFacts);
     this.deps.setDiagnostics(document.uri, result);
     if (result.length > 0 || this.deps.isUserOpenDocument(document.uri)) {
@@ -184,11 +195,14 @@ export class DocumentValidationService {
     const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     const readStartedAt = Date.now();
     const index = this.deps.getIndexForUri(uri);
-    const cachedFacts = index.parsedFactsByUri.get(uri.toString());
+    const cachedFacts = this.deps.getFactsForUri?.(uri, index);
     const cacheMiss = options?.preferFsRead === true && !cachedFacts;
 
     let document = existing;
     let pathMode: "fast" | "fs" | "open" = "open";
+    if (document && !options?.preferFsRead && cachedFacts) {
+      pathMode = "fast";
+    }
     if (!document && options?.preferFsRead) {
       const text = await this.deps.readWorkspaceFileText(uri);
       document = this.deps.createVirtualXmlDocument(uri, text);
@@ -203,7 +217,10 @@ export class DocumentValidationService {
     }
     const readMs = Date.now() - readStartedAt;
     const diagnosticsStartedAt = Date.now();
-    const effectiveFacts = cachedFacts ?? parseDocumentFacts(document);
+    const effectiveFacts = this.resolveFactsFromDocument(document, index, "strict-accessor");
+    if (!effectiveFacts) {
+      return undefined;
+    }
     const computed = this.deps.buildDiagnosticsForDocument(document, index, effectiveFacts, {
       settingsSnapshot: options?.settingsSnapshot,
       metadataSnapshot: options?.metadataSnapshot
@@ -223,5 +240,23 @@ export class DocumentValidationService {
       cacheMiss
     };
   }
+
+  private resolveFactsFromDocument(
+    document: vscode.TextDocument,
+    index: WorkspaceIndex,
+    mode: "strict-accessor" | "fallback-parse"
+  ): ReturnType<typeof parseDocumentFactsFromText> | undefined {
+    return resolveDocumentFacts(document, index, {
+      getFactsForUri: this.deps.getFactsForUri,
+      parseFacts: parseDocumentFacts,
+      mode
+    });
+  }
+}
+
+export function parseFactsStandalone(
+  document: vscode.TextDocument
+): ReturnType<typeof parseDocumentFactsFromText> {
+  return parseDocumentFacts(document);
 }
 

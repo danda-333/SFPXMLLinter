@@ -11,11 +11,15 @@ import { buildDocumentCompositionModel } from "../composition/documentModel";
 import { contributionMatchesDocumentRoot } from "../composition/usingImpact";
 import { collectCompletionSymbolValues, CompletionSymbolKind } from "../utils/completionSymbolModel";
 import { IndexedForm } from "../indexer/types";
+import { getIndexedComponentKeys, getIndexedFormByIdent } from "../core/model/indexAccess";
+import { resolveDocumentFacts } from "../core/model/factsResolution";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type OwningFormResolver = (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined;
-type FactsAccessor = (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText>;
+type FactsAccessor = (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
+type FactsByUriAccessor = (uri: vscode.Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
 type SymbolIdentsAccessor = (uri: vscode.Uri, kind: string) => readonly string[];
+type ModelVersionAccessor = () => number;
 type ParsedFacts = ReturnType<typeof parseDocumentFactsFromText>;
 
 const ROOT_ELEMENTS = ["Form", "WorkFlow", "DataView", "Filter", "Dashboard", "Configuration", "Feature", "Component", "Primitive"];
@@ -248,11 +252,18 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     private readonly getIndex: IndexAccessor,
     private readonly resolveOwningForm?: OwningFormResolver,
     private readonly getFactsForDocument?: FactsAccessor,
-    private readonly getSymbolIdentsForUriKind?: SymbolIdentsAccessor
+    private readonly getFactsForUri?: FactsByUriAccessor,
+    private readonly getSymbolIdentsForUriKind?: SymbolIdentsAccessor,
+    private readonly getModelVersion?: ModelVersionAccessor
   ) {}
 
-  private getFacts(document: vscode.TextDocument): ParsedFacts {
-    return this.getFactsForDocument?.(document) ?? parseDocumentFacts(document);
+  private getFacts(document: vscode.TextDocument): ParsedFacts | undefined {
+    return resolveDocumentFacts(document, this.getIndex(document.uri), {
+      getFactsForDocument: this.getFactsForDocument,
+      getFactsForUri: this.getFactsForUri,
+      parseFacts: parseDocumentFacts,
+      mode: "strict-accessor"
+    });
   }
 
   private getSymbolIdents(uri: vscode.Uri, kind: string): readonly string[] {
@@ -260,6 +271,13 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
   }
 
   async provideCompletionItems(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): Promise<vscode.CompletionItem[] | vscode.CompletionList | undefined> {
+    return this.withConsistentSnapshot(() => this.provideCompletionItemsInternal(document, position));
+  }
+
+  private async provideCompletionItemsInternal(
     document: vscode.TextDocument,
     position: vscode.Position
   ): Promise<vscode.CompletionItem[] | vscode.CompletionList | undefined> {
@@ -303,6 +321,19 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     return undefined;
   }
 
+  private async withConsistentSnapshot<T>(compute: () => Promise<T>): Promise<T> {
+    if (!this.getModelVersion) {
+      return compute();
+    }
+    const start = this.getModelVersion();
+    const first = await compute();
+    const end = this.getModelVersion();
+    if (start === end) {
+      return first;
+    }
+    return compute();
+  }
+
   private completeSqlParameterIdents(document: vscode.TextDocument, position: vscode.Position): SqlCompletionResult {
     const context = computeSqlParameterContext(document, position);
     if (!context) {
@@ -330,6 +361,9 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
     const index = this.getIndex(document.uri);
     const facts = this.getFacts(document);
+    if (!facts) {
+      return [];
+    }
     const componentKeyFromFields =
       context.fields.get("Feature") ??
       context.fields.get("Component") ??
@@ -403,6 +437,9 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     const facts = this.getFacts(document);
+    if (!facts) {
+      return [];
+    }
     const index = this.getIndex(document.uri);
     const documentComposition = buildDocumentCompositionModel(facts, index);
     const values = [...collectResolvableControlIdents(document, facts, index, { compositionModel: documentComposition })].sort((a, b) => a.localeCompare(b));
@@ -491,6 +528,9 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
   private async completeAttributeValues(document: vscode.TextDocument, position: vscode.Position, ctx: TagContext): Promise<vscode.CompletionItem[]> {
     const facts = this.getFacts(document);
+    if (!facts) {
+      return [];
+    }
     const index = this.getIndex(document.uri);
     const documentComposition = buildDocumentCompositionModel(facts, index);
     const tag = (ctx.currentTag ?? "").toLowerCase();
@@ -647,7 +687,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow"
         ? facts.workflowFormIdent
         : facts.formIdent ?? facts.rootFormIdent;
-      const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
+      const owningForm = getIndexedFormByIdent(index, owningFormIdent);
       if (!owningForm) {
         return [];
       }
@@ -662,7 +702,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
     if (tag === "mapping" && attr === "toident") {
       const targetFormIdent = ctx.mappingFormIdentInScope;
-      const targetForm = targetFormIdent ? index.formsByIdent.get(targetFormIdent) : undefined;
+      const targetForm = getIndexedFormByIdent(index, targetFormIdent);
       if (targetForm) {
         return asValueItems([...targetForm.controls].sort((a, b) => a.localeCompare(b)), vscode.CompletionItemKind.Reference);
       }
@@ -670,7 +710,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       const owningFormIdent = facts.rootTag?.toLowerCase() === "workflow"
         ? facts.workflowFormIdent
         : facts.formIdent ?? facts.rootFormIdent;
-      const owningForm = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
+      const owningForm = getIndexedFormByIdent(index, owningFormIdent);
       if (!owningForm) {
         return [];
       }
@@ -698,7 +738,8 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
         facts,
         index,
         composition: documentComposition,
-        resolveOwningForm: this.resolveOwningForm
+        resolveOwningForm: this.resolveOwningForm,
+        getFactsForUri: this.getFactsForUri
       })
     );
 
@@ -710,10 +751,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     if (registerKinds.ownerFormKinds.length > 0 && facts.workflowFormIdent) {
-      const resolvedOwner = this.resolveOwningForm?.(facts.workflowFormIdent, index) ?? (index.formsByIdent.get(facts.workflowFormIdent) ? {
-        form: index.formsByIdent.get(facts.workflowFormIdent)!,
-        index
-      } : undefined);
+      const resolvedOwner = this.resolveOwningForm?.(facts.workflowFormIdent, index);
       if (resolvedOwner) {
         for (const registerKind of registerKinds.ownerFormKinds) {
           for (const ident of this.getSymbolIdents(resolvedOwner.form.uri, registerKind)) {
@@ -1364,7 +1402,7 @@ function sortedFormIdents(index: WorkspaceIndex): string[] {
 }
 
 function sortedComponentKeys(index: WorkspaceIndex): string[] {
-  return [...index.componentsByKey.keys()].sort((a, b) => a.localeCompare(b));
+  return getIndexedComponentKeys(index).sort((a, b) => a.localeCompare(b));
 }
 
 function buildContributionValueItems(

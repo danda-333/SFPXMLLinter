@@ -9,11 +9,44 @@ Purpose: define the missing decisions needed to execute all refactor phases in o
 - Provider layer (`references`, `rename`, `definition`) now consumes shared facts/symbol access paths instead of legacy reference buckets.
 - Tree projection adapter is in place and covered by composition test suite.
 - TreeView dependency usage and dependency revalidation/template dependent lookup were switched away from legacy component reference/usage maps to fact-scanning paths.
+- Facts resolution policy is now centralized (`core/model/factsResolution.ts`) and used by providers + validation service in explicit modes (`strict-accessor` / `fallback-parse`) to avoid silent contract drift.
+- Added guard regression test for facts resolution policy (`src/tests/core/runFactsResolutionTests.ts`) and wired into `test:composition`.
 - Gates passing:
   - `npm run compile`
   - `npm run test:providers`
   - `npm run test:linter`
   - `npm run test:composition`
+
+## Execution Addendum (2026-03-21)
+
+- Single-writer guard was expanded to cover fact/symbol registration mutation surfaces:
+  - `factRegistry.register(...)`
+  - `symbolRegistry.registerResolver(...)`
+- Direct model/fact/symbol write calls from `extension.ts` were removed and centralized behind:
+  - `src/core/model/modelWriteGateway.ts`
+- Guard allowlist explicitly marks bootstrap-only registration boundary:
+  - `src/core/facts/registerDefaultFactsAndSymbols.ts`
+- Update orchestrator contract coverage was extended:
+  - post-save callback ordering (`build -> dependency enqueue -> onPostSave`)
+  - same-URI save serialization (second save waits for first pipeline completion)
+- Shared access policy tightened further in runtime consumers:
+  - component key/variant reads moved behind `core/model/indexAccess.ts`
+  - additional direct-map reads eliminated from providers/scope/orchestrator-adjacent services
+- Runtime facts reads were hardened to strict-accessor mode for composition/runtime consumers (TreeView facts resolution, dependency revalidation open-doc path, template planner on template save).
+- `missing-feature-expected-xpath` was moved to composed-reference validation mode; template diagnostics now resolve this rule from runtime/composed context only.
+
+### Standalone Fallback Contract (Explicit Exception)
+
+- Runtime/indexed pipeline remains strict-accessor only.
+- Fallback parsing is allowed only for standalone/non-indexed documents.
+- Allowed entrypoint:
+  - `parseFactsStandalone(...)` in `src/core/validation/documentValidationService.ts`
+- Forbidden:
+  - direct `parseDocumentFacts(...)` calls in runtime consumers
+  - `fallback-parse` mode in composition/runtime consumers
+- Guard alignment:
+  - single-source guard keeps `parseDocumentFacts(...)` usage blocked outside allowlisted boundaries
+  - document validation service is the explicit standalone boundary
 
 ## 1) Priority Order (Hard)
 

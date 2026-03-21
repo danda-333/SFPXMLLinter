@@ -13,6 +13,7 @@ export interface FactProvider {
 export class FactRegistry {
   private readonly providers = new Map<FactKind, FactProvider>();
   private readonly factsByNode = new Map<NodeId, Map<FactKind, unknown>>();
+  private readonly collectInProgress = new Set<string>();
   private readonly hitsByFactKind = new Map<FactKind, number>();
   private readonly missesByFactKind = new Map<FactKind, number>();
   private readonly requestedByConsumer = new Map<string, Set<FactKind>>();
@@ -64,7 +65,19 @@ export class FactRegistry {
       return undefined;
     }
 
-    const value = provider.collect(nodeId);
+    const inProgressKey = `${nodeId}::${kind}`;
+    if (this.collectInProgress.has(inProgressKey)) {
+      this.missesByFactKind.set(kind, (this.missesByFactKind.get(kind) ?? 0) + 1);
+      return undefined;
+    }
+
+    this.collectInProgress.add(inProgressKey);
+    let value: unknown;
+    try {
+      value = provider.collect(nodeId);
+    } finally {
+      this.collectInProgress.delete(inProgressKey);
+    }
     const nodeFacts = cache ?? new Map<FactKind, unknown>();
     nodeFacts.set(kind, value);
     this.factsByNode.set(nodeId, nodeFacts);

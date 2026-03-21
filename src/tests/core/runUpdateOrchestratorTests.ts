@@ -38,6 +38,8 @@ const { UpdateOrchestrator } = require("../../orchestrator/updateOrchestrator") 
 
 async function run(): Promise<void> {
   await testBuildCompletesBeforeDependentValidationEnqueue();
+  await testPostSaveRunsAfterDependencyEnqueue();
+  await testSameUriSavesAreSerialized();
   await testSkipWhenNoContentChanges();
   await testNonRelevantUriOnlyTriggersBuild();
   console.log("\x1b[32mUpdateOrchestrator tests passed.\x1b[0m");
@@ -125,6 +127,137 @@ async function testSkipWhenNoContentChanges(): Promise<void> {
 
   await orchestrator.handleDocumentSave({ uri: Uri.file("C:/repo/XML_Templates/A.xml") } as never, false);
   assert.equal(called, false, "No orchestrator actions expected when save has no content changes.");
+}
+
+async function testPostSaveRunsAfterDependencyEnqueue(): Promise<void> {
+  const callOrder: string[] = [];
+  const orchestrator = new UpdateOrchestrator({
+    log() {
+      // no-op
+    },
+    isReindexRelevantUri() {
+      return true;
+    },
+    refreshIncremental() {
+      callOrder.push("refresh");
+      return {
+        updated: true,
+        reason: "updated",
+        rootKind: "component",
+        componentKey: "Common/Controls/AdditionalFields",
+        formIdent: "ITSMIncident"
+      };
+    },
+    collectAffectedFormIdentsForComponent() {
+      callOrder.push("collect");
+      return new Set<string>(["ITSMIncident"]);
+    },
+    enqueueDependentValidationForFormIdents(formIdents) {
+      callOrder.push("enqueue");
+      assert.equal(formIdents.has("ITSMIncident"), true);
+      return {
+        forms: formIdents.size,
+        files: 2,
+        immediateOpen: 1,
+        queuedLow: 1,
+        durationMs: 3
+      };
+    },
+    async triggerAutoBuild() {
+      callOrder.push("build");
+    },
+    async onPostSave(context) {
+      callOrder.push("post");
+      assert.equal(context.affectedFormIdents.has("ITSMIncident"), true);
+      assert.equal(context.dependency?.files, 2);
+    },
+    queueFullReindex() {
+      // no-op
+    }
+  });
+
+  await orchestrator.handleDocumentSave(
+    { uri: Uri.file("C:/repo/XML_Components/Common/Controls/AdditionalFields.component.xml") } as never,
+    true
+  );
+  await orchestrator.waitForSaveIdle();
+
+  assert.deepEqual(callOrder, ["refresh", "collect", "build", "enqueue", "post"]);
+}
+
+async function testSameUriSavesAreSerialized(): Promise<void> {
+  const callOrder: string[] = [];
+  let releaseFirstBuild: (() => void) | undefined;
+  const firstBuildGate = new Promise<void>((resolve) => {
+    releaseFirstBuild = resolve;
+  });
+  let buildCall = 0;
+
+  const orchestrator = new UpdateOrchestrator({
+    log() {
+      // no-op
+    },
+    isReindexRelevantUri() {
+      return true;
+    },
+    refreshIncremental(document) {
+      const rel = document.uri.fsPath.replace(/\\/g, "/");
+      callOrder.push(`refresh:${rel}`);
+      return {
+        updated: true,
+        reason: "updated",
+        rootKind: "workflow",
+        formIdent: "ITSMIncident"
+      };
+    },
+    collectAffectedFormIdentsForComponent() {
+      return new Set<string>();
+    },
+    enqueueDependentValidationForFormIdents() {
+      callOrder.push("enqueue");
+      return undefined;
+    },
+    async triggerAutoBuild() {
+      buildCall++;
+      const thisCall = buildCall;
+      callOrder.push(`build-start:${thisCall}`);
+      if (thisCall === 1) {
+        await firstBuildGate;
+      }
+      callOrder.push(`build-done:${thisCall}`);
+    },
+    queueFullReindex() {
+      // no-op
+    }
+  });
+
+  const doc = { uri: Uri.file("C:/repo/XML_Templates/300_ITSMIncident/ITSMIncidentWorkFlow.xml") } as never;
+  const first = orchestrator.handleDocumentSave(doc, true);
+  const second = orchestrator.handleDocumentSave(doc, true);
+  await sleep(5);
+  assert.deepEqual(
+    callOrder,
+    [
+      "refresh:C:/repo/XML_Templates/300_ITSMIncident/ITSMIncidentWorkFlow.xml",
+      "build-start:1"
+    ],
+    "Second save must wait for first save pipeline on same URI."
+  );
+
+  releaseFirstBuild?.();
+  await Promise.all([first, second]);
+  await orchestrator.waitForSaveIdle();
+
+  assert.deepEqual(callOrder, [
+    "refresh:C:/repo/XML_Templates/300_ITSMIncident/ITSMIncidentWorkFlow.xml",
+    "build-start:1",
+    "build-done:1",
+    "enqueue",
+    "refresh:C:/repo/XML_Templates/300_ITSMIncident/ITSMIncidentWorkFlow.xml",
+    "build-start:2",
+    "build-done:2",
+    "enqueue"
+  ]);
 }
 
 async function testNonRelevantUriOnlyTriggersBuild(): Promise<void> {

@@ -110,9 +110,15 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - `sfpXmlLinter.templateBuilder.provenanceMode` (`off` | `fileComment`)
   - builder modes:
     - `sfpXmlLinter.templateBuilder.mode` (`fast` | `debug` | `release`)
-  - build/composition output channels:
+- build/composition output channels:
     - `SFP XML Linter: Show Build Queue Log`
     - `SFP XML Linter: Show Composition Log`
+    - `SFP XML Linter: Show Pipeline Stats`
+    - `SFP XML Linter: Export Pipeline Trace`
+    - `SFP XML Linter: Export Usage Snapshot`
+  - debug exports:
+    - `Export Pipeline Trace` writes `Docs/pipeline-trace.json`
+    - `Export Usage Snapshot` writes `Docs/pipeline-usage-snapshot.json` (`model` + `facts` + `symbols` + `validation` + `pipeline`)
 - Generator scaffolding commands:
   - `SFP XML Linter: Create Generator Template (Document)`
   - `SFP XML Linter: Create Generator Template (Snippet)`

@@ -38,7 +38,7 @@ const { UpdateOrchestrator } = require("../../orchestrator/updateOrchestrator") 
 
 async function run(): Promise<void> {
   await testBuildCompletesBeforeDependentValidationEnqueue();
-  await testPostSaveRunsAfterDependencyEnqueue();
+  await testPostSaveRunsBeforeDependencyEnqueue();
   await testSameUriSavesAreSerialized();
   await testSkipWhenNoContentChanges();
   await testNonRelevantUriOnlyTriggersBuild();
@@ -129,7 +129,7 @@ async function testSkipWhenNoContentChanges(): Promise<void> {
   assert.equal(called, false, "No orchestrator actions expected when save has no content changes.");
 }
 
-async function testPostSaveRunsAfterDependencyEnqueue(): Promise<void> {
+async function testPostSaveRunsBeforeDependencyEnqueue(): Promise<void> {
   const callOrder: string[] = [];
   const orchestrator = new UpdateOrchestrator({
     log() {
@@ -169,7 +169,7 @@ async function testPostSaveRunsAfterDependencyEnqueue(): Promise<void> {
     async onPostSave(context) {
       callOrder.push("post");
       assert.equal(context.affectedFormIdents.has("ITSMIncident"), true);
-      assert.equal(context.dependency?.files, 2);
+      assert.equal(context.dependency, undefined);
     },
     queueFullReindex() {
       // no-op
@@ -182,7 +182,7 @@ async function testPostSaveRunsAfterDependencyEnqueue(): Promise<void> {
   );
   await orchestrator.waitForSaveIdle();
 
-  assert.deepEqual(callOrder, ["refresh", "collect", "build", "enqueue", "post"]);
+  assert.deepEqual(callOrder, ["refresh", "collect", "build", "post", "enqueue"]);
 }
 
 async function testSameUriSavesAreSerialized(): Promise<void> {

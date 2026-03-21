@@ -16,7 +16,9 @@ const DIRECT_PATTERNS: ReadonlyArray<{ key: string; regex: RegExp }> = [
   { key: "componentsByKey.keys(", regex: /\bcomponentsByKey\.keys\(/ },
   { key: "componentsByKey.size", regex: /\bcomponentsByKey\.size\b/ },
   { key: "componentKeysByBaseName.get(", regex: /\bcomponentKeysByBaseName\.get\(/ },
-  { key: "parseDocumentFacts(...)", regex: /\bparseDocumentFacts\(\s*[a-zA-Z_$][\w$]*\s*\)/ }
+  { key: "parseDocumentFacts(...)", regex: /\bparseDocumentFacts\(\s*[a-zA-Z_$][\w$]*\s*\)/ },
+  { key: "mode: \"fallback-parse\"", regex: /\bmode\s*:\s*"fallback-parse"/ },
+  { key: "\"index-fallback\"", regex: /"index-fallback"/ }
 ];
 
 const ALLOWLIST = new Set<string>([

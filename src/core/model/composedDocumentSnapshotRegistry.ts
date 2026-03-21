@@ -40,10 +40,15 @@ export interface SnapshotRefreshDeps {
 export class ComposedDocumentSnapshotRegistry {
   private readonly snapshotsByUri = new Map<string, ComposedDocumentSnapshot>();
   private readonly urisByFormIdent = new Map<string, Set<string>>();
+  private version = 0;
 
   public clear(): void {
+    if (this.snapshotsByUri.size === 0 && this.urisByFormIdent.size === 0) {
+      return;
+    }
     this.snapshotsByUri.clear();
     this.urisByFormIdent.clear();
+    this.version++;
   }
 
   public get(uri: vscode.Uri): ComposedDocumentSnapshot | undefined {
@@ -66,6 +71,10 @@ export class ComposedDocumentSnapshotRegistry {
       snapshots: this.snapshotsByUri.size,
       forms: this.urisByFormIdent.size
     };
+  }
+
+  public getVersion(): number {
+    return this.version;
   }
 
   public refreshForUris(uris: readonly vscode.Uri[], deps: SnapshotRefreshDeps): number {
@@ -104,6 +113,7 @@ export class ComposedDocumentSnapshotRegistry {
       bucket.add(key);
       this.urisByFormIdent.set(snapshot.owningFormIdent, bucket);
     }
+    this.version++;
   }
 
   private removeFormBinding(formIdent: string, uriKey: string): void {

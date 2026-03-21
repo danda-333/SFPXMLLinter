@@ -32,6 +32,9 @@ export class SymbolRegistry {
   private readonly refsByNode = new Map<NodeId, SymbolRef[]>();
   private readonly defsByKind = new Map<SymbolKind, Map<string, SymbolDef[]>>();
   private readonly refsByKind = new Map<SymbolKind, Map<string, SymbolRef[]>>();
+  private readonly collectCallsByKind = new Map<SymbolKind, number>();
+  private readonly defsProducedByKind = new Map<SymbolKind, number>();
+  private readonly refsProducedByKind = new Map<SymbolKind, number>();
 
   public registerResolver(resolver: SymbolResolver): void {
     this.resolvers.set(resolver.kind, resolver);
@@ -50,8 +53,23 @@ export class SymbolRegistry {
     const defs: SymbolDef[] = [];
     const refs: SymbolRef[] = [];
     for (const resolver of this.resolvers.values()) {
-      defs.push(...resolver.collectDefs(nodeId));
-      refs.push(...resolver.collectRefs(nodeId));
+      this.collectCallsByKind.set(resolver.kind, (this.collectCallsByKind.get(resolver.kind) ?? 0) + 1);
+      const resolverDefs = resolver.collectDefs(nodeId);
+      const resolverRefs = resolver.collectRefs(nodeId);
+      if (resolverDefs.length > 0) {
+        this.defsProducedByKind.set(
+          resolver.kind,
+          (this.defsProducedByKind.get(resolver.kind) ?? 0) + resolverDefs.length
+        );
+      }
+      if (resolverRefs.length > 0) {
+        this.refsProducedByKind.set(
+          resolver.kind,
+          (this.refsProducedByKind.get(resolver.kind) ?? 0) + resolverRefs.length
+        );
+      }
+      defs.push(...resolverDefs);
+      refs.push(...resolverRefs);
     }
     this.defsByNode.set(nodeId, defs);
     this.refsByNode.set(nodeId, refs);
@@ -175,5 +193,27 @@ export class SymbolRegistry {
       refs,
       resolvers: this.resolvers.size
     };
+  }
+
+  public getResolverUsageStats(): Array<{
+    kind: SymbolKind;
+    collectCalls: number;
+    defsProduced: number;
+    refsProduced: number;
+  }> {
+    return [...this.resolvers.keys()]
+      .map((kind) => ({
+        kind,
+        collectCalls: this.collectCallsByKind.get(kind) ?? 0,
+        defsProduced: this.defsProducedByKind.get(kind) ?? 0,
+        refsProduced: this.refsProducedByKind.get(kind) ?? 0
+      }))
+      .sort((a, b) => a.kind.localeCompare(b.kind));
+  }
+
+  public getDeadResolverKinds(): readonly SymbolKind[] {
+    return this.getResolverUsageStats()
+      .filter((item) => item.collectCalls > 0 && item.defsProduced === 0 && item.refsProduced === 0)
+      .map((item) => item.kind);
   }
 }

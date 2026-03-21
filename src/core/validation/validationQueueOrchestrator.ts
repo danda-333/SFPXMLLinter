@@ -6,6 +6,7 @@ import { IndexedValidationOutcome } from "./documentValidationService";
 export interface ValidationQueueOrchestratorDeps {
   log: (message: string) => void;
   publishDiagnosticsBatch: (updates: ReadonlyArray<[vscode.Uri, readonly vscode.Diagnostic[] | undefined]>) => void;
+  onDiagnosticsPublished?: () => void;
   computeIndexedValidationOutcome: (
     uri: vscode.Uri,
     options?: {
@@ -29,6 +30,7 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
   private readonly lowPriorityValidationQueue: string[] = [];
   private readonly lowPriorityValidationSet = new Set<string>();
   private readonly validationGenerationByKey = new Map<string, number>();
+  private readonly validationMetaByKey = new Map<string, { sourceLabel?: string; snapshotVersion?: number }>();
   private isValidationWorkerRunning = false;
   private lowPriorityValidationStartTimer: NodeJS.Timeout | undefined;
 
@@ -41,7 +43,11 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
     }
   }
 
-  public enqueueValidation(uri: vscode.Uri, priority: "high" | "low", options?: { force?: boolean }): void {
+  public enqueueValidation(
+    uri: vscode.Uri,
+    priority: "high" | "low",
+    options?: { force?: boolean; sourceLabel?: string; snapshotVersion?: number }
+  ): void {
     if (uri.scheme !== "file") {
       return;
     }
@@ -62,6 +68,12 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
     if (priority === "high") {
       const nextGeneration = (this.validationGenerationByKey.get(key) ?? 0) + 1;
       this.validationGenerationByKey.set(key, nextGeneration);
+      if (options?.sourceLabel || options?.snapshotVersion !== undefined) {
+        this.validationMetaByKey.set(key, {
+          sourceLabel: options.sourceLabel,
+          snapshotVersion: options.snapshotVersion
+        });
+      }
       if (this.highPriorityValidationSet.has(key)) {
         return;
       }
@@ -78,6 +90,12 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
 
     if (this.highPriorityValidationSet.has(key) || this.lowPriorityValidationSet.has(key)) {
       return;
+    }
+    if (options?.sourceLabel || options?.snapshotVersion !== undefined) {
+      this.validationMetaByKey.set(key, {
+        sourceLabel: options.sourceLabel,
+        snapshotVersion: options.snapshotVersion
+      });
     }
 
     this.lowPriorityValidationSet.add(key);
@@ -106,6 +124,21 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
     if (lowIndex >= 0) {
       this.lowPriorityValidationQueue.splice(lowIndex, 1);
     }
+  }
+
+  private formatValidationSourceMeta(key: string): string {
+    const meta = this.validationMetaByKey.get(key);
+    if (!meta) {
+      return "";
+    }
+    const parts: string[] = [];
+    if (meta.sourceLabel) {
+      parts.push(`source=${meta.sourceLabel}`);
+    }
+    if (meta.snapshotVersion !== undefined) {
+      parts.push(`snapshot=${meta.snapshotVersion}`);
+    }
+    return parts.length > 0 ? ` (${parts.join(",")})` : "";
   }
 
   private scheduleLowPriorityValidationWorker(delayMs = 350): void {
@@ -159,11 +192,14 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
           }
           if (outcome) {
             this.deps.publishDiagnosticsBatch([[outcome.uri, outcome.diagnostics]]);
+            this.deps.onDiagnosticsPublished?.();
             if (outcome.shouldLog) {
               const outcomeKey = outcome.uri.toString();
               if (this.deps.getIndexedValidationLogSignature(outcomeKey) !== outcome.signature) {
                 this.deps.setIndexedValidationLogSignature(outcomeKey, outcome.signature);
-                this.deps.log(`validate indexed DONE: ${outcome.relOrPath} diagnostics=${outcome.diagnostics.length}`);
+                this.deps.log(
+                  `validate indexed DONE: ${outcome.relOrPath} diagnostics=${outcome.diagnostics.length}${this.formatValidationSourceMeta(key)}`
+                );
               }
             }
           }
@@ -239,12 +275,15 @@ export class ValidationQueueOrchestrator implements vscode.Disposable {
             const key = outcome.uri.toString();
             if (this.deps.getIndexedValidationLogSignature(key) !== outcome.signature) {
               this.deps.setIndexedValidationLogSignature(key, outcome.signature);
-              this.deps.log(`validate indexed DONE: ${outcome.relOrPath} diagnostics=${outcome.diagnostics.length}`);
+              this.deps.log(
+                `validate indexed DONE: ${outcome.relOrPath} diagnostics=${outcome.diagnostics.length}${this.formatValidationSourceMeta(key)}`
+              );
             }
           }
         }
         if (updates.length > 0) {
           this.deps.publishDiagnosticsBatch(updates);
+          this.deps.onDiagnosticsPublished?.();
         }
         lowPublishMs += Date.now() - publishStartedAt;
 

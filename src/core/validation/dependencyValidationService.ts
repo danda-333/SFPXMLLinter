@@ -11,8 +11,8 @@ export interface DependencyValidationServiceDeps {
   getFactsForUri?: (uri: vscode.Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
   isReindexRelevantUri: (uri: vscode.Uri) => boolean;
   shouldValidateUriForActiveProjects: (uri: vscode.Uri) => boolean;
-  enqueueValidationHigh: (uri: vscode.Uri, options?: { force?: boolean }) => void;
-  enqueueValidationLow: (uri: vscode.Uri, options?: { force?: boolean }) => void;
+  enqueueValidationHigh: (uri: vscode.Uri, options?: { force?: boolean; sourceLabel?: string; snapshotVersion?: number }) => void;
+  enqueueValidationLow: (uri: vscode.Uri, options?: { force?: boolean; sourceLabel?: string; snapshotVersion?: number }) => void;
   logIndex: (message: string) => void;
 }
 
@@ -22,6 +22,8 @@ export interface DependencyRevalidationStats {
   immediateOpen: number;
   queuedLow: number;
   durationMs: number;
+  sourceLabel?: string;
+  snapshotVersion?: number;
 }
 
 export class DependencyValidationService {
@@ -61,7 +63,8 @@ export class DependencyValidationService {
 
   public enqueueDependentValidationForFormIdents(
     formIdents: ReadonlySet<string>,
-    sourceLabel: string
+    sourceLabel: string,
+    options?: { snapshotVersion?: number }
   ): DependencyRevalidationStats | undefined {
     const startedAt = Date.now();
     if (formIdents.size === 0) {
@@ -104,17 +107,24 @@ export class DependencyValidationService {
       } else {
         queuedLow++;
       }
-      // Save-driven dependency revalidation must be deterministic and fast;
-      // route all impacted files through high priority queue to avoid low-priority starvation.
-      this.deps.enqueueValidationHigh(uri, { force: true });
-      // Schedule stabilization pass as low-priority follow-up revalidation.
+      // Save-driven dependency revalidation must be deterministic and fast.
+      // Run high priority first and keep low-priority as stabilization pass.
       // This mirrors workspace revalidate behavior and resolves transient save races
       // where cross-file contexts (Form <-> WorkFlow/DataView) become briefly inconsistent.
-      this.deps.enqueueValidationLow(uri, { force: false });
+      this.deps.enqueueValidationHigh(uri, {
+        force: true,
+        sourceLabel,
+        ...(options?.snapshotVersion !== undefined ? { snapshotVersion: options.snapshotVersion } : {})
+      });
+      this.deps.enqueueValidationLow(uri, {
+        force: false,
+        sourceLabel,
+        ...(options?.snapshotVersion !== undefined ? { snapshotVersion: options.snapshotVersion } : {})
+      });
     }
 
     this.deps.logIndex(
-      `SAVE dependency revalidation queued (${sourceLabel}): forms=${formIdents.size}, files=${uris.length}, immediateOpen=${validatedOpenNow}, low=${queuedLow}`
+      `SAVE dependency revalidation queued (${sourceLabel}${options?.snapshotVersion !== undefined ? `#snap=${options.snapshotVersion}` : ""}): forms=${formIdents.size}, files=${uris.length}, immediateOpen=${validatedOpenNow}, low=${queuedLow}`
     );
     if (uris.length > 0) {
       const preview = uris
@@ -130,7 +140,9 @@ export class DependencyValidationService {
       files: uris.length,
       immediateOpen: validatedOpenNow,
       queuedLow,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
+      sourceLabel,
+      ...(options?.snapshotVersion !== undefined ? { snapshotVersion: options.snapshotVersion } : {})
     };
   }
 

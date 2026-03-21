@@ -34,6 +34,8 @@ Purpose: define the missing decisions needed to execute all refactor phases in o
   - additional direct-map reads eliminated from providers/scope/orchestrator-adjacent services
 - Runtime facts reads were hardened to strict-accessor mode for composition/runtime consumers (TreeView facts resolution, dependency revalidation open-doc path, template planner on template save).
 - `missing-feature-expected-xpath` was moved to composed-reference validation mode; template diagnostics now resolve this rule from runtime/composed context only.
+- Validation rule matrix is now centralized in `src/core/validation/validationModules.ts` (`VALIDATION_RULE_GROUPS` + `COMPOSED_REFERENCE_RULE_IDS`) and consumed by extension composed-reference filtering.
+- Added strict aggregate test entrypoint `npm run test:all:strict` (includes performance checkpoints: `test:linter:perf`, `test:templates:perf`).
 
 ### Standalone Fallback Contract (Explicit Exception)
 

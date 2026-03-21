@@ -12,6 +12,7 @@ export interface CoreCommandsRegistrarServiceDeps {
   showCompositionLog: () => void;
   showPipelineStats: () => void;
   exportTrace: () => Promise<void>;
+  exportUsageSnapshot: () => Promise<void>;
   refreshCompositionView: () => void;
   compositionCopySummary: (payload?: { text?: string }) => Promise<void>;
   compositionLogNonEffectiveUsings: (payload?: { title?: string; lines?: string[] }) => void;
@@ -78,6 +79,9 @@ export class CoreCommandsRegistrarService {
       }),
       vscode.commands.registerCommand("sfpXmlLinter.exportTrace", async () => {
         await this.deps.exportTrace();
+      }),
+      vscode.commands.registerCommand("sfpXmlLinter.exportUsageSnapshot", async () => {
+        await this.deps.exportUsageSnapshot();
       })
     );
 

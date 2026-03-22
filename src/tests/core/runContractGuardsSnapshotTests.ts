@@ -22,7 +22,8 @@ const CONTRACT_GUARD_TESTS = [
   "runValidationDataAccessContractTests",
   "runExtensionBoundaryContractTests",
   "runWorkspaceScanBoundaryContractTests",
-  "runFallbackParseBoundaryContractTests"
+  "runFallbackParseBoundaryContractTests",
+  "runConsumerNoFallbackHeuristicsContractTests"
 ] as const;
 
 type PackageJsonLike = {
@@ -70,4 +71,3 @@ function run(): void {
 }
 
 run();
-

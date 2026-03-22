@@ -50,3 +50,23 @@ jobs:
 
       - name: Template generators performance gate
         run: npm run test:templates:perf
+
+  hardening:
+    name: Hardening E2E Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run hardening suite
+        run: npm run test:hardening

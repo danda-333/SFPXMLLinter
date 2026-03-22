@@ -54,6 +54,8 @@ Purpose: define the missing decisions needed to execute all refactor phases in o
 - Added strict aggregate test entrypoint `npm run test:all:strict` (includes performance checkpoints: `test:linter:perf`, `test:templates:perf`).
  - Added focused contract-only entrypoint `npm run test:contracts` for fast guard verification without full composition fixture run.
 - Added CI workflow gate `.github/workflows/ci-contracts-perf.yml` to enforce `test:contracts`, `test:linter:perf`, and `test:templates:perf` on push/PR.
+- Added hardening gate `npm run test:hardening` with cross-document save-pipeline E2E regressions (Form/WorkFlow/DataView transitions) and wired it into CI workflow (`Hardening E2E Gate`).
+- Added consumer fallback-heuristics contract guard `src/tests/core/runConsumerNoFallbackHeuristicsContractTests.ts` and wired it into `test:contracts` / `test:composition`.
 
 ### Standalone Fallback Contract (Explicit Exception)
 

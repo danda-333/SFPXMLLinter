@@ -422,8 +422,7 @@ async function run(): Promise<void> {
 
   for (const scenario of scenarios) {
     const formUri = Uri.file(scenario.formPath) as unknown as import("vscode").Uri;
-    const workflowText = fs.readFileSync(scenario.workflowPath, "utf8");
-    const workflowDoc = new MockTextDocument(scenario.workflowPath, workflowText, 2);
+    const saveTargets = collectSaveTargetsForForm(scenario.formIdent, scenario.workflowPath, templateIndexer.getIndex());
 
     await runFullRevalidateForForm(
       scenario.formIdent,
@@ -437,21 +436,25 @@ async function run(): Promise<void> {
       .map((d) => d.message)
       .sort((a, b) => a.localeCompare(b));
 
-    lastPublishAt = 0;
-    await updateOrchestrator.handleDocumentSave(workflowDoc as unknown as import("vscode").TextDocument, true);
-    await updateOrchestrator.waitForSaveIdle();
-    await waitForQueueSettle(() => lastPublishAt, 10000);
+    for (const saveTarget of saveTargets) {
+      const saveText = fs.readFileSync(saveTarget, "utf8");
+      const saveDoc = new MockTextDocument(saveTarget, saveText, 2);
+      lastPublishAt = 0;
+      await updateOrchestrator.handleDocumentSave(saveDoc as unknown as import("vscode").TextDocument, true);
+      await updateOrchestrator.waitForSaveIdle();
+      await waitForQueueSettle(() => lastPublishAt, 10000);
 
-    const afterSave = diagnosticsByUri.get(formUri.toString()) ?? [];
-    const afterSaveMissingFeatureExpectedXPath = afterSave
-      .filter((d) => String(d.code ?? "") === "missing-feature-expected-xpath")
-      .map((d) => d.message)
-      .sort((a, b) => a.localeCompare(b));
-    assert.deepEqual(
-      afterSaveMissingFeatureExpectedXPath,
-      baselineMissingFeatureExpectedXPath,
-      `Save pipeline introduced inconsistent missing-feature-expected-xpath diagnostics on Form '${scenario.formIdent}' compared to full revalidate baseline.`
-    );
+      const afterSave = diagnosticsByUri.get(formUri.toString()) ?? [];
+      const afterSaveMissingFeatureExpectedXPath = afterSave
+        .filter((d) => String(d.code ?? "") === "missing-feature-expected-xpath")
+        .map((d) => d.message)
+        .sort((a, b) => a.localeCompare(b));
+      assert.deepEqual(
+        afterSaveMissingFeatureExpectedXPath,
+        baselineMissingFeatureExpectedXPath,
+        `Save pipeline introduced inconsistent missing-feature-expected-xpath diagnostics on Form '${scenario.formIdent}' after save '${path.relative(workspaceRoot, saveTarget).replace(/\\/g, "/")}' compared to full revalidate baseline.`
+      );
+    }
   }
 
   queue.dispose();
@@ -497,6 +500,38 @@ async function runFullRevalidateForForm(
 
 function collectXmlFileUris(root: string): Uri[] {
   return collectXmlFiles(root).map((file) => Uri.file(file));
+}
+
+function collectSaveTargetsForForm(
+  formIdent: string,
+  workflowPath: string,
+  templateIndex: import("../../indexer/types").WorkspaceIndex
+): string[] {
+  const targets = new Set<string>();
+  const workflowAbs = path.resolve(workflowPath);
+  targets.add(workflowAbs);
+
+  for (const [uriKey, facts] of templateIndex.parsedFactsByUri.entries()) {
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root !== "form" && root !== "dataview") {
+      continue;
+    }
+    const owningFormIdent = root === "form" ? facts.formIdent : facts.rootFormIdent;
+    if (!owningFormIdent || owningFormIdent !== formIdent) {
+      continue;
+    }
+    try {
+      const uri = Uri.parse(uriKey);
+      const abs = path.resolve(uri.fsPath);
+      if (abs.toLowerCase() !== workflowAbs.toLowerCase() && fs.existsSync(abs)) {
+        targets.add(abs);
+      }
+    } catch {
+      // Ignore invalid URI keys in fixture.
+    }
+  }
+
+  return [...targets].sort((a, b) => a.localeCompare(b));
 }
 
 function computeLineStarts(text: string): number[] {

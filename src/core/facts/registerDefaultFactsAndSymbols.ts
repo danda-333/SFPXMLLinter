@@ -146,25 +146,6 @@ export function registerDefaultFactsAndSymbols(deps: RegisterDefaultFactsAndSymb
   });
 
   factRegistry.register({
-    kind: "fact.shareCodeDecls",
-    collect(nodeId) {
-      const facts = getFacts(nodeId);
-      if (!facts) {
-        return {
-          controlShareCodes: [] as string[],
-          actionShareCodes: [] as string[],
-          buttonShareCodes: [] as string[]
-        };
-      }
-      return {
-        controlShareCodes: [...facts.declaredControlShareCodes],
-        actionShareCodes: [...facts.declaredActionShareCodes],
-        buttonShareCodes: [...facts.declaredButtonShareCodes]
-      };
-    }
-  });
-
-  factRegistry.register({
     kind: "fact.rangeIndex",
     collect(nodeId) {
       const facts = getFacts(nodeId);

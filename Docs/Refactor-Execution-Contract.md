@@ -58,6 +58,17 @@ Purpose: define the missing decisions needed to execute all refactor phases in o
 - Added consumer fallback-heuristics contract guard `src/tests/core/runConsumerNoFallbackHeuristicsContractTests.ts` and wired it into `test:contracts` / `test:composition`.
 - Added aggregate release checklist command `npm run test:release:hardening` (contracts + hardening-e2e + linter perf + template perf) with one summary report.
 
+## Refactor Closure (2026-03-22)
+
+Status: complete for the single-source-of-truth scope defined by this contract.
+
+- single execution path: enforced (`UpdateRunner` + orchestrator entry contracts)
+- diagnostics model split: enforced (`sourceOnly` / `composedOnly` matrix + rule coverage guards)
+- facts/symbols boundaries: enforced (fallback boundary + consumer no-fallback guards + wiring coverage guard)
+- contracts/perf/hardening CI gates: enforced (`contracts`, `performance`, `hardening`, `release-hardening`)
+
+Remaining work is moved to product backlog (`Docs/TODO.MD`) and is outside this refactor closure.
+
 ### Standalone Fallback Contract (Explicit Exception)
 
 - Runtime/indexed pipeline remains strict-accessor only.

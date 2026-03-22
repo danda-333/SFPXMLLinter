@@ -892,3 +892,14 @@ ModelPerfCounters
 - Faster updates via in-memory caches and dependency-driven recompute.
 - Easy extensibility for new symbol kinds without changing core model.
 - Support for non-file entities (dynamic generator outputs, virtual nodes) without redesign.
+
+## Closure Status (2026-03-22)
+
+Refactor status for this design scope: complete.
+
+- single-path orchestration is active (`UpdateRunner` + module host)
+- runtime consumers are on strict accessor model (standalone fallback is explicitly isolated and contract-guarded)
+- TreeView/providers/validation consume shared facts/symbol access boundaries
+- contracts + performance + hardening gates are automated in CI and via aggregate command (`test:release:hardening`)
+
+Any further changes are treated as backlog feature work, not refactor completion blockers.

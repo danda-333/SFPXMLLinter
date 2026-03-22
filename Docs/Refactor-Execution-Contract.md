@@ -53,6 +53,7 @@ Purpose: define the missing decisions needed to execute all refactor phases in o
 - Added contract snapshot gate `src/tests/core/runContractGuardsSnapshotTests.ts` to ensure all contract guards are present and wired in `scripts.test:composition` (single aggregated contract inventory/report).
 - Added strict aggregate test entrypoint `npm run test:all:strict` (includes performance checkpoints: `test:linter:perf`, `test:templates:perf`).
  - Added focused contract-only entrypoint `npm run test:contracts` for fast guard verification without full composition fixture run.
+- Added CI workflow gate `.github/workflows/ci-contracts-perf.yml` to enforce `test:contracts`, `test:linter:perf`, and `test:templates:perf` on push/PR.
 
 ### Standalone Fallback Contract (Explicit Exception)
 

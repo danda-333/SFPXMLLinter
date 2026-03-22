@@ -1589,7 +1589,7 @@ function cloneUsingTraceMap(
       targetXPathMatchCount: value.targetXPathMatchCount,
       targetXPathClampedCount: value.targetXPathClampedCount,
       allowMultipleInserts: value.allowMultipleInserts,
-      fallbackSymbolCount: value.fallbackSymbolCount
+      estimatedSymbolCount: value.estimatedSymbolCount
     });
   }
   return out;

@@ -614,6 +614,8 @@ All existing commands must remain available with the same command IDs.
   Run tolerant formatter on full document.
 - `sfpXmlLinter.formatSelectionTolerant`  
   Run tolerant formatter on selection.
+- `sfpXmlLinter.migrateLegacyTemplateAliases`  
+  Migrate legacy template aliases (`Component/Section`) to strict (`Feature/Contribution`) in current file or workspace.
 
 ### Internal/Integration Commands (also preserve IDs)
 
@@ -857,7 +859,7 @@ Expected output:
 1. Enforce CI performance gates (p95 budgets).
 2. Add E2E scenarios for complex templating transitions.
 3. Evaluate dead facts/modules via usage analytics.
-4. Remove legacy compatibility provider(s).
+4. Remove legacy compatibility provider(s). ✅
 5. Final cleanup and release hardening.
 
 Expected output:
@@ -866,9 +868,9 @@ Expected output:
 
 ## Migration Notes
 
-- Keep a temporary compatibility provider `fact.legacyParsedDocumentFacts` while migrating.
+- Legacy compatibility provider path is removed from runtime consumers.
 - New modules should depend on fine-grained facts only.
-- Remove legacy provider once no consumer requests it.
+- Facts/index access is strict in runtime consumer paths (no `index-fallback` behavior).
 
 ## Performance Tracking
 

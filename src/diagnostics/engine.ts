@@ -13,7 +13,6 @@ import { maskXmlComments } from "../utils/xmlComments";
 import { getAllFormIdentCandidates, isKnownFormIdent, resolveSystemTableName } from "../utils/formIdents";
 import { EffectiveCompositionItem, FeatureCapabilityReport, FeatureSymbolKind } from "../composition/model";
 import { matchesExpectedXPathInEffectiveModel } from "../composition/effectiveModel";
-import { analyzeXPathInsertTargets } from "../template/buildXmlTemplatesCore";
 import { FeatureManifestRegistry } from "../composition/workspace";
 import { contributionMatchesDocumentRoot, populateUsingInsertTraceFromText } from "../composition/usingImpact";
 import {
@@ -119,7 +118,8 @@ export class DiagnosticsEngine {
       index,
       issues,
       documentComposition,
-      options?.composedSnapshotRegistry
+      options?.composedSnapshotRegistry,
+      maskedText
     );
     this.validatePrimitiveReferences(document, issues);
     this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
@@ -493,13 +493,17 @@ export class DiagnosticsEngine {
     index: WorkspaceIndex,
     issues: RuleDiagnostic[],
     documentComposition: ReturnType<typeof buildDocumentCompositionModel>,
-    composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
+    composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry,
+    maskedText?: string
   ): void {
     if (!index.componentsReady) {
       return;
     }
 
+    const settings = getSettings();
+    const legacyAliasesEnabled = settings.templateBuilderLegacyComponentSectionSupport;
     const tracesReady = facts.usingContributionInsertTraces.size > 0;
+    const effectiveMaskedText = maskedText ?? maskXmlComments(document.getText());
     const suppressedFull = new Set<string>();
     const suppressedSections = new Map<string, Set<string>>();
     const crossDocumentImpactByUsingKey = this.collectCrossDocumentUsingImpactByKey(
@@ -527,9 +531,95 @@ export class DiagnosticsEngine {
       }
     }
 
+    if (!legacyAliasesEnabled) {
+      const includeLegacyFlags = collectIncludeLegacyAliasFlags(effectiveMaskedText);
+      for (let i = 0; i < facts.includeReferences.length; i++) {
+        const includeRef = facts.includeReferences[i];
+        const flags = includeLegacyFlags[i];
+        if (!flags) {
+          continue;
+        }
+        const parts: string[] = [];
+        if (flags.legacyFeatureAliasUsed) {
+          parts.push("Component/Name");
+        }
+        if (flags.legacyContributionAliasUsed) {
+          parts.push("Section");
+        }
+        if (parts.length === 0) {
+          continue;
+        }
+        issues.push({
+          ruleId: "legacy-template-alias-disabled",
+          range: flags.legacyContributionAliasUsed
+            ? (includeRef.sectionValueRange ?? includeRef.componentValueRange)
+            : includeRef.componentValueRange,
+          message:
+            `Legacy template alias ${parts.join(" + ")} is disabled for this workspace. ` +
+            `Use Feature/Contribution instead or enable sfpXmlLinter.templateBuilder.legacyComponentSectionSupport.`
+        });
+      }
+
+      const placeholderLegacyFlags = collectPlaceholderLegacyAliasFlags(effectiveMaskedText);
+      for (let i = 0; i < facts.placeholderReferences.length; i++) {
+        const placeholderRef = facts.placeholderReferences[i];
+        if (!placeholderRef.componentKey) {
+          continue;
+        }
+        const flags = placeholderLegacyFlags[i];
+        if (!flags) {
+          continue;
+        }
+        const parts: string[] = [];
+        if (flags.legacyFeatureAliasUsed) {
+          parts.push("Component/Name");
+        }
+        if (flags.legacyContributionAliasUsed) {
+          parts.push("Section");
+        }
+        if (parts.length === 0) {
+          continue;
+        }
+        issues.push({
+          ruleId: "legacy-template-alias-disabled",
+          range: placeholderRef.range,
+          message:
+            `Legacy placeholder alias ${parts.join(" + ")} is disabled for this workspace. ` +
+            `Use Feature/Contribution keys instead or enable sfpXmlLinter.templateBuilder.legacyComponentSectionSupport.`
+        });
+      }
+    }
+
     for (const ref of facts.usingReferences) {
       if (ref.suppressInheritance) {
         continue;
+      }
+
+      if (!legacyAliasesEnabled) {
+        const usedLegacyFeatureAttr = ref.attributes?.some((attr) => {
+          const normalized = attr.name.trim().toLowerCase();
+          return normalized === "component" || normalized === "name";
+        }) === true;
+        const usedLegacyContributionAttr = ref.attributes?.some((attr) => attr.name.trim().toLowerCase() === "section") === true;
+
+        if (usedLegacyFeatureAttr || usedLegacyContributionAttr) {
+          const parts: string[] = [];
+          if (usedLegacyFeatureAttr) {
+            parts.push("Component/Name");
+          }
+          if (usedLegacyContributionAttr) {
+            parts.push("Section");
+          }
+          issues.push({
+            ruleId: "legacy-template-alias-disabled",
+            range: usedLegacyContributionAttr
+              ? (ref.sectionValueRange ?? ref.componentValueRange)
+              : ref.componentValueRange,
+            message:
+              `Legacy template alias ${parts.join(" + ")} is disabled for this workspace. ` +
+              `Use Feature/Contribution instead or enable sfpXmlLinter.templateBuilder.legacyComponentSectionSupport.`
+          });
+        }
       }
 
       const component = resolveComponentByKey(index, ref.componentKey);
@@ -706,127 +796,8 @@ export class DiagnosticsEngine {
     altContextText?: string,
     altContextUri?: vscode.Uri
   ): void {
-    const xpathTextCache = new Map<string, boolean>();
-    let freshContextText: string | undefined;
-    let freshContextTextLoaded = false;
-    const matchesInContextText = (xpathExpression: string, allowMultipleInserts?: boolean): boolean => {
-      if (!contextText) {
-        return false;
-      }
-      const key = `${xpathExpression}::${allowMultipleInserts ? "1" : "0"}`;
-      const cached = xpathTextCache.get(key);
-      if (cached !== undefined) {
-        return cached;
-      }
-      const stats = analyzeXPathInsertTargets(contextText, xpathExpression, allowMultipleInserts);
-      const matched = stats.matchCount > 0;
-      xpathTextCache.set(key, matched);
-      return matched;
-    };
-    const matchesInFreshContextText = (xpathExpression: string, allowMultipleInserts?: boolean): boolean => {
-      if (!contextUri || contextUri.scheme !== "file") {
-        return false;
-      }
-      if (!freshContextTextLoaded) {
-        freshContextTextLoaded = true;
-        try {
-          freshContextText = fs.readFileSync(contextUri.fsPath, "utf8");
-        } catch {
-          freshContextText = undefined;
-        }
-      }
-      if (!freshContextText) {
-        return false;
-      }
-      const key = `fresh::${xpathExpression}::${allowMultipleInserts ? "1" : "0"}`;
-      const cached = xpathTextCache.get(key);
-      if (cached !== undefined) {
-        return cached;
-      }
-      const stats = analyzeXPathInsertTargets(freshContextText, xpathExpression, allowMultipleInserts);
-      const matched = stats.matchCount > 0;
-      xpathTextCache.set(key, matched);
-      return matched;
-    };
-    const hasPlaceholderUsageInFreshContextText = (contributionName: string): boolean => {
-      if (!contextUri || contextUri.scheme !== "file") {
-        return false;
-      }
-      if (!freshContextTextLoaded) {
-        freshContextTextLoaded = true;
-        try {
-          freshContextText = fs.readFileSync(contextUri.fsPath, "utf8");
-        } catch {
-          freshContextText = undefined;
-        }
-      }
-      return hasPlaceholderOrIncludeUsageForContribution(
-        componentKey,
-        rawComponentValue,
-        contributionName,
-        freshContextText
-      );
-    };
-    const matchesInAltContextText = (xpathExpression: string, allowMultipleInserts?: boolean): boolean => {
-      if (!altContextText) {
-        return false;
-      }
-      const key = `alt::${xpathExpression}::${allowMultipleInserts ? "1" : "0"}`;
-      const cached = xpathTextCache.get(key);
-      if (cached !== undefined) {
-        return cached;
-      }
-      const stats = analyzeXPathInsertTargets(altContextText, xpathExpression, allowMultipleInserts);
-      const matched = stats.matchCount > 0;
-      xpathTextCache.set(key, matched);
-      return matched;
-    };
-    let freshAltContextText: string | undefined;
-    let freshAltContextTextLoaded = false;
-    const matchesInFreshAltContextText = (xpathExpression: string, allowMultipleInserts?: boolean): boolean => {
-      if (!altContextUri || altContextUri.scheme !== "file") {
-        return false;
-      }
-      if (!freshAltContextTextLoaded) {
-        freshAltContextTextLoaded = true;
-        try {
-          freshAltContextText = fs.readFileSync(altContextUri.fsPath, "utf8");
-        } catch {
-          freshAltContextText = undefined;
-        }
-      }
-      if (!freshAltContextText) {
-        return false;
-      }
-      const key = `freshAlt::${xpathExpression}::${allowMultipleInserts ? "1" : "0"}`;
-      const cached = xpathTextCache.get(key);
-      if (cached !== undefined) {
-        return cached;
-      }
-      const stats = analyzeXPathInsertTargets(freshAltContextText, xpathExpression, allowMultipleInserts);
-      const matched = stats.matchCount > 0;
-      xpathTextCache.set(key, matched);
-      return matched;
-    };
-    const hasPlaceholderUsageInFreshAltContextText = (contributionName: string): boolean => {
-      if (!altContextUri || altContextUri.scheme !== "file") {
-        return false;
-      }
-      if (!freshAltContextTextLoaded) {
-        freshAltContextTextLoaded = true;
-        try {
-          freshAltContextText = fs.readFileSync(altContextUri.fsPath, "utf8");
-        } catch {
-          freshAltContextText = undefined;
-        }
-      }
-      return hasPlaceholderOrIncludeUsageForContribution(
-        componentKey,
-        rawComponentValue,
-        contributionName,
-        freshAltContextText
-      );
-    };
+    // Single-source policy: expected XPath checks must rely on composed/indexed model
+    // (`items` + `facts`) and avoid ad-hoc text rescans/fallback branches.
 
     for (const contributionModel of contributionModels) {
       if (!contributionModel.rootRelevant && !contributionModel.explicit) {
@@ -856,22 +827,7 @@ export class DiagnosticsEngine {
         if (isRelatedContext) {
           continue;
         }
-        const placeholderUsed =
-          contributionModel.insertCount > 0 ||
-          hasPlaceholderOrIncludeUsageForContribution(
-            componentKey,
-            rawComponentValue,
-            contributionName,
-            contextText
-          ) ||
-          hasPlaceholderOrIncludeUsageForContribution(
-            componentKey,
-            rawComponentValue,
-            contributionName,
-            altContextText
-          ) ||
-          hasPlaceholderUsageInFreshContextText(contributionName) ||
-          hasPlaceholderUsageInFreshAltContextText(contributionName);
+        const placeholderUsed = contributionModel.insertCount > 0;
         if (!placeholderUsed) {
           issues.push({
             ruleId: "missing-feature-expected-xpath",
@@ -888,40 +844,25 @@ export class DiagnosticsEngine {
         const trace = contributionModel.insertTrace;
         const matchedInContextItems = matchesExpectedXPathInEffectiveModel(contributionTargetXPath, items);
         const matchedInContextFacts = contextFacts ? matchesExpectedXPathInDocumentFacts(contributionTargetXPath, contextFacts) : false;
-        const matchedInContextText = matchesInContextText(
-          contributionTargetXPath,
-          contributionModel.contribution.allowMultipleInserts
-        );
         const matchedInAltContextItems = altItems
           ? matchesExpectedXPathInEffectiveModel(contributionTargetXPath, altItems)
           : false;
         const matchedInAltContextFacts = altContextFacts
           ? matchesExpectedXPathInDocumentFacts(contributionTargetXPath, altContextFacts)
           : false;
-        const matchedInAltContextText = matchesInAltContextText(
-          contributionTargetXPath,
-          contributionModel.contribution.allowMultipleInserts
-        );
         const targetMatched = trace
           ? trace.strategy !== "targetXPath" ||
             trace.targetXPathMatchCount > 0 ||
             matchedInContextItems ||
             matchedInContextFacts ||
-            matchedInContextText ||
             matchedInAltContextItems ||
-            matchedInAltContextFacts ||
-            matchedInAltContextText
+            matchedInAltContextFacts
           : contributionModel.insertCount > 0 ||
             matchedInContextItems ||
             matchedInContextFacts ||
-            matchedInContextText ||
             matchedInAltContextItems ||
-            matchedInAltContextFacts ||
-            matchedInAltContextText;
-        const targetMatchedWithFresh = targetMatched
-          || matchesInFreshContextText(contributionTargetXPath, contributionModel.contribution.allowMultipleInserts)
-          || matchesInFreshAltContextText(contributionTargetXPath, contributionModel.contribution.allowMultipleInserts);
-        if (!targetMatchedWithFresh) {
+            matchedInAltContextFacts;
+        if (!targetMatched) {
           issues.push({
             ruleId: "missing-feature-expected-xpath",
             range,
@@ -952,12 +893,8 @@ export class DiagnosticsEngine {
         if (
           matchesExpectedXPathInEffectiveModel(expectedXPath, items) ||
           (contextFacts ? matchesExpectedXPathInDocumentFacts(expectedXPath, contextFacts) : false) ||
-          matchesInContextText(expectedXPath, contributionModel.contribution.allowMultipleInserts) ||
-          matchesInFreshContextText(expectedXPath, contributionModel.contribution.allowMultipleInserts) ||
           (altItems ? matchesExpectedXPathInEffectiveModel(expectedXPath, altItems) : false) ||
-          (altContextFacts ? matchesExpectedXPathInDocumentFacts(expectedXPath, altContextFacts) : false) ||
-          matchesInAltContextText(expectedXPath, contributionModel.contribution.allowMultipleInserts) ||
-          matchesInFreshAltContextText(expectedXPath, contributionModel.contribution.allowMultipleInserts)
+          (altContextFacts ? matchesExpectedXPathInDocumentFacts(expectedXPath, altContextFacts) : false)
         ) {
           continue;
         }
@@ -2738,6 +2675,61 @@ function parseXmlAttributesLoose(raw: string): Map<string, string> {
     out.set(key, (match[2] ?? match[3] ?? "").trim());
   }
   return out;
+}
+
+interface LegacyAliasFlags {
+  legacyFeatureAliasUsed: boolean;
+  legacyContributionAliasUsed: boolean;
+}
+
+function collectIncludeLegacyAliasFlags(text: string): LegacyAliasFlags[] {
+  const out: LegacyAliasFlags[] = [];
+  for (const match of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+    const attrsRaw = match[1] ?? "";
+    const legacyFeatureAliasUsed = hasXmlAttributeName(attrsRaw, "Component") || hasXmlAttributeName(attrsRaw, "Name");
+    const legacyContributionAliasUsed = hasXmlAttributeName(attrsRaw, "Section");
+    out.push({ legacyFeatureAliasUsed, legacyContributionAliasUsed });
+  }
+  return out;
+}
+
+function collectPlaceholderLegacyAliasFlags(text: string): LegacyAliasFlags[] {
+  const out: LegacyAliasFlags[] = [];
+  for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+    const body = (match[1] ?? "").trim();
+    const keys = parsePlaceholderKeys(body);
+    const hasFeatureLikeKey = keys.has("feature") || keys.has("component") || keys.has("name") || keys.has("primitive");
+    const legacyFeatureAliasUsed = hasFeatureLikeKey && (keys.has("component") || keys.has("name"));
+    const legacyContributionAliasUsed = hasFeatureLikeKey && keys.has("section");
+    out.push({ legacyFeatureAliasUsed, legacyContributionAliasUsed });
+  }
+  return out;
+}
+
+function parsePlaceholderKeys(body: string): Set<string> {
+  const out = new Set<string>();
+  for (const part of body.split(",")) {
+    const idx = part.indexOf(":");
+    if (idx <= 0) {
+      continue;
+    }
+    const key = part.slice(0, idx).trim().toLowerCase();
+    if (!key) {
+      continue;
+    }
+    out.add(key);
+  }
+  return out;
+}
+
+function hasXmlAttributeName(rawAttrs: string, attributeName: string): boolean {
+  const escaped = escapeRegExp(attributeName);
+  const regex = new RegExp(`\\b${escaped}\\s*=`, "i");
+  return regex.test(rawAttrs);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function findFeatureManifestRange(

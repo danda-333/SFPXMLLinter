@@ -13,6 +13,7 @@ export interface SfpXmlLinterSettings {
   componentSaveBuildScope: "dependents" | "full";
   templateBuilderMode: "fast" | "debug" | "release";
   templateBuilderPostBuildFormat: boolean;
+  templateBuilderLegacyComponentSectionSupport: boolean;
   templateBuilderProvenanceMode: "off" | "fileComment";
   templateBuilderGeneratorsEnabled: boolean;
   templateBuilderGeneratorTimeoutMs: number;
@@ -22,7 +23,7 @@ export interface SfpXmlLinterSettings {
   startupVerboseProgress: boolean;
 }
 
-const DEFAULT_RULES: Record<string, RuleSeverity> = {
+export const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "unknown-form-ident": "error",
   "unknown-form-control-ident": "error",
   "unknown-form-button-ident": "error",
@@ -41,6 +42,7 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "unknown-using-contribution": "warning",
   "contribution-mismatch": "warning",
   "missing-using-param": "warning",
+  "legacy-template-alias-disabled": "warning",
   "orphan-placeholder": "warning",
   "unused-using": "information",
   "partial-using": "information",
@@ -60,7 +62,17 @@ const DEFAULT_RULES: Record<string, RuleSeverity> = {
   "ident-convention-workflow-postfix": "warning",
   "ident-convention-view-postfix": "warning",
   "ident-convention-lookup-control": "warning",
-  "missing-explicit-provides": "information"
+  "unknown-feature-requirement": "warning",
+  "missing-feature-dependency": "warning",
+  "missing-feature-expectation": "warning",
+  "missing-feature-expected-xpath": "warning",
+  "duplicate-feature-provider": "warning",
+  "missing-explicit-provides": "information",
+  "ordering-conflict": "warning",
+  "orphan-feature-part": "warning",
+  "incomplete-feature": "warning",
+  "unused-feature-contribution": "information",
+  "partial-feature-contribution": "information"
 };
 
 const LEGACY_RULE_ALIASES: Record<string, string> = {
@@ -97,6 +109,10 @@ export function getSettings(): SfpXmlLinterSettings {
   const componentSaveBuildScope = cfg.get<"dependents" | "full">("templateBuilder.componentSaveBuildScope", "dependents");
   const templateBuilderMode = cfg.get<"fast" | "debug" | "release">("templateBuilder.mode", "debug");
   const templateBuilderPostBuildFormat = cfg.get<boolean>("templateBuilder.postBuildFormat", true);
+  const templateBuilderLegacyComponentSectionSupport = cfg.get<boolean>(
+    "templateBuilder.legacyComponentSectionSupport",
+    true
+  );
   const templateBuilderProvenanceMode = cfg.get<"off" | "fileComment">("templateBuilder.provenanceMode", "off");
   const templateBuilderGeneratorsEnabled = cfg.get<boolean>("templateBuilder.generators.enabled", true);
   const templateBuilderGeneratorTimeoutMs = Math.max(50, cfg.get<number>("templateBuilder.generators.timeoutMs", 150));
@@ -116,6 +132,7 @@ export function getSettings(): SfpXmlLinterSettings {
     componentSaveBuildScope,
     templateBuilderMode,
     templateBuilderPostBuildFormat,
+    templateBuilderLegacyComponentSectionSupport,
     templateBuilderProvenanceMode,
     templateBuilderGeneratorsEnabled,
     templateBuilderGeneratorTimeoutMs,

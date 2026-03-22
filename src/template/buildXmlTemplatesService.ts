@@ -18,6 +18,7 @@ export interface BuildRunOptions {
   silent?: boolean;
   mode?: "fast" | "debug" | "release";
   postBuildFormat?: boolean;
+  legacyTagAliasesEnabled?: boolean;
   provenanceMode?: TemplateBuilderProvenanceMode;
   provenanceLabel?: string;
   formatterMaxConsecutiveBlankLines?: number;
@@ -188,6 +189,7 @@ export class BuildXmlTemplatesService {
         templateText,
         componentLibrary,
         componentLibrarySnapshot.signature,
+        options.legacyTagAliasesEnabled !== false,
         inheritedUsingsXml,
         undefined,
         options.mode === "debug" ? options.onLogLine : undefined
@@ -222,6 +224,7 @@ export class BuildXmlTemplatesService {
       templateText,
       componentLibrary,
       componentLibrarySnapshot.signature,
+      options.legacyTagAliasesEnabled !== false,
       inheritedUsingsXml,
       undefined,
       options.mode === "debug" ? options.onLogLine : undefined
@@ -279,7 +282,11 @@ export class BuildXmlTemplatesService {
     return this.runInternal(workspaceFolder, [...targetPaths], options);
   }
 
-  public async findTemplatesUsingComponent(workspaceFolder: vscode.WorkspaceFolder, componentFilePath: string): Promise<string[]> {
+  public async findTemplatesUsingComponent(
+    workspaceFolder: vscode.WorkspaceFolder,
+    componentFilePath: string,
+    legacyTagAliasesEnabled = true
+  ): Promise<string[]> {
     const normalizedComponentPath = normalizePath(componentFilePath);
     const componentsRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
     const primitivesRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Primitives"));
@@ -299,7 +306,7 @@ export class BuildXmlTemplatesService {
 
     for (const uri of templateUris) {
       const text = await readWorkspaceTextFile(uri);
-      for (const usingRef of extractUsingComponentRefs(text)) {
+      for (const usingRef of extractUsingComponentRefs(text, { legacyTagAliasesEnabled })) {
         if (usingRef === relNoExt) {
           exact.add(uri.fsPath);
           break;
@@ -385,6 +392,7 @@ export class BuildXmlTemplatesService {
           templateText,
           componentLibrary,
           componentLibrarySnapshot.signature,
+          options.legacyTagAliasesEnabled !== false,
           inheritedUsingsXml,
           cacheStats,
           debugMode
@@ -587,6 +595,7 @@ export class BuildXmlTemplatesService {
     templateText: string,
     componentLibrary: ReturnType<typeof buildComponentLibrary>,
     componentLibrarySignature: string,
+    legacyTagAliasesEnabled: boolean,
     inheritedUsingsXml?: string,
     cacheStats?: BuildCacheStats,
     onDebugLog?: (line: string) => void
@@ -595,6 +604,7 @@ export class BuildXmlTemplatesService {
       workspaceKeyFromFolder(workspaceFolder),
       relativeTemplatePath,
       componentLibrarySignature,
+      `legacy:${legacyTagAliasesEnabled ? "1" : "0"}`,
       templateText,
       inheritedUsingsXml ?? ""
     ].join("\n"));
@@ -610,7 +620,8 @@ export class BuildXmlTemplatesService {
       componentLibrary,
       12,
       onDebugLog,
-      inheritedUsingsXml
+      inheritedUsingsXml,
+      { legacyTagAliasesEnabled }
     );
     this.templateTraceCache.set(cacheSignature, {
       signature: cacheSignature,
@@ -1013,9 +1024,10 @@ function computeRunSettingsSignature(
   generatorScriptsSignature: string
 ): string {
   return hashText([
-    `mode:${options.mode ?? "debug"}`,
-    `postBuildFormat:${options.postBuildFormat === true}`,
-    `provenanceMode:${options.provenanceMode ?? "off"}`,
+      `mode:${options.mode ?? "debug"}`,
+      `postBuildFormat:${options.postBuildFormat === true}`,
+      `legacyTagAliasesEnabled:${options.legacyTagAliasesEnabled !== false}`,
+      `provenanceMode:${options.provenanceMode ?? "off"}`,
     `provenanceLabel:${options.provenanceLabel ?? ""}`,
     `blankLines:${Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)}`,
     `generatorsEnabled:${options.generatorsEnabled !== false}`,

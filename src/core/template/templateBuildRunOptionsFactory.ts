@@ -53,6 +53,7 @@ export class TemplateBuildRunOptionsFactory {
       silent,
       mode,
       postBuildFormat: settings.templateBuilderPostBuildFormat,
+      legacyTagAliasesEnabled: settings.templateBuilderLegacyComponentSectionSupport,
       provenanceMode: settings.templateBuilderProvenanceMode,
       provenanceLabel,
       formatterMaxConsecutiveBlankLines: settings.formatterMaxConsecutiveBlankLines,

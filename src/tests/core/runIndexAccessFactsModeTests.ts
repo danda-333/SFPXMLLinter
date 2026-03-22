@@ -26,17 +26,16 @@ function createIndex(): WorkspaceIndex {
 function run(): void {
   const index = createIndex();
 
-  const strictMissing = getParsedFactsByUri(index, uri, () => undefined, "strict-accessor");
-  assert.equal(strictMissing, undefined, "strict-accessor must not fallback to index when accessor returns undefined");
+  const strictMissing = getParsedFactsByUri(index, uri, () => undefined);
+  assert.equal(strictMissing, undefined, "accessor mode must not fallback to index when accessor returns undefined");
 
-  const fallback = getParsedFactsByUri(index, uri, () => undefined, "index-fallback");
-  assert.ok(fallback, "index-fallback should use index map when accessor returns undefined");
+  const fromIndex = getParsedFactsByUri(index, uri);
+  assert.ok(fromIndex, "index path should use parsedFactsByUri when accessor is not supplied");
 
-  const fromAccessor = getParsedFactsByUri(index, uri, () => ({ rootTag: "WorkFlow" } as unknown as import("../../indexer/xmlFacts").ParsedDocumentFacts), "strict-accessor");
+  const fromAccessor = getParsedFactsByUri(index, uri, () => ({ rootTag: "WorkFlow" } as unknown as import("../../indexer/xmlFacts").ParsedDocumentFacts));
   assert.equal(fromAccessor?.rootTag, "WorkFlow");
 
   console.log("Index access facts mode tests passed.");
 }
 
 run();
-

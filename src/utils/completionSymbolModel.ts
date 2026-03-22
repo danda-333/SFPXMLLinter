@@ -204,7 +204,7 @@ function collectEffectiveOwnerFormContributionSymbols(
   const controls = new Set<string>();
   const buttons = new Set<string>();
   const sections = new Set<string>();
-  const facts = getParsedFactsByUri(index, form.uri, getFactsForUri, "strict-accessor");
+  const facts = getParsedFactsByUri(index, form.uri, getFactsForUri);
   if (!facts) {
     return { controls, buttons, sections };
   }

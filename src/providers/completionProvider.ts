@@ -13,6 +13,7 @@ import { collectCompletionSymbolValues, CompletionSymbolKind } from "../utils/co
 import { IndexedForm } from "../indexer/types";
 import { getIndexedComponentKeys, getIndexedFormByIdent } from "../core/model/indexAccess";
 import { resolveDocumentFacts } from "../core/model/factsResolution";
+import { getSettings } from "../config/settings";
 
 type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type OwningFormResolver = (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined;
@@ -364,24 +365,25 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     if (!facts) {
       return [];
     }
+    const legacyAliasesEnabled = getSettings().templateBuilderLegacyComponentSectionSupport;
     const componentKeyFromFields =
       context.fields.get("Feature") ??
-      context.fields.get("Component") ??
-      context.fields.get("Name") ??
-      context.fields.get("Primitive");
+      context.fields.get("Primitive") ??
+      (legacyAliasesEnabled ? context.fields.get("Component") : undefined) ??
+      (legacyAliasesEnabled ? context.fields.get("Name") : undefined);
     const componentKey = componentKeyFromFields ? normalizeComponentKey(componentKeyFromFields) : undefined;
     const component = componentKey ? resolveComponentByKey(index, componentKey) : undefined;
 
     if (context.mode === "key") {
       const keys = [
         "Feature",
-        "Component",
-        "Name",
         "Primitive",
         "Contribution",
-        "Section",
         "Template"
       ];
+      if (legacyAliasesEnabled) {
+        keys.push("Component", "Name", "Section");
+      }
       const available = keys.filter((key) => !context.usedKeysLower.has(key.toLowerCase()));
       if (component && (context.fields.get("Contribution") || context.fields.get("Section"))) {
         const selectedContribution =
@@ -411,9 +413,10 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
 
     const keyLower = (context.key ?? "").trim().toLowerCase();
     let values: vscode.CompletionItem[] = [];
-    if (keyLower === "feature" || keyLower === "component" || keyLower === "name" || keyLower === "primitive") {
+    const isFeatureKey = keyLower === "feature" || keyLower === "primitive" || (legacyAliasesEnabled && (keyLower === "component" || keyLower === "name"));
+    if (isFeatureKey) {
       values = asValueItems(sortedComponentKeys(index), vscode.CompletionItemKind.File);
-    } else if (keyLower === "contribution" || keyLower === "section" || keyLower === "template") {
+    } else if (keyLower === "contribution" || keyLower === "template" || (legacyAliasesEnabled && keyLower === "section")) {
       if (!component) {
         return [];
       }
@@ -504,7 +507,8 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     alreadyPresent: Set<string>,
     tagFragment?: string
   ): vscode.CompletionItem[] {
-    let attrs = ATTRIBUTES_BY_TAG[tagName.toLowerCase()] ?? [];
+    const legacyAliasesEnabled = getSettings().templateBuilderLegacyComponentSectionSupport;
+    let attrs = filterLegacyAliasAttributes(ATTRIBUTES_BY_TAG[tagName.toLowerCase()] ?? [], tagName.toLowerCase(), legacyAliasesEnabled);
     if (tagName.toLowerCase() === "action" && tagFragment) {
       const actionType = (extractAttributeValue(tagFragment, "xsi:type") ?? extractAttributeValue(tagFragment, "type") ?? "").toLowerCase();
       if (actionType === "actionvalue") {
@@ -535,6 +539,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
     const documentComposition = buildDocumentCompositionModel(facts, index);
     const tag = (ctx.currentTag ?? "").toLowerCase();
     const attr = ctx.valueAttribute;
+    const legacyAliasesEnabled = getSettings().templateBuilderLegacyComponentSectionSupport;
 
     if (!attr) {
       return [];
@@ -628,11 +633,18 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       return asValueItems(values, vscode.CompletionItemKind.Reference);
     }
 
-    if ((tag === "using" || tag === "include" || tag === "useprimitive") && (attr === "feature" || attr === "component" || attr === "name" || attr === "primitive")) {
+    if (
+      (tag === "using" || tag === "include" || tag === "useprimitive") &&
+      (
+        attr === "feature" ||
+        attr === "primitive" ||
+        (legacyAliasesEnabled && (attr === "component" || attr === "name"))
+      )
+    ) {
       return asValueItems(sortedComponentKeys(index), vscode.CompletionItemKind.File);
     }
 
-    if ((tag === "using" || tag === "include") && (attr === "section" || attr === "contribution")) {
+    if ((tag === "using" || tag === "include") && (attr === "contribution" || (legacyAliasesEnabled && attr === "section"))) {
       const componentKey = ctx.usingComponentInTag ? normalizeComponentKey(ctx.usingComponentInTag) : undefined;
       if (!componentKey) {
         return [];
@@ -658,7 +670,7 @@ export class SfpXmlCompletionProvider implements vscode.CompletionItemProvider {
       return asValueItems(INSERT_MODES, vscode.CompletionItemKind.EnumMember);
     }
 
-    if (tag === "useprimitive" && (attr === "template" || attr === "contribution" || attr === "section")) {
+    if (tag === "useprimitive" && (attr === "template" || attr === "contribution" || (legacyAliasesEnabled && attr === "section"))) {
       const componentKey = ctx.usingComponentInTag ? normalizeComponentKey(ctx.usingComponentInTag) : undefined;
       if (!componentKey) {
         return [];
@@ -1405,6 +1417,26 @@ function sortedComponentKeys(index: WorkspaceIndex): string[] {
   return getIndexedComponentKeys(index).sort((a, b) => a.localeCompare(b));
 }
 
+function filterLegacyAliasAttributes(
+  attrs: readonly string[],
+  tagName: string,
+  legacyAliasesEnabled: boolean
+): string[] {
+  if (legacyAliasesEnabled) {
+    return [...attrs];
+  }
+
+  if (tagName === "using" || tagName === "include") {
+    return attrs.filter((attr) => attr !== "Component" && attr !== "Name" && attr !== "Section");
+  }
+
+  if (tagName === "useprimitive") {
+    return attrs.filter((attr) => attr !== "Component" && attr !== "Name" && attr !== "Section");
+  }
+
+  return [...attrs];
+}
+
 function buildContributionValueItems(
   component: import("../indexer/types").IndexedComponent,
   rootTag: string | undefined
@@ -1573,12 +1605,13 @@ function computeTagContext(document: vscode.TextDocument, position: vscode.Posit
   const valuePrefix = partialValueMatch ? (partialValueMatch[3] ?? partialValueMatch[4] ?? "") : undefined;
 
   const parentTag = getParentTag(before.slice(0, lastLt));
+  const legacyAliasesEnabled = getSettings().templateBuilderLegacyComponentSectionSupport;
 
   const usingComponentInTag =
     extractAttributeValue(fragment, "Feature") ??
     extractAttributeValue(fragment, "Primitive") ??
-    extractAttributeValue(fragment, "Component") ??
-    extractAttributeValue(fragment, "Name");
+    (legacyAliasesEnabled ? extractAttributeValue(fragment, "Component") : undefined) ??
+    (legacyAliasesEnabled ? extractAttributeValue(fragment, "Name") : undefined);
   const mappingFormIdentInScope = getOpenButtonMappingFormIdent(before.slice(0, lastLt));
   const formControlTypeInTag = currentTag?.toLowerCase() === "formcontrol" ? extractAttributeValue(fragment, "xsi:type") ?? extractAttributeValue(fragment, "type") : undefined;
 

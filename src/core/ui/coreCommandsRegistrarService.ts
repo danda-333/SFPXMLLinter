@@ -16,6 +16,7 @@ export interface CoreCommandsRegistrarServiceDeps {
   refreshCompositionView: () => void;
   compositionCopySummary: (payload?: { text?: string }) => Promise<void>;
   compositionLogNonEffectiveUsings: (payload?: { title?: string; lines?: string[] }) => void;
+  migrateLegacyTemplateAliases: () => Promise<void>;
 }
 
 export class CoreCommandsRegistrarService {
@@ -104,6 +105,12 @@ export class CoreCommandsRegistrarService {
           this.deps.compositionLogNonEffectiveUsings(payload);
         }
       )
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("sfpXmlLinter.migrateLegacyTemplateAliases", async () => {
+        await this.deps.migrateLegacyTemplateAliases();
+      })
     );
   }
 }

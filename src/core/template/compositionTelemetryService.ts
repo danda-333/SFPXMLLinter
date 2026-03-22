@@ -132,7 +132,7 @@ export class CompositionTelemetryService {
             for (const contribution of usingItem.contributions) {
               const trace = contribution.insertTrace;
               const traceLabel = trace
-                ? `insert=${trace.finalInsertCount}, strategy=${trace.strategy}, placeholder=${trace.placeholderCount}, xpath=${trace.targetXPathMatchCount}, clamp=${trace.targetXPathClampedCount}, fallback=${trace.fallbackSymbolCount}`
+                ? `insert=${trace.finalInsertCount}, strategy=${trace.strategy}, placeholder=${trace.placeholderCount}, xpath=${trace.targetXPathMatchCount}, clamp=${trace.targetXPathClampedCount}, estimated=${trace.estimatedSymbolCount}`
                 : "trace=missing";
               this.deps.logComposition(
                 `    contribution ${contribution.contribution.contributionName}: usage=${contribution.usage}, rootRelevant=${contribution.rootRelevant}, ${traceLabel}`

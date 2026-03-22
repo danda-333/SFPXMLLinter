@@ -76,7 +76,7 @@ export function collectEffectiveUsingRefs(
   }
 
   const form = getIndexedFormByIdent(index, owningFormIdent);
-  const formFacts = form ? getParsedFactsByUri(index, form.uri, getFactsForUri, "strict-accessor") : undefined;
+  const formFacts = form ? getParsedFactsByUri(index, form.uri, getFactsForUri) : undefined;
   if (!formFacts) {
     return out;
   }

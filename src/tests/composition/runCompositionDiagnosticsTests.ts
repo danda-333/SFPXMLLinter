@@ -467,6 +467,7 @@ function createInheritanceSettings(): import("../../config/settings").SfpXmlLint
     componentSaveBuildScope: "dependents",
     templateBuilderMode: "debug",
     templateBuilderPostBuildFormat: false,
+    templateBuilderLegacyComponentSectionSupport: true,
     templateBuilderProvenanceMode: "off",
     templateBuilderGeneratorsEnabled: true,
     templateBuilderGeneratorTimeoutMs: 150,

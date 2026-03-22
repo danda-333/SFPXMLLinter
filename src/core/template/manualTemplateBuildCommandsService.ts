@@ -62,6 +62,8 @@ export class ManualTemplateBuildCommandsService {
     try {
       this.deps.logBuild("MANUAL build current/selection START");
       const mode = this.deps.getTemplateBuilderMode();
+      const compatibilityProbe = this.deps.createBuildRunOptions(true, mode);
+      const legacyTagAliasesEnabled = compatibilityProbe.legacyTagAliasesEnabled !== false;
       const telemetry = this.deps.createBuildTelemetryCollector();
       const selection = this.collectBuildSelectionUris(uri, uris);
       const targetUris = selection.length > 0 ? selection : this.getActiveDocumentUriFallback();
@@ -92,7 +94,11 @@ export class ManualTemplateBuildCommandsService {
         }
 
         if (this.deps.isInFolder(targetUri, "XML_Components") || this.deps.isInFolder(targetUri, "XML_Primitives")) {
-          const dependentTemplates = await this.deps.buildService.findTemplatesUsingComponent(folder, targetUri.fsPath);
+          const dependentTemplates = await this.deps.buildService.findTemplatesUsingComponent(
+            folder,
+            targetUri.fsPath,
+            legacyTagAliasesEnabled
+          );
           if (dependentTemplates.length === 0) {
             usedFullFallback = true;
             this.deps.logBuild(

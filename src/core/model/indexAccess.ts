@@ -7,8 +7,6 @@ export type FactsByUriAccessor = (
   index: WorkspaceIndex
 ) => ParsedDocumentFacts | undefined;
 
-export type FactsAccessMode = "index-fallback" | "strict-accessor";
-
 export type UriKeyParser = (uriKey: string) => vscode.Uri | undefined;
 
 export interface IndexedFactsEntry {
@@ -19,22 +17,19 @@ export interface IndexedFactsEntry {
 export function getParsedFactsByUri(
   index: WorkspaceIndex,
   uri: vscode.Uri,
-  getFactsForUri?: FactsByUriAccessor,
-  mode: FactsAccessMode = "index-fallback"
+  getFactsForUri?: FactsByUriAccessor
 ): ParsedDocumentFacts | undefined {
   if (getFactsForUri) {
     const fromAccessor = getFactsForUri(uri, index);
     if (fromAccessor) {
       return fromAccessor;
     }
-    if (mode === "strict-accessor") {
-      return undefined;
-    }
-  } else {
-    const direct = index.parsedFactsByUri.get(uri.toString());
-    if (direct) {
-      return direct;
-    }
+    return undefined;
+  }
+
+  const direct = index.parsedFactsByUri.get(uri.toString());
+  if (direct) {
+    return direct;
   }
 
   const normalizedTarget = normalizeUriLike(uri);
@@ -81,8 +76,7 @@ export function getIndexedComponentKeys(index: WorkspaceIndex): string[] {
 export function getParsedFactsEntries(
   index: WorkspaceIndex,
   getFactsForUri: FactsByUriAccessor | undefined,
-  parseUriKey: UriKeyParser,
-  mode: FactsAccessMode = "index-fallback"
+  parseUriKey: UriKeyParser
 ): IndexedFactsEntry[] {
   const out: IndexedFactsEntry[] = [];
   for (const [uriKey, fallbackFacts] of index.parsedFactsByUri.entries()) {
@@ -93,9 +87,6 @@ export function getParsedFactsEntries(
     let facts: ParsedDocumentFacts | undefined;
     if (getFactsForUri) {
       facts = getFactsForUri(uri, index);
-      if (!facts && mode === "index-fallback") {
-        facts = fallbackFacts;
-      }
     } else {
       facts = fallbackFacts;
     }

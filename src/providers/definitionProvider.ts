@@ -223,7 +223,7 @@ function findInjectedShareCodeDefinition(
     if (!component) {
       continue;
     }
-    const facts = getParsedFactsByUri(index, component.uri, getFactsForUri, "strict-accessor");
+    const facts = getParsedFactsByUri(index, component.uri, getFactsForUri);
     if (!facts) {
       continue;
     }

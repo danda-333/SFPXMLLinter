@@ -33,9 +33,26 @@ Purpose: define the missing decisions needed to execute all refactor phases in o
   - component key/variant reads moved behind `core/model/indexAccess.ts`
   - additional direct-map reads eliminated from providers/scope/orchestrator-adjacent services
 - Runtime facts reads were hardened to strict-accessor mode for composition/runtime consumers (TreeView facts resolution, dependency revalidation open-doc path, template planner on template save).
+- Index access helper API was simplified to strict behavior for accessor mode (legacy `index-fallback` mode removed from `core/model/indexAccess.ts`).
 - `missing-feature-expected-xpath` was moved to composed-reference validation mode; template diagnostics now resolve this rule from runtime/composed context only.
 - Validation rule matrix is now centralized in `src/core/validation/validationModules.ts` (`VALIDATION_RULE_GROUPS` + `COMPOSED_REFERENCE_RULE_IDS`) and consumed by extension composed-reference filtering.
+- Added explicit rule-mode matrix contract (`sourceOnly` / `composedOnly` / `dual`) in `src/core/validation/validationModules.ts` and regression gate `src/tests/core/runValidationRuleMatrixContractTests.ts` to keep engine rules, settings defaults, package defaults, and matrix coverage in sync.
+- Added validation dependency contract gate `src/tests/core/runValidationModuleFactContractTests.ts` to enforce that every `ValidationModule.needsFacts` dependency is backed by a registered default fact provider.
+- Added validation symbol dependency contract gate `src/tests/core/runValidationModuleSymbolContractTests.ts` to enforce that every declared `ValidationModule.needsSymbols` dependency is backed by a registered symbol resolver.
+- Added validation rule coverage contract gate `src/tests/core/runValidationModuleRuleCoverageContractTests.ts` to enforce full matrix-to-module coverage (`sourceOnly` / `composedOnly` / `dual`) and prevent orphaned rules/modules.
+- Added provider access contract gate `src/tests/core/runProviderAccessContractTests.ts` to enforce provider-layer usage of shared model entrypoints (`indexAccess` + `factsResolution` strict-accessor) and block legacy fallback/direct-map patterns.
+- Added orchestration entry contract gate `src/tests/core/runOrchestrationEntryContractTests.ts` to ensure event handlers route save/build work through orchestrator entrypoints and block direct build execution paths in event diagnostics/save handlers.
+- Added command-handler orchestration contract gate `src/tests/core/runCommandHandlerOrchestrationContractTests.ts` to ensure command registrar services stay as thin facades (dependency-injected handlers only) and do not import build/validation/orchestrator internals directly.
+- Added pipeline module registration contract gate `src/tests/core/runPipelineModuleRegistrationContractTests.ts` to enforce required module registration set and ordering in `extension.ts` (single orchestration path stability).
+- Added diagnostics publisher contract gate `src/tests/core/runDiagnosticsPublisherContractTests.ts` to enforce single diagnostics mutation boundary (`DiagnosticsPublisherService`) and keep `createDiagnosticCollection` centralized in `extension.ts`.
+- Added composition datasource contract gate `src/tests/core/runCompositionDataSourceContractTests.ts` to keep TreeView/projection on model facts/snapshot accessors only (no direct index map reads or orchestration/indexer internal imports in composition layer).
+- Added validation data access contract gate `src/tests/core/runValidationDataAccessContractTests.ts` to keep validation layer free of direct index-map access and direct orchestration/indexer implementation imports; validation module execution stays dependency-injected via `ValidationRunnerDeps`.
+- Added extension boundary contract gate `src/tests/core/runExtensionBoundaryContractTests.ts` to enforce that event handlers (`save/files`) route through `updateOrchestrator`, block direct build calls in handlers, and prevent low-level model/fact/symbol mutations in `extension.ts` outside `modelWriteGateway`.
+- Added workspace scan boundary contract gate `src/tests/core/runWorkspaceScanBoundaryContractTests.ts` to prevent ad-hoc workspace scans outside explicit boundaries (`utils/paths`, `workspaceIndexer`, template build service, legacy migration command), keeping scan orchestration centralized.
+- Added fallback-parse boundary contract gate `src/tests/core/runFallbackParseBoundaryContractTests.ts` to enforce strict-accessor default and allow `fallback-parse` only in the explicit standalone validation boundary (`documentValidationService`) plus `factsResolution` type/implementation declaration.
+- Added contract snapshot gate `src/tests/core/runContractGuardsSnapshotTests.ts` to ensure all contract guards are present and wired in `scripts.test:composition` (single aggregated contract inventory/report).
 - Added strict aggregate test entrypoint `npm run test:all:strict` (includes performance checkpoints: `test:linter:perf`, `test:templates:perf`).
+ - Added focused contract-only entrypoint `npm run test:contracts` for fast guard verification without full composition fixture run.
 
 ### Standalone Fallback Contract (Explicit Exception)
 

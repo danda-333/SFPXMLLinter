@@ -374,7 +374,7 @@ function collectWorkflowReferencesForComponentDeclarationTarget(
 ): vscode.Location[] {
   const normalized = normalizeComponentKey(componentKey);
   const out: vscode.Location[] = [];
-  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey, "strict-accessor")) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     const uri = entry.uri;
     const facts = entry.facts;
     if ((facts.rootTag ?? "").toLowerCase() !== "workflow" || !facts.workflowFormIdent) {

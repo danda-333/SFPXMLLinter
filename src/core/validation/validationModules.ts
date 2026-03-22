@@ -56,6 +56,7 @@ export const VALIDATION_RULE_GROUPS = {
     "unknown-using-feature",
     "unknown-using-contribution",
     "contribution-mismatch",
+    "legacy-template-alias-disabled",
     "unused-using",
     "partial-using",
     "missing-using-param",
@@ -114,6 +115,35 @@ export const VALIDATION_RULE_GROUPS = {
 } as const;
 
 export const COMPOSED_REFERENCE_RULE_IDS: readonly string[] = VALIDATION_RULE_GROUPS.composedReference;
+
+function toSorted(values: Iterable<string>): string[] {
+  return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+}
+
+const SOURCE_RULE_CANDIDATES = new Set<string>([
+  ...VALIDATION_RULE_GROUPS.duplicates,
+  ...VALIDATION_RULE_GROUPS.references,
+  ...VALIDATION_RULE_GROUPS.using,
+  ...VALIDATION_RULE_GROUPS.conventions,
+  ...VALIDATION_RULE_GROUPS.feature,
+  ...VALIDATION_RULE_GROUPS.primitives
+]);
+const COMPOSED_RULE_CANDIDATES = new Set<string>(VALIDATION_RULE_GROUPS.composedReference);
+const DUAL_RULES = new Set<string>(Array.from(SOURCE_RULE_CANDIDATES).filter((id) => COMPOSED_RULE_CANDIDATES.has(id)));
+const SOURCE_ONLY_RULES = new Set<string>(Array.from(SOURCE_RULE_CANDIDATES).filter((id) => !DUAL_RULES.has(id)));
+const COMPOSED_ONLY_RULES = new Set<string>(Array.from(COMPOSED_RULE_CANDIDATES).filter((id) => !DUAL_RULES.has(id)));
+
+export const VALIDATION_RULE_MODE_MATRIX = {
+  sourceOnly: toSorted(SOURCE_ONLY_RULES),
+  composedOnly: toSorted(COMPOSED_ONLY_RULES),
+  dual: toSorted(DUAL_RULES)
+} as const;
+
+export const ALL_VALIDATION_RULE_IDS: readonly string[] = toSorted([
+  ...VALIDATION_RULE_MODE_MATRIX.sourceOnly,
+  ...VALIDATION_RULE_MODE_MATRIX.composedOnly,
+  ...VALIDATION_RULE_MODE_MATRIX.dual
+]);
 
 function getOrCompute(
   cache: WeakMap<ValidationRequest, vscode.Diagnostic[]>,

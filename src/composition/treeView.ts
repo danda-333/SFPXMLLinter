@@ -478,8 +478,7 @@ function collectUsageLocationsForDocument(
   for (const entry of getParsedFactsEntries(
     index,
     composedSnapshotRegistry ? ((uri, idx) => getFactsForUri(idx, uri, composedSnapshotRegistry)) : undefined,
-    parseIndexUriKey,
-    "strict-accessor"
+    parseIndexUriKey
   )) {
     const uri = entry.uri;
     const entryFacts = entry.facts;
@@ -534,7 +533,7 @@ function getFactsForUri(
   if (snapshotFacts) {
     return snapshotFacts;
   }
-  return getParsedFactsByUri(index, uri, undefined, "strict-accessor");
+  return getParsedFactsByUri(index, uri, undefined);
 }
 
 function buildFeatureTree(
@@ -1312,7 +1311,7 @@ function buildUsingContributionMetaGroup(
     children.push(detailNode(`PlaceholderCount: ${insertTrace.placeholderCount}`));
     children.push(detailNode(`TargetXPathMatches: ${insertTrace.targetXPathMatchCount}`));
     children.push(detailNode(`TargetXPathClamped: ${insertTrace.targetXPathClampedCount}`));
-    children.push(detailNode(`FallbackSymbolCount: ${insertTrace.fallbackSymbolCount}`));
+    children.push(detailNode(`EstimatedSymbolCount: ${insertTrace.estimatedSymbolCount}`));
   } else {
     children.push(detailNode("InsertTrace: missing in index"));
   }

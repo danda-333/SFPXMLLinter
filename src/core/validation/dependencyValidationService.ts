@@ -41,7 +41,7 @@ export class DependencyValidationService {
     const allCandidateKeys = this.collectTransitiveCandidateComponentKeys(indexes, componentKey);
 
     for (const idx of indexes) {
-      for (const entry of getParsedFactsEntries(idx, this.deps.getFactsForUri, parseIndexUriKey, "strict-accessor")) {
+      for (const entry of getParsedFactsEntries(idx, this.deps.getFactsForUri, parseIndexUriKey)) {
         const uri = entry.uri;
         const facts = entry.facts;
         const owningFormIdent = this.getOwningFormIdentFromFacts(facts);
@@ -170,16 +170,20 @@ export class DependencyValidationService {
         continue;
       }
 
-      const uriKey = document.uri.toString();
-      const index =
-        templateIndex.formIdentByUri.has(uriKey) || getComponentKeysForUri(templateIndex, document.uri).size > 0
-          ? templateIndex
-          : runtimeIndex;
-      const facts = resolveDocumentFacts(document, index, {
+      let selectedIndex = templateIndex;
+      let facts = resolveDocumentFacts(document, selectedIndex, {
         getFactsForUri: this.deps.getFactsForUri,
         parseFacts: parseDocumentFacts,
         mode: "strict-accessor"
       });
+      if (!facts) {
+        selectedIndex = runtimeIndex;
+        facts = resolveDocumentFacts(document, selectedIndex, {
+          getFactsForUri: this.deps.getFactsForUri,
+          parseFacts: parseDocumentFacts,
+          mode: "strict-accessor"
+        });
+      }
       if (!facts) {
         continue;
       }
@@ -248,7 +252,7 @@ export class DependencyValidationService {
     }
 
     const reverse = new Map<string, Set<string>>();
-    for (const entry of getParsedFactsEntries(index, this.deps.getFactsForUri, parseIndexUriKey, "strict-accessor")) {
+    for (const entry of getParsedFactsEntries(index, this.deps.getFactsForUri, parseIndexUriKey)) {
       const consumerKeys = getComponentKeysForUri(index, entry.uri);
       if (consumerKeys.size === 0) {
         continue;
@@ -319,7 +323,7 @@ export class DependencyValidationService {
         out.set(form.uri.toString(), form.uri);
       }
 
-      for (const entry of getParsedFactsEntries(idx, this.deps.getFactsForUri, parseIndexUriKey, "strict-accessor")) {
+      for (const entry of getParsedFactsEntries(idx, this.deps.getFactsForUri, parseIndexUriKey)) {
         const uri = entry.uri;
         const facts = entry.facts;
         const owningFormIdent = this.getOwningFormIdentFromFacts(facts);

@@ -1,4 +1,4 @@
-﻿import * as vscode from "vscode";
+import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
@@ -57,6 +57,7 @@ import { ProvenanceHydrationService } from "./core/template/provenanceHydrationS
 import { TemplateBuildRunMode, TemplateBuildRunOptionsFactory } from "./core/template/templateBuildRunOptionsFactory";
 import { GeneratorTemplateScaffoldService } from "./core/template/generatorTemplateScaffoldService";
 import { ManualTemplateBuildCommandsService } from "./core/template/manualTemplateBuildCommandsService";
+import { LegacyTemplateAliasMigrationCommandsService } from "./core/template/legacyTemplateAliasMigrationCommandsService";
 import { PipelineUiCommandsService } from "./core/ui/pipelineUiCommandsService";
 import { VsCodeEventBridgeService } from "./core/ui/vsCodeEventBridgeService";
 import { LanguageProvidersRegistrarService } from "./core/ui/languageProvidersRegistrarService";
@@ -139,8 +140,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             index,
             uri,
             (targetUri) =>
-              factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "snapshot:refresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
-            "strict-accessor"
+              factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "snapshot:refresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined
           ),
         parseFacts: parseDocumentFacts,
         mode: "strict-accessor"
@@ -216,6 +216,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     getDisabledValidationModules: () => validationHost.getDisabledModuleIds(),
     getPipelineTrace: () => pipelineMetrics.getTrace(),
     getWorkspaceFolder: () => vscode.workspace.workspaceFolders?.[0]
+  });
+  const legacyTemplateAliasMigrationCommandsService = new LegacyTemplateAliasMigrationCommandsService({
+    logBuild: (message) => logBuild(message)
   });
   const vsCodeEventBridgeService = new VsCodeEventBridgeService({
     enqueue: (payload, priority, key) => {
@@ -330,7 +333,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     exportUsageSnapshot: () => pipelineUiCommandsService.exportUsageSnapshot(),
     refreshCompositionView: () => pipelineUiCommandsService.refreshCompositionView(),
     compositionCopySummary: (payload) => pipelineUiCommandsService.compositionCopySummary(payload),
-    compositionLogNonEffectiveUsings: (payload) => pipelineUiCommandsService.compositionLogNonEffectiveUsings(payload)
+    compositionLogNonEffectiveUsings: (payload) => pipelineUiCommandsService.compositionLogNonEffectiveUsings(payload),
+    migrateLegacyTemplateAliases: () => legacyTemplateAliasMigrationCommandsService.runInteractiveMigration()
   });
   let hasInitialIndex = false;
   type SavePerfAggregate = {
@@ -809,8 +813,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       index,
       uri,
       (targetUri) =>
-        factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:getParsedFactsByUri") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
-      "strict-accessor"
+        factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:getParsedFactsByUri") as ReturnType<typeof parseDocumentFactsFromText> | undefined
     );
   }
 
@@ -846,11 +849,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             idx,
             uri,
             (targetUri) =>
-              factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:buildDiagnosticsRefresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
-            "strict-accessor"
+              factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:buildDiagnosticsRefresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined
           ),
-        parseIndexUriKey,
-        "strict-accessor"
+        parseIndexUriKey
       )) {
         const uri = entry.uri;
         const parsedFacts = entry.facts;
@@ -1247,7 +1248,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     collectTemplatePathsForFormIdentFromIndex: (formIdent) => collectTemplatePathsForFormIdentFromIndex(formIdent),
     collectDependentTemplatesFromIndex: (componentKey) => collectDependentTemplatesFromIndex(componentKey),
     findTemplatesUsingComponent: (workspaceFolder, componentPath) =>
-      buildService.findTemplatesUsingComponent(workspaceFolder, componentPath),
+      buildService.findTemplatesUsingComponent(
+        workspaceFolder,
+        componentPath,
+        getSettings().templateBuilderLegacyComponentSectionSupport
+      ),
     getIndexForUri: (uri) => getIndexForUri(uri),
     getFactsForDocument: (document) => {
       const fromRegistry = factRegistry.getFact(document.uri.toString(), "fact.parsedDocument", "template:planner");
@@ -1258,8 +1263,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         index,
         uri,
         (targetUri) =>
-          factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "template:planner") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
-        "strict-accessor"
+          factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "template:planner") as ReturnType<typeof parseDocumentFactsFromText> | undefined
       )
   });
 
@@ -1482,8 +1486,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             index,
             targetUri,
               (factsUri) =>
-                factRegistry.getFact(factsUri.toString(), "fact.parsedDocument", "build:refreshForms") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
-              "strict-accessor"
+                factRegistry.getFact(factsUri.toString(), "fact.parsedDocument", "build:refreshForms") as ReturnType<typeof parseDocumentFactsFromText> | undefined
             ),
         parseFacts: parseDocumentFacts,
         mode: "strict-accessor"
@@ -1847,8 +1850,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           getParsedFactsByUriFromIndexAccess(
             index,
             targetUri,
-            undefined,
-            "strict-accessor"
+            undefined
           ),
         parseFacts: parseDocumentFacts,
         mode: "strict-accessor"

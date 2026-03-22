@@ -17,6 +17,7 @@ export interface ReindexServiceDeps {
   enqueueWorkspaceValidation: (uris: readonly vscode.Uri[]) => void;
   queueProvenanceHydration: (activeUri?: vscode.Uri) => void;
   setHasInitialIndex: (value: boolean) => void;
+  refreshComposedSnapshotsAll?: () => number;
   validateUri: (uri: vscode.Uri, options?: { respectProjectScope?: boolean; preferFsRead?: boolean }) => Promise<void>;
   getProjectKeyForUri: (uri: vscode.Uri) => string | undefined;
   getSettingsSnapshot: () => SfpXmlLinterSettings;
@@ -241,6 +242,8 @@ export class ReindexService implements vscode.Disposable {
 
     this.deps.rebuildFeatureRegistry();
     this.deps.setHasInitialIndex(true);
+    const refreshed = this.deps.refreshComposedSnapshotsAll?.() ?? 0;
+    this.deps.log(`REINDEX snapshot refresh docs=${refreshed}`);
     this.deps.validateOpenDocuments();
 
     if (!this.hasCompletedInitialWorkspaceValidation) {
@@ -292,6 +295,8 @@ export class ReindexService implements vscode.Disposable {
 
     this.deps.rebuildFeatureRegistry();
     this.deps.setHasInitialIndex(true);
+    const refreshed = this.deps.refreshComposedSnapshotsAll?.() ?? 0;
+    this.deps.log(`REINDEX snapshot refresh docs=${refreshed}`);
     this.deps.validateOpenDocuments();
   }
 

@@ -64,6 +64,14 @@ export class DocumentValidationService {
   }
 
   public validateDocument(document: vscode.TextDocument): void {
+    this.validateDocumentInternal(document, { respectProjectScope: true });
+  }
+
+  private validateDocumentInternal(
+    document: vscode.TextDocument,
+    options?: { respectProjectScope?: boolean }
+  ): void {
+    const respectProjectScope = options?.respectProjectScope !== false;
     if (document.languageId !== "xml") {
       this.deps.clearDiagnostics(document.uri);
       return;
@@ -102,7 +110,7 @@ export class DocumentValidationService {
       return;
     }
 
-    if (!this.deps.shouldValidateUriForActiveProjects(document.uri)) {
+    if (respectProjectScope && !this.deps.shouldValidateUriForActiveProjects(document.uri)) {
       this.deps.logIndex(`validate skipped by project scope: ${relOrPath}`);
       this.deps.clearDiagnostics(document.uri);
       return;
@@ -115,7 +123,11 @@ export class DocumentValidationService {
     }
 
     const currentIndex = this.deps.getIndexForUri(document.uri);
-    const parsedFacts = this.resolveFactsFromDocument(document, currentIndex, "strict-accessor");
+    if (!currentIndex.fullReady) {
+      this.deps.logIndex(`validate skipped: index not fullReady for ${relOrPath}`);
+      return;
+    }
+    const parsedFacts = this.resolveFactsForValidation(document, currentIndex, relOrPath);
     if (!parsedFacts) {
       this.deps.clearDiagnostics(document.uri);
       return;
@@ -165,8 +177,11 @@ export class DocumentValidationService {
         return;
       }
 
-      this.validateDocument(document);
-    } catch {
+      this.validateDocumentInternal(document, { respectProjectScope });
+    } catch (error) {
+      const relOrPath = this.deps.getRelativePath(uri);
+      const message = error instanceof Error ? error.message : String(error);
+      this.deps.logIndex(`validateUri ERROR: ${relOrPath} ${message}`);
       this.deps.clearDiagnostics(uri);
     }
   }
@@ -195,6 +210,9 @@ export class DocumentValidationService {
     const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     const readStartedAt = Date.now();
     const index = this.deps.getIndexForUri(uri);
+    if (!index.fullReady) {
+      return undefined;
+    }
     const cachedFacts = this.deps.getFactsForUri?.(uri, index);
     const cacheMiss = options?.preferFsRead === true && !cachedFacts;
 
@@ -217,7 +235,8 @@ export class DocumentValidationService {
     }
     const readMs = Date.now() - readStartedAt;
     const diagnosticsStartedAt = Date.now();
-    const effectiveFacts = this.resolveFactsFromDocument(document, index, "strict-accessor");
+    const relOrPath = this.deps.getRelativePath(uri);
+    const effectiveFacts = this.resolveFactsForValidation(document, index, relOrPath);
     if (!effectiveFacts) {
       return undefined;
     }
@@ -232,7 +251,7 @@ export class DocumentValidationService {
       diagnostics: computed,
       signature,
       shouldLog: computed.length > 0 || this.deps.isUserOpenDocument(uri),
-      relOrPath: this.deps.getRelativePath(uri),
+      relOrPath,
       totalMs: Date.now() - totalStartedAt,
       readMs,
       diagnosticsMs,
@@ -251,6 +270,40 @@ export class DocumentValidationService {
       parseFacts: parseDocumentFacts,
       mode
     });
+  }
+
+  private resolveFactsForValidation(
+    document: vscode.TextDocument,
+    index: WorkspaceIndex,
+    relOrPath: string
+  ): ReturnType<typeof parseDocumentFactsFromText> | undefined {
+    const normalized = relOrPath.replace(/\\/g, "/").toLowerCase();
+    const isTemplateDomain =
+      normalized.includes("/xml_templates/") ||
+      normalized.startsWith("xml_templates/") ||
+      normalized.includes("/xml_components/") ||
+      normalized.startsWith("xml_components/") ||
+      normalized.includes("/xml_primitives/") ||
+      normalized.startsWith("xml_primitives/");
+
+    if (isTemplateDomain) {
+      const parsedFacts = parseFactsStandalone(document);
+      if (parsedFacts) {
+        this.deps.logIndex(`validate facts parse-first used: ${relOrPath}`);
+        return parsedFacts;
+      }
+    }
+
+    const strictFacts = this.resolveFactsFromDocument(document, index, "strict-accessor");
+    if (strictFacts) {
+      return strictFacts;
+    }
+    const fallbackFacts = parseFactsStandalone(document);
+    if (fallbackFacts) {
+      this.deps.logIndex(`validate facts fallback-parse used: ${relOrPath}`);
+      return fallbackFacts;
+    }
+    return undefined;
   }
 }
 

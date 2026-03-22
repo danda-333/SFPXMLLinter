@@ -153,6 +153,9 @@ export class WorkspaceIndexer {
     // For workflow/dataview/other files we still keep parsed facts up to date,
     // so dependent diagnostics can run against fresh inherited usings/model.
     const facts = parseDocumentFactsFromMaskedText(maskedText);
+    if (options?.skipUsingTrace !== true) {
+      populateUsingInsertTraceFromText(facts, maskedText, this.index);
+    }
     cleanupOldByUri();
     this.index.parsedFactsByUri.set(document.uri.toString(), facts);
     this.index.hasIgnoreDirectiveByUri.set(

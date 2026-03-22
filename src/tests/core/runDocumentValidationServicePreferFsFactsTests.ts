@@ -51,6 +51,7 @@ const { parseDocumentFactsFromText } = require("../../indexer/xmlFacts") as type
 
 async function run(): Promise<void> {
   await testPreferFsReadIgnoresCachedFacts();
+  await testValidateUriCanBypassProjectScope();
   console.log("\x1b[32mDocumentValidationService preferFsRead tests passed.\x1b[0m");
 }
 
@@ -69,7 +70,8 @@ async function testPreferFsReadIgnoresCachedFacts(): Promise<void> {
 
   const staleFacts = parseDocumentFactsFromText("<WorkFlow FormIdent=\"A\"><Steps /></WorkFlow>");
   const index = {
-    parsedFactsByUri: new Map([[uri.toString(), staleFacts]])
+    parsedFactsByUri: new Map([[uri.toString(), staleFacts]]),
+    fullReady: true
   } as unknown as import("../../indexer/types").WorkspaceIndex;
 
   let observedRootTag = "";
@@ -112,6 +114,64 @@ async function testPreferFsReadIgnoresCachedFacts(): Promise<void> {
 
   await service.computeIndexedValidationOutcome(uri, { preferFsRead: true });
   assert.equal(observedRootTag, "form", "preferFsRead must use freshly parsed document facts instead of stale index facts");
+}
+
+async function testValidateUriCanBypassProjectScope(): Promise<void> {
+  const uri = Uri.file("C:\\repo\\XML_Templates\\100_Test\\B.xml") as unknown as import("vscode").Uri;
+  const documentText = "<Form Ident=\"B\"><Controls /></Form>";
+  const document = {
+    uri: uri as unknown as Uri,
+    languageId: "xml",
+    version: 3,
+    getText(): string {
+      return documentText;
+    }
+  };
+  vscodeMock.workspace.textDocuments = [document];
+
+  const facts = parseDocumentFactsFromText(documentText);
+  const index = {
+    parsedFactsByUri: new Map([[uri.toString(), facts]]),
+    fullReady: true
+  } as unknown as import("../../indexer/types").WorkspaceIndex;
+
+  let setCount = 0;
+  const service = new DocumentValidationService({
+    emptyIndex: index,
+    clearDiagnostics: () => {
+      // no-op
+    },
+    setDiagnostics: () => {
+      setCount++;
+    },
+    getIndexForUri: () => index,
+    buildDiagnosticsForDocument: () => [],
+    shouldValidateUriForActiveProjects: () => false,
+    documentInConfiguredRoots: () => true,
+    isUserOpenDocument: () => false,
+    hasInitialIndex: () => true,
+    openTextDocumentWithInternalFlag: async () => undefined,
+    readWorkspaceFileText: async () => documentText,
+    createVirtualXmlDocument: (_uri, text) => ({
+      uri: uri as unknown as Uri,
+      languageId: "xml",
+      version: 3,
+      getText(): string {
+        return text;
+      }
+    } as never),
+    getRelativePath: () => "XML_Templates/100_Test/B.xml",
+    logIndex: () => {
+      // no-op
+    },
+    logSingleFile: () => {
+      // no-op
+    },
+    referenceRuleFilter: () => true
+  });
+
+  await service.validateUri(uri, { respectProjectScope: false });
+  assert.equal(setCount, 1, "validateUri(respectProjectScope=false) must still publish diagnostics");
 }
 
 void run();

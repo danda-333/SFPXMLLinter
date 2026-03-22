@@ -78,10 +78,20 @@ export class TemplateBuildRunOptionsFactory {
           return;
         }
 
-        if (/^(UPDATED|SKIPPED|ERROR\b)/i.test(trimmed)) {
+        if (/^(UPDATED|SKIPPED)\b/i.test(trimmed)) {
           if (mode !== "debug") {
             return;
           }
+          return;
+        }
+
+        if (/^ERROR\b/i.test(trimmed)) {
+          this.deps.logBuild(trimmed);
+          return;
+        }
+
+        if (/^\[generator\]\[warning\]/i.test(trimmed)) {
+          this.deps.logBuild(trimmed);
           return;
         }
 

@@ -167,9 +167,67 @@ export class ManualTemplateBuildCommandsService {
       this.deps.logBuild("MANUAL build all START");
       const mode = this.deps.getTemplateBuilderMode();
       const telemetry = this.deps.createBuildTelemetryCollector();
-      await this.deps.buildService.run(
-        folder,
-        this.deps.createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "SFP XML Linter: Full rebuild XML templates",
+          cancellable: false
+        },
+        async (progress) => {
+          let lastReported = 0;
+          let totalCount = 0;
+          const buildErrors: string[] = [];
+          progress.report({ message: "Starting..." });
+          const runOptions = this.deps.createBuildRunOptions(
+            false,
+            mode,
+            telemetry.onTemplateEvaluated,
+            telemetry.onTemplateMutations
+          );
+          const previousOnLogLine = runOptions.onLogLine;
+          runOptions.onLogLine = (line: string) => {
+            previousOnLogLine?.(line);
+            const trimmed = line.trim();
+            if (/^ERROR:\s*/i.test(trimmed)) {
+              const normalized = trimmed.replace(/^ERROR:\s*/i, "");
+              if (normalized.length > 0) {
+                buildErrors.push(normalized);
+              }
+            }
+            const match = /^\[(\d+)\/(\d+)\]\s+(.+)$/.exec(line.trim());
+            if (!match) {
+              if (buildErrors.length > 0) {
+                const last = truncateForProgress(buildErrors[buildErrors.length - 1]);
+                progress.report({ message: `Errors: ${buildErrors.length} | Last: ${last}` });
+              }
+              return;
+            }
+            const current = Number(match[1] ?? 0);
+            const total = Number(match[2] ?? 0);
+            const relPath = match[3] ?? "";
+            if (Number.isFinite(total) && total > 0) {
+              totalCount = total;
+              const targetPercent = Math.floor((Math.max(0, current) / total) * 100);
+              const increment = Math.max(0, Math.min(100, targetPercent - lastReported));
+              lastReported += increment;
+              const errorPart = buildErrors.length > 0
+                ? ` | errors: ${buildErrors.length} | last: ${truncateForProgress(buildErrors[buildErrors.length - 1])}`
+                : "";
+              progress.report({
+                increment,
+                message: `${Math.max(0, current)}/${total}: ${relPath}${errorPart}`
+              });
+            } else {
+              progress.report({ message: relPath });
+            }
+          };
+          await this.deps.buildService.run(folder, runOptions);
+          if (totalCount > 0 && lastReported < 100) {
+            progress.report({ increment: 100 - lastReported, message: "Finalizing..." });
+          } else {
+            progress.report({ message: "Finalizing..." });
+          }
+        }
       );
       await this.deps.queueReindexAll();
       this.deps.applyBuildMutationTelemetry(telemetry.mutationsByTemplate);
@@ -288,6 +346,13 @@ export class ManualTemplateBuildCommandsService {
       return false;
     }
   }
+}
+
+function truncateForProgress(input: string, max = 120): string {
+  if (input.length <= max) {
+    return input;
+  }
+  return `${input.slice(0, max - 3)}...`;
 }
 
 function isVsCodeUri(value: unknown): value is vscode.Uri {

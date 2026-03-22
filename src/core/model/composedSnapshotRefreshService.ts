@@ -56,6 +56,27 @@ export class ComposedSnapshotRefreshService {
     );
   }
 
+  public refreshAll(): number {
+    const refreshStartedAt = Date.now();
+    const snapshotDeps = {
+      templateIndex: this.deps.getTemplateIndex(),
+      runtimeIndex: this.deps.getRuntimeIndex()
+    };
+    const formIdents = new Set<string>();
+    for (const key of snapshotDeps.templateIndex.formsByIdent.keys()) {
+      formIdents.add(key);
+    }
+    for (const key of snapshotDeps.runtimeIndex.formsByIdent.keys()) {
+      formIdents.add(key);
+    }
+    const refreshed = this.deps.registry.refreshForFormIdents(formIdents, snapshotDeps);
+    const stats = this.deps.registry.getStats();
+    this.deps.logIndex(
+      `REVALIDATE snapshot full refresh docs=${refreshed} forms=${formIdents.size} in ${Date.now() - refreshStartedAt} ms (total=${stats.snapshots}, forms=${stats.forms})`
+    );
+    return refreshed;
+  }
+
   private getOwningFormIdent(facts: ParsedDocumentFacts): string | undefined {
     const root = (facts.rootTag ?? "").toLowerCase();
     if (root === "form") {
@@ -70,4 +91,3 @@ export class ComposedSnapshotRefreshService {
     return undefined;
   }
 }
-

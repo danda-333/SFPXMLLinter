@@ -314,7 +314,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     createFormatterOptions: (editorOptions, document) => createFormatterOptions(editorOptions, document, getSettings()),
     formatDocument: (source, options) => formatXmlTolerant(source, options),
     formatRangeLikeDocument: (document, range, options) => formatRangeLikeDocument(document, range, options),
-    logFormatter: (message) => logFormatter(message)
+    logFormatter: (message) => logFormatter(message),
+    getPublishedDiagnostics: () => diagnosticsPublisher.getEntries()
   });
   const coreCommandsRegistrarService = new CoreCommandsRegistrarService({
     suppressNextSqlSuggest: () => {
@@ -444,11 +445,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function isReadyLogMessage(message: string): boolean {
-    return message.startsWith("REINDEX all passes DONE");
+    if (message.startsWith("REINDEX all passes DONE")) {
+      return true;
+    }
+    if (message.startsWith("REINDEX snapshot refresh")) {
+      return true;
+    }
+    if (message.startsWith("REVALIDATE ")) {
+      return true;
+    }
+    if (
+      message.startsWith("validate indexed DONE:") ||
+      message.startsWith("validateUri ERROR:") ||
+      (message.startsWith("validate facts ") && message.includes(" used:"))
+    ) {
+      return true;
+    }
+    return false;
   }
 
-  function logBuild(_message: string): void {
-    // Build details are emitted only through aggregated save/build performance logs.
+  function logBuild(message: string): void {
+    const trimmed = message.trim();
+    if (trimmed.length === 0) {
+      return;
+    }
+    if (/^ERROR\b/i.test(trimmed) || /^\[generator\]\[warning\]/i.test(trimmed)) {
+      appendUnifiedLog(`build: ${trimmed}`);
+    }
   }
 
   function logIndex(message: string): void {
@@ -907,9 +930,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return base;
     }
 
-    const sourceOnly = base.filter((item) => !isComposedReferenceRule(item.code));
     const composedOnly = validationHost.runMode(request, "composed-reference");
-    return dedupeDiagnostics([...sourceOnly, ...composedOnly]);
+    return dedupeDiagnostics([...base, ...composedOnly]);
   }
 
   function queueProvenanceHydration(targetRuntimeUri?: vscode.Uri): void {
@@ -1092,6 +1114,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     setHasInitialIndex: (value) => {
       hasInitialIndex = value;
     },
+    refreshComposedSnapshotsAll: () => composedSnapshotRefreshService?.refreshAll() ?? 0,
     validateUri: (uri, options) => validateUri(uri, options),
     getProjectKeyForUri: (uri) => getProjectKeyForUri(uri),
     getSettingsSnapshot: () => getSettings(),
@@ -1375,18 +1398,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ensureActiveProjectScopeInitialized();
     clearDiagnosticsOutsideActiveProjects();
     const targetUris = getUserOpenUris().filter((uri) => uri.scheme === "file");
+    if (targetUris.length === 0) {
+      return;
+    }
 
     for (const uri of targetUris) {
-      const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
-      if (existing) {
-        validateDocument(existing);
-        continue;
-      }
-
-      void vscode.workspace.openTextDocument(uri).then(validateDocument, () => {
-        // Ignore transient failures (closed tab, invalid URI, etc.)
+      // Route startup/open-doc validation through the same queued pipeline as save/revalidate.
+      // This avoids stale ordering between direct validation and composed snapshot refresh.
+      enqueueValidation(uri, "high", {
+        force: true,
+        sourceLabel: "open-doc-reindex"
       });
     }
+
+    // Second forced pass: the first pass may validate Form before its related
+    // WorkFlow/DataView snapshot is refreshed. This pass converges diagnostics
+    // to the same steady state as explicit revalidate without requiring manual save.
+    setTimeout(() => {
+      for (const uri of targetUris) {
+        enqueueValidation(uri, "high", {
+          force: true,
+          sourceLabel: "open-doc-reindex-pass2"
+        });
+      }
+    }, 200);
   }
 
   async function queueReindex(
@@ -1399,10 +1434,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function revalidateWorkspaceFull(): Promise<void> {
     await reindexService.revalidateWorkspaceFull();
+    const refreshed = composedSnapshotRefreshService?.refreshAll() ?? 0;
+    if (refreshed > 0) {
+      const uris = (await globConfiguredXmlFiles()).filter((uri) => uri.scheme === "file");
+      const startedAt = Date.now();
+      await forEachWithConcurrency(uris, 8, async (uri) => {
+        await validateUri(uri, { respectProjectScope: false, preferFsRead: true });
+      });
+      logIndex(`REVALIDATE snapshot pass DONE files=${uris.length} in ${Date.now() - startedAt} ms`);
+    }
   }
 
   async function revalidateCurrentProject(): Promise<void> {
     await reindexService.revalidateCurrentProject();
+    const activeUri = vscode.window.activeTextEditor?.document.uri;
+    if (!activeUri || activeUri.scheme !== "file") {
+      return;
+    }
+    const projectKey = getProjectKeyForUri(activeUri);
+    if (!projectKey) {
+      return;
+    }
+    const refreshed = composedSnapshotRefreshService?.refreshAll() ?? 0;
+    if (refreshed > 0) {
+      const uris = (await globConfiguredXmlFiles())
+        .filter((uri) => uri.scheme === "file")
+        .filter((uri) => getProjectKeyForUri(uri) === projectKey);
+      const startedAt = Date.now();
+      await forEachWithConcurrency(uris, 8, async (uri) => {
+        await validateUri(uri, { respectProjectScope: false, preferFsRead: true });
+      });
+      logIndex(`REVALIDATE project snapshot pass DONE files=${uris.length} in ${Date.now() - startedAt} ms`);
+    }
   }
 
   function shouldValidateUriForActiveProjects(uri: vscode.Uri): boolean {
@@ -1945,10 +2008,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (request.domain !== "template") {
         return [];
       }
-      return buildComposedReferenceDiagnosticsForTemplate(request.document.uri, request.facts, {
+      const localComposed = engine
+        .buildDiagnostics(request.document, request.index, {
+          parsedFacts: request.facts,
+          settingsOverride: request.settingsSnapshot,
+          metadataOverride: request.metadataSnapshot,
+          standaloneMode: request.standaloneMode,
+          skipConfiguredRootsCheck: request.skipConfiguredRootsCheck,
+          featureRegistry: featureRegistryStore.getRegistry(),
+          composedSnapshotRegistry,
+          resolveOwningForm: (formIdent) =>
+            resolveOwningFormForDiagnostics(formIdent, request.index, request.document.uri),
+          workflowReferenceMode: "local"
+        })
+        .filter((item) => isComposedReferenceRule(item.code));
+
+      const runtimeComposed = buildComposedReferenceDiagnosticsForTemplate(request.document.uri, request.facts, {
         settingsSnapshot: request.settingsSnapshot,
         metadataSnapshot: request.metadataSnapshot
       });
+
+      return dedupeDiagnostics([...localComposed, ...runtimeComposed]);
     }
   })) {
     validationHost.register(module);

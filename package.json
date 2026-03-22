@@ -427,7 +427,7 @@
         },
         "sfpXmlLinter.templateBuilder.generators.timeoutMs": {
           "type": "number",
-          "default": 150,
+          "default": 2000,
           "minimum": 50,
           "description": "Soft timeout budget for template generators per file in milliseconds."
         },

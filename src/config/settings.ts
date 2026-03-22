@@ -115,7 +115,7 @@ export function getSettings(): SfpXmlLinterSettings {
   );
   const templateBuilderProvenanceMode = cfg.get<"off" | "fileComment">("templateBuilder.provenanceMode", "off");
   const templateBuilderGeneratorsEnabled = cfg.get<boolean>("templateBuilder.generators.enabled", true);
-  const templateBuilderGeneratorTimeoutMs = Math.max(50, cfg.get<number>("templateBuilder.generators.timeoutMs", 150));
+  const templateBuilderGeneratorTimeoutMs = Math.max(50, cfg.get<number>("templateBuilder.generators.timeoutMs", 2000));
   const templateBuilderGeneratorEnableUserScripts = cfg.get<boolean>("templateBuilder.generators.enableUserScripts", true);
   const templateBuilderGeneratorUserScriptsRoots = cfg.get<string[]>("templateBuilder.generators.userScriptsRoots", ["XML_Generators"]);
   const startupFullReindexDelayMs = Math.max(0, cfg.get<number>("startup.fullReindexDelayMs", 1000));

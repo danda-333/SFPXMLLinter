@@ -33,6 +33,7 @@ export interface WorkspaceMaintenanceCommandsRegistrarServiceDeps {
     options: FormatterOptions
   ) => FormatterRangeResult;
   logFormatter: (message: string) => void;
+  getPublishedDiagnostics: () => ReadonlyArray<{ uri: vscode.Uri; diagnostics: readonly vscode.Diagnostic[] }>;
 }
 
 export class WorkspaceMaintenanceCommandsRegistrarService {
@@ -69,44 +70,50 @@ export class WorkspaceMaintenanceCommandsRegistrarService {
 
     context.subscriptions.push(
       vscode.commands.registerCommand("sfpXmlLinter.workspaceDiagnosticsReport", async () => {
-        const output = vscode.window.createOutputChannel("SFP XML Linter");
-        output.clear();
-        output.appendLine("SFP XML Linter - Workspace Diagnostics Report");
-        output.appendLine("");
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "SFP XML Linter: Workspace diagnostics report",
+            cancellable: false
+          },
+          async (progress) => {
+            const output = vscode.window.createOutputChannel("SFP XML Linter");
+            output.clear();
+            output.appendLine("SFP XML Linter - Workspace Diagnostics Report");
+            output.appendLine("");
 
-        await this.deps.rebuildTemplateIndex();
-        await this.deps.rebuildRuntimeIndex();
-        const uris = await this.deps.globConfiguredXmlFiles();
+            progress.report({ message: "Revalidating workspace...", increment: 10 });
+            await this.deps.revalidateWorkspace();
 
-        const byRule = new Map<string, number>();
-        let total = 0;
+            progress.report({ message: "Collecting diagnostics...", increment: 45 });
+            const sfpDiagnostics = this.deps.getPublishedDiagnostics()
+              .filter((entry) => entry.diagnostics.length > 0)
+              .sort((a, b) => a.uri.fsPath.localeCompare(b.uri.fsPath));
 
-        for (const uri of uris) {
-          const doc = await vscode.workspace.openTextDocument(uri);
-          const currentIndex = this.deps.getIndexForUri(uri);
-          const facts = this.deps.getFactsForUri?.(uri, currentIndex) ?? this.deps.parseFacts(doc);
-          const ds = this.deps.buildDiagnosticsForDocument(doc, currentIndex, facts);
-          if (ds.length === 0) {
-            continue;
+            progress.report({ message: "Formatting report...", increment: 35 });
+            const byRule = new Map<string, number>();
+            let total = 0;
+            for (const entry of sfpDiagnostics) {
+              output.appendLine(`${vscode.workspace.asRelativePath(entry.uri, false)} (${entry.diagnostics.length})`);
+              for (const d of entry.diagnostics) {
+                const rule = typeof d.code === "string" ? d.code : "unknown";
+                byRule.set(rule, (byRule.get(rule) ?? 0) + 1);
+                total++;
+                output.appendLine(`  - [${rule}] line ${d.range.start.line + 1}: ${d.message}`);
+              }
+            }
+
+            output.appendLine("");
+            output.appendLine(`Total diagnostics: ${total}`);
+            output.appendLine("By rule:");
+            for (const [rule, count] of [...byRule.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+              output.appendLine(`  ${rule}: ${count}`);
+            }
+
+            output.show(true);
+            progress.report({ message: "Done", increment: 10 });
           }
-
-          output.appendLine(`${vscode.workspace.asRelativePath(uri, false)} (${ds.length})`);
-          for (const d of ds) {
-            const rule = typeof d.code === "string" ? d.code : "unknown";
-            byRule.set(rule, (byRule.get(rule) ?? 0) + 1);
-            total++;
-            output.appendLine(`  - [${rule}] line ${d.range.start.line + 1}: ${d.message}`);
-          }
-        }
-
-        output.appendLine("");
-        output.appendLine(`Total diagnostics: ${total}`);
-        output.appendLine("By rule:");
-        for (const [rule, count] of [...byRule.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-          output.appendLine(`  ${rule}: ${count}`);
-        }
-
-        output.show(true);
+        );
       }),
       vscode.commands.registerCommand("sfpXmlLinter.formatDocumentTolerant", async () => {
         const editor = vscode.window.activeTextEditor;

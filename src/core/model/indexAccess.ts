@@ -24,7 +24,6 @@ export function getParsedFactsByUri(
     if (fromAccessor) {
       return fromAccessor;
     }
-    return undefined;
   }
 
   const direct = index.parsedFactsByUri.get(uri.toString());
@@ -86,7 +85,7 @@ export function getParsedFactsEntries(
     }
     let facts: ParsedDocumentFacts | undefined;
     if (getFactsForUri) {
-      facts = getFactsForUri(uri, index);
+      facts = getFactsForUri(uri, index) ?? fallbackFacts;
     } else {
       facts = fallbackFacts;
     }

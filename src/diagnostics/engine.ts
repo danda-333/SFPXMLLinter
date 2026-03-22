@@ -500,6 +500,10 @@ export class DiagnosticsEngine {
       return;
     }
 
+    if (facts.usingContributionInsertTraces.size === 0) {
+      populateUsingInsertTraceFromText(facts, document.getText(), index);
+    }
+
     const settings = getSettings();
     const legacyAliasesEnabled = settings.templateBuilderLegacyComponentSectionSupport;
     const tracesReady = facts.usingContributionInsertTraces.size > 0;
@@ -928,12 +932,15 @@ export class DiagnosticsEngine {
     altText?: string;
   }> {
     if (composedSnapshotRegistry) {
-      return this.collectRelatedExpectedXPathContextsForFormFromSnapshots(
+      const snapshotContexts = this.collectRelatedExpectedXPathContextsForFormFromSnapshots(
         documentUri,
         facts,
         index,
         composedSnapshotRegistry
       );
+      if (snapshotContexts.length > 0) {
+        return snapshotContexts;
+      }
     }
 
     const out: Array<{
@@ -1075,26 +1082,10 @@ export class DiagnosticsEngine {
       }
 
       const sourceComposition = snapshot.effectiveComposition ?? buildDocumentCompositionModel(snapshot.sourceFacts, index);
-      let contextUri = snapshot.uri;
-      let contextFacts = snapshot.sourceFacts;
-      let contextItems = buildEffectiveItemsFromDocumentComposition(sourceComposition, snapshot.sourceFacts);
-      let contextText = this.tryReadFileText(snapshot.uri);
-      let altUri: vscode.Uri | undefined;
-      let altFacts: ReturnType<typeof parseDocumentFacts> | undefined;
-      let altItems: EffectiveCompositionItem[] | undefined;
-      let altText: string | undefined;
-
-      if (snapshot.composedUri && snapshot.composedFacts) {
-        contextUri = snapshot.composedUri;
-        contextFacts = snapshot.composedFacts;
-        const runtimeComposition = buildDocumentCompositionModel(snapshot.composedFacts, index);
-        contextItems = buildEffectiveItemsFromDocumentComposition(runtimeComposition, snapshot.composedFacts);
-        contextText = this.tryReadFileText(snapshot.composedUri);
-        altUri = snapshot.uri;
-        altFacts = snapshot.sourceFacts;
-        altItems = buildEffectiveItemsFromDocumentComposition(sourceComposition, snapshot.sourceFacts);
-        altText = this.tryReadFileText(snapshot.uri);
-      }
+      const contextUri = snapshot.uri;
+      const contextFacts = snapshot.sourceFacts;
+      const contextItems = buildEffectiveItemsFromDocumentComposition(sourceComposition, snapshot.sourceFacts);
+      const contextText = this.tryReadFileText(snapshot.uri);
 
       out.push({
         label: formatUriForMessage(contextUri),
@@ -1102,11 +1093,7 @@ export class DiagnosticsEngine {
         composition: sourceComposition,
         items: contextItems,
         facts: contextFacts,
-        ...(contextText !== undefined ? { text: contextText } : {}),
-        ...(altUri !== undefined ? { altUri } : {}),
-        ...(altFacts !== undefined ? { altFacts } : {}),
-        ...(altItems !== undefined ? { altItems } : {}),
-        ...(altText !== undefined ? { altText } : {})
+        ...(contextText !== undefined ? { text: contextText } : {})
       });
     }
 
@@ -1159,11 +1146,14 @@ export class DiagnosticsEngine {
     composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
   ): Map<string, "effective" | "partial" | "unused"> {
     if (composedSnapshotRegistry) {
-      return this.collectCrossDocumentUsingImpactByKeyFromSnapshots(
+      const snapshotImpact = this.collectCrossDocumentUsingImpactByKeyFromSnapshots(
         facts,
         index,
         composedSnapshotRegistry
       );
+      if (snapshotImpact.size > 0) {
+        return snapshotImpact;
+      }
     }
 
     const out = new Map<string, "effective" | "partial" | "unused">();

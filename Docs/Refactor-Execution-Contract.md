@@ -56,6 +56,7 @@ Purpose: define the missing decisions needed to execute all refactor phases in o
 - Added CI workflow gate `.github/workflows/ci-contracts-perf.yml` to enforce `test:contracts`, `test:linter:perf`, and `test:templates:perf` on push/PR.
 - Added hardening gate `npm run test:hardening` with cross-document save-pipeline E2E regressions (Form/WorkFlow/DataView transitions) and wired it into CI workflow (`Hardening E2E Gate`).
 - Added consumer fallback-heuristics contract guard `src/tests/core/runConsumerNoFallbackHeuristicsContractTests.ts` and wired it into `test:contracts` / `test:composition`.
+- Added aggregate release checklist command `npm run test:release:hardening` (contracts + hardening-e2e + linter perf + template perf) with one summary report.
 
 ### Standalone Fallback Contract (Explicit Exception)
 

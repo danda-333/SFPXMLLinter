@@ -13,6 +13,15 @@
     - workspace scan boundary
     - fallback-parse boundary
 
+## 0.1.16
+
+- Save/cache stability for component-like files:
+  - invalidates component library cache on every save in `XML_Components` / `XML_Primitives`, even when editor change tracking reports no content diff.
+  - prevents stale template-build source cache in external-edit and edge save-tracking scenarios.
+- Contract/hardening compatibility:
+  - updated dependent template collector traversal to use contract-safe indexed-facts access (no direct map traversal).
+  - removed runtime `vscode` dependency from collector path used by node-only hardening tests.
+
 ## 0.1.15
 
 - Component-save dependent rebuild stability:

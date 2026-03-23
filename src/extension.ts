@@ -2077,6 +2077,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const saveKey = document.uri.toString();
     const hadContentChanges = pendingContentChangesSinceLastSave.has(saveKey);
     pendingContentChangesSinceLastSave.delete(saveKey);
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+    const isComponentLikeSave = isInFolder(document.uri, "XML_Components") || isInFolder(document.uri, "XML_Primitives");
+    if (workspaceFolder && isComponentLikeSave) {
+      // Keep template build source cache coherent even when save arrives without editor-detected content diff
+      // (e.g. external file edits or edge cases in change tracking).
+      buildService.invalidateComponentLibraryCache(workspaceFolder, document.uri.fsPath);
+    }
 
     if (!documentInConfiguredRoots(document)) {
       validateDocument(document);
@@ -2089,13 +2096,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!hadContentChanges) {
       logIndex(`SAVE skip unchanged: ${vscode.workspace.asRelativePath(document.uri, false)}`);
       return;
-    }
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-    if (
-      workspaceFolder &&
-      (isInFolder(document.uri, "XML_Components") || isInFolder(document.uri, "XML_Primitives"))
-    ) {
-      buildService.invalidateComponentLibraryCache(workspaceFolder, document.uri.fsPath);
     }
     await updateOrchestrator.handleDocumentSave(document, hadContentChanges);
   }

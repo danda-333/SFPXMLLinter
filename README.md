@@ -101,6 +101,9 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
     - first match is used by default
     - `AllowMultipleInserts="true"` applies the insert to all matches
     - build log prints a debug line for the multi-match case
+  - component save dependent rebuild behavior:
+    - when a feature/component changes, dependent template selection includes related `Form` + sibling `WorkFlow`/`DataView` by `FormIdent`
+    - this also applies when contribution blocks are removed/commented, so stale workflow/dataview output is cleaned up reliably
   - Placeholder sections support custom inline params:
     - `{{Component:Common/Shared/Assign,Section:Html,CustomParam:ParamValue}}`
     - `{{Feature:Common/Shared/Assign,Contribution:Html,CustomParam:ParamValue}}`

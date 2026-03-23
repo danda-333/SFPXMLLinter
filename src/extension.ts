@@ -17,7 +17,6 @@ import { getSettings, SfpXmlLinterSettings } from "./config/settings";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "./indexer/xmlFacts";
 import { formatXmlTolerant } from "./formatter";
 import { WorkspaceIndex, IndexedForm, IndexedSymbolProvenanceProvider } from "./indexer/types";
-import { resolveComponentByKey } from "./indexer/componentResolve";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
 import { FeatureRegistryStore } from "./composition/registry";
 import { CompositionTreeProvider } from "./composition/treeView";
@@ -35,7 +34,6 @@ import { registerDefaultFactsAndSymbols } from "./core/facts/registerDefaultFact
 import { SymbolRegistry } from "./core/symbols/symbolRegistry";
 import { ModelWriteGateway } from "./core/model/modelWriteGateway";
 import {
-  getComponentVariantKeys,
   getIndexedFormByIdent,
   getParsedFactsByUri as getParsedFactsByUriFromIndexAccess,
   getParsedFactsEntries
@@ -53,6 +51,7 @@ import { ReindexService } from "./core/index/reindexService";
 import { ProjectScopeService } from "./core/scope/projectScopeService";
 import { TemplateBuildOrchestrator } from "./core/template/templateBuildOrchestrator";
 import { TemplateBuildPlannerService } from "./core/template/templateBuildPlannerService";
+import { collectDependentTemplatePathsFromIndex } from "./core/template/dependentTemplateCollector";
 import { ProvenanceHydrationService } from "./core/template/provenanceHydrationService";
 import { TemplateBuildRunMode, TemplateBuildRunOptionsFactory } from "./core/template/templateBuildRunOptionsFactory";
 import { GeneratorTemplateScaffoldService } from "./core/template/generatorTemplateScaffoldService";
@@ -1624,80 +1623,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function collectDependentTemplatesFromIndex(componentKey: string): string[] {
-    const idx = templateIndexer.getIndex();
-    const candidateKeys = getComponentVariantKeys(idx, componentKey);
-    const canAffectNonFormRoots = componentCanAffectNonFormRoots(idx, candidateKeys);
-
-    const result = new Set<string>();
-    const affectedFormIdents = new Set<string>();
-    for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
-      const uri = entry.uri;
-      const facts = entry.facts;
-      if (!isInFolder(uri, "XML_Templates")) {
-        continue;
-      }
-
-      const usingHit = facts.usingReferences.some((ref) => candidateKeys.has(ref.componentKey));
-      const includeHit = facts.includeReferences.some((ref) => candidateKeys.has(ref.componentKey));
-      const placeholderHit = facts.placeholderReferences.some((ref) => ref.componentKey && candidateKeys.has(ref.componentKey));
-      if (usingHit || includeHit || placeholderHit) {
-        result.add(uri.fsPath);
-        const root = (facts.rootTag ?? "").toLowerCase();
-        const owningFormIdent = root === "form" ? facts.formIdent : undefined;
-        if (owningFormIdent) {
-          affectedFormIdents.add(owningFormIdent);
-        }
-      }
-    }
-
-    if (affectedFormIdents.size > 0 && canAffectNonFormRoots) {
-      for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
-        const facts = entry.facts;
-        const root = (facts.rootTag ?? "").toLowerCase();
-        if (root !== "workflow" && root !== "dataview") {
-          continue;
-        }
-
-        const owningFormIdent =
-          root === "workflow"
-            ? (facts.workflowFormIdent ?? facts.rootFormIdent)
-            : facts.rootFormIdent;
-        if (!owningFormIdent || !affectedFormIdents.has(owningFormIdent)) {
-          continue;
-        }
-
-        const uri = entry.uri;
-        if (!isInFolder(uri, "XML_Templates")) {
-          continue;
-        }
-        result.add(uri.fsPath);
-      }
-    }
-
-    return [...result].sort((a, b) => a.localeCompare(b));
-  }
-
-  function componentCanAffectNonFormRoots(index: WorkspaceIndex, candidateKeys: ReadonlySet<string>): boolean {
-    for (const key of candidateKeys) {
-      const component = resolveComponentByKey(index, key);
-      if (!component) {
-        // Unknown component metadata -> keep safe behavior.
-        return true;
-      }
-      for (const summary of component.contributionSummaries.values()) {
-        const rootExpr = (summary.rootExpression ?? "").toLowerCase();
-        if (summary.root === "workflow" || rootExpr.includes("workflow")) {
-          return true;
-        }
-        if (rootExpr.includes("dataview")) {
-          return true;
-        }
-        if (summary.root === "other" && summary.hasContent) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return collectDependentTemplatePathsFromIndex(templateIndexer.getIndex(), componentKey, {
+      isTemplatePath: (fsPath) => isInFolder(vscode.Uri.file(fsPath), "XML_Templates")
+    });
   }
 
   function buildInheritedUsingsSnapshotFromIndex(): ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]> {

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { WorkspaceIndex } from "../../indexer/types";
+import { countIndexedForms, countIndexedParsedFacts, getIndexedComponents, getIndexedForms } from "../model/indexAccess";
 
 export interface ProjectScopeServiceDeps {
   log: (message: string) => void;
@@ -128,13 +129,13 @@ export class ProjectScopeService {
       }
     };
 
-    for (const form of this.deps.getTemplateIndex().formsByIdent.values()) {
+    for (const form of getIndexedForms(this.deps.getTemplateIndex())) {
       collect(form.uri);
     }
-    for (const component of this.deps.getTemplateIndex().componentsByKey.values()) {
+    for (const component of getIndexedComponents(this.deps.getTemplateIndex())) {
       collect(component.uri);
     }
-    for (const form of this.deps.getRuntimeIndex().formsByIdent.values()) {
+    for (const form of getIndexedForms(this.deps.getRuntimeIndex())) {
       collect(form.uri);
     }
 
@@ -150,11 +151,11 @@ export class ProjectScopeService {
     const template = this.deps.getTemplateIndex();
     const runtime = this.deps.getRuntimeIndex();
     return [
-      `tf:${template.formsByIdent.size}`,
-      `tc:${template.componentsByKey.size}`,
-      `tp:${template.parsedFactsByUri.size}`,
-      `rf:${runtime.formsByIdent.size}`,
-      `rp:${runtime.parsedFactsByUri.size}`
+      `tf:${countIndexedForms(template)}`,
+      `tc:${getIndexedComponents(template).length}`,
+      `tp:${countIndexedParsedFacts(template)}`,
+      `rf:${countIndexedForms(runtime)}`,
+      `rp:${countIndexedParsedFacts(runtime)}`
     ].join("|");
   }
 }

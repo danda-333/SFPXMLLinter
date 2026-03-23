@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Single-source-of-truth contract hardening:
+  - added aggregated contract snapshot guard (`runContractGuardsSnapshotTests`) that verifies contract guard inventory and `test:composition` wiring.
+  - added focused guard entrypoint `npm run test:contracts` for fast contract-only verification.
+  - expanded contract guard suite for:
+    - diagnostics publish boundary
+    - composition datasource boundary
+    - validation data-access boundary
+    - extension event-handler/orchestrator boundary
+    - workspace scan boundary
+    - fallback-parse boundary
+
+## 0.1.15
+
+- Component-save dependent rebuild stability:
+  - fixed dependent template target selection after `XML_Components` changes where component content is removed/commented.
+  - dependent rebuild now always includes sibling `WorkFlow`/`DataView` templates of affected `FormIdent` (not only current non-form contribution metadata).
+  - prevents stale runtime outputs when a component stops contributing workflow/dataview fragments.
+- Refactor:
+  - extracted dependent template selection into reusable module `core/template/dependentTemplateCollector`.
+- Hardening:
+  - added regression test `runDependentTemplateCollectorTests` and wired it into `test:hardening`.
+
 ## 0.1.14
 
 - Packaging and publish optimization:

@@ -14,10 +14,20 @@ import { applyTemplateOutputQuality, TemplateBuilderProvenanceMode } from "./out
 import { runTemplateGenerators } from "./generators";
 import { computeWorkspaceUserGeneratorsSignature, loadWorkspaceUserGenerators } from "./generators/userGeneratorLoader";
 
+const DEFAULT_TEMPLATE_GENERATOR_TIMEOUT_MS = 2000;
+const FATAL_GENERATOR_WARNING_CODES = new Set<string>([
+  "generator-timeout",
+  "generator-snippet-guard",
+  "generator-snippet-not-found",
+  "generator-run-failed",
+  "generator-unresolved-snippet"
+]);
+
 export interface BuildRunOptions {
   silent?: boolean;
   mode?: "fast" | "debug" | "release";
   postBuildFormat?: boolean;
+  legacyTagAliasesEnabled?: boolean;
   provenanceMode?: TemplateBuilderProvenanceMode;
   provenanceLabel?: string;
   formatterMaxConsecutiveBlankLines?: number;
@@ -188,6 +198,7 @@ export class BuildXmlTemplatesService {
         templateText,
         componentLibrary,
         componentLibrarySnapshot.signature,
+        options.legacyTagAliasesEnabled !== false,
         inheritedUsingsXml,
         undefined,
         options.mode === "debug" ? options.onLogLine : undefined
@@ -222,6 +233,7 @@ export class BuildXmlTemplatesService {
       templateText,
       componentLibrary,
       componentLibrarySnapshot.signature,
+      options.legacyTagAliasesEnabled !== false,
       inheritedUsingsXml,
       undefined,
       options.mode === "debug" ? options.onLogLine : undefined
@@ -244,7 +256,7 @@ export class BuildXmlTemplatesService {
       },
       {
         enabled: options.generatorsEnabled !== false,
-        timeoutMs: Math.max(50, options.generatorTimeoutMs ?? 150),
+        timeoutMs: Math.max(50, options.generatorTimeoutMs ?? DEFAULT_TEMPLATE_GENERATOR_TIMEOUT_MS),
         userGenerators
       },
       options.onLogLine
@@ -279,7 +291,11 @@ export class BuildXmlTemplatesService {
     return this.runInternal(workspaceFolder, [...targetPaths], options);
   }
 
-  public async findTemplatesUsingComponent(workspaceFolder: vscode.WorkspaceFolder, componentFilePath: string): Promise<string[]> {
+  public async findTemplatesUsingComponent(
+    workspaceFolder: vscode.WorkspaceFolder,
+    componentFilePath: string,
+    legacyTagAliasesEnabled = true
+  ): Promise<string[]> {
     const normalizedComponentPath = normalizePath(componentFilePath);
     const componentsRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Components"));
     const primitivesRoot = normalizePath(path.join(workspaceFolder.uri.fsPath, "XML_Primitives"));
@@ -299,7 +315,7 @@ export class BuildXmlTemplatesService {
 
     for (const uri of templateUris) {
       const text = await readWorkspaceTextFile(uri);
-      for (const usingRef of extractUsingComponentRefs(text)) {
+      for (const usingRef of extractUsingComponentRefs(text, { legacyTagAliasesEnabled })) {
         if (usingRef === relNoExt) {
           exact.add(uri.fsPath);
           break;
@@ -385,6 +401,7 @@ export class BuildXmlTemplatesService {
           templateText,
           componentLibrary,
           componentLibrarySnapshot.signature,
+          options.legacyTagAliasesEnabled !== false,
           inheritedUsingsXml,
           cacheStats,
           debugMode
@@ -404,17 +421,37 @@ export class BuildXmlTemplatesService {
           },
           {
             enabled: options.generatorsEnabled !== false,
-            timeoutMs: Math.max(50, options.generatorTimeoutMs ?? 150),
+            timeoutMs: Math.max(50, options.generatorTimeoutMs ?? DEFAULT_TEMPLATE_GENERATOR_TIMEOUT_MS),
             userGenerators
           },
           options.onLogLine
         );
-        for (const warning of generated.warnings) {
+        const generatorWarnings = [...generated.warnings];
+        const generatorTimedOut = generatorWarnings.some((warning) => warning.code === "generator-timeout");
+        const unresolvedGeneratorSnippets = countGeneratorSnippets(generated.xml);
+        if (unresolvedGeneratorSnippets > 0) {
+          generatorWarnings.push({
+            code: "generator-unresolved-snippet",
+            message: `'${relPath}' contains ${unresolvedGeneratorSnippets} unresolved <GeneratorSnippet> block(s) after generator stage.`
+          });
+        }
+        for (const warning of generatorWarnings) {
           options.onLogLine?.(`[generator][warning] ${warning.code}: ${warning.message}`);
         }
+        const fatalGeneratorWarnings = generatorWarnings.filter((warning) =>
+          FATAL_GENERATOR_WARNING_CODES.has(warning.code)
+        );
+        if (fatalGeneratorWarnings.length > 0) {
+          throw new Error(
+            `Generator stage failed for '${relPath}': ${fatalGeneratorWarnings
+              .map((warning) => `${warning.code}: ${warning.message}`)
+              .join(" | ")}`
+          );
+        }
+        const allowFastCache = !generatorTimedOut && unresolvedGeneratorSnippets === 0;
         if ((options.mode ?? "debug") === "debug") {
           options.onLogLine?.(
-            `[generator] summary: applied=${generated.appliedGeneratorIds.length}, warnings=${generated.warnings.length}, duration=${generated.durationMs} ms`
+            `[generator] summary: applied=${generated.appliedGeneratorIds.length}, warnings=${generatorWarnings.length}, duration=${generated.durationMs} ms`
           );
         }
 
@@ -433,6 +470,32 @@ export class BuildXmlTemplatesService {
           options.onFileStatus?.(relPath, "nochange");
           options.onTemplateEvaluated?.(relPath, "nochange", templateText, debugLines);
           options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations, rendered);
+          if (allowFastCache) {
+            await this.updateFastCacheEntry(
+              fastCacheKey,
+              fastSignature,
+              outputUri,
+              templateText,
+              debugLines,
+              outputRelativePath,
+              renderResult.mutations,
+              rendered,
+              ioStats
+            );
+          } else {
+            this.templateBuildFastCache.delete(fastCacheKey);
+          }
+          return;
+        }
+
+        await ensureParentDirectory(outputUri);
+        await writeWorkspaceTextFileTracked(outputUri, rendered, ioStats);
+        summary.updated++;
+        options.onLogLine?.("UPDATED");
+        options.onFileStatus?.(relPath, "update");
+        options.onTemplateEvaluated?.(relPath, "update", templateText, debugLines);
+        options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations, rendered);
+        if (allowFastCache) {
           await this.updateFastCacheEntry(
             fastCacheKey,
             fastSignature,
@@ -444,27 +507,9 @@ export class BuildXmlTemplatesService {
             rendered,
             ioStats
           );
-          return;
+        } else {
+          this.templateBuildFastCache.delete(fastCacheKey);
         }
-
-        await ensureParentDirectory(outputUri);
-        await writeWorkspaceTextFileTracked(outputUri, rendered, ioStats);
-        summary.updated++;
-        options.onLogLine?.("UPDATED");
-        options.onFileStatus?.(relPath, "update");
-        options.onTemplateEvaluated?.(relPath, "update", templateText, debugLines);
-        options.onTemplateMutations?.(relPath, outputRelativePath, outputUri.fsPath, renderResult.mutations, rendered);
-        await this.updateFastCacheEntry(
-          fastCacheKey,
-          fastSignature,
-          outputUri,
-          templateText,
-          debugLines,
-          outputRelativePath,
-          renderResult.mutations,
-          rendered,
-          ioStats
-        );
       } catch (error) {
         summary.errors++;
         const message = error instanceof Error ? error.message : String(error);
@@ -492,12 +537,19 @@ export class BuildXmlTemplatesService {
 
     if (!options.silent) {
       const summaryText = formatSummaryText(summary);
+      const notify = (message: string): void => {
+        if (summary.errors > 0) {
+          vscode.window.showErrorMessage(message);
+        } else {
+          vscode.window.showInformationMessage(message);
+        }
+      };
       if (Array.isArray(targetPathOrPaths) && targetPathOrPaths.length > 0) {
-        vscode.window.showInformationMessage(`BuildXmlTemplates finished for ${targetPathOrPaths.length} template(s). ${summaryText}`);
+        notify(`BuildXmlTemplates finished for ${targetPathOrPaths.length} template(s). ${summaryText}`);
       } else if (typeof targetPathOrPaths === "string" && targetPathOrPaths.trim().length > 0) {
-        vscode.window.showInformationMessage(`BuildXmlTemplates finished for: ${path.basename(targetPathOrPaths)}. ${summaryText}`);
+        notify(`BuildXmlTemplates finished for: ${path.basename(targetPathOrPaths)}. ${summaryText}`);
       } else {
-        vscode.window.showInformationMessage(`BuildXmlTemplates finished for all templates. ${summaryText}`);
+        notify(`BuildXmlTemplates finished for all templates. ${summaryText}`);
       }
     }
 
@@ -587,6 +639,7 @@ export class BuildXmlTemplatesService {
     templateText: string,
     componentLibrary: ReturnType<typeof buildComponentLibrary>,
     componentLibrarySignature: string,
+    legacyTagAliasesEnabled: boolean,
     inheritedUsingsXml?: string,
     cacheStats?: BuildCacheStats,
     onDebugLog?: (line: string) => void
@@ -595,6 +648,7 @@ export class BuildXmlTemplatesService {
       workspaceKeyFromFolder(workspaceFolder),
       relativeTemplatePath,
       componentLibrarySignature,
+      `legacy:${legacyTagAliasesEnabled ? "1" : "0"}`,
       templateText,
       inheritedUsingsXml ?? ""
     ].join("\n"));
@@ -610,7 +664,8 @@ export class BuildXmlTemplatesService {
       componentLibrary,
       12,
       onDebugLog,
-      inheritedUsingsXml
+      inheritedUsingsXml,
+      { legacyTagAliasesEnabled }
     );
     this.templateTraceCache.set(cacheSignature, {
       signature: cacheSignature,
@@ -1013,18 +1068,23 @@ function computeRunSettingsSignature(
   generatorScriptsSignature: string
 ): string {
   return hashText([
-    `mode:${options.mode ?? "debug"}`,
-    `postBuildFormat:${options.postBuildFormat === true}`,
-    `provenanceMode:${options.provenanceMode ?? "off"}`,
+      `mode:${options.mode ?? "debug"}`,
+      `postBuildFormat:${options.postBuildFormat === true}`,
+      `legacyTagAliasesEnabled:${options.legacyTagAliasesEnabled !== false}`,
+      `provenanceMode:${options.provenanceMode ?? "off"}`,
     `provenanceLabel:${options.provenanceLabel ?? ""}`,
     `blankLines:${Math.max(0, options.formatterMaxConsecutiveBlankLines ?? 2)}`,
     `generatorsEnabled:${options.generatorsEnabled !== false}`,
-    `generatorTimeout:${Math.max(50, options.generatorTimeoutMs ?? 150)}`,
+    `generatorTimeout:${Math.max(50, options.generatorTimeoutMs ?? DEFAULT_TEMPLATE_GENERATOR_TIMEOUT_MS)}`,
     `generatorEnableUserScripts:${options.generatorEnableUserScripts !== false}`,
     `generatorRoots:${(options.generatorUserScriptsRoots ?? ["XML_Generators"]).join("|")}`,
     `generatorScriptsSignature:${generatorScriptsSignature}`,
     `inheritedUsingsSignature:${inheritedUsingsSignature}`
   ].join("\n"));
+}
+
+function countGeneratorSnippets(xml: string): number {
+  return (xml.match(/<\s*GeneratorSnippet\b/gi) ?? []).length;
 }
 
 function computeInheritedUsingsSignature(

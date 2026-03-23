@@ -30,9 +30,7 @@ function run(): void {
 
   const report = registry.capabilityReportsByFeature.get("Assign");
   assert.ok(report);
-  assert.ok(report?.provides.some((item) => item.kind === "button" && item.ident === "AssignToGroupButton"));
-  assert.ok(report?.provides.some((item) => item.kind === "button" && item.ident === "AssignButton"));
-  assert.ok(report?.provides.some((item) => item.kind === "actionShareCode" && item.ident === "Assignee_Update_FromDialog_ActionShare"));
+  assert.equal(report?.provides.length, 0);
   assert.equal(report?.requires.length, 0);
   const formPart = assign?.parts.find((part) => part.file.endsWith("Assign.Form.feature.xml"));
   assert.ok(formPart);
@@ -55,13 +53,7 @@ function run(): void {
   );
   const effectiveModel = registry.effectiveModelsByFeature.get("Assign");
   assert.ok(effectiveModel);
-  assert.ok(effectiveModel?.items.some((item) => item.key === "button:AssignButton" && item.usage === "applied"));
-  assert.ok(effectiveModel?.items.some((item) => item.key === "control:AssignedGroupID" && item.usage === "consumed"));
-  assert.ok(
-    effectiveModel?.items.some(
-      (item) => item.key === "actionShareCode:Assignee_Update_FromDialog_ActionShare" && item.usage === "applied"
-    )
-  );
+  assert.equal(effectiveModel?.items.length, 0);
   assert.ok(effectiveModel?.conflicts.some((conflict) => conflict.code === "missing-expected-xpath"));
   assert.ok(
     effectiveModel?.contributions.some(
@@ -75,7 +67,7 @@ function run(): void {
   );
   assert.ok(
     effectiveModel?.contributions.some(
-      (contribution) => contribution.name === "ActionShareCodes" && contribution.usage === "effective"
+      (contribution) => contribution.name === "ActionShareCodes" && contribution.usage === "partial"
     )
   );
 

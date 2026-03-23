@@ -1,5 +1,6 @@
 import type { WorkspaceIndex } from "../indexer/types";
 import type { ParsedDocumentFacts } from "../indexer/xmlFacts";
+import { getIndexedFormByIdent, getParsedFactsByUri, type FactsByUriAccessor } from "../core/model/indexAccess";
 
 export interface EffectiveUsingRef {
   componentKey: string;
@@ -12,7 +13,8 @@ export interface EffectiveUsingRef {
 
 export function collectEffectiveUsingRefs(
   facts: ParsedDocumentFacts,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  getFactsForUri?: FactsByUriAccessor
 ): EffectiveUsingRef[] {
   const out: EffectiveUsingRef[] = [];
   const seen = new Set<string>();
@@ -73,8 +75,8 @@ export function collectEffectiveUsingRefs(
     return out;
   }
 
-  const form = index.formsByIdent.get(owningFormIdent);
-  const formFacts = form ? index.parsedFactsByUri.get(form.uri.toString()) : undefined;
+  const form = getIndexedFormByIdent(index, owningFormIdent);
+  const formFacts = form ? getParsedFactsByUri(index, form.uri, getFactsForUri) : undefined;
   if (!formFacts) {
     return out;
   }

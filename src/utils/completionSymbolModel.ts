@@ -3,6 +3,7 @@ import { IndexedForm, WorkspaceIndex } from "../indexer/types";
 import { parseDocumentFacts } from "../indexer/xmlFacts";
 import { DocumentCompositionModel, buildDocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
 import { contributionMatchesDocumentRoot } from "../composition/usingImpact";
+import { getIndexedFormByIdent, getParsedFactsByUri } from "../core/model/indexAccess";
 
 export type CompletionSymbolKind =
   | "workflowControlShareCode"
@@ -17,6 +18,7 @@ export interface CompletionSymbolContext {
   index: WorkspaceIndex;
   composition: DocumentCompositionModel;
   resolveOwningForm?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined;
+  getFactsForUri?: (uri: import("vscode").Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFacts> | undefined;
 }
 
 type CompletionCollector = (ctx: CompletionSymbolContext) => Set<string>;
@@ -104,7 +106,7 @@ function collectWorkflowFormControlValues(ctx: CompletionSymbolContext): Set<str
   const { form, index: ownerIndex } = owner;
 
   const out = new Set<string>(form.controls);
-  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex).controls) {
+  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex, ctx.getFactsForUri).controls) {
     out.add(ident);
   }
   for (const contributionRef of collectSelectedDocumentContributions(ctx.composition)) {
@@ -131,7 +133,7 @@ function collectWorkflowFormButtonValues(ctx: CompletionSymbolContext): Set<stri
   const { form, index: ownerIndex } = owner;
 
   const out = new Set<string>(form.buttons);
-  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex).buttons) {
+  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex, ctx.getFactsForUri).buttons) {
     out.add(ident);
   }
   for (const contributionRef of collectSelectedDocumentContributions(ctx.composition)) {
@@ -158,7 +160,7 @@ function collectWorkflowFormSectionValues(ctx: CompletionSymbolContext): Set<str
   const { form, index: ownerIndex } = owner;
 
   const out = new Set<string>(form.sections);
-  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex).sections) {
+  for (const ident of collectEffectiveOwnerFormContributionSymbols(form, ownerIndex, ctx.getFactsForUri).sections) {
     out.add(ident);
   }
   for (const contributionRef of collectSelectedDocumentContributions(ctx.composition)) {
@@ -187,8 +189,7 @@ function resolveWorkflowOwnerForm(ctx: CompletionSymbolContext): { form: Indexed
   if (resolved) {
     return resolved;
   }
-
-  const fallback = ctx.index.formsByIdent.get(formIdent);
+  const fallback = getIndexedFormByIdent(ctx.index, formIdent);
   if (!fallback) {
     return undefined;
   }
@@ -197,12 +198,13 @@ function resolveWorkflowOwnerForm(ctx: CompletionSymbolContext): { form: Indexed
 
 function collectEffectiveOwnerFormContributionSymbols(
   form: IndexedForm,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  getFactsForUri?: (uri: import("vscode").Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFacts> | undefined
 ): { controls: Set<string>; buttons: Set<string>; sections: Set<string> } {
   const controls = new Set<string>();
   const buttons = new Set<string>();
   const sections = new Set<string>();
-  const facts = index.parsedFactsByUri.get(form.uri.toString());
+  const facts = getParsedFactsByUri(index, form.uri, getFactsForUri);
   if (!facts) {
     return { controls, buttons, sections };
   }

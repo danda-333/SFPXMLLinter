@@ -1,5 +1,6 @@
 import { SystemMetadata } from "../config/systemMetadata";
 import { WorkspaceIndex } from "../indexer/types";
+import { getIndexedForms, hasIndexedFormIdent } from "../core/model/indexAccess";
 
 const DBO_PREFIX = "dbo.";
 
@@ -24,12 +25,12 @@ export function resolveSystemTableName(formIdent: string, metadata: SystemMetada
 }
 
 export function isKnownFormIdent(formIdent: string, index: WorkspaceIndex, metadata: SystemMetadata): boolean {
-  return index.formsByIdent.has(formIdent) || resolveSystemTableName(formIdent, metadata) !== undefined;
+  return hasIndexedFormIdent(index, formIdent) || resolveSystemTableName(formIdent, metadata) !== undefined;
 }
 
 export function getAllFormIdentCandidates(index: WorkspaceIndex, metadata: SystemMetadata): string[] {
   const out = new Set<string>();
-  for (const form of index.formsByIdent.values()) {
+  for (const form of getIndexedForms(index)) {
     out.add(form.ident);
   }
 

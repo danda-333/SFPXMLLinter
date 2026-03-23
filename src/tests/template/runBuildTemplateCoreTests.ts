@@ -9,6 +9,7 @@ interface Case {
   maxDepth?: number;
   expectedDebugLogs?: string[];
   inheritedUsingsXml?: string;
+  legacyTagAliasesEnabled?: boolean;
 }
 
 function run(): void {
@@ -137,6 +138,36 @@ function run(): void {
     <Control Ident="LegacyAdded" />
   </Controls>
 </Form>`
+    },
+    {
+      name: "legacy-component-section-tags-disabled-in-strict-mode",
+      components: [
+        {
+          key: "Common/Legacy",
+          text: `
+<Component>
+  <Section Name="Controls" Root="Form" TargetXPath="//Form/Controls" Insert="append">
+    <Control Ident="LegacyAdded" />
+  </Section>
+</Component>`
+        }
+      ],
+      template: `
+<Form>
+  <Usings>
+    <Using Feature="Common/Legacy" />
+  </Usings>
+  <Controls>
+    <Control Ident="Base" />
+  </Controls>
+</Form>`,
+      expected: `
+<Form>
+  <Controls>
+    <Control Ident="Base" />
+  </Controls>
+</Form>`,
+      legacyTagAliasesEnabled: false
     },
     {
       name: "commented-using-is-ignored",
@@ -745,7 +776,8 @@ function run(): void {
         library,
         c.maxDepth ?? 12,
         (line) => debugLogs.push(line),
-        c.inheritedUsingsXml
+        c.inheritedUsingsXml,
+        { legacyTagAliasesEnabled: c.legacyTagAliasesEnabled }
       );
       assert.equal(normalize(actual), normalize(c.expected));
       if (c.expectedDebugLogs) {

@@ -265,7 +265,7 @@ export function populateUsingInsertTraceFromText(
           targetXPathMatchCount: 0,
           targetXPathClampedCount: 0,
           allowMultipleInserts: !!contribution.allowMultipleInserts,
-          fallbackSymbolCount: 0
+          estimatedSymbolCount: 0
         });
         continue;
       }
@@ -286,22 +286,22 @@ export function populateUsingInsertTraceFromText(
           targetXPathMatchCount: xpathStats.matchCount,
           targetXPathClampedCount: xpathStats.insertCount,
           allowMultipleInserts: !!contribution.allowMultipleInserts,
-          fallbackSymbolCount: 0
+          estimatedSymbolCount: 0
         });
         continue;
       }
 
-      const fallbackSymbolCount = countIndexedContributionSymbolsForRoot(facts.rootTag, contribution);
-      counts.set(key, fallbackSymbolCount);
+      const estimatedSymbolCount = countIndexedContributionSymbolsForRoot(facts.rootTag, contribution);
+      counts.set(key, estimatedSymbolCount);
       traces.set(key, {
-        strategy: "symbolCount",
-        finalInsertCount: fallbackSymbolCount,
+        strategy: "estimatedSymbolCount",
+        finalInsertCount: estimatedSymbolCount,
         placeholderCount,
         targetXPathExpression: undefined,
         targetXPathMatchCount: 0,
         targetXPathClampedCount: 0,
         allowMultipleInserts: !!contribution.allowMultipleInserts,
-        fallbackSymbolCount
+        estimatedSymbolCount
       });
     }
   }

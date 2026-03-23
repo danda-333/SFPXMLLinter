@@ -227,6 +227,9 @@ function run(): void {
   testPrimitiveMissingParamAction(provider);
   testPrimitiveCycleAction(provider);
   testMissingExplicitProvidesAction(provider);
+  testLegacyAliasUsingMigrationAction(provider);
+  testLegacyAliasIncludeMigrationAction(provider);
+  testLegacyAliasPlaceholderMigrationAction(provider);
 
   console.log("Ignore code action provider tests passed.");
 }
@@ -331,6 +334,78 @@ function testMissingExplicitProvidesAction(provider: InstanceType<typeof SfpXmlI
   const editedText = editOp?.type === "replace" || editOp?.type === "insert" ? editOp.text : "";
   assert.ok(editedText.includes("<Provides>"), "Quick-fix should add <Provides> block.");
   assert.ok(editedText.includes("<Symbol Kind=\"button\" Ident=\"SaveButton\" />"), "Quick-fix should include inferred button symbol.");
+}
+
+function testLegacyAliasUsingMigrationAction(provider: InstanceType<typeof SfpXmlIgnoreCodeActionProvider>): void {
+  const text = "<Form><Usings><Using Component=\"Common/X\" Section=\"Buttons\" /></Usings></Form>";
+  const doc = createDoc("tests/fixtures/linter/XML_Templates/100_Test/CodeActionLegacyUsing.xml", text);
+  const range = findSnippetRange(text, "Common/X");
+  const diagnostic = new Diagnostic(
+    range,
+    "[legacy-template-alias-disabled] Legacy template alias Component/Name + Section is disabled."
+  );
+  diagnostic.source = "sfp-xml-linter";
+  diagnostic.code = "legacy-template-alias-disabled";
+
+  const actions = provider.provideCodeActions(
+    doc as unknown as import("vscode").TextDocument,
+    range as unknown as import("vscode").Range,
+    toCodeActionContext([diagnostic])
+  ) as CodeAction[];
+  const migrate = actions.find((action) => action.title === "Migrate to Feature/Contribution (tag)");
+  assert.ok(migrate, "Expected legacy alias migration action for Using tag.");
+  const replace = migrate?.edit?.operations.find((op) => op.type === "replace");
+  assert.ok(replace && replace.type === "replace", "Expected replace edit for Using migration.");
+  assert.equal(replace?.type === "replace" ? replace.text : "", "<Using Feature=\"Common/X\" Contribution=\"Buttons\" />");
+}
+
+function testLegacyAliasIncludeMigrationAction(provider: InstanceType<typeof SfpXmlIgnoreCodeActionProvider>): void {
+  const text = "<View><Include Name=\"Common/Y\" Section=\"Columns\" /></View>";
+  const doc = createDoc("tests/fixtures/linter/XML_Templates/100_Test/CodeActionLegacyInclude.xml", text);
+  const range = findSnippetRange(text, "Common/Y");
+  const diagnostic = new Diagnostic(
+    range,
+    "[legacy-template-alias-disabled] Legacy template alias Component/Name + Section is disabled."
+  );
+  diagnostic.source = "sfp-xml-linter";
+  diagnostic.code = "legacy-template-alias-disabled";
+
+  const actions = provider.provideCodeActions(
+    doc as unknown as import("vscode").TextDocument,
+    range as unknown as import("vscode").Range,
+    toCodeActionContext([diagnostic])
+  ) as CodeAction[];
+  const migrate = actions.find((action) => action.title === "Migrate to Feature/Contribution (tag)");
+  assert.ok(migrate, "Expected legacy alias migration action for Include tag.");
+  const replace = migrate?.edit?.operations.find((op) => op.type === "replace");
+  assert.ok(replace && replace.type === "replace", "Expected replace edit for Include migration.");
+  assert.equal(replace?.type === "replace" ? replace.text : "", "<Include Feature=\"Common/Y\" Contribution=\"Columns\" />");
+}
+
+function testLegacyAliasPlaceholderMigrationAction(provider: InstanceType<typeof SfpXmlIgnoreCodeActionProvider>): void {
+  const text = "<Form>{{Component:Common/Z,Section:Html,Param:1}}</Form>";
+  const doc = createDoc("tests/fixtures/linter/XML_Templates/100_Test/CodeActionLegacyPlaceholder.xml", text);
+  const range = findSnippetRange(text, "{{Component:Common/Z,Section:Html,Param:1}}");
+  const diagnostic = new Diagnostic(
+    range,
+    "[legacy-template-alias-disabled] Legacy placeholder alias Component/Name + Section is disabled."
+  );
+  diagnostic.source = "sfp-xml-linter";
+  diagnostic.code = "legacy-template-alias-disabled";
+
+  const actions = provider.provideCodeActions(
+    doc as unknown as import("vscode").TextDocument,
+    range as unknown as import("vscode").Range,
+    toCodeActionContext([diagnostic])
+  ) as CodeAction[];
+  const migrate = actions.find((action) => action.title === "Migrate to Feature/Contribution (placeholder)");
+  assert.ok(migrate, "Expected legacy alias migration action for placeholder.");
+  const replace = migrate?.edit?.operations.find((op) => op.type === "replace");
+  assert.ok(replace && replace.type === "replace", "Expected replace edit for placeholder migration.");
+  assert.equal(
+    replace?.type === "replace" ? replace.text : "",
+    "{{Feature:Common/Z,Contribution:Html,Param:1}}"
+  );
 }
 
 function createDoc(relPath: string, text: string): MockTextDocument {

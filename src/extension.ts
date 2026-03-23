@@ -1,5 +1,6 @@
-﻿import * as vscode from "vscode";
+import * as vscode from "vscode";
 import * as path from "node:path";
+import * as fs from "node:fs";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
 import { DiagnosticsEngine } from "./diagnostics/engine";
 import { documentInConfiguredRoots, getXmlIndexDomainByUri, XmlIndexDomain } from "./utils/paths";
@@ -14,35 +15,48 @@ import { TemplateMutationRecord } from "./template/buildXmlTemplatesCore";
 import { globConfiguredXmlFiles } from "./utils/paths";
 import { getSettings, SfpXmlLinterSettings } from "./config/settings";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "./indexer/xmlFacts";
-import { toIndexUriKey } from "./indexer/uriKey";
 import { formatXmlTolerant } from "./formatter";
 import { WorkspaceIndex, IndexedForm, IndexedSymbolProvenanceProvider } from "./indexer/types";
 import { SystemMetadata, getSystemMetadata } from "./config/systemMetadata";
 import { FeatureRegistryStore } from "./composition/registry";
 import { CompositionTreeProvider } from "./composition/treeView";
-import { UpdateOrchestrator } from "./orchestrator/updateOrchestrator";
+import { createSavePipelineOrchestration } from "./core/orchestration/savePipelineOrchestrationService";
+import type { SavePerformanceEvent } from "./orchestrator/updateOrchestrator";
 import { HoverDocsWatcherService } from "./core/docs/hoverDocsWatcherService";
 import { ModuleHost } from "./core/pipeline/moduleHost";
 import { PipelineMetricsStore } from "./core/pipeline/metrics";
 import { UpdateRunner } from "./core/pipeline/updateRunner";
 import { ModelCore } from "./core/model/modelCore";
+import { ComposedDocumentSnapshotRegistry } from "./core/model/composedDocumentSnapshotRegistry";
+import { ComposedSnapshotRefreshService } from "./core/model/composedSnapshotRefreshService";
 import { FactRegistry } from "./core/facts/factRegistry";
 import { registerDefaultFactsAndSymbols } from "./core/facts/registerDefaultFactsAndSymbols";
 import { SymbolRegistry } from "./core/symbols/symbolRegistry";
+import { ModelWriteGateway } from "./core/model/modelWriteGateway";
+import {
+  getIndexedFormByIdent,
+  getParsedFactsByUri as getParsedFactsByUriFromIndexAccess,
+  getParsedFactsEntries
+} from "./core/model/indexAccess";
+import { parseIndexUriKey } from "./core/model/indexUriParser";
+import { resolveDocumentFacts } from "./core/model/factsResolution";
 import { ValidationHost } from "./core/validation/validationHost";
-import { createValidationModules } from "./core/validation/validationModules";
+import { COMPOSED_REFERENCE_RULE_IDS, createValidationModules } from "./core/validation/validationModules";
 import { ValidationRequest } from "./core/validation/types";
 import { ValidationQueueOrchestrator } from "./core/validation/validationQueueOrchestrator";
-import { DocumentValidationService } from "./core/validation/documentValidationService";
+import { DocumentValidationService, parseFactsStandalone } from "./core/validation/documentValidationService";
 import { DependencyValidationService } from "./core/validation/dependencyValidationService";
+import { DiagnosticsPublisherService } from "./core/validation/diagnosticsPublisherService";
 import { ReindexService } from "./core/index/reindexService";
 import { ProjectScopeService } from "./core/scope/projectScopeService";
 import { TemplateBuildOrchestrator } from "./core/template/templateBuildOrchestrator";
 import { TemplateBuildPlannerService } from "./core/template/templateBuildPlannerService";
+import { collectDependentTemplatePathsFromIndex } from "./core/template/dependentTemplateCollector";
 import { ProvenanceHydrationService } from "./core/template/provenanceHydrationService";
 import { TemplateBuildRunMode, TemplateBuildRunOptionsFactory } from "./core/template/templateBuildRunOptionsFactory";
 import { GeneratorTemplateScaffoldService } from "./core/template/generatorTemplateScaffoldService";
 import { ManualTemplateBuildCommandsService } from "./core/template/manualTemplateBuildCommandsService";
+import { LegacyTemplateAliasMigrationCommandsService } from "./core/template/legacyTemplateAliasMigrationCommandsService";
 import { PipelineUiCommandsService } from "./core/ui/pipelineUiCommandsService";
 import { VsCodeEventBridgeService } from "./core/ui/vsCodeEventBridgeService";
 import { LanguageProvidersRegistrarService } from "./core/ui/languageProvidersRegistrarService";
@@ -68,23 +82,7 @@ import {
 import { ModelSyncModule } from "./core/modules/modelSyncModule";
 import { ConfigurationEventsModule, DiagnosticsEventsModule, DocumentEventsModule, FilesystemEventsModule, SaveBuildModule } from "./core/modules/eventModules";
 
-const REFERENCE_REQUIRED_RULES = new Set<string>([
-  "unknown-form-ident",
-  "unknown-form-control-ident",
-  "unknown-form-button-ident",
-  "unknown-workflow-button-share-code-ident",
-  "unknown-form-section-ident",
-  "unknown-mapping-ident",
-  "unknown-mapping-form-ident",
-  "unknown-required-action-ident",
-  "unknown-workflow-action-value-control-ident",
-  "unknown-workflow-show-hide-control-ident",
-  "unknown-html-template-control-ident",
-  "unknown-using-feature",
-  "unknown-using-contribution",
-  "contribution-mismatch",
-  "orphan-placeholder",
-]);
+const REFERENCE_REQUIRED_RULES = new Set<string>(COMPOSED_REFERENCE_RULE_IDS);
 
 function getDiagnosticCodeValue(code: unknown): string | undefined {
   return typeof code === "string" ? code : undefined;
@@ -107,19 +105,47 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const templateIndexer = new WorkspaceIndexer(["XML_Templates", "XML_Components", "XML_Primitives"]);
   const runtimeIndexer = new WorkspaceIndexer(["XML"]);
   const featureRegistryStore = new FeatureRegistryStore();
+  const composedSnapshotRegistry = new ComposedDocumentSnapshotRegistry();
+  let composedSnapshotRefreshService: ComposedSnapshotRefreshService | undefined;
+  let getModelVersionForTree = () => 0;
   const compositionTreeProvider = new CompositionTreeProvider(
     () => vscode.window.activeTextEditor?.document,
     (uri) => getIndexForUri(uri),
     () => featureRegistryStore.getRegistry(),
-    (formIdent, preferredIndex) => resolveOwningFormForDiagnostics(formIdent, preferredIndex)
+    (formIdent, preferredIndex) => resolveOwningFormForDiagnostics(formIdent, preferredIndex),
+    composedSnapshotRegistry,
+    (document) => refreshComposedSnapshotsForDocument(document),
+    () => getModelVersionForTree()
   );
   const compositionTreeView = vscode.window.createTreeView("sfpXmlLinter.compositionView", {
     treeDataProvider: compositionTreeProvider,
     showCollapseAll: true
   });
+  const diagnosticsPublisher = new DiagnosticsPublisherService({
+    diagnostics,
+    onChanged: () => compositionTreeProvider.refresh()
+  });
   const engine = new DiagnosticsEngine();
   const factRegistry = new FactRegistry();
   const symbolRegistry = new SymbolRegistry();
+  composedSnapshotRefreshService = new ComposedSnapshotRefreshService({
+    registry: composedSnapshotRegistry,
+    getTemplateIndex: () => templateIndexer.getIndex(),
+    getRuntimeIndex: () => runtimeIndexer.getIndex(),
+    getFactsForDocument: (document) =>
+      resolveDocumentFacts(document, getIndexForUri(document.uri), {
+        getFactsForUri: (uri, index) =>
+          getParsedFactsByUriFromIndexAccess(
+            index,
+            uri,
+            (targetUri) =>
+              factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "snapshot:refresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+          ),
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }),
+    logIndex: (message) => logIndex(message)
+  });
   const validationHost = new ValidationHost({
     hasFactKind: (kind) => factRegistry.hasProvider(kind),
     hasSymbolKind: (kind) => symbolRegistry.hasResolver(kind),
@@ -179,11 +205,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     getPipelinePhaseStats: () => pipelineMetrics.getPhaseStats(),
     getModelStats: () => modelCore.getStats(),
     getSymbolStats: () => symbolRegistry.getStats(),
+    getSymbolResolverUsageStats: () => symbolRegistry.getResolverUsageStats(),
+    getDeadSymbolResolverKinds: () => symbolRegistry.getDeadResolverKinds(),
     getFactStats: () => factRegistry.getStats(),
     getDeadFactKinds: () => factRegistry.getDeadFactKinds(),
     getFactConsumerUsage: () => factRegistry.getConsumerUsage(),
+    getValidationModuleUsageStats: () => validationHost.getModuleUsageStats(),
+    getDeadValidationModuleIds: () => validationHost.getDeadModuleIds(),
     getDisabledValidationModules: () => validationHost.getDisabledModuleIds(),
-    getPipelineTrace: () => pipelineMetrics.getTrace()
+    getPipelineTrace: () => pipelineMetrics.getTrace(),
+    getWorkspaceFolder: () => vscode.workspace.workspaceFolders?.[0]
+  });
+  const legacyTemplateAliasMigrationCommandsService = new LegacyTemplateAliasMigrationCommandsService({
+    logBuild: (message) => logBuild(message)
   });
   const vsCodeEventBridgeService = new VsCodeEventBridgeService({
     enqueue: (payload, priority, key) => {
@@ -215,8 +249,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     getFactsForDocument: (document) => {
       const uriKey = document.uri.toString();
       const fromRegistry = factRegistry.getFact(uriKey, "fact.parsedDocument", "provider:language") as ReturnType<typeof parseDocumentFactsFromText> | undefined;
-      return fromRegistry ?? parseDocumentFacts(document);
+      return fromRegistry;
     },
+    getFactsForUri: (uri) => {
+      const fromRegistry = factRegistry.getFact(uri.toString(), "fact.parsedDocument", "provider:language");
+      return fromRegistry as ReturnType<typeof parseDocumentFactsFromText> | undefined;
+    },
+    getModelVersion: () => modelCore.getVersion(),
     getSymbolIdentsForUriKind: (uri, kind) => {
       const defs = symbolRegistry.getDefsByKind(uri.toString(), kind);
       return defs.map((def) => def.ident);
@@ -261,7 +300,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     },
     globConfiguredXmlFiles: () => globConfiguredXmlFiles(),
     getIndexForUri: (uri) => getIndexerForUri(uri).getIndex(),
-    parseDocumentFacts: (document) => parseDocumentFacts(document),
+    getFactsForUri: (uri) =>
+      factRegistry.getFact(uri.toString(), "fact.parsedDocument", "command:workspaceMaintenance"),
+    parseFacts: parseDocumentFacts,
     buildDiagnosticsForDocument: (document, index, facts) =>
       buildDiagnosticsForDocument(
         document,
@@ -272,7 +313,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     createFormatterOptions: (editorOptions, document) => createFormatterOptions(editorOptions, document, getSettings()),
     formatDocument: (source, options) => formatXmlTolerant(source, options),
     formatRangeLikeDocument: (document, range, options) => formatRangeLikeDocument(document, range, options),
-    logFormatter: (message) => logFormatter(message)
+    logFormatter: (message) => logFormatter(message),
+    getPublishedDiagnostics: () => diagnosticsPublisher.getEntries()
   });
   const coreCommandsRegistrarService = new CoreCommandsRegistrarService({
     suppressNextSqlSuggest: () => {
@@ -288,9 +330,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     showCompositionLog: () => pipelineUiCommandsService.showCompositionLog(),
     showPipelineStats: () => pipelineUiCommandsService.showPipelineStats(),
     exportTrace: () => pipelineUiCommandsService.exportTrace(),
+    exportUsageSnapshot: () => pipelineUiCommandsService.exportUsageSnapshot(),
     refreshCompositionView: () => pipelineUiCommandsService.refreshCompositionView(),
     compositionCopySummary: (payload) => pipelineUiCommandsService.compositionCopySummary(payload),
-    compositionLogNonEffectiveUsings: (payload) => pipelineUiCommandsService.compositionLogNonEffectiveUsings(payload)
+    compositionLogNonEffectiveUsings: (payload) => pipelineUiCommandsService.compositionLogNonEffectiveUsings(payload),
+    migrateLegacyTemplateAliases: () => legacyTemplateAliasMigrationCommandsService.runInteractiveMigration()
   });
   let hasInitialIndex = false;
   type SavePerfAggregate = {
@@ -400,11 +444,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function isReadyLogMessage(message: string): boolean {
-    return message.startsWith("REINDEX all passes DONE");
+    if (message.startsWith("REINDEX all passes DONE")) {
+      return true;
+    }
+    if (message.startsWith("REINDEX snapshot refresh")) {
+      return true;
+    }
+    if (message.startsWith("REVALIDATE ")) {
+      return true;
+    }
+    if (
+      message.startsWith("validate indexed DONE:") ||
+      message.startsWith("validateUri ERROR:") ||
+      (message.startsWith("validate facts ") && message.includes(" used:"))
+    ) {
+      return true;
+    }
+    return false;
   }
 
-  function logBuild(_message: string): void {
-    // Build details are emitted only through aggregated save/build performance logs.
+  function logBuild(message: string): void {
+    const trimmed = message.trim();
+    if (trimmed.length === 0) {
+      return;
+    }
+    if (/^ERROR\b/i.test(trimmed) || /^\[generator\]\[warning\]/i.test(trimmed)) {
+      appendUnifiedLog(`build: ${trimmed}`);
+    }
   }
 
   function logIndex(message: string): void {
@@ -543,25 +609,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // react to component/feature changes that affect generated XML.
     if (domain === "template") {
       const runtimeIndex = runtimeIndexer.getIndex();
-      const runtimeForm = runtimeIndex.formsByIdent.get(formIdent);
+      const runtimeForm = getIndexedFormByIdent(runtimeIndex, formIdent);
       if (runtimeForm) {
         return { form: runtimeForm, index: runtimeIndex };
       }
     }
 
-    const preferredForm = preferredIndex.formsByIdent.get(formIdent);
+    const preferredForm = getIndexedFormByIdent(preferredIndex, formIdent);
     if (preferredForm) {
       return { form: preferredForm, index: preferredIndex };
     }
 
     const runtimeIndex = runtimeIndexer.getIndex();
-    const runtimeForm = runtimeIndex.formsByIdent.get(formIdent);
+    const runtimeForm = getIndexedFormByIdent(runtimeIndex, formIdent);
     if (runtimeForm) {
       return { form: runtimeForm, index: runtimeIndex };
     }
 
     const templateIndex = templateIndexer.getIndex();
-    const templateForm = templateIndex.formsByIdent.get(formIdent);
+    const templateForm = getIndexedFormByIdent(templateIndex, formIdent);
     if (templateForm) {
       return { form: templateForm, index: templateIndex };
     }
@@ -756,7 +822,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       settingsSnapshot: options?.settingsSnapshot,
       metadataSnapshot: options?.metadataSnapshot,
       skipConfiguredRootsCheck: true
-    }, "source");
+    }, "composed-reference");
     const referenceDiagnostics = composedDiagnostics.filter((item) => isComposedReferenceRule(item.code));
     return remapComposedDiagnosticsToTemplate(referenceDiagnostics, templateFacts);
   }
@@ -765,26 +831,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     index: WorkspaceIndex,
     uri: vscode.Uri
   ): ReturnType<typeof parseDocumentFactsFromText> | undefined {
-    const direct = index.parsedFactsByUri.get(uri.toString());
-    if (direct) {
-      return direct;
-    }
-
-    const normalizedTarget = toIndexUriKey(uri);
-    for (const [key, facts] of index.parsedFactsByUri.entries()) {
-      if (key === normalizedTarget) {
-        return facts;
-      }
-
-      const keyUri = key.includes("://")
-        ? vscode.Uri.parse(key)
-        : vscode.Uri.file(key);
-      if (toIndexUriKey(keyUri) === normalizedTarget) {
-        return facts;
-      }
-    }
-
-    return undefined;
+    return getParsedFactsByUriFromIndexAccess(
+      index,
+      uri,
+      (targetUri) =>
+        factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:getParsedFactsByUri") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+    );
   }
 
   function buildDiagnosticsForDocument(
@@ -793,6 +845,76 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     facts: ReturnType<typeof parseDocumentFactsFromText>,
     options?: { settingsSnapshot?: SfpXmlLinterSettings; metadataSnapshot?: SystemMetadata }
   ): vscode.Diagnostic[] {
+    // Keep composed snapshots hot for the currently validated document/form so all
+    // cross-document checks (ExpectedXPath, related usings) read a fresh single source.
+    const owningFormIdent = (() => {
+      const root = (facts.rootTag ?? "").toLowerCase();
+      if (root === "form") {
+        return facts.formIdent;
+      }
+      if (root === "workflow") {
+        return facts.workflowFormIdent ?? facts.rootFormIdent;
+      }
+      if (root === "dataview") {
+        return facts.rootFormIdent;
+      }
+      return undefined;
+    })();
+    const refreshUris: vscode.Uri[] = [document.uri];
+    if (owningFormIdent) {
+      const templateIndex = templateIndexer.getIndex();
+      const runtimeIndex = runtimeIndexer.getIndex();
+      for (const entry of getParsedFactsEntries(
+        templateIndex,
+        (uri, idx) =>
+          getParsedFactsByUriFromIndexAccess(
+            idx,
+            uri,
+            (targetUri) =>
+              factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "extension:buildDiagnosticsRefresh") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+          ),
+        parseIndexUriKey
+      )) {
+        const uri = entry.uri;
+        const parsedFacts = entry.facts;
+        const parsedRoot = (parsedFacts.rootTag ?? "").toLowerCase();
+        const parsedOwning =
+          parsedRoot === "form"
+            ? parsedFacts.formIdent
+            : parsedRoot === "workflow"
+              ? (parsedFacts.workflowFormIdent ?? parsedFacts.rootFormIdent)
+              : parsedRoot === "dataview"
+                ? parsedFacts.rootFormIdent
+                : undefined;
+        if (!parsedOwning || parsedOwning !== owningFormIdent) {
+          continue;
+        }
+        refreshUris.push(uri);
+      }
+      composedSnapshotRegistry.refreshForFormIdents(new Set([owningFormIdent]), {
+        templateIndex,
+        runtimeIndex,
+        readFileText: (uri) => {
+          try {
+            return fs.readFileSync(uri.fsPath, "utf8");
+          } catch {
+            return undefined;
+          }
+        }
+      });
+    }
+    composedSnapshotRegistry.refreshForUris(refreshUris, {
+      templateIndex: templateIndexer.getIndex(),
+      runtimeIndex: runtimeIndexer.getIndex(),
+      readFileText: (uri) => {
+        try {
+          return fs.readFileSync(uri.fsPath, "utf8");
+        } catch {
+          return undefined;
+        }
+      }
+    });
+
     const request: ValidationRequest = {
       document,
       index: currentIndex,
@@ -807,9 +929,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return base;
     }
 
-    const sourceOnly = base.filter((item) => !isComposedReferenceRule(item.code));
     const composedOnly = validationHost.runMode(request, "composed-reference");
-    return dedupeDiagnostics([...sourceOnly, ...composedOnly]);
+    return dedupeDiagnostics([...base, ...composedOnly]);
   }
 
   function queueProvenanceHydration(targetRuntimeUri?: vscode.Uri): void {
@@ -939,9 +1060,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const documentValidationService = new DocumentValidationService({
     emptyIndex,
-    clearDiagnostics: (uri) => diagnostics.delete(uri),
-    setDiagnostics: (uri, result) => diagnostics.set(uri, result),
+    clearDiagnostics: (uri) => diagnosticsPublisher.delete(uri),
+    setDiagnostics: (uri, result) => diagnosticsPublisher.set(uri, result),
     getIndexForUri: (uri) => getIndexerForUri(uri).getIndex(),
+    getFactsForUri: (uri) => {
+      const fromRegistry = factRegistry.getFact(uri.toString(), "fact.parsedDocument", "validation:document");
+      return fromRegistry as ReturnType<typeof parseDocumentFactsFromText> | undefined;
+    },
     buildDiagnosticsForDocument: (document, currentIndex, facts, options) =>
       buildDiagnosticsForDocument(document, currentIndex, facts, options),
     shouldValidateUriForActiveProjects: (uri) => shouldValidateUriForActiveProjects(uri),
@@ -962,8 +1087,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const validationQueue = new ValidationQueueOrchestrator({
     log: (message) => logIndex(message),
-    publishDiagnosticsBatch: (updates) => diagnostics.set(updates),
-    validateUri: (uri) => validateUri(uri),
+    publishDiagnosticsBatch: (updates) => diagnosticsPublisher.setBatch(updates),
+    onDiagnosticsPublished: () => compositionTreeProvider.refresh(),
     computeIndexedValidationOutcome: (uri, options) => computeIndexedValidationOutcome(uri, options),
     shouldValidateUriForActiveProjects: (uri) => shouldValidateUriForActiveProjects(uri),
     getBackgroundSettingsSnapshot: () => getSettings(),
@@ -988,6 +1113,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     setHasInitialIndex: (value) => {
       hasInitialIndex = value;
     },
+    refreshComposedSnapshotsAll: () => composedSnapshotRefreshService?.refreshAll() ?? 0,
     validateUri: (uri, options) => validateUri(uri, options),
     getProjectKeyForUri: (uri) => getProjectKeyForUri(uri),
     getSettingsSnapshot: () => getSettings(),
@@ -1003,8 +1129,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     getUserOpenUris: () => getUserOpenUris(),
     getTemplateIndex: () => templateIndexer.getIndex(),
     getRuntimeIndex: () => runtimeIndexer.getIndex(),
-    diagnosticsForEach: (callback) => diagnostics.forEach((uri) => callback(uri)),
-    deleteDiagnostics: (uri) => diagnostics.delete(uri),
+    diagnosticsForEach: (callback) => diagnosticsPublisher.forEach((uri) => callback(uri)),
+    deleteDiagnostics: (uri) => diagnosticsPublisher.delete(uri),
     globConfiguredXmlFiles: () => globConfiguredXmlFiles(),
     enqueueWorkspaceValidation: (uris) => enqueueWorkspaceValidation(uris)
   });
@@ -1144,7 +1270,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     collectTemplatePathsForFormIdentFromIndex: (formIdent) => collectTemplatePathsForFormIdentFromIndex(formIdent),
     collectDependentTemplatesFromIndex: (componentKey) => collectDependentTemplatesFromIndex(componentKey),
     findTemplatesUsingComponent: (workspaceFolder, componentPath) =>
-      buildService.findTemplatesUsingComponent(workspaceFolder, componentPath)
+      buildService.findTemplatesUsingComponent(
+        workspaceFolder,
+        componentPath,
+        getSettings().templateBuilderLegacyComponentSectionSupport
+      ),
+    getIndexForUri: (uri) => getIndexForUri(uri),
+    getFactsForDocument: (document) => {
+      const fromRegistry = factRegistry.getFact(document.uri.toString(), "fact.parsedDocument", "template:planner");
+      return fromRegistry as ReturnType<typeof parseDocumentFactsFromText> | undefined;
+    },
+    getFactsForUri: (uri, index) =>
+      getParsedFactsByUriFromIndexAccess(
+        index,
+        uri,
+        (targetUri) =>
+          factRegistry.getFact(targetUri.toString(), "fact.parsedDocument", "template:planner") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+      )
   });
 
   provenanceHydrationService = new ProvenanceHydrationService({
@@ -1165,7 +1307,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   function enqueueValidation(
     uri: vscode.Uri,
     priority: "high" | "low",
-    options?: { force?: boolean }
+    options?: { force?: boolean; sourceLabel?: string; snapshotVersion?: number }
   ): void {
     validationQueue.enqueueValidation(uri, priority, options);
   }
@@ -1255,18 +1397,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ensureActiveProjectScopeInitialized();
     clearDiagnosticsOutsideActiveProjects();
     const targetUris = getUserOpenUris().filter((uri) => uri.scheme === "file");
+    if (targetUris.length === 0) {
+      return;
+    }
 
     for (const uri of targetUris) {
-      const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
-      if (existing) {
-        validateDocument(existing);
-        continue;
-      }
-
-      void vscode.workspace.openTextDocument(uri).then(validateDocument, () => {
-        // Ignore transient failures (closed tab, invalid URI, etc.)
+      // Route startup/open-doc validation through the same queued pipeline as save/revalidate.
+      // This avoids stale ordering between direct validation and composed snapshot refresh.
+      enqueueValidation(uri, "high", {
+        force: true,
+        sourceLabel: "open-doc-reindex"
       });
     }
+
+    // Second forced pass: the first pass may validate Form before its related
+    // WorkFlow/DataView snapshot is refreshed. This pass converges diagnostics
+    // to the same steady state as explicit revalidate without requiring manual save.
+    setTimeout(() => {
+      for (const uri of targetUris) {
+        enqueueValidation(uri, "high", {
+          force: true,
+          sourceLabel: "open-doc-reindex-pass2"
+        });
+      }
+    }, 200);
   }
 
   async function queueReindex(
@@ -1279,10 +1433,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function revalidateWorkspaceFull(): Promise<void> {
     await reindexService.revalidateWorkspaceFull();
+    const refreshed = composedSnapshotRefreshService?.refreshAll() ?? 0;
+    if (refreshed > 0) {
+      const uris = (await globConfiguredXmlFiles()).filter((uri) => uri.scheme === "file");
+      const startedAt = Date.now();
+      await forEachWithConcurrency(uris, 8, async (uri) => {
+        await validateUri(uri, { respectProjectScope: false, preferFsRead: true });
+      });
+      logIndex(`REVALIDATE snapshot pass DONE files=${uris.length} in ${Date.now() - startedAt} ms`);
+    }
   }
 
   async function revalidateCurrentProject(): Promise<void> {
     await reindexService.revalidateCurrentProject();
+    const activeUri = vscode.window.activeTextEditor?.document.uri;
+    if (!activeUri || activeUri.scheme !== "file") {
+      return;
+    }
+    const projectKey = getProjectKeyForUri(activeUri);
+    if (!projectKey) {
+      return;
+    }
+    const refreshed = composedSnapshotRefreshService?.refreshAll() ?? 0;
+    if (refreshed > 0) {
+      const uris = (await globConfiguredXmlFiles())
+        .filter((uri) => uri.scheme === "file")
+        .filter((uri) => getProjectKeyForUri(uri) === projectKey);
+      const startedAt = Date.now();
+      await forEachWithConcurrency(uris, 8, async (uri) => {
+        await validateUri(uri, { respectProjectScope: false, preferFsRead: true });
+      });
+      logIndex(`REVALIDATE project snapshot pass DONE files=${uris.length} in ${Date.now() - startedAt} ms`);
+    }
   }
 
   function shouldValidateUriForActiveProjects(uri: vscode.Uri): boolean {
@@ -1294,7 +1476,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function clearClosedStandaloneDiagnostics(): void {
-    diagnostics.forEach((uri) => {
+    diagnosticsPublisher.forEach((uri) => {
       if (uri.scheme !== "file") {
         return;
       }
@@ -1312,7 +1494,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
 
-      diagnostics.delete(uri);
+      diagnosticsPublisher.delete(uri);
       documentValidationService.clearValidationStateForUri(uri);
       logSingleFile(`cleanup removed closed standalone diagnostics: ${vscode.workspace.asRelativePath(uri, false)}`);
     });
@@ -1360,7 +1542,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           doc = createVirtualXmlDocument(uri, text);
         }
 
-        const root = (parseDocumentFacts(doc).rootTag ?? "").toLowerCase();
+      const facts = resolveDocumentFacts(doc, getIndexForUri(uri), {
+        getFactsForUri: (targetUri, index) =>
+          getParsedFactsByUriFromIndexAccess(
+            index,
+            targetUri,
+              (factsUri) =>
+                factRegistry.getFact(factsUri.toString(), "fact.parsedDocument", "build:refreshForms") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+            ),
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseFactsStandalone(doc);
+        const root = (facts?.rootTag ?? "").toLowerCase();
         if (root !== "form") {
           return;
         }
@@ -1430,90 +1623,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function collectDependentTemplatesFromIndex(componentKey: string): string[] {
-    const idx = templateIndexer.getIndex();
-    const candidateKeys = collectCandidateComponentKeys(idx, componentKey);
-    const canAffectNonFormRoots = componentCanAffectNonFormRoots(idx, candidateKeys);
-
-    const result = new Set<string>();
-    const affectedFormIdents = new Set<string>();
-    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
-      const uri = vscode.Uri.parse(uriKey);
-      if (!isInFolder(uri, "XML_Templates")) {
-        continue;
-      }
-
-      const usingHit = facts.usingReferences.some((ref) => candidateKeys.has(ref.componentKey));
-      const includeHit = facts.includeReferences.some((ref) => candidateKeys.has(ref.componentKey));
-      const placeholderHit = facts.placeholderReferences.some((ref) => ref.componentKey && candidateKeys.has(ref.componentKey));
-      if (usingHit || includeHit || placeholderHit) {
-        result.add(uri.fsPath);
-        const root = (facts.rootTag ?? "").toLowerCase();
-        const owningFormIdent = root === "form" ? facts.formIdent : undefined;
-        if (owningFormIdent) {
-          affectedFormIdents.add(owningFormIdent);
-        }
-      }
-    }
-
-    if (affectedFormIdents.size > 0 && canAffectNonFormRoots) {
-      for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
-        const root = (facts.rootTag ?? "").toLowerCase();
-        if (root !== "workflow" && root !== "dataview") {
-          continue;
-        }
-
-        const owningFormIdent =
-          root === "workflow"
-            ? (facts.workflowFormIdent ?? facts.rootFormIdent)
-            : facts.rootFormIdent;
-        if (!owningFormIdent || !affectedFormIdents.has(owningFormIdent)) {
-          continue;
-        }
-
-        const uri = vscode.Uri.parse(uriKey);
-        if (!isInFolder(uri, "XML_Templates")) {
-          continue;
-        }
-        result.add(uri.fsPath);
-      }
-    }
-
-    return [...result].sort((a, b) => a.localeCompare(b));
-  }
-
-  function componentCanAffectNonFormRoots(index: WorkspaceIndex, candidateKeys: ReadonlySet<string>): boolean {
-    for (const key of candidateKeys) {
-      const component = index.componentsByKey.get(key);
-      if (!component) {
-        // Unknown component metadata -> keep safe behavior.
-        return true;
-      }
-      for (const summary of component.contributionSummaries.values()) {
-        const rootExpr = (summary.rootExpression ?? "").toLowerCase();
-        if (summary.root === "workflow" || rootExpr.includes("workflow")) {
-          return true;
-        }
-        if (rootExpr.includes("dataview")) {
-          return true;
-        }
-        if (summary.root === "other" && summary.hasContent) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return collectDependentTemplatePathsFromIndex(templateIndexer.getIndex(), componentKey, {
+      isTemplatePath: (fsPath) => isInFolder(vscode.Uri.file(fsPath), "XML_Templates")
+    });
   }
 
   function buildInheritedUsingsSnapshotFromIndex(): ReadonlyMap<string, readonly TemplateInheritedUsingEntry[]> {
     const idx = templateIndexer.getIndex();
     const out = new Map<string, TemplateInheritedUsingEntry[]>();
-    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+    for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
+      const facts = entry.facts;
       const root = (facts.rootTag ?? "").toLowerCase();
       if (root !== "form" || !facts.formIdent) {
         continue;
       }
 
-      const uri = vscode.Uri.parse(uriKey);
+      const uri = entry.uri;
       if (!isInFolder(uri, "XML_Templates")) {
         continue;
       }
@@ -1539,7 +1664,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   function collectTemplatePathsForFormIdentFromIndex(formIdent: string): string[] {
     const idx = templateIndexer.getIndex();
     const result = new Set<string>();
-    for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+    for (const entry of getParsedFactsEntries(idx, undefined, parseIndexUriKey)) {
+      const facts = entry.facts;
       const root = (facts.rootTag ?? "").toLowerCase();
       if (root !== "form" && root !== "workflow" && root !== "dataview") {
         continue;
@@ -1555,7 +1681,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         continue;
       }
 
-      const uri = vscode.Uri.parse(uriKey);
+      const uri = entry.uri;
       if (!isInFolder(uri, "XML_Templates")) {
         continue;
       }
@@ -1566,152 +1692,167 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     return [...result].sort((a, b) => a.localeCompare(b));
   }
 
-  function collectCandidateComponentKeys(index: WorkspaceIndex, componentKey: string): Set<string> {
-    const out = new Set<string>([componentKey]);
-    const baseName = componentKey.split("/").pop() ?? componentKey;
-    const variants = index.componentKeysByBaseName.get(baseName);
-    if (variants) {
-      for (const variant of variants) {
-        out.add(variant);
-      }
-    }
-    return out;
-  }
-
   function validateDocument(document: vscode.TextDocument): void {
     documentValidationService.validateDocument(document);
+  }
+
+  function refreshComposedSnapshotsForDocument(document: vscode.TextDocument): void {
+    composedSnapshotRefreshService?.refreshForDocument(document);
+  }
+
+  function refreshComposedSnapshotsForSave(
+    cycleId: string,
+    document: vscode.TextDocument,
+    affectedFormIdents: ReadonlySet<string>
+  ): void {
+    composedSnapshotRefreshService?.refreshForSave(cycleId, document, affectedFormIdents);
   }
 
   hoverDocsWatcherService.refresh();
   context.subscriptions.push(hoverDocsWatcherService);
 
-  dependencyValidationService = new DependencyValidationService({
+  const handleSavePerformanceEvent = (event: SavePerformanceEvent): void => {
+    const rel = vscode.workspace.asRelativePath(event.document.uri, false);
+    if (event.phase === "start") {
+      currentSavePerformanceCycleId = event.cycleId;
+      savePerfByCycle.set(event.cycleId, {
+        rel,
+        buildRunCount: 0,
+        buildRunTemplates: 0,
+        buildRunDurationMs: 0,
+        buildRunUpdated: 0,
+        buildRunSkipped: 0,
+        buildRunErrors: 0,
+        buildRunReadMs: 0,
+        buildRunWriteMs: 0,
+        buildRunStatMs: 0,
+        buildRunReadPeakMs: 0,
+        buildRunWritePeakMs: 0,
+        buildRunStatPeakMs: 0,
+        buildRunFastHit: 0,
+        buildRunFastTotal: 0,
+        buildRunTraceHit: 0,
+        buildRunTraceTotal: 0,
+        buildRunComponentLibraryHit: 0,
+        buildRunComponentLibraryMiss: 0
+      });
+      return;
+    }
+    const aggregate = savePerfByCycle.get(event.cycleId);
+    if (!aggregate) {
+      return;
+    }
+    if (event.phase === "refresh") {
+      const refresh = event.refresh;
+      aggregate.refreshElapsedMs = event.elapsedMs;
+      aggregate.refreshRoot = refresh?.rootKind;
+      aggregate.refreshReason = refresh?.reason;
+      return;
+    }
+    if (event.phase === "build-done") {
+      aggregate.buildDoneElapsedMs = event.elapsedMs;
+      return;
+    }
+    if (event.phase === "dependency-queued") {
+      const dep = event.dependency;
+      aggregate.dependencyElapsedMs = event.elapsedMs;
+      aggregate.depForms = dep?.forms;
+      aggregate.depFiles = dep?.files;
+      aggregate.depImmediate = dep?.immediateOpen;
+      aggregate.depLow = dep?.queuedLow;
+      aggregate.depDurationMs = dep?.durationMs;
+      return;
+    }
+    if (event.phase === "done") {
+      const parts: string[] = [
+        `build run=${event.cycleId}`,
+        `file=${aggregate.rel}`,
+        `total=${event.elapsedMs}ms`,
+        `refresh=${aggregate.refreshElapsedMs ?? 0}ms(${aggregate.refreshRoot ?? "n/a"}/${aggregate.refreshReason ?? "n/a"})`,
+        `build=${aggregate.buildDoneElapsedMs ?? 0}ms`,
+        `dep=${aggregate.dependencyElapsedMs ?? 0}ms(forms=${aggregate.depForms ?? 0},files=${aggregate.depFiles ?? 0},imm=${aggregate.depImmediate ?? 0},low=${aggregate.depLow ?? 0},queue=${aggregate.depDurationMs ?? 0}ms)`,
+        `runs=${aggregate.buildRunCount}`,
+        `runTpl=${aggregate.buildRunTemplates}`,
+        `runMs=${aggregate.buildRunDurationMs}ms`,
+        `sum=upd:${aggregate.buildRunUpdated}/skip:${aggregate.buildRunSkipped}/err:${aggregate.buildRunErrors}`,
+        `ioSum=read:${aggregate.buildRunReadMs}ms,write:${aggregate.buildRunWriteMs}ms,stat:${aggregate.buildRunStatMs}ms`,
+        `ioPeak=read:${aggregate.buildRunReadPeakMs}ms,write:${aggregate.buildRunWritePeakMs}ms,stat:${aggregate.buildRunStatPeakMs}ms`,
+        `cache=fast:${aggregate.buildRunFastHit}/${aggregate.buildRunFastTotal},trace:${aggregate.buildRunTraceHit}/${aggregate.buildRunTraceTotal},lib:h${aggregate.buildRunComponentLibraryHit}/m${aggregate.buildRunComponentLibraryMiss}`
+      ];
+      if (
+        aggregate.autoRunBuildMs !== undefined
+        || aggregate.autoPostReindexMs !== undefined
+        || aggregate.autoPostFormsMs !== undefined
+        || aggregate.autoPostRuntimeMs !== undefined
+      ) {
+        parts.push(
+          `phases=run:${aggregate.autoRunBuildMs ?? 0}ms,reindex:${aggregate.autoPostReindexMs ?? 0}ms,forms:${aggregate.autoPostFormsMs ?? 0}ms,runtime:${aggregate.autoPostRuntimeMs ?? 0}ms`
+        );
+      }
+      logPerformance(parts.join(" | "));
+      currentSavePerformanceCycleId = undefined;
+      savePerfByCycle.delete(event.cycleId);
+    }
+  };
+
+  let dependencyServiceRef: DependencyValidationService | undefined;
+  const orchestration = createSavePipelineOrchestration({
     getTemplateIndex: () => templateIndexer.getIndex(),
     getRuntimeIndex: () => runtimeIndexer.getIndex(),
+    getFactsForUri: (uri) =>
+      factRegistry.getFact(uri.toString(), "fact.parsedDocument", "validation:dependency") as ReturnType<typeof parseDocumentFactsFromText> | undefined,
     isReindexRelevantUri: (uri) => isReindexRelevantUri(uri),
     shouldValidateUriForActiveProjects: (uri) => shouldValidateUriForActiveProjects(uri),
     enqueueValidationHigh: (uri, options) => enqueueValidation(uri, "high", options),
     enqueueValidationLow: (uri, options) => enqueueValidation(uri, "low", options),
-    logIndex: (message) => logIndex(message)
-  });
-
-  const updateOrchestrator = new UpdateOrchestrator({
-    log: (message) => logIndex(message),
-    isReindexRelevantUri: (uri) => isReindexRelevantUri(uri),
-    refreshIncremental: (document) => {
-      const indexer = getIndexerForUri(document.uri);
-      const refreshed = indexer.refreshXmlDocument(document);
-      if (refreshed.rootKind === "form" || refreshed.rootKind === "workflow" || refreshed.rootKind === "dataview") {
-        dependencyValidationService.markDependentUrisDirty();
-      }
-      return refreshed;
-    },
-    collectAffectedFormIdentsForComponent: (componentKey) =>
-      dependencyValidationService.collectAffectedFormIdentsForComponent(componentKey),
-    enqueueDependentValidationForFormIdents: (formIdents, sourceLabel) =>
-      dependencyValidationService.enqueueDependentValidationForFormIdents(formIdents, sourceLabel),
+    logIndex: (message) => logIndex(message),
+    getIndexerForUri: (uri) => getIndexerForUri(uri),
+    onStructureUpdated: () => dependencyServiceRef?.markDependentUrisDirty(),
     triggerAutoBuild: async (document, componentKeyHint) => maybeAutoBuildTemplates(document, componentKeyHint),
     queueFullReindex: () => {
       void queueReindex("all");
     },
-    onSavePerformance: (event) => {
-      const rel = vscode.workspace.asRelativePath(event.document.uri, false);
-      if (event.phase === "start") {
-        currentSavePerformanceCycleId = event.cycleId;
-        savePerfByCycle.set(event.cycleId, {
-          rel,
-          buildRunCount: 0,
-          buildRunTemplates: 0,
-          buildRunDurationMs: 0,
-          buildRunUpdated: 0,
-          buildRunSkipped: 0,
-          buildRunErrors: 0,
-          buildRunReadMs: 0,
-          buildRunWriteMs: 0,
-          buildRunStatMs: 0,
-          buildRunReadPeakMs: 0,
-          buildRunWritePeakMs: 0,
-          buildRunStatPeakMs: 0,
-          buildRunFastHit: 0,
-          buildRunFastTotal: 0,
-          buildRunTraceHit: 0,
-          buildRunTraceTotal: 0,
-          buildRunComponentLibraryHit: 0,
-          buildRunComponentLibraryMiss: 0
-        });
-        return;
-      }
-      const aggregate = savePerfByCycle.get(event.cycleId);
-      if (!aggregate) {
-        return;
-      }
-      if (event.phase === "refresh") {
-        const refresh = event.refresh;
-        aggregate.refreshElapsedMs = event.elapsedMs;
-        aggregate.refreshRoot = refresh?.rootKind;
-        aggregate.refreshReason = refresh?.reason;
-        return;
-      }
-      if (event.phase === "build-done") {
-        aggregate.buildDoneElapsedMs = event.elapsedMs;
-        return;
-      }
-      if (event.phase === "dependency-queued") {
-        const dep = event.dependency;
-        aggregate.dependencyElapsedMs = event.elapsedMs;
-        aggregate.depForms = dep?.forms;
-        aggregate.depFiles = dep?.files;
-        aggregate.depImmediate = dep?.immediateOpen;
-        aggregate.depLow = dep?.queuedLow;
-        aggregate.depDurationMs = dep?.durationMs;
-        return;
-      }
-      if (event.phase === "done") {
-        const parts: string[] = [
-          `build run=${event.cycleId}`,
-          `file=${aggregate.rel}`,
-          `total=${event.elapsedMs}ms`,
-          `refresh=${aggregate.refreshElapsedMs ?? 0}ms(${aggregate.refreshRoot ?? "n/a"}/${aggregate.refreshReason ?? "n/a"})`,
-          `build=${aggregate.buildDoneElapsedMs ?? 0}ms`,
-          `dep=${aggregate.dependencyElapsedMs ?? 0}ms(forms=${aggregate.depForms ?? 0},files=${aggregate.depFiles ?? 0},imm=${aggregate.depImmediate ?? 0},low=${aggregate.depLow ?? 0},queue=${aggregate.depDurationMs ?? 0}ms)`,
-          `runs=${aggregate.buildRunCount}`,
-          `runTpl=${aggregate.buildRunTemplates}`,
-          `runMs=${aggregate.buildRunDurationMs}ms`,
-          `sum=upd:${aggregate.buildRunUpdated}/skip:${aggregate.buildRunSkipped}/err:${aggregate.buildRunErrors}`,
-          `ioSum=read:${aggregate.buildRunReadMs}ms,write:${aggregate.buildRunWriteMs}ms,stat:${aggregate.buildRunStatMs}ms`,
-          `ioPeak=read:${aggregate.buildRunReadPeakMs}ms,write:${aggregate.buildRunWritePeakMs}ms,stat:${aggregate.buildRunStatPeakMs}ms`,
-          `cache=fast:${aggregate.buildRunFastHit}/${aggregate.buildRunFastTotal},trace:${aggregate.buildRunTraceHit}/${aggregate.buildRunTraceTotal},lib:h${aggregate.buildRunComponentLibraryHit}/m${aggregate.buildRunComponentLibraryMiss}`
-        ];
-        if (
-          aggregate.autoRunBuildMs !== undefined
-          || aggregate.autoPostReindexMs !== undefined
-          || aggregate.autoPostFormsMs !== undefined
-          || aggregate.autoPostRuntimeMs !== undefined
-        ) {
-          parts.push(
-            `phases=run:${aggregate.autoRunBuildMs ?? 0}ms,reindex:${aggregate.autoPostReindexMs ?? 0}ms,forms:${aggregate.autoPostFormsMs ?? 0}ms,runtime:${aggregate.autoPostRuntimeMs ?? 0}ms`
-          );
-        }
-        logPerformance(parts.join(" | "));
-        currentSavePerformanceCycleId = undefined;
-        savePerfByCycle.delete(event.cycleId);
-      }
+    getCurrentSnapshotVersion: () => composedSnapshotRefreshService?.getSnapshotVersion() ?? composedSnapshotRegistry.getVersion(),
+    onSavePerformance: (event) => handleSavePerformanceEvent(event),
+    onPostSave: (context) => {
+      refreshComposedSnapshotsForSave(context.cycleId, context.document, context.affectedFormIdents);
     }
   });
+  dependencyValidationService = orchestration.dependencyValidationService;
+  dependencyServiceRef = dependencyValidationService;
+  const updateOrchestrator = orchestration.updateOrchestrator;
 
   const pipelineModuleHost = new ModuleHost();
   const pipelineMetrics = new PipelineMetricsStore(600);
   const updateRunner = new UpdateRunner(pipelineModuleHost, pipelineMetrics, (line) => logIndex(line));
   const modelCore = new ModelCore();
+  getModelVersionForTree = () => modelCore.getVersion() + composedSnapshotRegistry.getVersion();
+  const modelWriteGateway = new ModelWriteGateway({
+    modelCore,
+    factRegistry,
+    symbolRegistry
+  });
   const resolveParsedFacts = (nodeId: string): ReturnType<typeof parseDocumentFactsFromText> | undefined => {
     const uri = vscode.Uri.parse(nodeId);
     const opened = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     if (opened) {
-      return parseDocumentFacts(opened);
+      return resolveDocumentFacts(opened, getIndexForUri(uri), {
+        getFactsForUri: (targetUri, index) =>
+          getParsedFactsByUriFromIndexAccess(
+            index,
+            targetUri,
+            undefined
+          ),
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      });
     }
 
     const indexer = getIndexerForUri(uri);
-    return indexer.getIndex().parsedFactsByUri.get(uri.toString());
+    return getParsedFactsByUriFromIndexAccess(
+      indexer.getIndex(),
+      uri
+    );
   };
 
   registerDefaultFactsAndSymbols({
@@ -1740,7 +1881,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     const uriKey = document.uri.toString();
     const nodeKind = document.languageId === "xml" ? "document" : "virtual";
-    modelCore.upsertNode({
+    modelWriteGateway.upsertNode({
       id: uriKey,
       kind: nodeKind,
       source: {
@@ -1753,8 +1894,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         versionToken: `${document.version}`
       }
     });
-    factRegistry.invalidateNode(uriKey);
-    symbolRegistry.refreshNode(uriKey);
   }
 
   function upsertModelNodeFromUri(uri: vscode.Uri, provider: "file" | "generator" | "runtime" = "file"): void {
@@ -1762,7 +1901,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     const uriKey = uri.toString();
-    modelCore.upsertNode({
+    modelWriteGateway.upsertNode({
       id: uriKey,
       kind: "document",
       source: {
@@ -1771,14 +1910,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         identityKey: uriKey
       }
     });
-    factRegistry.invalidateNode(uriKey);
-    symbolRegistry.refreshNode(uriKey);
   }
 
   pipelineModuleHost.register(new ModelSyncModule({
     upsertModelNodeFromDocument,
     upsertModelNodeFromUri,
-    removeModelNodeByUri: (uri) => modelCore.removeNode(uri.toString())
+    removeModelNodeByUri: (uri) => modelWriteGateway.removeNode(uri.toString())
   }));
 
   for (const module of createValidationModules({
@@ -1790,6 +1927,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         standaloneMode: request.standaloneMode,
         skipConfiguredRootsCheck: request.skipConfiguredRootsCheck,
         featureRegistry: featureRegistryStore.getRegistry(),
+        composedSnapshotRegistry,
         resolveOwningForm: (formIdent) =>
           resolveOwningFormForDiagnostics(formIdent, request.index, request.document.uri),
         workflowReferenceMode: "local"
@@ -1798,10 +1936,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (request.domain !== "template") {
         return [];
       }
-      return buildComposedReferenceDiagnosticsForTemplate(request.document.uri, request.facts, {
+      const localComposed = engine
+        .buildDiagnostics(request.document, request.index, {
+          parsedFacts: request.facts,
+          settingsOverride: request.settingsSnapshot,
+          metadataOverride: request.metadataSnapshot,
+          standaloneMode: request.standaloneMode,
+          skipConfiguredRootsCheck: request.skipConfiguredRootsCheck,
+          featureRegistry: featureRegistryStore.getRegistry(),
+          composedSnapshotRegistry,
+          resolveOwningForm: (formIdent) =>
+            resolveOwningFormForDiagnostics(formIdent, request.index, request.document.uri),
+          workflowReferenceMode: "local"
+        })
+        .filter((item) => isComposedReferenceRule(item.code));
+
+      const runtimeComposed = buildComposedReferenceDiagnosticsForTemplate(request.document.uri, request.facts, {
         settingsSnapshot: request.settingsSnapshot,
         metadataSnapshot: request.metadataSnapshot
       });
+
+      return dedupeDiagnostics([...localComposed, ...runtimeComposed]);
     }
   })) {
     validationHost.register(module);
@@ -1874,7 +2029,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         ? vscode.workspace.asRelativePath(document.uri, false)
         : document.uri.toString();
       logSingleFile(`onDidCloseTextDocument: ${relOrPath}`);
-      diagnostics.delete(document.uri);
+      diagnosticsPublisher.delete(document.uri);
       visibleSweepValidatedVersionByUri.delete(document.uri.toString());
       documentValidationService.clearValidationStateForUri(document.uri);
       logSingleFile(`closed standalone file, diagnostics cleared: ${relOrPath}`);
@@ -1968,7 +2123,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       logIndex("SETTINGS deleted -> metadata cache invalidated");
     }
     for (const uri of files) {
-      diagnostics.delete(uri);
+      diagnosticsPublisher.delete(uri);
     }
 
     updateOrchestrator.handleFilesDeleted(files);
@@ -1989,7 +2144,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       logIndex("SETTINGS renamed -> metadata cache invalidated");
     }
     for (const item of files) {
-      diagnostics.delete(item.oldUri);
+      diagnosticsPublisher.delete(item.oldUri);
     }
 
     updateOrchestrator.handleFilesRenamed(files);

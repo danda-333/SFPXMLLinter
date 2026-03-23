@@ -1,14 +1,18 @@
 import * as vscode from "vscode";
 import { WorkspaceIndex } from "../../indexer/types";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "../../indexer/xmlFacts";
+import { getComponentKeysForUri, getComponentVariantKeys, getIndexedFormByIdent, getParsedFactsEntries } from "../model/indexAccess";
+import { parseIndexUriKey } from "../model/indexUriParser";
+import { resolveDocumentFacts } from "../model/factsResolution";
 
 export interface DependencyValidationServiceDeps {
   getTemplateIndex: () => WorkspaceIndex;
   getRuntimeIndex: () => WorkspaceIndex;
+  getFactsForUri?: (uri: vscode.Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
   isReindexRelevantUri: (uri: vscode.Uri) => boolean;
   shouldValidateUriForActiveProjects: (uri: vscode.Uri) => boolean;
-  enqueueValidationHigh: (uri: vscode.Uri, options?: { force?: boolean }) => void;
-  enqueueValidationLow: (uri: vscode.Uri, options?: { force?: boolean }) => void;
+  enqueueValidationHigh: (uri: vscode.Uri, options?: { force?: boolean; sourceLabel?: string; snapshotVersion?: number }) => void;
+  enqueueValidationLow: (uri: vscode.Uri, options?: { force?: boolean; sourceLabel?: string; snapshotVersion?: number }) => void;
   logIndex: (message: string) => void;
 }
 
@@ -18,17 +22,16 @@ export interface DependencyRevalidationStats {
   immediateOpen: number;
   queuedLow: number;
   durationMs: number;
+  sourceLabel?: string;
+  snapshotVersion?: number;
 }
 
 export class DependencyValidationService {
-  private dependentUrisByFormIdentCache = new Map<string, vscode.Uri[]>();
-  private dependentUrisCacheDirty = true;
   private reverseComponentDependenciesByIndex = new WeakMap<WorkspaceIndex, Map<string, Set<string>>>();
 
   public constructor(private readonly deps: DependencyValidationServiceDeps) {}
 
   public markDependentUrisDirty(): void {
-    this.dependentUrisCacheDirty = true;
     this.reverseComponentDependenciesByIndex = new WeakMap<WorkspaceIndex, Map<string, Set<string>>>();
   }
 
@@ -38,7 +41,9 @@ export class DependencyValidationService {
     const allCandidateKeys = this.collectTransitiveCandidateComponentKeys(indexes, componentKey);
 
     for (const idx of indexes) {
-      for (const [, facts] of idx.parsedFactsByUri.entries()) {
+      for (const entry of getParsedFactsEntries(idx, this.deps.getFactsForUri, parseIndexUriKey)) {
+        const uri = entry.uri;
+        const facts = entry.facts;
         const owningFormIdent = this.getOwningFormIdentFromFacts(facts);
         if (!owningFormIdent) {
           continue;
@@ -58,7 +63,8 @@ export class DependencyValidationService {
 
   public enqueueDependentValidationForFormIdents(
     formIdents: ReadonlySet<string>,
-    sourceLabel: string
+    sourceLabel: string,
+    options?: { snapshotVersion?: number }
   ): DependencyRevalidationStats | undefined {
     const startedAt = Date.now();
     if (formIdents.size === 0) {
@@ -101,13 +107,24 @@ export class DependencyValidationService {
       } else {
         queuedLow++;
       }
-      // Save-driven dependency revalidation must be deterministic and fast;
-      // route all impacted files through high priority queue to avoid low-priority starvation.
-      this.deps.enqueueValidationHigh(uri, { force: true });
+      // Save-driven dependency revalidation must be deterministic and fast.
+      // Run high priority first and keep low-priority as stabilization pass.
+      // This mirrors workspace revalidate behavior and resolves transient save races
+      // where cross-file contexts (Form <-> WorkFlow/DataView) become briefly inconsistent.
+      this.deps.enqueueValidationHigh(uri, {
+        force: true,
+        sourceLabel,
+        ...(options?.snapshotVersion !== undefined ? { snapshotVersion: options.snapshotVersion } : {})
+      });
+      this.deps.enqueueValidationLow(uri, {
+        force: false,
+        sourceLabel,
+        ...(options?.snapshotVersion !== undefined ? { snapshotVersion: options.snapshotVersion } : {})
+      });
     }
 
     this.deps.logIndex(
-      `SAVE dependency revalidation queued (${sourceLabel}): forms=${formIdents.size}, files=${uris.length}, immediateOpen=${validatedOpenNow}, low=${queuedLow}`
+      `SAVE dependency revalidation queued (${sourceLabel}${options?.snapshotVersion !== undefined ? `#snap=${options.snapshotVersion}` : ""}): forms=${formIdents.size}, files=${uris.length}, immediateOpen=${validatedOpenNow}, low=${queuedLow}`
     );
     if (uris.length > 0) {
       const preview = uris
@@ -123,7 +140,9 @@ export class DependencyValidationService {
       files: uris.length,
       immediateOpen: validatedOpenNow,
       queuedLow,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
+      sourceLabel,
+      ...(options?.snapshotVersion !== undefined ? { snapshotVersion: options.snapshotVersion } : {})
     };
   }
 
@@ -135,46 +154,14 @@ export class DependencyValidationService {
     return this.collectDependentUrisDirectly(formIdents);
   }
 
-  private ensureDependentUrisCache(): void {
-    if (!this.dependentUrisCacheDirty) {
-      return;
-    }
-
-    const next = new Map<string, Map<string, vscode.Uri>>();
-    const indexes = [this.deps.getTemplateIndex(), this.deps.getRuntimeIndex()];
-    for (const idx of indexes) {
-      for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
-        const owningFormIdent = this.getOwningFormIdentFromFacts(facts);
-        if (!owningFormIdent) {
-          continue;
-        }
-
-        const uri = this.uriFromIndexKey(uriKey);
-        if (uri.scheme !== "file" || !this.deps.isReindexRelevantUri(uri)) {
-          continue;
-        }
-
-        const byUri = next.get(owningFormIdent) ?? new Map<string, vscode.Uri>();
-        byUri.set(uri.toString(), uri);
-        next.set(owningFormIdent, byUri);
-      }
-    }
-
-    this.dependentUrisByFormIdentCache = new Map(
-      [...next.entries()].map(([formIdent, urisByKey]) => [
-        formIdent,
-        [...urisByKey.values()].sort((a, b) => a.fsPath.localeCompare(b.fsPath))
-      ])
-    );
-    this.dependentUrisCacheDirty = false;
-  }
-
   private collectOpenDocumentUrisForFormIdents(formIdents: ReadonlySet<string>): vscode.Uri[] {
     if (formIdents.size === 0) {
       return [];
     }
 
     const out = new Map<string, vscode.Uri>();
+    const templateIndex = this.deps.getTemplateIndex();
+    const runtimeIndex = this.deps.getRuntimeIndex();
     for (const document of vscode.workspace.textDocuments) {
       if (document.languageId !== "xml" || document.uri.scheme !== "file") {
         continue;
@@ -183,7 +170,23 @@ export class DependencyValidationService {
         continue;
       }
 
-      const facts = parseDocumentFacts(document);
+      let selectedIndex = templateIndex;
+      let facts = resolveDocumentFacts(document, selectedIndex, {
+        getFactsForUri: this.deps.getFactsForUri,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      });
+      if (!facts) {
+        selectedIndex = runtimeIndex;
+        facts = resolveDocumentFacts(document, selectedIndex, {
+          getFactsForUri: this.deps.getFactsForUri,
+          parseFacts: parseDocumentFacts,
+          mode: "strict-accessor"
+        });
+      }
+      if (!facts) {
+        continue;
+      }
       const owningFormIdent = this.getOwningFormIdentFromFacts(facts);
       if (!owningFormIdent || !formIdents.has(owningFormIdent)) {
         continue;
@@ -196,15 +199,7 @@ export class DependencyValidationService {
   }
 
   private collectCandidateComponentKeys(index: WorkspaceIndex, componentKey: string): Set<string> {
-    const out = new Set<string>([componentKey]);
-    const baseName = componentKey.split("/").pop() ?? componentKey;
-    const variants = index.componentKeysByBaseName.get(baseName);
-    if (variants) {
-      for (const variant of variants) {
-        out.add(variant);
-      }
-    }
-    return out;
+    return getComponentVariantKeys(index, componentKey);
   }
 
   private collectTransitiveCandidateComponentKeys(
@@ -257,11 +252,12 @@ export class DependencyValidationService {
     }
 
     const reverse = new Map<string, Set<string>>();
-    for (const [uriKey, facts] of index.parsedFactsByUri.entries()) {
-      const consumerKey = index.componentKeyByUri.get(uriKey);
-      if (!consumerKey) {
+    for (const entry of getParsedFactsEntries(index, this.deps.getFactsForUri, parseIndexUriKey)) {
+      const consumerKeys = getComponentKeysForUri(index, entry.uri);
+      if (consumerKeys.size === 0) {
         continue;
       }
+      const facts = entry.facts;
 
       const referencedKeys = new Set<string>();
       for (const ref of facts.usingReferences) {
@@ -282,7 +278,9 @@ export class DependencyValidationService {
 
       for (const referencedKey of referencedKeys) {
         const dependents = reverse.get(referencedKey) ?? new Set<string>();
-        dependents.add(consumerKey);
+        for (const consumerKey of consumerKeys) {
+          dependents.add(consumerKey);
+        }
         reverse.set(referencedKey, dependents);
       }
     }
@@ -310,41 +308,12 @@ export class DependencyValidationService {
     return undefined;
   }
 
-  private uriFromIndexKey(uriKey: string): vscode.Uri {
-    if (uriKey.includes("://")) {
-      const parsed = vscode.Uri.parse(uriKey);
-      if (parsed.scheme === "file") {
-        return vscode.Uri.file(parsed.fsPath);
-      }
-      return parsed;
-    }
-    return vscode.Uri.file(uriKey);
-  }
-
-  private collectFormUrisFromIndexes(formIdents: ReadonlySet<string>): vscode.Uri[] {
-    const out = new Map<string, vscode.Uri>();
-    const indexes = [this.deps.getTemplateIndex(), this.deps.getRuntimeIndex()];
-    for (const idx of indexes) {
-      for (const formIdent of formIdents) {
-        const form = idx.formsByIdent.get(formIdent);
-        if (!form) {
-          continue;
-        }
-        if (form.uri.scheme !== "file" || !this.deps.isReindexRelevantUri(form.uri)) {
-          continue;
-        }
-        out.set(form.uri.toString(), form.uri);
-      }
-    }
-    return [...out.values()].sort((a, b) => a.fsPath.localeCompare(b.fsPath));
-  }
-
   private collectDependentUrisDirectly(formIdents: ReadonlySet<string>): vscode.Uri[] {
     const out = new Map<string, vscode.Uri>();
     const indexes = [this.deps.getTemplateIndex(), this.deps.getRuntimeIndex()];
     for (const idx of indexes) {
       for (const formIdent of formIdents) {
-        const form = idx.formsByIdent.get(formIdent);
+        const form = getIndexedFormByIdent(idx, formIdent);
         if (!form) {
           continue;
         }
@@ -354,13 +323,13 @@ export class DependencyValidationService {
         out.set(form.uri.toString(), form.uri);
       }
 
-      for (const [uriKey, facts] of idx.parsedFactsByUri.entries()) {
+      for (const entry of getParsedFactsEntries(idx, this.deps.getFactsForUri, parseIndexUriKey)) {
+        const uri = entry.uri;
+        const facts = entry.facts;
         const owningFormIdent = this.getOwningFormIdentFromFacts(facts);
         if (!owningFormIdent || !formIdents.has(owningFormIdent)) {
           continue;
         }
-
-        const uri = this.uriFromIndexKey(uriKey);
         if (uri.scheme !== "file" || !this.deps.isReindexRelevantUri(uri)) {
           continue;
         }
@@ -405,3 +374,5 @@ export class DependencyValidationService {
     return undefined;
   }
 }
+
+

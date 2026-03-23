@@ -4,32 +4,18 @@ import { ParsedDocumentFacts } from "../indexer/xmlFacts";
 import { normalizeComponentKey } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { DocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
+import { getParsedFactsByUri, getParsedFactsEntries } from "../core/model/indexAccess";
+import { parseIndexUriKey } from "../core/model/indexUriParser";
 
 export type FormSymbolKind = "control" | "button" | "section";
-
-interface FactsEntry {
-  uri: vscode.Uri;
-  facts: ParsedDocumentFacts;
-}
-
-function getFactsEntries(index: WorkspaceIndex): FactsEntry[] {
-  const out: FactsEntry[] = [];
-  for (const [uriKey, facts] of index.parsedFactsByUri.entries()) {
-    try {
-      out.push({ uri: vscode.Uri.parse(uriKey), facts });
-    } catch {
-      // Skip invalid uri keys.
-    }
-  }
-  return out;
-}
+export type FactsByUriAccessor = (uri: vscode.Uri) => ParsedDocumentFacts | undefined;
 
 function sameText(a: string | undefined, b: string | undefined): boolean {
   return (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
 }
 
-export function findFormDeclaration(index: WorkspaceIndex, formIdent: string): vscode.Location | undefined {
-  for (const entry of getFactsEntries(index)) {
+export function findFormDeclaration(index: WorkspaceIndex, formIdent: string, getFactsForUri?: FactsByUriAccessor): vscode.Location | undefined {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     if ((entry.facts.rootTag ?? "").toLowerCase() !== "form") {
       continue;
     }
@@ -48,9 +34,10 @@ export function findFormSymbolDeclaration(
   index: WorkspaceIndex,
   formIdent: string,
   kind: FormSymbolKind,
-  ident: string
+  ident: string,
+  getFactsForUri?: FactsByUriAccessor
 ): vscode.Location | undefined {
-  for (const entry of getFactsEntries(index)) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     if ((entry.facts.rootTag ?? "").toLowerCase() !== "form") {
       continue;
     }
@@ -87,14 +74,19 @@ export function findComponentSymbolDeclaration(
   index: WorkspaceIndex,
   componentKey: string,
   kind: FormSymbolKind,
-  ident: string
+  ident: string,
+  getFactsForUri?: FactsByUriAccessor
 ): vscode.Location | undefined {
   const component = resolveComponentByKey(index, componentKey);
   if (!component) {
     return undefined;
   }
 
-  const facts = index.parsedFactsByUri.get(component.uri.toString());
+  const facts = getParsedFactsByUri(
+    index,
+    component.uri,
+    getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined
+  );
   if (!facts) {
     return undefined;
   }
@@ -118,13 +110,14 @@ export function resolveWorkflowDeclaration(
   workflowFacts: ParsedDocumentFacts,
   composition: DocumentCompositionModel,
   kind: FormSymbolKind,
-  ident: string
+  ident: string,
+  getFactsForUri?: FactsByUriAccessor
 ): vscode.Location | undefined {
   if (!workflowFacts.workflowFormIdent) {
     return undefined;
   }
 
-  const local = findFormSymbolDeclaration(index, workflowFacts.workflowFormIdent, kind, ident);
+  const local = findFormSymbolDeclaration(index, workflowFacts.workflowFormIdent, kind, ident, getFactsForUri);
   if (local) {
     return local;
   }
@@ -140,7 +133,7 @@ export function resolveWorkflowDeclaration(
       continue;
     }
 
-    const declaration = findComponentSymbolDeclaration(index, contributionRef.componentKey, kind, ident);
+    const declaration = findComponentSymbolDeclaration(index, contributionRef.componentKey, kind, ident, getFactsForUri);
     if (declaration) {
       return declaration;
     }
@@ -149,9 +142,9 @@ export function resolveWorkflowDeclaration(
   return undefined;
 }
 
-export function collectFormIdentReferenceLocations(index: WorkspaceIndex, formIdent: string): vscode.Location[] {
+export function collectFormIdentReferenceLocations(index: WorkspaceIndex, formIdent: string, getFactsForUri?: FactsByUriAccessor): vscode.Location[] {
   const out: vscode.Location[] = [];
-  for (const entry of getFactsEntries(index)) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     for (const ref of entry.facts.formIdentReferences) {
       if (sameText(ref.formIdent, formIdent)) {
         out.push(new vscode.Location(entry.uri, ref.range));
@@ -170,12 +163,13 @@ export function collectWorkflowReferenceLocations(
   index: WorkspaceIndex,
   formIdent: string,
   kind: FormSymbolKind,
-  ident: string
+  ident: string,
+  getFactsForUri?: FactsByUriAccessor
 ): vscode.Location[] {
   const kindMap = kind === "control" ? "formControl" : kind === "button" ? "button" : "section";
   const out: vscode.Location[] = [];
 
-  for (const entry of getFactsEntries(index)) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     if ((entry.facts.rootTag ?? "").toLowerCase() !== "workflow") {
       continue;
     }
@@ -192,10 +186,10 @@ export function collectWorkflowReferenceLocations(
   return out;
 }
 
-export function collectHtmlControlReferenceLocations(index: WorkspaceIndex, formIdent: string, controlIdent: string): vscode.Location[] {
+export function collectHtmlControlReferenceLocations(index: WorkspaceIndex, formIdent: string, controlIdent: string, getFactsForUri?: FactsByUriAccessor): vscode.Location[] {
   const out: vscode.Location[] = [];
 
-  for (const entry of getFactsEntries(index)) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     if ((entry.facts.rootTag ?? "").toLowerCase() !== "form") {
       continue;
     }
@@ -212,11 +206,11 @@ export function collectHtmlControlReferenceLocations(index: WorkspaceIndex, form
   return out;
 }
 
-export function collectComponentReferenceLocations(index: WorkspaceIndex, componentKey: string): vscode.Location[] {
+export function collectComponentReferenceLocations(index: WorkspaceIndex, componentKey: string, getFactsForUri?: FactsByUriAccessor): vscode.Location[] {
   const normalized = normalizeComponentKey(componentKey);
   const out: vscode.Location[] = [];
 
-  for (const entry of getFactsEntries(index)) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     for (const ref of entry.facts.usingReferences) {
       if (ref.componentKey === normalized) {
         out.push(new vscode.Location(entry.uri, ref.componentValueRange));
@@ -240,12 +234,13 @@ export function collectComponentReferenceLocations(index: WorkspaceIndex, compon
 export function collectComponentContributionReferenceLocations(
   index: WorkspaceIndex,
   componentKey: string,
-  contributionName: string
+  contributionName: string,
+  getFactsForUri?: FactsByUriAccessor
 ): vscode.Location[] {
   const normalized = normalizeComponentKey(componentKey);
   const out: vscode.Location[] = [];
 
-  for (const entry of getFactsEntries(index)) {
+  for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     for (const ref of entry.facts.usingReferences) {
       if (ref.componentKey === normalized && ref.sectionValue === contributionName && ref.sectionValueRange) {
         out.push(new vscode.Location(entry.uri, ref.sectionValueRange));

@@ -22,6 +22,11 @@ import {
   findLocalUsingModelForReference
 } from "../composition/documentModel";
 import { collectEffectiveUsingRefs } from "../utils/effectiveUsings";
+import type { ComposedDocumentSnapshotRegistry } from "../core/model/composedDocumentSnapshotRegistry";
+import { getIndexedComponentKeys, getIndexedFormByIdent, getIndexedForms, getParsedFactsByUri, getParsedFactsEntries } from "../core/model/indexAccess";
+import { parseIndexUriKey } from "../core/model/indexUriParser";
+import { resolveDocumentFacts } from "../core/model/factsResolution";
+import { parseFactsStandalone } from "../core/validation/documentValidationService";
 
 export interface RuleDiagnostic {
   ruleId: string;
@@ -42,6 +47,7 @@ export interface BuildDiagnosticsOptions {
   resolveOwningForm?: (formIdent: string) => { form: import("../indexer/types").IndexedForm; index: WorkspaceIndex } | undefined;
   injectedWorkflowReferences?: readonly WorkflowReference[];
   workflowReferenceMode?: "local" | "injected" | "merged";
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry;
 }
 
 export class DiagnosticsEngine {
@@ -54,11 +60,13 @@ export class DiagnosticsEngine {
     }
 
     const maskedText = options?.maskedText ?? maskXmlComments(document.getText());
-    const facts =
-      options?.parsedFacts ??
-      (standaloneMode
-        ? parseDocumentFacts(document)
-        : index.parsedFactsByUri.get(document.uri.toString()));
+    const facts = options?.parsedFacts ?? resolveDocumentFacts(document, index, {
+      getFactsForUri: standaloneMode
+        ? undefined
+        : ((uri, idx) => getFactsForUri(idx, uri, options?.composedSnapshotRegistry)),
+      parseFacts: parseDocumentFacts,
+      mode: "strict-accessor"
+    }) ?? (standaloneMode ? parseFactsStandalone(document) : undefined);
     if (!facts) {
       return [];
     }
@@ -104,7 +112,15 @@ export class DiagnosticsEngine {
     this.validateMappingReferences(facts, index, issues, metadata, getResolvableControlIdents, settings);
     this.validateRequiredActionIdentReferences(facts, issues, getResolvableControlIdents);
     this.validateWorkflowControlIdentReferences(facts, issues, getResolvableControlIdents);
-    this.validateUsingReferences(facts, index, issues, documentComposition);
+    this.validateUsingReferences(
+      document,
+      facts,
+      index,
+      issues,
+      documentComposition,
+      options?.composedSnapshotRegistry,
+      maskedText
+    );
     this.validatePrimitiveReferences(document, issues);
     this.validateHtmlTemplateControlReferences(facts, issues, getResolvableControlIdents);
     this.validateFeatureCompositionReferences(document, facts, issues, featureRegistry, maskedText);
@@ -243,7 +259,7 @@ export class DiagnosticsEngine {
     }
 
     const resolvedOwningForm = resolveOwningForm?.(formIdent);
-    const form = resolvedOwningForm?.form ?? index.formsByIdent.get(formIdent);
+    const form = resolvedOwningForm?.form ?? getIndexedFormByIdent(index, formIdent);
     if (!form) {
       return;
     }
@@ -373,7 +389,7 @@ export class DiagnosticsEngine {
       return;
     }
 
-    const form = index.formsByIdent.get(owningFormIdent);
+    const form = getIndexedFormByIdent(index, owningFormIdent);
     if (!form) {
       return;
     }
@@ -391,7 +407,7 @@ export class DiagnosticsEngine {
 
       if (mapping.kind === "toIdent") {
         const targetFormIdent = mapping.mappingFormIdent;
-        const targetForm = targetFormIdent ? index.formsByIdent.get(targetFormIdent) : undefined;
+        const targetForm = getIndexedFormByIdent(index, targetFormIdent);
         if (targetForm) {
           const targetSameAsOwning = targetFormIdent === owningFormIdent;
           if (targetSameAsOwning) {
@@ -431,7 +447,7 @@ export class DiagnosticsEngine {
             ? withDidYouMean(
                 `Mapping toIdent '${mapping.ident}' was not found in Form '${mapping.mappingFormIdent}'.`,
                 mapping.ident,
-                index.formsByIdent.get(mapping.mappingFormIdent)?.controls ?? []
+                getIndexedFormByIdent(index, mapping.mappingFormIdent)?.controls ?? []
               )
             : withDidYouMean(
                 `Mapping ${mapping.kind} '${mapping.ident}' was not found in controls of Form '${form.ident}'.`,
@@ -472,21 +488,40 @@ export class DiagnosticsEngine {
   }
 
   private validateUsingReferences(
+    document: vscode.TextDocument,
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
     issues: RuleDiagnostic[],
-    documentComposition: ReturnType<typeof buildDocumentCompositionModel>
+    documentComposition: ReturnType<typeof buildDocumentCompositionModel>,
+    composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry,
+    maskedText?: string
   ): void {
     if (!index.componentsReady) {
       return;
     }
 
+    if (facts.usingContributionInsertTraces.size === 0) {
+      populateUsingInsertTraceFromText(facts, document.getText(), index);
+    }
+
+    const settings = getSettings();
+    const legacyAliasesEnabled = settings.templateBuilderLegacyComponentSectionSupport;
     const tracesReady = facts.usingContributionInsertTraces.size > 0;
+    const effectiveMaskedText = maskedText ?? maskXmlComments(document.getText());
     const suppressedFull = new Set<string>();
     const suppressedSections = new Map<string, Set<string>>();
-    const crossDocumentImpactByUsingKey = this.collectCrossDocumentUsingImpactByKey(facts, index);
+    const crossDocumentImpactByUsingKey = this.collectCrossDocumentUsingImpactByKey(
+      facts,
+      index,
+      composedSnapshotRegistry
+    );
     const effectiveItemsCurrentDocument = buildEffectiveItemsFromDocumentComposition(documentComposition, facts);
-    const relatedExpectedXPathContexts = this.collectRelatedExpectedXPathContextsForForm(facts, index);
+    const relatedExpectedXPathContexts = this.collectRelatedExpectedXPathContextsForForm(
+      document.uri,
+      facts,
+      index,
+      composedSnapshotRegistry
+    );
     for (const ref of facts.usingReferences) {
       if (!ref.suppressInheritance) {
         continue;
@@ -500,9 +535,95 @@ export class DiagnosticsEngine {
       }
     }
 
+    if (!legacyAliasesEnabled) {
+      const includeLegacyFlags = collectIncludeLegacyAliasFlags(effectiveMaskedText);
+      for (let i = 0; i < facts.includeReferences.length; i++) {
+        const includeRef = facts.includeReferences[i];
+        const flags = includeLegacyFlags[i];
+        if (!flags) {
+          continue;
+        }
+        const parts: string[] = [];
+        if (flags.legacyFeatureAliasUsed) {
+          parts.push("Component/Name");
+        }
+        if (flags.legacyContributionAliasUsed) {
+          parts.push("Section");
+        }
+        if (parts.length === 0) {
+          continue;
+        }
+        issues.push({
+          ruleId: "legacy-template-alias-disabled",
+          range: flags.legacyContributionAliasUsed
+            ? (includeRef.sectionValueRange ?? includeRef.componentValueRange)
+            : includeRef.componentValueRange,
+          message:
+            `Legacy template alias ${parts.join(" + ")} is disabled for this workspace. ` +
+            `Use Feature/Contribution instead or enable sfpXmlLinter.templateBuilder.legacyComponentSectionSupport.`
+        });
+      }
+
+      const placeholderLegacyFlags = collectPlaceholderLegacyAliasFlags(effectiveMaskedText);
+      for (let i = 0; i < facts.placeholderReferences.length; i++) {
+        const placeholderRef = facts.placeholderReferences[i];
+        if (!placeholderRef.componentKey) {
+          continue;
+        }
+        const flags = placeholderLegacyFlags[i];
+        if (!flags) {
+          continue;
+        }
+        const parts: string[] = [];
+        if (flags.legacyFeatureAliasUsed) {
+          parts.push("Component/Name");
+        }
+        if (flags.legacyContributionAliasUsed) {
+          parts.push("Section");
+        }
+        if (parts.length === 0) {
+          continue;
+        }
+        issues.push({
+          ruleId: "legacy-template-alias-disabled",
+          range: placeholderRef.range,
+          message:
+            `Legacy placeholder alias ${parts.join(" + ")} is disabled for this workspace. ` +
+            `Use Feature/Contribution keys instead or enable sfpXmlLinter.templateBuilder.legacyComponentSectionSupport.`
+        });
+      }
+    }
+
     for (const ref of facts.usingReferences) {
       if (ref.suppressInheritance) {
         continue;
+      }
+
+      if (!legacyAliasesEnabled) {
+        const usedLegacyFeatureAttr = ref.attributes?.some((attr) => {
+          const normalized = attr.name.trim().toLowerCase();
+          return normalized === "component" || normalized === "name";
+        }) === true;
+        const usedLegacyContributionAttr = ref.attributes?.some((attr) => attr.name.trim().toLowerCase() === "section") === true;
+
+        if (usedLegacyFeatureAttr || usedLegacyContributionAttr) {
+          const parts: string[] = [];
+          if (usedLegacyFeatureAttr) {
+            parts.push("Component/Name");
+          }
+          if (usedLegacyContributionAttr) {
+            parts.push("Section");
+          }
+          issues.push({
+            ruleId: "legacy-template-alias-disabled",
+            range: usedLegacyContributionAttr
+              ? (ref.sectionValueRange ?? ref.componentValueRange)
+              : ref.componentValueRange,
+            message:
+              `Legacy template alias ${parts.join(" + ")} is disabled for this workspace. ` +
+              `Use Feature/Contribution instead or enable sfpXmlLinter.templateBuilder.legacyComponentSectionSupport.`
+          });
+        }
       }
 
       const component = resolveComponentByKey(index, ref.componentKey);
@@ -510,12 +631,12 @@ export class DiagnosticsEngine {
         issues.push({
           ruleId: "unknown-using-feature",
           range: ref.componentValueRange,
-          message: withDidYouMean(
-            `Using feature '${ref.rawComponentValue}' was not found in indexed features.`,
-            ref.componentKey,
-            index.componentsByKey.keys()
-          )
-        });
+              message: withDidYouMean(
+                `Using feature '${ref.rawComponentValue}' was not found in indexed features.`,
+                ref.componentKey,
+                getIndexedComponentKeys(index)
+              )
+            });
         continue;
       }
 
@@ -591,7 +712,8 @@ export class DiagnosticsEngine {
         usingRange,
         "",
         undefined,
-        facts
+        facts,
+        undefined
       );
       this.validateUsingExpectedXPathsForContext(
         index,
@@ -603,7 +725,8 @@ export class DiagnosticsEngine {
         usingRange,
         "",
         undefined,
-        facts
+        facts,
+        undefined
       );
       for (const relatedContext of relatedExpectedXPathContexts) {
         const relatedUsingModel = relatedContext.composition.usings.find(
@@ -612,6 +735,9 @@ export class DiagnosticsEngine {
             (item.sectionValue ?? "") === (ref.sectionValue ?? "")
         );
         if (!relatedUsingModel || !relatedUsingModel.hasResolvedFeature) {
+          continue;
+        }
+        if (relatedUsingModel.impact.kind === "unused") {
           continue;
         }
         this.validateUsingExpectedXPathsForContext(
@@ -624,7 +750,12 @@ export class DiagnosticsEngine {
           usingRange,
           ` (context: ${relatedContext.label})`,
           relatedContext.uri,
-          relatedContext.facts
+          relatedContext.facts,
+          relatedContext.text,
+          relatedContext.altItems,
+          relatedContext.altFacts,
+          relatedContext.altText,
+          relatedContext.altUri
         );
         this.validateUsingExpectedXPathsForContext(
           index,
@@ -636,13 +767,18 @@ export class DiagnosticsEngine {
           usingRange,
           ` (context: ${relatedContext.label})`,
           relatedContext.uri,
-          relatedContext.facts
+          relatedContext.facts,
+          relatedContext.text,
+          relatedContext.altItems,
+          relatedContext.altFacts,
+          relatedContext.altText,
+          relatedContext.altUri
         );
       }
     }
 
-    this.validateUsingSuppressionConflicts(facts, index, issues);
-    this.validateFormOwnedUsingInheritance(facts, index, issues);
+    this.validateUsingSuppressionConflicts(facts, index, issues, composedSnapshotRegistry);
+    this.validateFormOwnedUsingInheritance(facts, index, issues, composedSnapshotRegistry);
     this.validateMissingUsingParams(facts, index, issues, documentComposition);
     this.validateOrphanPlaceholderReferences(facts, index, issues);
   }
@@ -657,8 +793,16 @@ export class DiagnosticsEngine {
     range: vscode.Range,
     contextSuffix = "",
     contextUri?: vscode.Uri,
-    contextFacts?: ReturnType<typeof parseDocumentFacts>
+    contextFacts?: ReturnType<typeof parseDocumentFacts>,
+    contextText?: string,
+    altItems?: readonly EffectiveCompositionItem[],
+    altContextFacts?: ReturnType<typeof parseDocumentFacts>,
+    altContextText?: string,
+    altContextUri?: vscode.Uri
   ): void {
+    // Single-source policy: expected XPath checks must rely on composed/indexed model
+    // (`items` + `facts`) and avoid ad-hoc text rescans/fallback branches.
+
     for (const contributionModel of contributionModels) {
       if (!contributionModel.rootRelevant && !contributionModel.explicit) {
         continue;
@@ -674,7 +818,19 @@ export class DiagnosticsEngine {
       const contributionTargetXPath = (contributionModel.contribution.targetXPath ?? "").trim();
       const contributionInsert = (contributionModel.contribution.insert ?? "").trim().toLowerCase();
       const insertOptional = contributionModel.contribution.isInsertOptional === true;
+      const isRelatedContext = contextSuffix.length > 0;
+      const contextRoot = normalizeRootTagName(contextFacts?.rootTag);
+      const targetRoot = detectTopLevelXPathRoot(contributionTargetXPath);
+      if (targetRoot && contextRoot && targetRoot !== contextRoot) {
+        // This contribution is expected to apply in another document root context
+        // (e.g. Form-owned feature contribution targeting //WorkFlow/...).
+        // It will be validated through related context passes.
+        continue;
+      }
       if (!insertOptional && contributionInsert === "placeholder") {
+        if (isRelatedContext) {
+          continue;
+        }
         const placeholderUsed = contributionModel.insertCount > 0;
         if (!placeholderUsed) {
           issues.push({
@@ -692,9 +848,24 @@ export class DiagnosticsEngine {
         const trace = contributionModel.insertTrace;
         const matchedInContextItems = matchesExpectedXPathInEffectiveModel(contributionTargetXPath, items);
         const matchedInContextFacts = contextFacts ? matchesExpectedXPathInDocumentFacts(contributionTargetXPath, contextFacts) : false;
+        const matchedInAltContextItems = altItems
+          ? matchesExpectedXPathInEffectiveModel(contributionTargetXPath, altItems)
+          : false;
+        const matchedInAltContextFacts = altContextFacts
+          ? matchesExpectedXPathInDocumentFacts(contributionTargetXPath, altContextFacts)
+          : false;
         const targetMatched = trace
-          ? trace.strategy !== "targetXPath" || trace.targetXPathMatchCount > 0 || matchedInContextItems || matchedInContextFacts
-          : contributionModel.insertCount > 0 || matchedInContextItems || matchedInContextFacts;
+          ? trace.strategy !== "targetXPath" ||
+            trace.targetXPathMatchCount > 0 ||
+            matchedInContextItems ||
+            matchedInContextFacts ||
+            matchedInAltContextItems ||
+            matchedInAltContextFacts
+          : contributionModel.insertCount > 0 ||
+            matchedInContextItems ||
+            matchedInContextFacts ||
+            matchedInAltContextItems ||
+            matchedInAltContextFacts;
         if (!targetMatched) {
           issues.push({
             ruleId: "missing-feature-expected-xpath",
@@ -716,12 +887,18 @@ export class DiagnosticsEngine {
         if (insertOptional) {
           continue;
         }
+        const expectedRoot = detectTopLevelXPathRoot(expectedXPath);
+        if (expectedRoot && contextRoot && expectedRoot !== contextRoot) {
+          continue;
+        }
         if (contributionTargetXPath.length > 0 && expectedXPath.trim() === contributionTargetXPath) {
           continue;
         }
         if (
           matchesExpectedXPathInEffectiveModel(expectedXPath, items) ||
-          (contextFacts ? matchesExpectedXPathInDocumentFacts(expectedXPath, contextFacts) : false)
+          (contextFacts ? matchesExpectedXPathInDocumentFacts(expectedXPath, contextFacts) : false) ||
+          (altItems ? matchesExpectedXPathInEffectiveModel(expectedXPath, altItems) : false) ||
+          (altContextFacts ? matchesExpectedXPathInDocumentFacts(expectedXPath, altContextFacts) : false)
         ) {
           continue;
         }
@@ -738,27 +915,64 @@ export class DiagnosticsEngine {
   }
 
   private collectRelatedExpectedXPathContextsForForm(
+    documentUri: vscode.Uri,
     facts: ReturnType<typeof parseDocumentFacts>,
-    index: WorkspaceIndex
-  ): Array<{ label: string; uri: vscode.Uri; composition: DocumentCompositionModel; items: EffectiveCompositionItem[]; facts: ReturnType<typeof parseDocumentFacts> }> {
-    const out: Array<{ label: string; uri: vscode.Uri; composition: DocumentCompositionModel; items: EffectiveCompositionItem[]; facts: ReturnType<typeof parseDocumentFacts> }> = [];
+    index: WorkspaceIndex,
+    composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
+  ): Array<{
+    label: string;
+    uri: vscode.Uri;
+    composition: DocumentCompositionModel;
+    items: EffectiveCompositionItem[];
+    facts: ReturnType<typeof parseDocumentFacts>;
+    text?: string;
+    altUri?: vscode.Uri;
+    altItems?: EffectiveCompositionItem[];
+    altFacts?: ReturnType<typeof parseDocumentFacts>;
+    altText?: string;
+  }> {
+    if (composedSnapshotRegistry) {
+      const snapshotContexts = this.collectRelatedExpectedXPathContextsForFormFromSnapshots(
+        documentUri,
+        facts,
+        index,
+        composedSnapshotRegistry
+      );
+      if (snapshotContexts.length > 0) {
+        return snapshotContexts;
+      }
+    }
+
+    const out: Array<{
+      label: string;
+      uri: vscode.Uri;
+      composition: DocumentCompositionModel;
+      items: EffectiveCompositionItem[];
+      facts: ReturnType<typeof parseDocumentFacts>;
+      text?: string;
+      altUri?: vscode.Uri;
+      altItems?: EffectiveCompositionItem[];
+      altFacts?: ReturnType<typeof parseDocumentFacts>;
+      altText?: string;
+    }> = [];
     const root = (facts.rootTag ?? "").toLowerCase();
     if (root !== "form" || !facts.formIdent) {
       return out;
     }
-    const currentUriKey = [...index.parsedFactsByUri.entries()].find((entry) => entry[1] === facts)?.[0];
-    const currentDir = currentUriKey ? dirnameFromUriKey(currentUriKey) : undefined;
+    const currentDir = path.dirname(documentUri.fsPath).replace(/\\/g, "/").toLowerCase();
 
-    for (const [uriKey, relatedFacts] of index.parsedFactsByUri.entries()) {
+    for (const entry of getParsedFactsEntries(index, undefined, parseIndexUriKey)) {
+      const relatedUri = entry.uri;
+      const relatedFacts = entry.facts;
       const relatedRoot = (relatedFacts.rootTag ?? "").toLowerCase();
       if (relatedRoot !== "workflow" && relatedRoot !== "dataview") {
         continue;
       }
-      if (currentDir) {
-        const relatedDir = dirnameFromUriKey(uriKey);
-        if (!relatedDir || relatedDir !== currentDir) {
-          continue;
-        }
+      const relatedDir = relatedUri.scheme === "file"
+        ? path.dirname(relatedUri.fsPath).replace(/\\/g, "/").toLowerCase()
+        : dirnameFromUriKey(relatedUri.toString());
+      if (!relatedDir || relatedDir !== currentDir) {
+        continue;
       }
 
       const relatedFormIdent = relatedRoot === "workflow"
@@ -768,25 +982,42 @@ export class DiagnosticsEngine {
         continue;
       }
 
-      const relatedUri = uriFromUriKey(uriKey);
-      if (!relatedUri) {
-        continue;
-      }
       const composition = buildDocumentCompositionModel(relatedFacts, index);
       let contextUri = relatedUri;
       let contextFacts = relatedFacts;
+      let contextText: string | undefined;
       let contextItems = buildEffectiveItemsFromDocumentComposition(composition, relatedFacts);
+      let altUri: vscode.Uri | undefined;
+      let altFacts: ReturnType<typeof parseDocumentFacts> | undefined;
+      let altText: string | undefined;
+      let altItems: EffectiveCompositionItem[] | undefined;
+      try {
+        contextText = fs.readFileSync(relatedUri.fsPath, "utf8");
+      } catch {
+        contextText = undefined;
+      }
       const runtimeUri = templateUriToRuntimeUri(relatedUri);
       if (runtimeUri && fs.existsSync(runtimeUri.fsPath)) {
         try {
           const runtimeText = fs.readFileSync(runtimeUri.fsPath, "utf8");
+          // Always prefer runtime text for XPath existence checks, even when
+          // structured facts parsing fails for any reason.
+          contextUri = runtimeUri;
+          contextText = runtimeText;
           const runtimeFacts = parseDocumentFactsFromText(runtimeText);
           const runtimeComposition = buildDocumentCompositionModel(runtimeFacts, index);
           contextItems = buildEffectiveItemsFromDocumentComposition(runtimeComposition, runtimeFacts);
-          contextUri = runtimeUri;
           contextFacts = runtimeFacts;
+          altUri = relatedUri;
+          altFacts = relatedFacts;
+          altItems = buildEffectiveItemsFromDocumentComposition(composition, relatedFacts);
+          try {
+            altText = fs.readFileSync(relatedUri.fsPath, "utf8");
+          } catch {
+            altText = undefined;
+          }
         } catch {
-          // Keep template context when runtime cannot be loaded.
+          // Keep already-populated runtime text context; fallback to template facts/items.
         }
       }
       out.push({
@@ -794,16 +1025,85 @@ export class DiagnosticsEngine {
         uri: contextUri,
         composition,
         items: contextItems,
-        facts: contextFacts
+        facts: contextFacts,
+        ...(contextText !== undefined ? { text: contextText } : {}),
+        ...(altUri !== undefined ? { altUri } : {}),
+        ...(altFacts !== undefined ? { altFacts } : {}),
+        ...(altItems !== undefined ? { altItems } : {}),
+        ...(altText !== undefined ? { altText } : {})
       });
     }
 
     return out;
   }
 
-  private collectCrossDocumentUsingImpactByKey(
+  private collectRelatedExpectedXPathContextsForFormFromSnapshots(
+    documentUri: vscode.Uri,
     facts: ReturnType<typeof parseDocumentFacts>,
-    index: WorkspaceIndex
+    index: WorkspaceIndex,
+    composedSnapshotRegistry: ComposedDocumentSnapshotRegistry
+  ): Array<{
+    label: string;
+    uri: vscode.Uri;
+    composition: DocumentCompositionModel;
+    items: EffectiveCompositionItem[];
+    facts: ReturnType<typeof parseDocumentFacts>;
+    text?: string;
+    altUri?: vscode.Uri;
+    altItems?: EffectiveCompositionItem[];
+    altFacts?: ReturnType<typeof parseDocumentFacts>;
+    altText?: string;
+  }> {
+    const out: Array<{
+      label: string;
+      uri: vscode.Uri;
+      composition: DocumentCompositionModel;
+      items: EffectiveCompositionItem[];
+      facts: ReturnType<typeof parseDocumentFacts>;
+      text?: string;
+      altUri?: vscode.Uri;
+      altItems?: EffectiveCompositionItem[];
+      altFacts?: ReturnType<typeof parseDocumentFacts>;
+      altText?: string;
+    }> = [];
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root !== "form" || !facts.formIdent) {
+      return out;
+    }
+
+    const currentUriKey = documentUri.toString();
+    for (const snapshot of composedSnapshotRegistry.getByFormIdent(facts.formIdent)) {
+      if (snapshot.uriKey === currentUriKey) {
+        continue;
+      }
+      const sourceRoot = (snapshot.sourceFacts.rootTag ?? "").toLowerCase();
+      if (sourceRoot !== "workflow" && sourceRoot !== "dataview") {
+        continue;
+      }
+
+      const sourceComposition = snapshot.effectiveComposition ?? buildDocumentCompositionModel(snapshot.sourceFacts, index);
+      const contextUri = snapshot.uri;
+      const contextFacts = snapshot.sourceFacts;
+      const contextItems = buildEffectiveItemsFromDocumentComposition(sourceComposition, snapshot.sourceFacts);
+      const contextText = this.tryReadFileText(snapshot.uri);
+
+      out.push({
+        label: formatUriForMessage(contextUri),
+        uri: contextUri,
+        composition: sourceComposition,
+        items: contextItems,
+        facts: contextFacts,
+        ...(contextText !== undefined ? { text: contextText } : {})
+      });
+    }
+
+    return out;
+  }
+
+  private collectCrossDocumentUsingImpactByKeyFromSnapshots(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
+    composedSnapshotRegistry: ComposedDocumentSnapshotRegistry
   ): Map<string, "effective" | "partial" | "unused"> {
     const out = new Map<string, "effective" | "partial" | "unused">();
     const root = (facts.rootTag ?? "").toLowerCase();
@@ -811,7 +1111,59 @@ export class DiagnosticsEngine {
       return out;
     }
 
-    for (const [uriKey, relatedFacts] of index.parsedFactsByUri.entries()) {
+    for (const snapshot of composedSnapshotRegistry.getByFormIdent(facts.formIdent)) {
+      const relatedRoot = (snapshot.sourceFacts.rootTag ?? "").toLowerCase();
+      if (relatedRoot !== "workflow" && relatedRoot !== "dataview") {
+        continue;
+      }
+
+      const relatedComposition = snapshot.effectiveComposition ?? buildDocumentCompositionModel(snapshot.sourceFacts, index);
+      for (const usingModel of relatedComposition.usings) {
+        const key = getUsingKey(usingModel.componentKey, usingModel.sectionValue);
+        const relatedKind = usingModel.impact.kind;
+        const previous = out.get(key);
+        out.set(key, this.resolveEffectiveUsingImpactKind(previous, relatedKind));
+      }
+    }
+
+    return out;
+  }
+
+  private tryReadFileText(uri: vscode.Uri): string | undefined {
+    if (uri.scheme !== "file") {
+      return undefined;
+    }
+    try {
+      return fs.readFileSync(uri.fsPath, "utf8");
+    } catch {
+      return undefined;
+    }
+  }
+
+  private collectCrossDocumentUsingImpactByKey(
+    facts: ReturnType<typeof parseDocumentFacts>,
+    index: WorkspaceIndex,
+    composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
+  ): Map<string, "effective" | "partial" | "unused"> {
+    if (composedSnapshotRegistry) {
+      const snapshotImpact = this.collectCrossDocumentUsingImpactByKeyFromSnapshots(
+        facts,
+        index,
+        composedSnapshotRegistry
+      );
+      if (snapshotImpact.size > 0) {
+        return snapshotImpact;
+      }
+    }
+
+    const out = new Map<string, "effective" | "partial" | "unused">();
+    const root = (facts.rootTag ?? "").toLowerCase();
+    if (root !== "form" || !facts.formIdent) {
+      return out;
+    }
+
+    for (const entry of getParsedFactsEntries(index, undefined, parseIndexUriKey)) {
+      const relatedFacts = entry.facts;
       const relatedRoot = (relatedFacts.rootTag ?? "").toLowerCase();
       if (relatedRoot !== "workflow" && relatedRoot !== "dataview") {
         continue;
@@ -1007,7 +1359,8 @@ export class DiagnosticsEngine {
   private validateUsingSuppressionConflicts(
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
   ): void {
     const root = (facts.rootTag ?? "").toLowerCase();
     if (root !== "workflow" && root !== "dataview") {
@@ -1038,8 +1391,8 @@ export class DiagnosticsEngine {
     }
 
     const owningFormIdent = getOwningFormIdentForInheritance(root, facts);
-    const form = owningFormIdent ? index.formsByIdent.get(owningFormIdent) : undefined;
-    const formFacts = form ? index.parsedFactsByUri.get(form.uri.toString()) : undefined;
+    const form = getIndexedFormByIdent(index, owningFormIdent);
+    const formFacts = form ? getFactsForUri(index, form.uri, composedSnapshotRegistry) : undefined;
     const formFeatureRefs = formFacts ? collectUsingRefsByFeature(formFacts) : new Map<string, { hasFull: boolean; sections: Set<string> }>();
 
     for (const [featureKey, ranges] of suppressFullByFeature.entries()) {
@@ -1131,7 +1484,8 @@ export class DiagnosticsEngine {
   private validateFormOwnedUsingInheritance(
     facts: ReturnType<typeof parseDocumentFacts>,
     index: WorkspaceIndex,
-    issues: RuleDiagnostic[]
+    issues: RuleDiagnostic[],
+    composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
   ): void {
     const root = (facts.rootTag ?? "").toLowerCase();
     const inheritanceRulePrefix = getInheritanceRulePrefix(root);
@@ -1144,12 +1498,12 @@ export class DiagnosticsEngine {
       return;
     }
 
-    const form = index.formsByIdent.get(owningFormIdent);
+    const form = getIndexedFormByIdent(index, owningFormIdent);
     if (!form) {
       return;
     }
 
-    const formFacts = index.parsedFactsByUri.get(form.uri.toString());
+    const formFacts = getFactsForUri(index, form.uri, composedSnapshotRegistry);
     if (!formFacts) {
       return;
     }
@@ -1342,7 +1696,7 @@ export class DiagnosticsEngine {
       }
     }
 
-    const formCandidates = [...index.formsByIdent.values()].map((f) => f.ident);
+    const formCandidates = getIndexedForms(index).map((f) => f.ident);
     const targetCandidates = [
       ...formCandidates.map((name) => ({ name, kind: "form" as const })),
       ...[...metadata.systemTables].map((name) => ({ name, kind: "system" as const }))
@@ -2313,6 +2667,61 @@ function parseXmlAttributesLoose(raw: string): Map<string, string> {
   return out;
 }
 
+interface LegacyAliasFlags {
+  legacyFeatureAliasUsed: boolean;
+  legacyContributionAliasUsed: boolean;
+}
+
+function collectIncludeLegacyAliasFlags(text: string): LegacyAliasFlags[] {
+  const out: LegacyAliasFlags[] = [];
+  for (const match of text.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+    const attrsRaw = match[1] ?? "";
+    const legacyFeatureAliasUsed = hasXmlAttributeName(attrsRaw, "Component") || hasXmlAttributeName(attrsRaw, "Name");
+    const legacyContributionAliasUsed = hasXmlAttributeName(attrsRaw, "Section");
+    out.push({ legacyFeatureAliasUsed, legacyContributionAliasUsed });
+  }
+  return out;
+}
+
+function collectPlaceholderLegacyAliasFlags(text: string): LegacyAliasFlags[] {
+  const out: LegacyAliasFlags[] = [];
+  for (const match of text.matchAll(/\{\{([^{}]+)\}\}/g)) {
+    const body = (match[1] ?? "").trim();
+    const keys = parsePlaceholderKeys(body);
+    const hasFeatureLikeKey = keys.has("feature") || keys.has("component") || keys.has("name") || keys.has("primitive");
+    const legacyFeatureAliasUsed = hasFeatureLikeKey && (keys.has("component") || keys.has("name"));
+    const legacyContributionAliasUsed = hasFeatureLikeKey && keys.has("section");
+    out.push({ legacyFeatureAliasUsed, legacyContributionAliasUsed });
+  }
+  return out;
+}
+
+function parsePlaceholderKeys(body: string): Set<string> {
+  const out = new Set<string>();
+  for (const part of body.split(",")) {
+    const idx = part.indexOf(":");
+    if (idx <= 0) {
+      continue;
+    }
+    const key = part.slice(0, idx).trim().toLowerCase();
+    if (!key) {
+      continue;
+    }
+    out.add(key);
+  }
+  return out;
+}
+
+function hasXmlAttributeName(rawAttrs: string, attributeName: string): boolean {
+  const escaped = escapeRegExp(attributeName);
+  const regex = new RegExp(`\\b${escaped}\\s*=`, "i");
+  return regex.test(rawAttrs);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function findFeatureManifestRange(
   text: string,
   document: vscode.TextDocument
@@ -2724,13 +3133,22 @@ function formatUriForMessage(uri: vscode.Uri): string {
   return uri.fsPath.replace(/\\/g, "/");
 }
 
+
+function getFactsForUri(
+  index: WorkspaceIndex,
+  uri: vscode.Uri,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
+): ReturnType<typeof parseDocumentFacts> | undefined {
+  return composedSnapshotRegistry?.get(uri)?.sourceFacts ?? getParsedFactsByUri(index, uri);
+}
+
 function collectFormEffectiveContributionSymbols(
   form: import("../indexer/types").IndexedForm,
   index: WorkspaceIndex
 ): { controlIdents: Set<string>; buttonIdents: Set<string> } {
   const controlIdents = new Set<string>();
   const buttonIdents = new Set<string>();
-  const formFacts = index.parsedFactsByUri.get(form.uri.toString());
+  const formFacts = getFactsForUri(index, form.uri);
   if (!formFacts) {
     return { controlIdents, buttonIdents };
   }
@@ -2804,7 +3222,7 @@ function isLookupCandidateSemanticallyValid(
     return isKnownSystemTableForeignKey(metadata, parsed.targetName, normalizedForeignKey);
   }
 
-  const targetForm = index.formsByIdent.get(parsed.targetName);
+  const targetForm = getIndexedFormByIdent(index, parsed.targetName);
   if (!targetForm) {
     return false;
   }
@@ -3222,6 +3640,73 @@ function matchesExpectedXPathInDocumentFacts(
         break;
       default:
         break;
+    }
+  }
+
+  return false;
+}
+
+function normalizeRootTagName(rootTag: string | undefined): "form" | "workflow" | "dataview" | "filter" | undefined {
+  const value = (rootTag ?? "").trim().toLowerCase();
+  if (value === "form" || value === "workflow" || value === "dataview" || value === "filter") {
+    return value;
+  }
+  return undefined;
+}
+
+function detectTopLevelXPathRoot(xpathExpression: string | undefined): "form" | "workflow" | "dataview" | "filter" | undefined {
+  const xpath = (xpathExpression ?? "").trim();
+  if (!xpath) {
+    return undefined;
+  }
+  const absoluteMatch = /^\/{1,2}\s*([A-Za-z_][\w:-]*)/.exec(xpath);
+  if (!absoluteMatch) {
+    return undefined;
+  }
+  return normalizeRootTagName(absoluteMatch[1]);
+}
+
+function normalizeFeatureLikeKey(value: string | undefined): string {
+  const raw = (value ?? "").trim().replace(/\\/g, "/").toLowerCase();
+  if (!raw) {
+    return "";
+  }
+  return raw.replace(/\.(feature|component)\.xml$/i, "").replace(/\.xml$/i, "");
+}
+
+function hasPlaceholderOrIncludeUsageForContribution(
+  componentKey: string,
+  rawComponentValue: string,
+  contributionName: string,
+  text: string | undefined
+): boolean {
+  if (!text) {
+    return false;
+  }
+
+  const expectedKey = normalizeFeatureLikeKey(componentKey);
+  const expectedRaw = normalizeFeatureLikeKey(rawComponentValue);
+  const expectedSection = (contributionName ?? "").trim().toLowerCase();
+  const scanText = text.replace(/<!--[\s\S]*?-->/g, "");
+
+  for (const match of scanText.matchAll(/<Include\b([^>]*)\/?>/gi)) {
+    const attrs = match[1] ?? "";
+    const featureValue = extractXmlAttribute(attrs, "Feature") ?? extractXmlAttribute(attrs, "Component");
+    const sectionValue = extractXmlAttribute(attrs, "Section");
+    const featureKey = normalizeFeatureLikeKey(featureValue);
+    if (!featureKey || !sectionValue) {
+      continue;
+    }
+    if ((featureKey === expectedKey || featureKey === expectedRaw) && sectionValue.trim().toLowerCase() === expectedSection) {
+      return true;
+    }
+  }
+
+  for (const match of scanText.matchAll(/\{\{\s*(?:Feature|Component)\s*:\s*([^,}]+)\s*,\s*Section\s*:\s*([^}]+)\}\}/gi)) {
+    const featureKey = normalizeFeatureLikeKey(match[1] ?? "");
+    const sectionValue = (match[2] ?? "").trim().toLowerCase();
+    if ((featureKey === expectedKey || featureKey === expectedRaw) && sectionValue === expectedSection) {
+      return true;
     }
   }
 

@@ -10,6 +10,16 @@ Unify internal extension logic around one in-memory model, where:
 
 This document defines the proposed data model and extension points.
 
+## Standalone Facts Exception (Contract)
+
+- Single source of truth is the indexed/composed model.
+- Normal runtime consumers (TreeView, providers, dependency validation, planner) must use strict-accessor facts resolution.
+- One explicit exception exists for non-indexed standalone XML:
+  - `src/core/validation/documentValidationService.ts` may parse document facts directly via `parseFactsStandalone(...)`.
+- This exception is intentionally narrow and guarded:
+  - no other runtime consumer may call `parseDocumentFacts(...)` directly,
+  - no consumer-side fallback parse logic outside the standalone boundary.
+
 ## Top-Level Model (v2: Node-Based)
 
 ```ts
@@ -604,6 +614,8 @@ All existing commands must remain available with the same command IDs.
   Run tolerant formatter on full document.
 - `sfpXmlLinter.formatSelectionTolerant`  
   Run tolerant formatter on selection.
+- `sfpXmlLinter.migrateLegacyTemplateAliases`  
+  Migrate legacy template aliases (`Component/Section`) to strict (`Feature/Contribution`) in current file or workspace.
 
 ### Internal/Integration Commands (also preserve IDs)
 
@@ -752,12 +764,37 @@ Support commands:
 - Phase 4 completed: Tree projection adapter, references/rename/definition providers, and completion symbol hooks read from shared model services.
 - Phase 5 completed for core goals: performance metrics/traces are available and legacy validation module wiring has been removed.
 
+## Execution Status Addendum (2026-03-20)
+
+- Index access was consolidated behind `src/core/model/indexAccess.ts` for both point lookups and iteration-style reads.
+- Direct consumer reads of `formsByIdent` / `parsedFactsByUri` were removed from runtime providers/services and routed through shared access helpers.
+- URI key parsing for index iteration was unified into `src/core/model/indexUriParser.ts` (single parsing rule shared by diagnostics, tree, providers, orchestrator-adjacent services).
+- `runSingleSourceGuardTests` was tightened to also block direct `.entries()` / `.values()` access patterns outside model access helpers.
+
 Validation gates used for this status:
 
 - `npm run compile`
 - `npm run test:providers`
 - `npm run test:linter`
 - `npm run test:composition`
+
+## Execution Status Addendum (2026-03-21)
+
+- Runtime consumers were further aligned with single-source access helpers:
+  - `getComponentVariantKeys(...)`
+  - `getIndexedComponentKeys(...)`
+  - `getIndexedComponents(...)`
+  - `countIndexedForms(...)`
+  - `countIndexedParsedFacts(...)`
+  - `hasIndexedFormIdent(...)`
+- Single-source guard scope was expanded to block additional direct legacy-map reads outside sanctioned boundaries.
+- Single-writer guard scope was expanded to registration-time mutation surfaces (`factRegistry.register`, `symbolRegistry.registerResolver`), with bootstrap registration retained in a dedicated allowlisted boundary.
+- Runtime model/fact/symbol write path is now centralized via `core/model/modelWriteGateway.ts` (extension no longer calls core mutation methods directly).
+- Update orchestrator tests now explicitly cover:
+  - post-save ordering contract (`build` before dependency queue, dependency queue before `onPostSave`)
+  - same-URI save serialization contract.
+- TreeView cache validity now includes `model.version` (prevents mixed-snapshot render when facts/symbols change without document text/version change).
+- Composed-sensitive rule `missing-feature-expected-xpath` now runs in composed-reference mode (resolved from runtime/composed context, not template source-only pass).
 
 ### Phase 1: Core Runtime Framework
 
@@ -822,7 +859,7 @@ Expected output:
 1. Enforce CI performance gates (p95 budgets).
 2. Add E2E scenarios for complex templating transitions.
 3. Evaluate dead facts/modules via usage analytics.
-4. Remove legacy compatibility provider(s).
+4. Remove legacy compatibility provider(s). ✅
 5. Final cleanup and release hardening.
 
 Expected output:
@@ -831,9 +868,9 @@ Expected output:
 
 ## Migration Notes
 
-- Keep a temporary compatibility provider `fact.legacyParsedDocumentFacts` while migrating.
+- Legacy compatibility provider path is removed from runtime consumers.
 - New modules should depend on fine-grained facts only.
-- Remove legacy provider once no consumer requests it.
+- Facts/index access is strict in runtime consumer paths (no `index-fallback` behavior).
 
 ## Performance Tracking
 
@@ -855,3 +892,14 @@ ModelPerfCounters
 - Faster updates via in-memory caches and dependency-driven recompute.
 - Easy extensibility for new symbol kinds without changing core model.
 - Support for non-file entities (dynamic generator outputs, virtual nodes) without redesign.
+
+## Closure Status (2026-03-22)
+
+Refactor status for this design scope: complete.
+
+- single-path orchestration is active (`UpdateRunner` + module host)
+- runtime consumers are on strict accessor model (standalone fallback is explicitly isolated and contract-guarded)
+- TreeView/providers/validation consume shared facts/symbol access boundaries
+- contracts + performance + hardening gates are automated in CI and via aggregate command (`test:release:hardening`)
+
+Any further changes are treated as backlog feature work, not refactor completion blockers.

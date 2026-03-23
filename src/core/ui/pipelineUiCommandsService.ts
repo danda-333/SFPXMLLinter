@@ -43,6 +43,13 @@ export interface PipelineUiCommandsServiceDeps {
     refs: number;
     resolvers: number;
   };
+  getSymbolResolverUsageStats: () => ReadonlyArray<{
+    kind: string;
+    collectCalls: number;
+    defsProduced: number;
+    refsProduced: number;
+  }>;
+  getDeadSymbolResolverKinds: () => readonly string[];
   getFactStats: () => ReadonlyArray<{
     factKind: string;
     hits: number;
@@ -53,8 +60,15 @@ export interface PipelineUiCommandsServiceDeps {
     consumerId: string;
     factKinds: readonly string[];
   }>;
+  getValidationModuleUsageStats: () => ReadonlyArray<{
+    moduleId: string;
+    runs: number;
+    diagnostics: number;
+  }>;
+  getDeadValidationModuleIds: () => readonly string[];
   getDisabledValidationModules?: () => readonly string[];
   getPipelineTrace: () => unknown;
+  getWorkspaceFolder: () => vscode.WorkspaceFolder | undefined;
 }
 
 export class PipelineUiCommandsService {
@@ -118,6 +132,19 @@ export class PipelineUiCommandsService {
     this.appendIndexLine(
       `[pipeline] symbols: nodes=${symbolStats.nodes}, defs=${symbolStats.defs}, refs=${symbolStats.refs}, resolvers=${symbolStats.resolvers}`
     );
+    const symbolResolverUsage = this.deps.getSymbolResolverUsageStats();
+    if (symbolResolverUsage.length > 0) {
+      this.appendIndexLine("[pipeline] symbol resolvers:");
+      for (const item of symbolResolverUsage.slice(0, 30)) {
+        this.appendIndexLine(
+          `[pipeline]   ${item.kind}: collect=${item.collectCalls}, defs=${item.defsProduced}, refs=${item.refsProduced}`
+        );
+      }
+    }
+    const deadSymbolResolvers = this.deps.getDeadSymbolResolverKinds();
+    if (deadSymbolResolvers.length > 0) {
+      this.appendIndexLine(`[pipeline] dead symbol resolvers: ${deadSymbolResolvers.join(", ")}`);
+    }
     const factStats = this.deps.getFactStats();
     this.appendIndexLine("[pipeline] facts:");
     for (const item of factStats.slice(0, 20)) {
@@ -134,6 +161,19 @@ export class PipelineUiCommandsService {
         this.appendIndexLine(`[pipeline]   ${item.consumerId}: ${item.factKinds.join(", ")}`);
       }
     }
+    const validationModuleUsage = this.deps.getValidationModuleUsageStats();
+    if (validationModuleUsage.length > 0) {
+      this.appendIndexLine("[pipeline] validation modules:");
+      for (const item of validationModuleUsage.slice(0, 30)) {
+        this.appendIndexLine(
+          `[pipeline]   ${item.moduleId}: runs=${item.runs}, diagnostics=${item.diagnostics}`
+        );
+      }
+    }
+    const deadValidationModules = this.deps.getDeadValidationModuleIds();
+    if (deadValidationModules.length > 0) {
+      this.appendIndexLine(`[pipeline] dead validation modules: ${deadValidationModules.join(", ")}`);
+    }
     const disabledValidationModules = this.deps.getDisabledValidationModules?.() ?? [];
     if (disabledValidationModules.length > 0) {
       this.appendIndexLine(`[pipeline] disabled validation modules: ${disabledValidationModules.join(", ")}`);
@@ -143,7 +183,7 @@ export class PipelineUiCommandsService {
 
   public async exportTrace(): Promise<void> {
     const trace = this.deps.getPipelineTrace();
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const workspaceFolder = this.deps.getWorkspaceFolder();
     if (!workspaceFolder) {
       vscode.window.showInformationMessage("SFP XML Linter: No workspace folder is open.");
       return;
@@ -156,6 +196,47 @@ export class PipelineUiCommandsService {
     await vscode.window.showTextDocument(doc, { preview: false });
     const records = Array.isArray(trace) ? trace.length : 0;
     vscode.window.showInformationMessage(`SFP XML Linter: Pipeline trace exported (${records} records).`);
+  }
+
+  public async exportUsageSnapshot(): Promise<void> {
+    const workspaceFolder = this.deps.getWorkspaceFolder();
+    if (!workspaceFolder) {
+      vscode.window.showInformationMessage("SFP XML Linter: No workspace folder is open.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const payload = {
+      generatedAt: now,
+      model: this.deps.getModelStats(),
+      symbols: {
+        summary: this.deps.getSymbolStats(),
+        resolvers: this.deps.getSymbolResolverUsageStats(),
+        deadResolvers: this.deps.getDeadSymbolResolverKinds()
+      },
+      facts: {
+        stats: this.deps.getFactStats(),
+        deadFacts: this.deps.getDeadFactKinds(),
+        consumers: this.deps.getFactConsumerUsage()
+      },
+      validation: {
+        modules: this.deps.getValidationModuleUsageStats(),
+        deadModules: this.deps.getDeadValidationModuleIds(),
+        disabledModules: this.deps.getDisabledValidationModules?.() ?? []
+      },
+      pipeline: {
+        outcomes: this.deps.getPipelineOutcomeStats(),
+        phaseStats: this.deps.getPipelinePhaseStats(),
+        modules: this.deps.getPipelineModuleStats()
+      }
+    };
+
+    const target = vscode.Uri.joinPath(workspaceFolder.uri, "Docs", "pipeline-usage-snapshot.json");
+    await fs.mkdir(path.dirname(target.fsPath), { recursive: true });
+    await fs.writeFile(target.fsPath, JSON.stringify(payload, null, 2), "utf8");
+    const doc = await vscode.workspace.openTextDocument(target);
+    await vscode.window.showTextDocument(doc, { preview: false });
+    vscode.window.showInformationMessage("SFP XML Linter: Usage snapshot exported.");
   }
 
   public refreshCompositionView(): void {

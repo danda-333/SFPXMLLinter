@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
 import * as fs from "node:fs";
+import {
+  migrateLegacyPlaceholderAliases as migrateLegacyPlaceholderAliasesShared,
+  migrateLegacyTagAliases as migrateLegacyTagAliasesShared
+} from "../template/legacyTemplateAliasMigration";
 
 export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider {
   public static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
@@ -93,6 +97,12 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
             const addProvidesAction = this.createAddExplicitProvidesAction(document, diagnostic);
             if (addProvidesAction) {
               actions.push(addProvidesAction);
+            }
+            actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
+          } else if (code === "legacy-template-alias-disabled") {
+            const migrateLegacyAliasAction = this.createMigrateLegacyTemplateAliasAction(document, diagnostic);
+            if (migrateLegacyAliasAction) {
+              actions.push(migrateLegacyAliasAction);
             }
             actions.push(this.createIgnoreNextLineAction(document, diagnostic, code));
           } else {
@@ -400,6 +410,54 @@ export class SfpXmlIgnoreCodeActionProvider implements vscode.CodeActionProvider
     return action;
   }
 
+  private createMigrateLegacyTemplateAliasAction(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic
+  ): vscode.CodeAction | undefined {
+    const fullText = document.getText();
+    const startOffset = document.offsetAt(diagnostic.range.start);
+
+    const placeholderRange = findEnclosingPlaceholderRange(fullText, startOffset);
+    if (placeholderRange) {
+      const placeholderText = fullText.slice(placeholderRange.start, placeholderRange.end);
+      const migrated = migrateLegacyPlaceholderAliasesShared(placeholderText);
+      if (migrated !== placeholderText) {
+        const action = new vscode.CodeAction("Migrate to Feature/Contribution (placeholder)", vscode.CodeActionKind.QuickFix);
+        action.diagnostics = [diagnostic];
+        action.isPreferred = true;
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(
+          document.uri,
+          new vscode.Range(document.positionAt(placeholderRange.start), document.positionAt(placeholderRange.end)),
+          migrated
+        );
+        action.edit = edit;
+        return action;
+      }
+    }
+
+    const tagRange = findEnclosingTagRange(fullText, startOffset, ["Using", "Include"]);
+    if (tagRange) {
+      const tagText = fullText.slice(tagRange.start, tagRange.end);
+      const migrated = migrateLegacyTagAliasesShared(tagText);
+      if (migrated !== tagText) {
+        const action = new vscode.CodeAction("Migrate to Feature/Contribution (tag)", vscode.CodeActionKind.QuickFix);
+        action.diagnostics = [diagnostic];
+        action.isPreferred = true;
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(
+          document.uri,
+          new vscode.Range(document.positionAt(tagRange.start), document.positionAt(tagRange.end)),
+          migrated
+        );
+        action.edit = edit;
+        return action;
+      }
+    }
+
+    return undefined;
+  }
+
   private createRemoveUsingLineAction(
     document: vscode.TextDocument,
     diagnostic: vscode.Diagnostic,
@@ -561,6 +619,141 @@ function extractPrimitiveKeyFromMessage(message: string): string | undefined {
   const match = /Primitive '([^']+)'/i.exec(message);
   const value = (match?.[1] ?? "").trim();
   return value.length > 0 ? value : undefined;
+}
+
+function findEnclosingPlaceholderRange(text: string, offset: number): { start: number; end: number } | undefined {
+  const start = text.lastIndexOf("{{", offset);
+  if (start < 0) {
+    return undefined;
+  }
+  const end = text.indexOf("}}", offset);
+  if (end < 0 || end < start) {
+    return undefined;
+  }
+  const finalEnd = end + 2;
+  if (offset < start || offset > finalEnd) {
+    return undefined;
+  }
+  return { start, end: finalEnd };
+}
+
+function findEnclosingTagRange(
+  text: string,
+  offset: number,
+  tagNames: readonly string[]
+): { start: number; end: number } | undefined {
+  const names = tagNames.map((tag) => tag.toLowerCase());
+  const regex = /<\s*([A-Za-z_][\w:.-]*)\b/g;
+  let foundStart = -1;
+  let foundTagName = "";
+  for (const match of text.matchAll(regex)) {
+    const start = typeof match.index === "number" ? match.index : -1;
+    if (start < 0 || start > offset) {
+      continue;
+    }
+    const name = (match[1] ?? "").toLowerCase();
+    if (!names.includes(name)) {
+      continue;
+    }
+    foundStart = start;
+    foundTagName = name;
+  }
+  if (foundStart < 0 || !foundTagName) {
+    return undefined;
+  }
+
+  const close = text.indexOf(">", foundStart);
+  if (close < 0) {
+    return undefined;
+  }
+  if (offset > close + 1) {
+    return undefined;
+  }
+  return { start: foundStart, end: close + 1 };
+}
+
+function migrateLegacyTagAliases(tagText: string): string {
+  let out = tagText;
+
+  const hasFeature = /\bFeature\s*=/i.test(out);
+  if (hasFeature) {
+    out = out.replace(/\s+\bComponent\s*=\s*("([^"]*)"|'([^']*)')/gi, "");
+    out = out.replace(/\s+\bName\s*=\s*("([^"]*)"|'([^']*)')/gi, "");
+  } else {
+    out = out.replace(/\bComponent\s*=/gi, "Feature=");
+    out = out.replace(/\bName\s*=/gi, "Feature=");
+    // Deduplicate accidental duplicate Feature attribute by removing later ones.
+    out = dedupeFirstAttribute(out, "Feature");
+  }
+
+  if (/\bContribution\s*=/i.test(out)) {
+    out = out.replace(/\s+\bSection\s*=\s*("([^"]*)"|'([^']*)')/gi, "");
+  } else {
+    out = out.replace(/\bSection\s*=/gi, "Contribution=");
+  }
+
+  return out;
+}
+
+function migrateLegacyPlaceholderAliases(placeholderText: string): string {
+  const bodyMatch = /^\{\{([\s\S]*)\}\}$/.exec(placeholderText);
+  if (!bodyMatch) {
+    return placeholderText;
+  }
+
+  const body = bodyMatch[1] ?? "";
+  const pairs = body.split(",").map((part) => part.trim()).filter((part) => part.length > 0);
+  const outPairs: string[] = [];
+  let hasFeature = false;
+  let hasContribution = false;
+
+  for (const pair of pairs) {
+    const idx = pair.indexOf(":");
+    if (idx <= 0) {
+      outPairs.push(pair);
+      continue;
+    }
+    const rawKey = pair.slice(0, idx).trim();
+    const value = pair.slice(idx + 1).trim();
+    const keyLower = rawKey.toLowerCase();
+
+    if ((keyLower === "component" || keyLower === "name") && !hasFeature) {
+      outPairs.push(`Feature:${value}`);
+      hasFeature = true;
+      continue;
+    }
+    if (keyLower === "feature") {
+      outPairs.push(`Feature:${value}`);
+      hasFeature = true;
+      continue;
+    }
+    if (keyLower === "section" && !hasContribution) {
+      outPairs.push(`Contribution:${value}`);
+      hasContribution = true;
+      continue;
+    }
+    if (keyLower === "contribution") {
+      outPairs.push(`Contribution:${value}`);
+      hasContribution = true;
+      continue;
+    }
+
+    outPairs.push(pair);
+  }
+
+  return `{{${outPairs.join(",")}}}`;
+}
+
+function dedupeFirstAttribute(tagText: string, attrName: string): string {
+  const attrRegex = new RegExp(`\\b${attrName}\\s*=\\s*(\"[^\"]*\"|'[^']*')`, "gi");
+  let found = false;
+  return tagText.replace(attrRegex, (full) => {
+    if (!found) {
+      found = true;
+      return full;
+    }
+    return "";
+  }).replace(/\s{2,}/g, " ");
 }
 
 type SymbolKind =

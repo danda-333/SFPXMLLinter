@@ -10,6 +10,8 @@ export interface ValidationHostDeps {
 export class ValidationHost {
   private readonly modules: ValidationModule[] = [];
   private readonly disabledModuleIds = new Set<string>();
+  private readonly runsByModuleId = new Map<string, number>();
+  private readonly diagnosticsByModuleId = new Map<string, number>();
 
   public constructor(private readonly deps: ValidationHostDeps = {}) {}
 
@@ -33,12 +35,17 @@ export class ValidationHost {
     }
 
     this.modules.push(module);
+    this.runsByModuleId.set(module.id, this.runsByModuleId.get(module.id) ?? 0);
+    this.diagnosticsByModuleId.set(module.id, this.diagnosticsByModuleId.get(module.id) ?? 0);
   }
 
   public run(request: ValidationRequest): vscode.Diagnostic[] {
     const diagnostics: vscode.Diagnostic[] = [];
     for (const module of this.modules) {
-      diagnostics.push(...module.run(request));
+      const produced = module.run(request);
+      diagnostics.push(...produced);
+      this.runsByModuleId.set(module.id, (this.runsByModuleId.get(module.id) ?? 0) + 1);
+      this.diagnosticsByModuleId.set(module.id, (this.diagnosticsByModuleId.get(module.id) ?? 0) + produced.length);
     }
     return diagnostics;
   }
@@ -49,12 +56,35 @@ export class ValidationHost {
       if (module.mode !== mode) {
         continue;
       }
-      diagnostics.push(...module.run(request));
+      const produced = module.run(request);
+      diagnostics.push(...produced);
+      this.runsByModuleId.set(module.id, (this.runsByModuleId.get(module.id) ?? 0) + 1);
+      this.diagnosticsByModuleId.set(module.id, (this.diagnosticsByModuleId.get(module.id) ?? 0) + produced.length);
     }
     return diagnostics;
   }
 
   public getDisabledModuleIds(): readonly string[] {
     return [...this.disabledModuleIds].sort((a, b) => a.localeCompare(b));
+  }
+
+  public getModuleUsageStats(): Array<{
+    moduleId: string;
+    runs: number;
+    diagnostics: number;
+  }> {
+    return this.modules
+      .map((module) => ({
+        moduleId: module.id,
+        runs: this.runsByModuleId.get(module.id) ?? 0,
+        diagnostics: this.diagnosticsByModuleId.get(module.id) ?? 0
+      }))
+      .sort((a, b) => a.moduleId.localeCompare(b.moduleId));
+  }
+
+  public getDeadModuleIds(): readonly string[] {
+    return this.getModuleUsageStats()
+      .filter((item) => item.runs > 0 && item.diagnostics === 0)
+      .map((item) => item.moduleId);
   }
 }

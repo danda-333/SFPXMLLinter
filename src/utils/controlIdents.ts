@@ -5,6 +5,7 @@ import { resolveComponentByKey } from "../indexer/componentResolve";
 import { collectTemplateAvailableControlIdents } from "./templateControls";
 import { getSystemMetadata, SystemMetadata } from "../config/systemMetadata";
 import { DocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
+import { getIndexedFormByIdent } from "../core/model/indexAccess";
 
 export function collectResolvableControlIdents(
   document: vscode.TextDocument,
@@ -23,7 +24,7 @@ export function collectResolvableControlIdents(
     const out = new Set<string>();
     appendDefaultColumns(out, metadata);
     const formIdent = facts.workflowFormIdent;
-    const form = formIdent ? index.formsByIdent.get(formIdent) : undefined;
+    const form = getIndexedFormByIdent(index, formIdent);
     if (form) {
       for (const ident of form.controls) {
         out.add(ident);
@@ -69,8 +70,7 @@ export function collectResolvableControlIdents(
     return out;
   }
 
-  const fallbackForm = facts.formIdent ? index.formsByIdent.get(facts.formIdent) : undefined;
-  const out = fallbackForm ? new Set<string>(fallbackForm.controls) : new Set<string>();
+  const out = new Set<string>(facts.declaredControls);
   appendDefaultColumns(out, metadata);
   return out;
 }

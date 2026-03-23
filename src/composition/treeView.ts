@@ -21,6 +21,9 @@ import {
   collectComponentContributionReferenceLocations,
   collectComponentReferenceLocations
 } from "../providers/referenceModelUtils";
+import type { ComposedDocumentSnapshotRegistry } from "../core/model/composedDocumentSnapshotRegistry";
+import { getComponentKeysForUri, getIndexedFormByIdent, getParsedFactsByUri, getParsedFactsEntries } from "../core/model/indexAccess";
+import { parseIndexUriKey } from "../core/model/indexUriParser";
 
 type CompositionTreeNode =
   | InfoNode
@@ -105,6 +108,7 @@ interface AggregatedSymbol {
 interface CachedRootTree {
   documentUri: string;
   documentVersion: number;
+  modelVersion: number;
   indexRef: WorkspaceIndex;
   factsRef: ParsedDocumentFacts | undefined;
   registryRef: FeatureManifestRegistry;
@@ -138,7 +142,10 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
     private readonly getActiveDocument: () => vscode.TextDocument | undefined,
     private readonly getIndexForUri: (uri: vscode.Uri) => WorkspaceIndex,
     private readonly getFeatureRegistry: () => FeatureManifestRegistry,
-    private readonly resolveOwningFormForModel?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined
+    private readonly resolveOwningFormForModel?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined,
+    private readonly composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry,
+    private readonly refreshSnapshotForDocument?: (document: vscode.TextDocument) => void,
+    private readonly getModelVersion: () => number = () => 0
   ) {}
 
   public refresh(): void {
@@ -229,14 +236,16 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
     }
 
     const registry = this.getFeatureRegistry();
+    this.refreshSnapshotForDocument?.(document);
     const index = this.getIndexForUri(document.uri);
     const documentUri = document.uri.toString();
-    const facts = index.parsedFactsByUri.get(documentUri);
+    const modelVersion = this.getModelVersion();
+    const facts = this.composedSnapshotRegistry?.get(document.uri)?.sourceFacts;
     if (!facts) {
       this.cachedRootTree = undefined;
       return [
         this.buildStatusNode(),
-        infoNode("Index facts are not available for this document yet. Run Revalidate Workspace/Project.")
+        infoNode("Snapshot facts are not available for this document yet. Run Revalidate Workspace/Project.")
       ];
     }
     const relPath = vscode.workspace.asRelativePath(document.uri, false).replace(/\\/g, "/");
@@ -245,12 +254,13 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
       cached &&
       cached.documentUri === documentUri &&
       cached.documentVersion === document.version &&
+      cached.modelVersion === modelVersion &&
       cached.indexRef === index &&
       cached.factsRef === facts &&
       cached.registryRef === registry &&
       cached.relativePath === relPath
     ) {
-      return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index), ...cached.nodes];
+      return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index, this.composedSnapshotRegistry), ...cached.nodes];
     }
 
     const nodes = buildCompositionProjection<CompositionTreeNode>(
@@ -266,21 +276,30 @@ export class CompositionTreeProvider implements vscode.TreeDataProvider<Composit
         findFeatureForRelativePath,
         buildFeatureTree: (report, reg, idx, uri) => buildFeatureTree(report, reg, idx, vscode.Uri.parse(uri)),
         buildRegularXmlTree: (_uri, factsSnapshot, idx) =>
-          buildRegularXmlTree(vscode.Uri.parse(documentUri), relPath, factsSnapshot, idx, this.resolveOwningFormForModel),
-        buildUsingTree: (_uri, factsSnapshot, idx) => buildUsingTree(vscode.Uri.parse(documentUri), factsSnapshot, idx),
+          buildRegularXmlTree(
+            vscode.Uri.parse(documentUri),
+            relPath,
+            factsSnapshot,
+            idx,
+            this.resolveOwningFormForModel,
+            this.composedSnapshotRegistry
+          ),
+        buildUsingTree: (_uri, factsSnapshot, idx) =>
+          buildUsingTree(vscode.Uri.parse(documentUri), factsSnapshot, idx, undefined, this.composedSnapshotRegistry),
         infoNode
       }
     );
     this.cachedRootTree = {
       documentUri,
       documentVersion: document.version,
+      modelVersion,
       indexRef: index,
       factsRef: facts,
       registryRef: registry,
       relativePath: relPath,
       nodes
     };
-    return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index), ...nodes];
+    return [this.buildStatusNode(), buildBuildTargetNode(document.uri, relPath, facts, index, this.composedSnapshotRegistry), ...nodes];
   }
 
   private buildStatusNode(): InfoNode {
@@ -355,7 +374,8 @@ function buildBuildTargetNode(
   documentUri: vscode.Uri,
   relativePath: string,
   facts: ParsedDocumentFacts,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
 ): CompositionTreeNode {
   const normalizedRel = relativePath.replace(/\\/g, "/");
   if (/^XML_Templates\//i.test(normalizedRel)) {
@@ -391,7 +411,7 @@ function buildBuildTargetNode(
     };
   }
 
-  const usages = collectUsageLocationsForDocument(documentUri, index);
+  const usages = collectUsageLocationsForDocument(documentUri, index, composedSnapshotRegistry);
   if (usages.length === 0) {
     return {
       type: "group",
@@ -444,18 +464,24 @@ function buildBuildTargetNode(
 
 function collectUsageLocationsForDocument(
   documentUri: vscode.Uri,
-  index: WorkspaceIndex
+  index: WorkspaceIndex,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
 ): Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }> {
   const out: Array<{ location: vscode.Location; kind: "using" | "include" | "placeholder" }> = [];
   const seen = new Set<string>();
 
-  const componentKeys = collectComponentKeysForUri(documentUri, index);
+  const componentKeys = getComponentKeysForUri(index, documentUri);
   if (componentKeys.size === 0) {
     return out;
   }
 
-  for (const [uriKey, entryFacts] of index.parsedFactsByUri.entries()) {
-    const uri = vscode.Uri.parse(uriKey);
+  for (const entry of getParsedFactsEntries(
+    index,
+    composedSnapshotRegistry ? ((uri, idx) => getFactsForUri(idx, uri, composedSnapshotRegistry)) : undefined,
+    parseIndexUriKey
+  )) {
+    const uri = entry.uri;
+    const entryFacts = entry.facts;
     for (const usingRef of entryFacts.usingReferences) {
       if (!componentKeys.has(usingRef.componentKey)) {
         continue;
@@ -498,24 +524,16 @@ function pushLocation(
   out.push({ location: new vscode.Location(uri, range), kind });
 }
 
-function collectComponentKeysForUri(uri: vscode.Uri, index: WorkspaceIndex): Set<string> {
-  const out = new Set<string>();
-  const direct = index.componentKeyByUri.get(uri.toString());
-  if (direct) {
-    out.add(direct);
+function getFactsForUri(
+  index: WorkspaceIndex,
+  uri: vscode.Uri,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
+): ReturnType<typeof parseDocumentFacts> | undefined {
+  const snapshotFacts = composedSnapshotRegistry?.get(uri)?.sourceFacts;
+  if (snapshotFacts) {
+    return snapshotFacts;
   }
-  const normalizedTarget = toIndexUriKey(uri);
-  for (const [key, componentKey] of index.componentKeyByUri.entries()) {
-    if (key === normalizedTarget) {
-      out.add(componentKey);
-      continue;
-    }
-    const keyUri = key.includes("://") ? vscode.Uri.parse(key) : vscode.Uri.file(key);
-    if (toIndexUriKey(keyUri) === normalizedTarget) {
-      out.add(componentKey);
-    }
-  }
-  return out;
+  return getParsedFactsByUri(index, uri, undefined);
 }
 
 function buildFeatureTree(
@@ -686,7 +704,8 @@ function buildRegularXmlTree(
   relativePath: string,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
-  resolveOwningFormForModel?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined
+  resolveOwningFormForModel?: (formIdent: string, preferredIndex: WorkspaceIndex) => { form: IndexedForm; index: WorkspaceIndex } | undefined,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
 ): CompositionTreeNode[] {
   const root = (facts.rootTag ?? "").toLowerCase();
   if (root !== "form" && root !== "workflow" && root !== "dataview") {
@@ -762,32 +781,31 @@ function buildRegularXmlTree(
       ? (facts.rootFormIdent ?? facts.formIdent)
       : undefined;
   if ((root === "workflow" || root === "dataview") && owningFormIdent) {
-    const resolvedOwningForm = resolveOwningFormForModel?.(owningFormIdent, index);
-    if (resolvedOwningForm) {
-      const ownerFacts = resolvedOwningForm.index.parsedFactsByUri.get(resolvedOwningForm.form.uri.toString());
-      if (ownerFacts) {
-        const ownerComposition = buildDocumentCompositionModel(ownerFacts, resolvedOwningForm.index);
-        const ownerControls = aggregateFormControls(resolvedOwningForm.form.uri, ownerFacts, resolvedOwningForm.index, ownerComposition);
-        const ownerButtons = aggregateFormButtons(resolvedOwningForm.form.uri, ownerFacts, resolvedOwningForm.index, ownerComposition);
-        const ownerSections = aggregateFormSections(resolvedOwningForm.form.uri, ownerFacts, resolvedOwningForm.index, ownerComposition);
-        children.push({
-          id: sharedSectionNodeId("OwningFormSymbols"),
-          type: "group",
-          label: `Owning Form Symbols (${owningFormIdent})`,
-          description: resolvedOwningForm.index === index ? "template" : "runtime",
-          collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-          icon: new vscode.ThemeIcon("symbol-file"),
-          children: [
-            buildSymbolGroup("Controls", ownerControls, "symbol-field", sharedSectionNodeId("OwningFormSymbols.Controls")),
-            buildSymbolGroup("Buttons", ownerButtons, "symbol-event", sharedSectionNodeId("OwningFormSymbols.Buttons")),
-            buildSymbolGroup("Sections", ownerSections, "symbol-structure", sharedSectionNodeId("OwningFormSymbols.Sections"))
-          ]
-        });
-      }
+    const ownerSnapshot = composedSnapshotRegistry?.getByFormIdent(owningFormIdent)
+      .find((item) => (item.sourceFacts.rootTag ?? "").toLowerCase() === "form");
+    if (ownerSnapshot) {
+      const ownerFacts = ownerSnapshot.sourceFacts;
+      const ownerComposition = ownerSnapshot.effectiveComposition ?? buildDocumentCompositionModel(ownerFacts, index);
+      const ownerControls = aggregateFormControls(ownerSnapshot.uri, ownerFacts, index, ownerComposition);
+      const ownerButtons = aggregateFormButtons(ownerSnapshot.uri, ownerFacts, index, ownerComposition);
+      const ownerSections = aggregateFormSections(ownerSnapshot.uri, ownerFacts, index, ownerComposition);
+      children.push({
+        id: sharedSectionNodeId("OwningFormSymbols"),
+        type: "group",
+        label: `Owning Form Symbols (${owningFormIdent})`,
+        description: ownerSnapshot.domain,
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        icon: new vscode.ThemeIcon("symbol-file"),
+        children: [
+          buildSymbolGroup("Controls", ownerControls, "symbol-field", sharedSectionNodeId("OwningFormSymbols.Controls")),
+          buildSymbolGroup("Buttons", ownerButtons, "symbol-event", sharedSectionNodeId("OwningFormSymbols.Buttons")),
+          buildSymbolGroup("Sections", ownerSections, "symbol-structure", sharedSectionNodeId("OwningFormSymbols.Sections"))
+        ]
+      });
     }
   }
 
-  const usingTree = buildUsingTree(documentUri, facts, index, composition);
+  const usingTree = buildUsingTree(documentUri, facts, index, composition, composedSnapshotRegistry);
   if (usingTree.length > 0) {
     children.push(...usingTree);
   }
@@ -916,7 +934,8 @@ function buildUsingTree(
   documentUri: vscode.Uri,
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
-  compositionModel?: DocumentCompositionModel
+  compositionModel?: DocumentCompositionModel,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
 ): CompositionTreeNode[] {
   const usageLocationsByKey = new Map<string, vscode.Location[]>();
   const ownerByUri = new Map<string, string | undefined>();
@@ -926,7 +945,7 @@ function buildUsingTree(
     if (cached) {
       return cached;
     }
-    const resolved = getUsingUsageLocations(facts, index, componentKey, contributionName, ownerByUri);
+    const resolved = getUsingUsageLocations(facts, index, componentKey, contributionName, ownerByUri, composedSnapshotRegistry);
     usageLocationsByKey.set(cacheKey, resolved);
     return resolved;
   };
@@ -1010,7 +1029,7 @@ function buildUsingTree(
 
   const suppressionNodes = suppressedUsings.map((ref, idx) => {
     const component = resolveComponentByKey(index, ref.componentKey);
-    const matchedContributions = countSuppressedInheritedContributions(facts, index, ref.componentKey, ref.sectionValue);
+    const matchedContributions = countSuppressedInheritedContributions(facts, index, ref.componentKey, ref.sectionValue, composedSnapshotRegistry);
     const label = ref.sectionValue ? `${ref.rawComponentValue}#${ref.sectionValue}` : ref.rawComponentValue;
     const metaChildren: CompositionTreeNode[] = [
       detailNode(`Mode: suppression`),
@@ -1154,7 +1173,8 @@ function countSuppressedInheritedContributions(
   facts: ReturnType<typeof parseDocumentFacts>,
   index: WorkspaceIndex,
   componentKey: string,
-  sectionValue: string | undefined
+  sectionValue: string | undefined,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
 ): number {
   const root = (facts.rootTag ?? "").toLowerCase();
   if (root !== "workflow" && root !== "dataview") {
@@ -1166,8 +1186,8 @@ function countSuppressedInheritedContributions(
     return 0;
   }
 
-  const form = index.formsByIdent.get(owningFormIdent);
-  const formFacts = form ? index.parsedFactsByUri.get(form.uri.toString()) : undefined;
+  const form = getIndexedFormByIdent(index, owningFormIdent);
+  const formFacts = form ? getFactsForUri(index, form.uri, composedSnapshotRegistry) : undefined;
   const component = resolveComponentByKey(index, componentKey);
   if (!formFacts || !component) {
     return 0;
@@ -1291,7 +1311,7 @@ function buildUsingContributionMetaGroup(
     children.push(detailNode(`PlaceholderCount: ${insertTrace.placeholderCount}`));
     children.push(detailNode(`TargetXPathMatches: ${insertTrace.targetXPathMatchCount}`));
     children.push(detailNode(`TargetXPathClamped: ${insertTrace.targetXPathClampedCount}`));
-    children.push(detailNode(`FallbackSymbolCount: ${insertTrace.fallbackSymbolCount}`));
+    children.push(detailNode(`EstimatedSymbolCount: ${insertTrace.estimatedSymbolCount}`));
   } else {
     children.push(detailNode("InsertTrace: missing in index"));
   }
@@ -1885,7 +1905,8 @@ function getUsingUsageLocations(
   index: WorkspaceIndex,
   componentKey: string,
   contributionName?: string,
-  ownerByUri?: Map<string, string | undefined>
+  ownerByUri?: Map<string, string | undefined>,
+  composedSnapshotRegistry?: ComposedDocumentSnapshotRegistry
 ): vscode.Location[] {
   const currentOwner = facts.formIdent ?? facts.workflowFormIdent;
   const locations = contributionName
@@ -1902,8 +1923,8 @@ function getUsingUsageLocations(
       if (ownerByUri?.has(key)) {
         locationOwner = ownerByUri.get(key);
       } else {
-        const locationFacts = index.parsedFactsByUri.get(key);
-        locationOwner = locationFacts?.formIdent ?? locationFacts?.workflowFormIdent;
+    const locationFacts = getFactsForUri(index, location.uri, composedSnapshotRegistry);
+    locationOwner = locationFacts?.formIdent ?? locationFacts?.workflowFormIdent;
         ownerByUri?.set(key, locationOwner);
       }
       return locationOwner === currentOwner;

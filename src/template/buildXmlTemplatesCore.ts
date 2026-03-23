@@ -41,12 +41,23 @@ interface PrimitiveDefinition {
   templates: PrimitiveTemplate[];
 }
 
-const TEMPLATE_DEFINITION_TAGS = ["Feature", "Component"] as const;
+interface RenderTemplateOptions {
+  legacyTagAliasesEnabled?: boolean;
+}
+
+function isLegacyTagAliasesEnabled(options?: RenderTemplateOptions): boolean {
+  return options?.legacyTagAliasesEnabled !== false;
+}
+
+function getTemplateDefinitionTags(legacyTagAliasesEnabled: boolean): readonly string[] {
+  return legacyTagAliasesEnabled ? ["Feature", "Component"] : ["Feature"];
+}
 
 interface RenderContext {
   library: BuildComponentLibrary;
   maxDepth: number;
   templateRoot: string;
+  legacyTagAliasesEnabled: boolean;
   onDebugLog?: (line: string) => void;
   onMutation?: (record: TemplateMutationRecord) => void;
 }
@@ -190,9 +201,10 @@ export function renderTemplateText(
   library: BuildComponentLibrary,
   maxDepth = 12,
   onDebugLog?: (line: string) => void,
-  inheritedUsingsXml?: string
+  inheritedUsingsXml?: string,
+  options?: RenderTemplateOptions
 ): string {
-  return renderTemplateWithTrace(templateText, library, maxDepth, onDebugLog, inheritedUsingsXml).xml;
+  return renderTemplateWithTrace(templateText, library, maxDepth, onDebugLog, inheritedUsingsXml, options).xml;
 }
 
 export function renderTemplateWithTrace(
@@ -200,14 +212,17 @@ export function renderTemplateWithTrace(
   library: BuildComponentLibrary,
   maxDepth = 12,
   onDebugLog?: (line: string) => void,
-  inheritedUsingsXml?: string
+  inheritedUsingsXml?: string,
+  options?: RenderTemplateOptions
 ): RenderTemplateResult {
   const normalizedTemplate = templateText.replace(/^\uFEFF/, "");
   const mutations: TemplateMutationRecord[] = [];
+  const legacyTagAliasesEnabled = isLegacyTagAliasesEnabled(options);
   const context: RenderContext = {
     library,
     maxDepth,
     templateRoot: detectRootTagName(normalizedTemplate),
+    legacyTagAliasesEnabled,
     onDebugLog,
     onMutation: (record) => mutations.push(record)
   };
@@ -225,7 +240,7 @@ export function renderTemplateWithTrace(
   out = replaceComponentPlaceholders(out, templateParams, context, 0, activePlaceholderContexts);
   out = expandAuthoringSugar(out, templateParams, context);
   out = expandPrimitiveUsages(out, templateParams, context);
-  out = sanitizeFinalXml(out, context.templateRoot);
+  out = sanitizeFinalXml(out, context.templateRoot, context.legacyTagAliasesEnabled);
   out = normalizeXmlTagSpacingLikeLegacy(out);
   out = trimWhitespaceLikeLegacy(out);
   out = out.replace(/\uFEFF/g, "");
@@ -247,16 +262,14 @@ function expandAuthoringSugar(text: string, inheritedParams: Map<string, string>
   return out;
 }
 
-export function extractUsingComponentRefs(text: string): string[] {
+export function extractUsingComponentRefs(text: string, options?: RenderTemplateOptions): string[] {
   const refs = new Set<string>();
   const scanText = maskXmlComments(text);
+  const legacyTagAliasesEnabled = isLegacyTagAliasesEnabled(options);
 
   for (const match of scanText.matchAll(/<Using\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
-    const componentValue =
-      extractAttributeValue(attrs, "Feature") ??
-      extractAttributeValue(attrs, "Component") ??
-      extractAttributeValue(attrs, "Name");
+    const componentValue = resolveFeatureLikeAttrFromRawAttrs(attrs, legacyTagAliasesEnabled);
     if (!componentValue) {
       continue;
     }
@@ -265,11 +278,7 @@ export function extractUsingComponentRefs(text: string): string[] {
 
   for (const match of scanText.matchAll(/<UsePrimitive\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
-    const primitiveValue =
-      extractAttributeValue(attrs, "Primitive") ??
-      extractAttributeValue(attrs, "Name") ??
-      extractAttributeValue(attrs, "Feature") ??
-      extractAttributeValue(attrs, "Component");
+    const primitiveValue = resolvePrimitiveLikeAttrFromRawAttrs(attrs, legacyTagAliasesEnabled);
     if (!primitiveValue) {
       continue;
     }
@@ -278,10 +287,7 @@ export function extractUsingComponentRefs(text: string): string[] {
 
   for (const match of scanText.matchAll(/<Include\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
-    const featureValue =
-      extractAttributeValue(attrs, "Feature") ??
-      extractAttributeValue(attrs, "Component") ??
-      extractAttributeValue(attrs, "Name");
+    const featureValue = resolveFeatureLikeAttrFromRawAttrs(attrs, legacyTagAliasesEnabled);
     if (!featureValue) {
       continue;
     }
@@ -290,10 +296,7 @@ export function extractUsingComponentRefs(text: string): string[] {
 
   for (const match of scanText.matchAll(/<ContributionPatch\b([^>]*)\/?>/gi)) {
     const attrs = match[1] ?? "";
-    const componentValue =
-      extractAttributeValue(attrs, "Feature") ??
-      extractAttributeValue(attrs, "Component") ??
-      extractAttributeValue(attrs, "Name");
+    const componentValue = resolveFeatureLikeAttrFromRawAttrs(attrs, legacyTagAliasesEnabled);
     if (!componentValue) {
       continue;
     }
@@ -302,10 +305,7 @@ export function extractUsingComponentRefs(text: string): string[] {
 
   for (const match of scanText.matchAll(/\{\{([^{}]+)\}\}/g)) {
     const body = match[1] ?? "";
-    const componentValue =
-      extractPlaceholderField(body, "Feature") ??
-      extractPlaceholderField(body, "Component") ??
-      extractPlaceholderField(body, "Name");
+    const componentValue = resolveFeatureLikePlaceholderField(body, legacyTagAliasesEnabled);
     if (!componentValue) {
       continue;
     }
@@ -336,7 +336,11 @@ export function stripXmlComponentExtension(value: string): string {
   return value;
 }
 
-function resolveComponentByKey(library: BuildComponentLibrary, rawKey: string): ComponentDefinition | undefined {
+function resolveComponentByKey(
+  library: BuildComponentLibrary,
+  rawKey: string,
+  legacyTagAliasesEnabled = true
+): ComponentDefinition | undefined {
   const normalized = stripXmlComponentExtension(normalizePath(rawKey));
   const source =
     library.byKey.get(normalized) ??
@@ -351,7 +355,7 @@ function resolveComponentByKey(library: BuildComponentLibrary, rawKey: string): 
 
   return {
     key: source.key,
-    sections: parseComponentSections(source.text)
+    sections: parseComponentSections(source.text, legacyTagAliasesEnabled)
   };
 }
 
@@ -405,7 +409,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
       cursor = start + full.length;
 
       const attrs = parseXmlAttributes(full);
-      const componentKey = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+      const componentKey = resolveFeatureLikeAttr(attrs, context.legacyTagAliasesEnabled);
       if (!componentKey) {
         next += full;
         continue;
@@ -419,7 +423,7 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
 
       const includeParams = new Map<string, string>();
       for (const [k, v] of attrs.entries()) {
-        if (k === "Feature" || k === "Component" || k === "Name") {
+        if (isFeatureLikeAttrName(k, context.legacyTagAliasesEnabled)) {
           continue;
         }
         includeParams.set(k, v);
@@ -427,17 +431,17 @@ function expandIncludes(text: string, baseParams: Map<string, string>, context: 
       const mergedParams = mergeParams(baseParams, includeParams);
 
       let componentText = source.text;
-      const sectionName = attrs.get("Contribution") ?? attrs.get("Section");
+      const sectionName = resolveContributionLikeAttr(attrs, context.legacyTagAliasesEnabled);
       if (sectionName && sectionName.trim().length > 0) {
-        const def = resolveComponentByKey(context.library, source.key);
+        const def = resolveComponentByKey(context.library, source.key, context.legacyTagAliasesEnabled);
         const section = def?.sections.find((s) => (s.name ?? "") === sectionName) ?? def?.sections[0];
         if (section) {
           componentText = section.content;
         } else {
-          componentText = normalizeComponentContent(componentText);
+          componentText = normalizeComponentContent(componentText, context.legacyTagAliasesEnabled);
         }
       } else {
-        componentText = normalizeComponentContent(componentText);
+        componentText = normalizeComponentContent(componentText, context.legacyTagAliasesEnabled);
       }
 
       const renderedInclude = applyParamSubstitution(componentText, mergedParams);
@@ -477,11 +481,7 @@ function expandPrimitiveUsages(text: string, inheritedParams: Map<string, string
 
 function renderPrimitiveUsage(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
   const attrs = parseXmlAttributes(block.attrs);
-  const primitiveKey =
-    attrs.get("Primitive") ??
-    attrs.get("Name") ??
-    attrs.get("Feature") ??
-    attrs.get("Component");
+  const primitiveKey = resolvePrimitiveLikeAttr(attrs, context.legacyTagAliasesEnabled);
   if (!primitiveKey) {
     return reconstructUsePrimitiveBlock(block);
   }
@@ -494,7 +494,7 @@ function renderPrimitiveUsage(block: TagBlock, inheritedParams: Map<string, stri
     return reconstructUsePrimitiveBlock(block);
   }
 
-  const selectedTemplateName = attrs.get("Template") ?? attrs.get("Contribution") ?? attrs.get("Section");
+  const selectedTemplateName = resolveTemplateLikeAttr(attrs, context.legacyTagAliasesEnabled);
   const template = pickPrimitiveTemplate(primitive.templates, selectedTemplateName);
   if (!template) {
     if (context.onDebugLog) {
@@ -505,7 +505,7 @@ function renderPrimitiveUsage(block: TagBlock, inheritedParams: Map<string, stri
 
   const localParams = new Map<string, string>();
   for (const [key, value] of attrs.entries()) {
-    if (key === "Primitive" || key === "Name" || key === "Feature" || key === "Component" || key === "Template" || key === "Contribution" || key === "Section") {
+    if (isPrimitiveControlAttrName(key, context.legacyTagAliasesEnabled)) {
       continue;
     }
     localParams.set(key, value);
@@ -590,7 +590,7 @@ function applyUsingSections(
     inheritedUsingsXml && inheritedUsingsXml.trim().length > 0
       ? `${text}\n${inheritedUsingsXml}`
       : text;
-  const usingDirectives = parseUsingDirectives(usingParseSource);
+  const usingDirectives = parseUsingDirectives(usingParseSource, context.legacyTagAliasesEnabled);
   let out = removeUsingsBlocks(text);
   out = removeStandaloneUsingTags(out);
   out = removeContributionPatchBlocks(out);
@@ -603,12 +603,12 @@ function applyUsingSections(
   }> = [];
 
   for (const using of usingDirectives) {
-    const component = resolveComponentByKey(context.library, using.componentKey);
+    const component = resolveComponentByKey(context.library, using.componentKey, context.legacyTagAliasesEnabled);
     if (!component) {
       continue;
     }
 
-    const sectionFilter = using.attrs.get("Contribution") ?? using.attrs.get("Section");
+    const sectionFilter = resolveContributionLikeAttr(using.attrs, context.legacyTagAliasesEnabled);
     const params = mergeParams(templateParams, using.attrs);
     const sections = sectionFilter
       ? component.sections.filter((s) => (s.name ?? "") === sectionFilter)
@@ -702,7 +702,7 @@ function replaceComponentPlaceholders(
     out += text.slice(cursor, token.start);
 
     const fields = parsePlaceholderFields(token.body);
-    const componentKey = fields.get("Feature") ?? fields.get("Component") ?? fields.get("Name");
+    const componentKey = resolveFeatureLikePlaceholderMapField(fields, context.legacyTagAliasesEnabled);
     if (!componentKey) {
       const value = inheritedParams.get(token.body.trim());
       out += value ?? token.full;
@@ -710,14 +710,14 @@ function replaceComponentPlaceholders(
       continue;
     }
 
-    const component = resolveComponentByKey(context.library, componentKey);
+    const component = resolveComponentByKey(context.library, componentKey, context.legacyTagAliasesEnabled);
     if (!component) {
       out += token.full;
       cursor = token.end;
       continue;
     }
 
-    const sectionName = fields.get("Contribution") ?? fields.get("Section");
+    const sectionName = resolveContributionLikePlaceholderMapField(fields, context.legacyTagAliasesEnabled);
     const section = pickComponentSection(component.sections, sectionName);
     if (!section) {
       out += token.full;
@@ -1066,10 +1066,12 @@ function pickInnermostBlocks(blocks: readonly TagBlock[]): TagBlock[] {
   });
 }
 
-function parseComponentSections(text: string): ComponentSection[] {
+function parseComponentSections(text: string, legacyTagAliasesEnabled: boolean): ComponentSection[] {
   const sections: ComponentSection[] = [];
   const scanText = maskXmlComments(text);
-  const tagRegex = /<\s*(\/?)\s*(Contribution|Section)\b([^>]*)>/gi;
+  const tagRegex = legacyTagAliasesEnabled
+    ? /<\s*(\/?)\s*(Contribution|Section)\b([^>]*)>/gi
+    : /<\s*(\/?)\s*(Contribution)\b([^>]*)>/gi;
   let depth = 0;
   let currentOpenEnd = -1;
   let currentAttrsRaw = "";
@@ -1488,13 +1490,13 @@ function buildTemplateParams(text: string): Map<string, string> {
   return params;
 }
 
-function parseUsingDirectives(text: string): UsingDirective[] {
+function parseUsingDirectives(text: string, legacyTagAliasesEnabled: boolean): UsingDirective[] {
   const out: UsingDirective[] = [];
   const regex = /<Using\b([^>]*)\/?>/gi;
   const scanText = maskXmlComments(text);
   for (const m of scanText.matchAll(regex)) {
     const attrs = parseXmlAttributes(m[1] ?? "");
-    const componentValue = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+    const componentValue = resolveFeatureLikeAttr(attrs, legacyTagAliasesEnabled);
     if (!componentValue) {
       continue;
     }
@@ -1513,7 +1515,7 @@ function parseContributionPatchDirectives(text: string, context: RenderContext):
   const patchBlocks = collectTagBlocks(text, "ContributionPatch").sort((a, b) => a.start - b.start);
   for (const patchBlock of patchBlocks) {
     const attrs = parseXmlAttributes(patchBlock.attrs);
-    const componentValue = attrs.get("Feature") ?? attrs.get("Component") ?? attrs.get("Name");
+    const componentValue = resolveFeatureLikeAttr(attrs, context.legacyTagAliasesEnabled);
     if (!componentValue) {
       continue;
     }
@@ -1521,7 +1523,7 @@ function parseContributionPatchDirectives(text: string, context: RenderContext):
     const componentKey = resolvedSource
       ? stripXmlComponentExtension(normalizePath(resolvedSource.key))
       : stripXmlComponentExtension(normalizePath(componentValue));
-    const contributionName = attrs.get("Contribution") ?? attrs.get("Section");
+    const contributionName = resolveContributionLikeAttr(attrs, context.legacyTagAliasesEnabled);
     const appendSlotOperations: ContributionPatchAppendSlotOperation[] = [];
     const appendBlocks = collectTagBlocks(patchBlock.body, "AppendSlot").sort((a, b) => a.start - b.start);
     for (const appendBlock of appendBlocks) {
@@ -1644,6 +1646,82 @@ function parseXmlAttributes(rawAttrs: string): Map<string, string> {
   return out;
 }
 
+function isFeatureLikeAttrName(name: string, legacyTagAliasesEnabled: boolean): boolean {
+  if (name === "Feature") {
+    return true;
+  }
+  if (!legacyTagAliasesEnabled) {
+    return false;
+  }
+  return name === "Component" || name === "Name";
+}
+
+function resolveFeatureLikeAttr(attrs: ReadonlyMap<string, string>, legacyTagAliasesEnabled: boolean): string | undefined {
+  return attrs.get("Feature")
+    ?? (legacyTagAliasesEnabled ? attrs.get("Component") : undefined)
+    ?? (legacyTagAliasesEnabled ? attrs.get("Name") : undefined);
+}
+
+function resolvePrimitiveLikeAttr(attrs: ReadonlyMap<string, string>, legacyTagAliasesEnabled: boolean): string | undefined {
+  return attrs.get("Primitive")
+    ?? (legacyTagAliasesEnabled ? attrs.get("Name") : undefined)
+    ?? attrs.get("Feature")
+    ?? (legacyTagAliasesEnabled ? attrs.get("Component") : undefined);
+}
+
+function resolveContributionLikeAttr(attrs: ReadonlyMap<string, string>, legacyTagAliasesEnabled: boolean): string | undefined {
+  return attrs.get("Contribution") ?? (legacyTagAliasesEnabled ? attrs.get("Section") : undefined);
+}
+
+function resolveTemplateLikeAttr(attrs: ReadonlyMap<string, string>, legacyTagAliasesEnabled: boolean): string | undefined {
+  return attrs.get("Template") ?? resolveContributionLikeAttr(attrs, legacyTagAliasesEnabled);
+}
+
+function isPrimitiveControlAttrName(name: string, legacyTagAliasesEnabled: boolean): boolean {
+  if (name === "Primitive" || name === "Feature" || name === "Template" || name === "Contribution") {
+    return true;
+  }
+  if (!legacyTagAliasesEnabled) {
+    return false;
+  }
+  return name === "Name" || name === "Component" || name === "Section";
+}
+
+function resolveFeatureLikePlaceholderMapField(
+  fields: ReadonlyMap<string, string>,
+  legacyTagAliasesEnabled: boolean
+): string | undefined {
+  return fields.get("Feature")
+    ?? (legacyTagAliasesEnabled ? fields.get("Component") : undefined)
+    ?? (legacyTagAliasesEnabled ? fields.get("Name") : undefined);
+}
+
+function resolveContributionLikePlaceholderMapField(
+  fields: ReadonlyMap<string, string>,
+  legacyTagAliasesEnabled: boolean
+): string | undefined {
+  return fields.get("Contribution") ?? (legacyTagAliasesEnabled ? fields.get("Section") : undefined);
+}
+
+function resolveFeatureLikeAttrFromRawAttrs(rawAttrs: string, legacyTagAliasesEnabled: boolean): string | undefined {
+  return extractAttributeValue(rawAttrs, "Feature")
+    ?? (legacyTagAliasesEnabled ? extractAttributeValue(rawAttrs, "Component") : undefined)
+    ?? (legacyTagAliasesEnabled ? extractAttributeValue(rawAttrs, "Name") : undefined);
+}
+
+function resolvePrimitiveLikeAttrFromRawAttrs(rawAttrs: string, legacyTagAliasesEnabled: boolean): string | undefined {
+  return extractAttributeValue(rawAttrs, "Primitive")
+    ?? (legacyTagAliasesEnabled ? extractAttributeValue(rawAttrs, "Name") : undefined)
+    ?? extractAttributeValue(rawAttrs, "Feature")
+    ?? (legacyTagAliasesEnabled ? extractAttributeValue(rawAttrs, "Component") : undefined);
+}
+
+function resolveFeatureLikePlaceholderField(rawBody: string, legacyTagAliasesEnabled: boolean): string | undefined {
+  return extractPlaceholderField(rawBody, "Feature")
+    ?? (legacyTagAliasesEnabled ? extractPlaceholderField(rawBody, "Component") : undefined)
+    ?? (legacyTagAliasesEnabled ? extractPlaceholderField(rawBody, "Name") : undefined);
+}
+
 function collectPlaceholderTokens(text: string): PlaceholderToken[] {
   const out: PlaceholderToken[] = [];
   const regex = /\{\{([^{}]+)\}\}/g;
@@ -1708,10 +1786,10 @@ function removeContributionPatchBlocks(text: string): string {
   return out;
 }
 
-function normalizeComponentContent(text: string): string {
+function normalizeComponentContent(text: string, legacyTagAliasesEnabled: boolean): string {
   let out = text.replace(/<\?xml[^>]*\?>/gi, "");
   out = out.replace(/^\uFEFF/, "");
-  for (const tagName of TEMPLATE_DEFINITION_TAGS) {
+  for (const tagName of getTemplateDefinitionTags(legacyTagAliasesEnabled)) {
     const start = out.indexOf(`<${tagName}`);
     if (start < 0) {
       continue;
@@ -1726,7 +1804,7 @@ function normalizeComponentContent(text: string): string {
   return out;
 }
 
-function sanitizeFinalXml(text: string, templateRoot: string): string {
+function sanitizeFinalXml(text: string, templateRoot: string, legacyTagAliasesEnabled: boolean): string {
   // Keep XML declaration if present, remove accidental component wrappers, and normalize common self-closing style.
   const declMatch = /^\s*<\?xml[^>]*\?>/.exec(text);
   const decl = declMatch?.[0] ?? "";
@@ -1734,7 +1812,7 @@ function sanitizeFinalXml(text: string, templateRoot: string): string {
   out = out.replace(/<\?xml[^>]*\?>/g, "");
   const isSfpComponentTemplate = templateRoot.localeCompare("Component", undefined, { sensitivity: "accent" }) === 0;
   if (!isSfpComponentTemplate) {
-    out = stripOuterTemplateDefinitionWrapper(out);
+    out = stripOuterTemplateDefinitionWrapper(out, legacyTagAliasesEnabled);
   }
   if (decl.length > 0) {
     return `${decl}${out}`;
@@ -1742,8 +1820,8 @@ function sanitizeFinalXml(text: string, templateRoot: string): string {
   return out;
 }
 
-function stripOuterTemplateDefinitionWrapper(text: string): string {
-  for (const tagName of TEMPLATE_DEFINITION_TAGS) {
+function stripOuterTemplateDefinitionWrapper(text: string, legacyTagAliasesEnabled: boolean): string {
+  for (const tagName of getTemplateDefinitionTags(legacyTagAliasesEnabled)) {
     const stripped = stripOuterWrapperForTag(text, tagName);
     if (stripped !== text) {
       return stripped;

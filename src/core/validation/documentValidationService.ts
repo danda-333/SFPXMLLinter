@@ -3,6 +3,7 @@ import { SfpXmlLinterSettings } from "../../config/settings";
 import { WorkspaceIndex } from "../../indexer/types";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "../../indexer/xmlFacts";
 import { SystemMetadata } from "../../config/systemMetadata";
+import { resolveDocumentFacts } from "../model/factsResolution";
 
 export interface IndexedValidationOutcome {
   uri: vscode.Uri;
@@ -22,6 +23,7 @@ export interface DocumentValidationServiceDeps {
   clearDiagnostics: (uri: vscode.Uri) => void;
   setDiagnostics: (uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[]) => void;
   getIndexForUri: (uri: vscode.Uri) => WorkspaceIndex;
+  getFactsForUri?: (uri: vscode.Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
   buildDiagnosticsForDocument: (
     document: vscode.TextDocument,
     currentIndex: WorkspaceIndex,
@@ -62,6 +64,14 @@ export class DocumentValidationService {
   }
 
   public validateDocument(document: vscode.TextDocument): void {
+    this.validateDocumentInternal(document, { respectProjectScope: true });
+  }
+
+  private validateDocumentInternal(
+    document: vscode.TextDocument,
+    options?: { respectProjectScope?: boolean }
+  ): void {
+    const respectProjectScope = options?.respectProjectScope !== false;
     if (document.languageId !== "xml") {
       this.deps.clearDiagnostics(document.uri);
       return;
@@ -84,10 +94,15 @@ export class DocumentValidationService {
       }
 
       this.deps.logSingleFile(`validate standalone START: ${relOrPath}`);
+      const standaloneFacts = this.resolveFactsFromDocument(document, this.deps.emptyIndex, "fallback-parse");
+      if (!standaloneFacts) {
+        this.deps.clearDiagnostics(document.uri);
+        return;
+      }
       const standaloneDiagnostics = this.deps.buildDiagnosticsForDocument(
         document,
         this.deps.emptyIndex,
-        parseDocumentFacts(document)
+        standaloneFacts
       ).filter(this.deps.referenceRuleFilter);
       this.deps.setDiagnostics(document.uri, standaloneDiagnostics);
       this.standaloneValidationVersionByUri.set(docKey, document.version);
@@ -95,7 +110,7 @@ export class DocumentValidationService {
       return;
     }
 
-    if (!this.deps.shouldValidateUriForActiveProjects(document.uri)) {
+    if (respectProjectScope && !this.deps.shouldValidateUriForActiveProjects(document.uri)) {
       this.deps.logIndex(`validate skipped by project scope: ${relOrPath}`);
       this.deps.clearDiagnostics(document.uri);
       return;
@@ -108,7 +123,15 @@ export class DocumentValidationService {
     }
 
     const currentIndex = this.deps.getIndexForUri(document.uri);
-    const parsedFacts = parseDocumentFacts(document);
+    if (!currentIndex.fullReady) {
+      this.deps.logIndex(`validate skipped: index not fullReady for ${relOrPath}`);
+      return;
+    }
+    const parsedFacts = this.resolveFactsForValidation(document, currentIndex, relOrPath);
+    if (!parsedFacts) {
+      this.deps.clearDiagnostics(document.uri);
+      return;
+    }
     const result = this.deps.buildDiagnosticsForDocument(document, currentIndex, parsedFacts);
     this.deps.setDiagnostics(document.uri, result);
     if (result.length > 0 || this.deps.isUserOpenDocument(document.uri)) {
@@ -154,8 +177,11 @@ export class DocumentValidationService {
         return;
       }
 
-      this.validateDocument(document);
-    } catch {
+      this.validateDocumentInternal(document, { respectProjectScope });
+    } catch (error) {
+      const relOrPath = this.deps.getRelativePath(uri);
+      const message = error instanceof Error ? error.message : String(error);
+      this.deps.logIndex(`validateUri ERROR: ${relOrPath} ${message}`);
       this.deps.clearDiagnostics(uri);
     }
   }
@@ -184,11 +210,17 @@ export class DocumentValidationService {
     const existing = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     const readStartedAt = Date.now();
     const index = this.deps.getIndexForUri(uri);
-    const cachedFacts = index.parsedFactsByUri.get(uri.toString());
+    if (!index.fullReady) {
+      return undefined;
+    }
+    const cachedFacts = this.deps.getFactsForUri?.(uri, index);
     const cacheMiss = options?.preferFsRead === true && !cachedFacts;
 
     let document = existing;
     let pathMode: "fast" | "fs" | "open" = "open";
+    if (document && !options?.preferFsRead && cachedFacts) {
+      pathMode = "fast";
+    }
     if (!document && options?.preferFsRead) {
       const text = await this.deps.readWorkspaceFileText(uri);
       document = this.deps.createVirtualXmlDocument(uri, text);
@@ -203,7 +235,11 @@ export class DocumentValidationService {
     }
     const readMs = Date.now() - readStartedAt;
     const diagnosticsStartedAt = Date.now();
-    const effectiveFacts = cachedFacts ?? parseDocumentFacts(document);
+    const relOrPath = this.deps.getRelativePath(uri);
+    const effectiveFacts = this.resolveFactsForValidation(document, index, relOrPath);
+    if (!effectiveFacts) {
+      return undefined;
+    }
     const computed = this.deps.buildDiagnosticsForDocument(document, index, effectiveFacts, {
       settingsSnapshot: options?.settingsSnapshot,
       metadataSnapshot: options?.metadataSnapshot
@@ -215,7 +251,7 @@ export class DocumentValidationService {
       diagnostics: computed,
       signature,
       shouldLog: computed.length > 0 || this.deps.isUserOpenDocument(uri),
-      relOrPath: this.deps.getRelativePath(uri),
+      relOrPath,
       totalMs: Date.now() - totalStartedAt,
       readMs,
       diagnosticsMs,
@@ -223,5 +259,57 @@ export class DocumentValidationService {
       cacheMiss
     };
   }
+
+  private resolveFactsFromDocument(
+    document: vscode.TextDocument,
+    index: WorkspaceIndex,
+    mode: "strict-accessor" | "fallback-parse"
+  ): ReturnType<typeof parseDocumentFactsFromText> | undefined {
+    return resolveDocumentFacts(document, index, {
+      getFactsForUri: this.deps.getFactsForUri,
+      parseFacts: parseDocumentFacts,
+      mode
+    });
+  }
+
+  private resolveFactsForValidation(
+    document: vscode.TextDocument,
+    index: WorkspaceIndex,
+    relOrPath: string
+  ): ReturnType<typeof parseDocumentFactsFromText> | undefined {
+    const normalized = relOrPath.replace(/\\/g, "/").toLowerCase();
+    const isTemplateDomain =
+      normalized.includes("/xml_templates/") ||
+      normalized.startsWith("xml_templates/") ||
+      normalized.includes("/xml_components/") ||
+      normalized.startsWith("xml_components/") ||
+      normalized.includes("/xml_primitives/") ||
+      normalized.startsWith("xml_primitives/");
+
+    if (isTemplateDomain) {
+      const parsedFacts = parseFactsStandalone(document);
+      if (parsedFacts) {
+        this.deps.logIndex(`validate facts parse-first used: ${relOrPath}`);
+        return parsedFacts;
+      }
+    }
+
+    const strictFacts = this.resolveFactsFromDocument(document, index, "strict-accessor");
+    if (strictFacts) {
+      return strictFacts;
+    }
+    const fallbackFacts = parseFactsStandalone(document);
+    if (fallbackFacts) {
+      this.deps.logIndex(`validate facts fallback-parse used: ${relOrPath}`);
+      return fallbackFacts;
+    }
+    return undefined;
+  }
+}
+
+export function parseFactsStandalone(
+  document: vscode.TextDocument
+): ReturnType<typeof parseDocumentFactsFromText> {
+  return parseDocumentFacts(document);
 }
 

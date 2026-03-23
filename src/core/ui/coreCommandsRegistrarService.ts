@@ -12,9 +12,11 @@ export interface CoreCommandsRegistrarServiceDeps {
   showCompositionLog: () => void;
   showPipelineStats: () => void;
   exportTrace: () => Promise<void>;
+  exportUsageSnapshot: () => Promise<void>;
   refreshCompositionView: () => void;
   compositionCopySummary: (payload?: { text?: string }) => Promise<void>;
   compositionLogNonEffectiveUsings: (payload?: { title?: string; lines?: string[] }) => void;
+  migrateLegacyTemplateAliases: () => Promise<void>;
 }
 
 export class CoreCommandsRegistrarService {
@@ -78,6 +80,9 @@ export class CoreCommandsRegistrarService {
       }),
       vscode.commands.registerCommand("sfpXmlLinter.exportTrace", async () => {
         await this.deps.exportTrace();
+      }),
+      vscode.commands.registerCommand("sfpXmlLinter.exportUsageSnapshot", async () => {
+        await this.deps.exportUsageSnapshot();
       })
     );
 
@@ -100,6 +105,12 @@ export class CoreCommandsRegistrarService {
           this.deps.compositionLogNonEffectiveUsings(payload);
         }
       )
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("sfpXmlLinter.migrateLegacyTemplateAliases", async () => {
+        await this.deps.migrateLegacyTemplateAliases();
+      })
     );
   }
 }

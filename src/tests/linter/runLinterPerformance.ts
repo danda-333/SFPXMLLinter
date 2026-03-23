@@ -98,10 +98,20 @@ class Diagnostic {
   public readonly severity: DiagnosticSeverity;
   public source?: string;
   public code?: string | number;
+  public relatedInformation?: DiagnosticRelatedInformation[];
   constructor(range: Range, message: string, severity: DiagnosticSeverity) {
     this.range = range;
     this.message = message;
     this.severity = severity;
+  }
+}
+
+class DiagnosticRelatedInformation {
+  public readonly location: Location;
+  public readonly message: string;
+  constructor(location: Location, message: string) {
+    this.location = location;
+    this.message = message;
   }
 }
 
@@ -204,6 +214,7 @@ const vscodeMock = {
   Location,
   DiagnosticSeverity,
   Diagnostic,
+  DiagnosticRelatedInformation,
   workspace: {
     workspaceFolders: [{ uri: Uri.file(workspaceRoot), name: "linter-perf-fixture", index: 0 }],
     fs: {

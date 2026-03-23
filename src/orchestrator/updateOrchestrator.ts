@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { parseDocumentFacts } from "../indexer/xmlFacts";
 import type { DependencyRevalidationStats } from "../core/validation/dependencyValidationService";
 
 export type XmlStructuralKind = "form" | "workflow" | "dataview" | "component" | "feature" | "other";
@@ -20,11 +19,14 @@ export interface UpdateOrchestratorHooks {
   collectAffectedFormIdentsForComponent: (componentKey: string) => Set<string>;
   enqueueDependentValidationForFormIdents: (
     formIdents: ReadonlySet<string>,
-    sourceLabel: string
+    sourceLabel: string,
+    options?: { snapshotVersion?: number }
   ) => DependencyRevalidationStats | undefined;
   triggerAutoBuild: (document: vscode.TextDocument, componentKeyHint?: string) => Promise<void>;
   queueFullReindex: () => void;
+  getCurrentSnapshotVersion?: () => number;
   onSavePerformance?: (event: SavePerformanceEvent) => void;
+  onPostSave?: (context: PostSaveContext) => Promise<void> | void;
 }
 
 export interface SavePerformanceEvent {
@@ -33,6 +35,14 @@ export interface SavePerformanceEvent {
   document: vscode.TextDocument;
   elapsedMs: number;
   refresh?: IncrementalRefreshOutcome;
+  dependency?: DependencyRevalidationStats;
+}
+
+export interface PostSaveContext {
+  cycleId: string;
+  document: vscode.TextDocument;
+  refresh: IncrementalRefreshOutcome;
+  affectedFormIdents: ReadonlySet<string>;
   dependency?: DependencyRevalidationStats;
 }
 
@@ -132,10 +142,23 @@ export class UpdateOrchestrator {
       refresh
     });
 
+    // Post-save hook is intentionally invoked before dependency validation enqueue so
+    // dependent validations read a fully refreshed composed snapshot/facts state.
+    await this.hooks.onPostSave?.({
+      cycleId,
+      document,
+      refresh,
+      affectedFormIdents
+    });
+
+    let dependencyStats: DependencyRevalidationStats | undefined;
     if (affectedFormIdents.size > 0) {
       const sourceLabel = `${cycleId}:${refresh.rootKind}:${rel}`;
       const dependencyStartedAt = Date.now();
-      const dependency = this.hooks.enqueueDependentValidationForFormIdents(affectedFormIdents, sourceLabel);
+      const dependency = this.hooks.enqueueDependentValidationForFormIdents(affectedFormIdents, sourceLabel, {
+        snapshotVersion: this.hooks.getCurrentSnapshotVersion?.()
+      });
+      dependencyStats = dependency;
       if (dependency) {
         this.hooks.log(
           `${cycleId} dependency validation queued forms=${dependency.forms}, files=${dependency.files}, immediateOpen=${dependency.immediateOpen}, low=${dependency.queuedLow}, in ${dependency.durationMs} ms`
@@ -189,13 +212,5 @@ export class UpdateOrchestrator {
       this.hooks.log("ORCH fs-rename -> queue full reindex");
       this.hooks.queueFullReindex();
     }
-  }
-
-  public inferRootKind(document: vscode.TextDocument): XmlStructuralKind {
-    const root = (parseDocumentFacts(document).rootTag ?? "").toLowerCase();
-    if (root === "form" || root === "workflow" || root === "dataview" || root === "component" || root === "feature") {
-      return root;
-    }
-    return "other";
   }
 }

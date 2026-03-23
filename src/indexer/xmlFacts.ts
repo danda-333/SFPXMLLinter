@@ -132,14 +132,14 @@ export interface ParsedDocumentFacts {
 }
 
 export interface UsingContributionInsertTrace {
-  strategy: "placeholder" | "targetXPath" | "symbolCount";
+  strategy: "placeholder" | "targetXPath" | "estimatedSymbolCount";
   finalInsertCount: number;
   placeholderCount: number;
   targetXPathExpression?: string;
   targetXPathMatchCount: number;
   targetXPathClampedCount: number;
   allowMultipleInserts: boolean;
-  fallbackSymbolCount: number;
+  estimatedSymbolCount: number;
 }
 
 const ATTR_REGEX = /([A-Za-z_][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;

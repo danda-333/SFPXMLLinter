@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { SfpXmlLinterSettings } from "../../config/settings";
-import { parseDocumentFacts } from "../../indexer/xmlFacts";
+import { parseDocumentFacts, parseDocumentFactsFromText } from "../../indexer/xmlFacts";
+import { resolveDocumentFacts } from "../model/factsResolution";
+import { WorkspaceIndex } from "../../indexer/types";
 
 export interface TemplateBuildPlannerServiceDeps {
   getSettings: () => SfpXmlLinterSettings;
@@ -16,6 +18,9 @@ export interface TemplateBuildPlannerServiceDeps {
   collectTemplatePathsForFormIdentFromIndex: (formIdent: string) => string[];
   collectDependentTemplatesFromIndex: (componentKey: string) => string[];
   findTemplatesUsingComponent: (workspaceFolder: vscode.WorkspaceFolder, componentPath: string) => Promise<string[]>;
+  getIndexForUri: (uri: vscode.Uri) => WorkspaceIndex;
+  getFactsForDocument?: (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
+  getFactsForUri?: (uri: vscode.Uri, index: WorkspaceIndex) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
 }
 
 export class TemplateBuildPlannerService {
@@ -67,7 +72,15 @@ export class TemplateBuildPlannerService {
 
     if (this.deps.isInFolder(document.uri, "XML_Templates")) {
       this.deps.logBuild(`SAVE XML_Templates: ${this.deps.toRelativePath(document.uri)}`);
-      const facts = parseDocumentFacts(document);
+      const facts = resolveDocumentFacts(document, this.deps.getIndexForUri(document.uri), {
+        getFactsForDocument: this.deps.getFactsForDocument,
+        getFactsForUri: this.deps.getFactsForUri,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      });
+      if (!facts) {
+        return;
+      }
       const root = (facts.rootTag ?? "").toLowerCase();
       if (root === "form" && facts.formIdent) {
         const relatedTemplatePaths = this.deps.collectTemplatePathsForFormIdentFromIndex(facts.formIdent);

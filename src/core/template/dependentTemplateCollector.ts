@@ -1,6 +1,6 @@
 import { WorkspaceIndex } from "../../indexer/types";
 import { ParsedDocumentFacts } from "../../indexer/xmlFacts";
-import { getComponentVariantKeys } from "../model/indexAccess";
+import { getComponentVariantKeys, getParsedFactsEntries } from "../model/indexAccess";
 
 export interface CollectDependentTemplatePathsFromIndexOptions {
   isTemplatePath?: (fsPath: string) => boolean;
@@ -20,8 +20,8 @@ export function collectDependentTemplatePathsFromIndex(
   const affectedFormIdents = new Set<string>();
   const isTemplatePath = options?.isTemplatePath ?? defaultIsTemplatePath;
 
-  for (const [uriKey, facts] of index.parsedFactsByUri.entries()) {
-    const fsPath = uriKeyToFsPath(uriKey);
+  for (const { uri, facts } of getParsedFactsEntries(index, undefined, parseIndexUriKeyForCollector)) {
+    const fsPath = uri.fsPath;
     if (!fsPath || !isTemplatePath(fsPath)) {
       continue;
     }
@@ -44,13 +44,13 @@ export function collectDependentTemplatePathsFromIndex(
   // regardless of the current component contribution metadata. A component change
   // can remove prior non-form contributions and still requires cleanup rebuild.
   if (affectedFormIdents.size > 0) {
-    for (const [uriKey, facts] of index.parsedFactsByUri.entries()) {
+    for (const { uri, facts } of getParsedFactsEntries(index, undefined, parseIndexUriKeyForCollector)) {
       const root = (facts.rootTag ?? "").toLowerCase();
       if (root !== "workflow" && root !== "dataview") {
         continue;
       }
 
-      const fsPath = uriKeyToFsPath(uriKey);
+      const fsPath = uri.fsPath;
       if (!fsPath || !isTemplatePath(fsPath)) {
         continue;
       }
@@ -81,25 +81,26 @@ function resolveOwningFormIdent(facts: ParsedDocumentFacts): string | undefined 
   return undefined;
 }
 
-function uriKeyToFsPath(uriKey: string): string | undefined {
+function parseIndexUriKeyForCollector(uriKey: string): any {
   const raw = uriKey.trim();
   if (!raw) {
     return undefined;
   }
+
   if (raw.includes("://")) {
     try {
-      const parsed = new URL(raw);
-      if (parsed.protocol !== "file:") {
+      const url = new URL(raw);
+      if (url.protocol !== "file:") {
         return undefined;
       }
-      let pathname = decodeURIComponent(parsed.pathname);
-      pathname = pathname.replace(/^\/([A-Za-z]:\/)/, "$1");
-      return pathname.replace(/\//g, "\\");
+      const fsPath = decodeURIComponent(url.pathname).replace(/^\/([a-zA-Z]:\/)/, "$1");
+      return { fsPath };
     } catch {
       return undefined;
     }
   }
-  return raw;
+
+  return { fsPath: raw };
 }
 
 function defaultIsTemplatePath(fsPath: string): boolean {

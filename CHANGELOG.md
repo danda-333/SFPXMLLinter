@@ -13,6 +13,13 @@
     - workspace scan boundary
     - fallback-parse boundary
 
+## 0.1.17
+
+- Critical build reliability fix:
+  - fixed stale component-library cache path during manual/full template rebuilds.
+  - full rebuild now forces component cache invalidation and full component source refresh.
+  - prevents missing component contributions in final XML after `Build XML Templates (All)` when prior file-change tracking missed updates.
+
 ## 0.1.16
 
 - Save/cache stability for component-like files:

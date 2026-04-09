@@ -171,6 +171,10 @@ export class BuildXmlTemplatesService {
       const dirtyPaths = cached.dirtyPaths ?? new Set<string>();
       dirtyPaths.add(normalizePath(changedPath));
       cached.dirtyPaths = dirtyPaths;
+    } else {
+      // Force full component library rescan on next build. This protects
+      // manual/full rebuild commands from stale incremental dirty-path state.
+      cached.dirtyPaths = undefined;
     }
     this.componentLibraryCacheByWorkspace.set(workspaceKey, cached);
   }

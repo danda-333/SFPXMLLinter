@@ -70,6 +70,7 @@ export class ManualTemplateBuildCommandsService {
 
       if (targetUris.length === 0) {
         this.deps.logBuild("No current/selected resource -> FULL fallback");
+        this.deps.buildService.invalidateComponentLibraryCache(folder);
         await this.deps.buildService.run(
           folder,
           this.deps.createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
@@ -119,6 +120,7 @@ export class ManualTemplateBuildCommandsService {
       }
 
       if (usedFullFallback || templateTargets.size === 0) {
+        this.deps.buildService.invalidateComponentLibraryCache(folder);
         await this.deps.buildService.run(
           folder,
           this.deps.createBuildRunOptions(false, mode, telemetry.onTemplateEvaluated, telemetry.onTemplateMutations)
@@ -165,6 +167,9 @@ export class ManualTemplateBuildCommandsService {
     const commandStartedAt = Date.now();
     try {
       this.deps.logBuild("MANUAL build all START");
+      // Always invalidate component library cache before full rebuild so the run
+      // cannot reuse stale component snapshots from missed file-watch/save events.
+      this.deps.buildService.invalidateComponentLibraryCache(folder);
       const mode = this.deps.getTemplateBuilderMode();
       const telemetry = this.deps.createBuildTelemetryCollector();
       await vscode.window.withProgress(

@@ -82,6 +82,8 @@ export interface NamedIdent {
   ident: string;
   range: vscode.Range;
   type?: string;
+  titleResourceKey?: string;
+  title?: string;
 }
 
 export interface IdentOccurrence {
@@ -89,6 +91,21 @@ export interface IdentOccurrence {
   range: vscode.Range;
   kind: "control" | "button" | "section";
   scopeKey?: string;
+}
+
+export interface WorkflowStateInfo {
+  stateIdent?: string;
+  stateValue: string;
+  titleResourceKey?: string;
+  colorCssClass?: string;
+  isOutOfSla?: string;
+  range?: vscode.Range;
+}
+
+export interface WorkflowStepInfo {
+  stepIdent?: string;
+  stateValue?: string;
+  range?: vscode.Range;
 }
 
 export interface ParsedDocumentFacts {
@@ -126,6 +143,8 @@ export interface ParsedDocumentFacts {
   actionShareCodeReferences: NamedIdent[];
   declaredControlInfos: NamedIdent[];
   declaredButtonInfos: NamedIdent[];
+  workflowStates: WorkflowStateInfo[];
+  workflowSteps: WorkflowStepInfo[];
   rootControlScopeKeys?: Set<string>;
   rootButtonScopeKeys?: Set<string>;
   rootSectionScopeKeys?: Set<string>;
@@ -188,6 +207,8 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
     actionShareCodeReferences: [],
     declaredControlInfos: [],
     declaredButtonInfos: [],
+    workflowStates: [],
+    workflowSteps: [],
     rootControlScopeKeys: new Set<string>(),
     rootButtonScopeKeys: new Set<string>(),
     rootSectionScopeKeys: new Set<string>()
@@ -271,11 +292,13 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
       const attrs = parseAttributes(controlTag.rawAttrs, text, controlTag.attrsStartIndex);
       const attr = attrs.get("Ident");
       const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
+      const titleResourceKey = attrs.get("TitleResourceKey")?.value;
+      const title = attrs.get("Title")?.value;
       if (attr?.value) {
         facts.declaredControls.add(attr.value);
         if (attr.valueRange) {
           facts.identOccurrences.push({ ident: attr.value, range: attr.valueRange, kind: "control", scopeKey: controlTag.scopeKey });
-          facts.declaredControlInfos.push({ ident: attr.value, range: attr.valueRange, type });
+          facts.declaredControlInfos.push({ ident: attr.value, range: attr.valueRange, type, titleResourceKey, title });
         }
       }
     }
@@ -287,6 +310,8 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
       const attrs = parseAttributes(buttonTag.rawAttrs, text, buttonTag.attrsStartIndex);
       const ident = attrs.get("Ident");
       const type = attrs.get("xsi:type")?.value ?? attrs.get("type")?.value;
+      const titleResourceKey = attrs.get("TitleResourceKey")?.value;
+      const title = attrs.get("Title")?.value;
       if (ident?.value) {
         facts.declaredButtons.add(ident.value);
         if (ident.valueRange) {
@@ -296,7 +321,7 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
             kind: "button",
             scopeKey: buttonTag.scopeKey
           });
-          facts.declaredButtonInfos.push({ ident: ident.value, range: ident.valueRange, type });
+          facts.declaredButtonInfos.push({ ident: ident.value, range: ident.valueRange, type, titleResourceKey, title });
         }
       }
     }
@@ -411,6 +436,40 @@ function parseDocumentFactsCore(text: string): ParsedDocumentFacts {
       if (!facts.actionShareCodeDefinitions.has(key)) {
         facts.actionShareCodeDefinitions.set(key, attr.valueRange);
       }
+    }
+  }
+
+  if (canHaveWorkflowNodes && text.includes("<State")) {
+    for (const m of text.matchAll(/<State\b([^>]*)\/?>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const valueAttr = getAttributeCaseInsensitive(attrs, "Value");
+      if (!valueAttr?.value) {
+        continue;
+      }
+      facts.workflowStates.push({
+        stateIdent: getAttributeCaseInsensitive(attrs, "Ident")?.value,
+        stateValue: valueAttr.value,
+        titleResourceKey: getAttributeCaseInsensitive(attrs, "TitleResourceKey")?.value,
+        colorCssClass: getAttributeCaseInsensitive(attrs, "ColorCssClass")?.value,
+        isOutOfSla: getAttributeCaseInsensitive(attrs, "IsOutOfSLA")?.value,
+        range: valueAttr.valueRange
+      });
+    }
+  }
+
+  if (canHaveWorkflowNodes && text.includes("<Step")) {
+    for (const m of text.matchAll(/<Step\b([^>]*)\/?>/gi)) {
+      const attrs = parseAttributes(m[1], text, attributeStartIndex(m));
+      const stateAttr = getAttributeCaseInsensitive(attrs, "State");
+      const identAttr = getAttributeCaseInsensitive(attrs, "Ident");
+      if (!stateAttr?.value && !identAttr?.value) {
+        continue;
+      }
+      facts.workflowSteps.push({
+        stepIdent: identAttr?.value,
+        stateValue: stateAttr?.value,
+        range: stateAttr?.valueRange ?? identAttr?.valueRange
+      });
     }
   }
 

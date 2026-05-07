@@ -146,12 +146,13 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
     }
 
     const index = this.getIndex(document.uri);
-    const facts = resolveDocumentFacts(document, index, {
-      getFactsForDocument: this.getFactsForDocument,
-      getFactsForUri: this.getFactsForUri ? ((uri, _index) => this.getFactsForUri?.(uri)) : undefined,
-      parseFacts: parseDocumentFacts,
-      mode: "strict-accessor"
-    });
+    const facts =
+      resolveDocumentFacts(document, index, {
+        getFactsForDocument: this.getFactsForDocument,
+        getFactsForUri: this.getFactsForUri ? ((uri, _index) => this.getFactsForUri?.(uri)) : undefined,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseDocumentFactsFromText(document.getText());
     if (!facts) {
       return undefined;
     }
@@ -323,7 +324,11 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
       }
     }
 
-    if (facts.rootTag?.toLowerCase() === "workflow" && facts.workflowFormIdent) {
+    if (facts.rootTag?.toLowerCase() === "workflow") {
+      const owningFormIdent = facts.workflowFormIdent ?? facts.rootFormIdent;
+      if (!owningFormIdent) {
+        return undefined;
+      }
       for (const ref of facts.workflowReferences) {
         if (!ref.range.contains(position)) {
           continue;
@@ -334,13 +339,11 @@ export class SfpXmlReferencesProvider implements vscode.ReferenceProvider {
           continue;
         }
 
-        const declaration = resolveWorkflowDeclaration(index, facts, documentComposition, kind, ref.ident, this.getFactsForUri);
-        if (!declaration) {
-          continue;
-        }
+        const declaration = resolveWorkflowDeclaration(index, facts, documentComposition, kind, ref.ident, this.getFactsForUri)
+          ?? new vscode.Location(document.uri, ref.range);
 
         return {
-          formIdent: facts.workflowFormIdent,
+          formIdent: owningFormIdent,
           ident: ref.ident,
           kind,
           declaration

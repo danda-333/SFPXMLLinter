@@ -22,6 +22,7 @@ export interface ReindexServiceDeps {
   getProjectKeyForUri: (uri: vscode.Uri) => string | undefined;
   getSettingsSnapshot: () => SfpXmlLinterSettings;
   sleep: (ms: number) => Promise<void>;
+  onReindexCompleted?: (scope: ReindexScope, durationMs: number) => void;
 }
 
 export class ReindexService implements vscode.Disposable {
@@ -153,6 +154,7 @@ export class ReindexService implements vscode.Disposable {
 
       const durationMs = Date.now() - startedAt;
       this.deps.log(`REINDEX all passes DONE in ${durationMs} ms`);
+      this.deps.onReindexCompleted?.(scope, durationMs);
       vscode.window.setStatusBarMessage(`SFP XML Linter: Indexace dokoncena (${durationMs} ms)`, 4000);
 
       if (!this.hasShownInitialIndexReadyNotification) {

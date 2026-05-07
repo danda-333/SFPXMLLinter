@@ -9,6 +9,7 @@ import { SfpXmlRenameProvider } from "../../providers/renameProvider";
 import { SfpSqlPlaceholderSemanticProvider } from "../../providers/sqlPlaceholderSemanticProvider";
 import { SfpXmlColorProvider } from "../../providers/colorProvider";
 import { SfpXmlIgnoreCodeActionProvider } from "../../providers/ignoreCodeActionProvider";
+import { WorkflowTranslationInlayProvider } from "../../providers/workflowTranslationInlayProvider";
 import { FormatterOptions } from "../../formatter/types";
 import { parseDocumentFactsFromText } from "../../indexer/xmlFacts";
 
@@ -46,6 +47,7 @@ export interface LanguageProvidersRegistrarServiceDeps {
     options: FormatterOptions
   ) => FormatRangeResult;
   logFormatter: (message: string) => void;
+  createWorkflowTranslationInlayProvider: () => WorkflowTranslationInlayProvider;
 }
 
 export class LanguageProvidersRegistrarService {
@@ -92,6 +94,15 @@ export class LanguageProvidersRegistrarService {
           () => this.deps.getModelVersion()
         )
       ),
+      vscode.languages.registerImplementationProvider(
+        { language: "xml" },
+        new SfpXmlDefinitionProvider(
+          (uri) => this.deps.getIndexForUri(uri),
+          (document) => this.deps.getFactsForDocument(document),
+          (uri) => this.deps.getFactsForUri(uri),
+          () => this.deps.getModelVersion()
+        )
+      ),
       vscode.languages.registerRenameProvider(
         { language: "xml" },
         new SfpXmlRenameProvider(
@@ -108,6 +119,10 @@ export class LanguageProvidersRegistrarService {
         SfpSqlPlaceholderSemanticProvider.legend
       ),
       vscode.languages.registerColorProvider({ language: "xml" }, new SfpXmlColorProvider()),
+      vscode.languages.registerInlayHintsProvider(
+        { language: "xml" },
+        this.deps.createWorkflowTranslationInlayProvider()
+      ),
       vscode.languages.registerDocumentFormattingEditProvider({ language: "xml" }, {
         provideDocumentFormattingEdits: (document, options) => {
           const startedAt = Date.now();

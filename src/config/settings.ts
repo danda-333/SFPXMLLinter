@@ -21,6 +21,9 @@ export interface SfpXmlLinterSettings {
   templateBuilderGeneratorUserScriptsRoots: string[];
   startupFullReindexDelayMs: number;
   startupVerboseProgress: boolean;
+  translationsEnabled: boolean;
+  translationsLanguageId: number;
+  translationsHintsEnabled: boolean;
 }
 
 export const DEFAULT_RULES: Record<string, RuleSeverity> = {
@@ -120,6 +123,9 @@ export function getSettings(): SfpXmlLinterSettings {
   const templateBuilderGeneratorUserScriptsRoots = cfg.get<string[]>("templateBuilder.generators.userScriptsRoots", ["XML_Generators"]);
   const startupFullReindexDelayMs = Math.max(0, cfg.get<number>("startup.fullReindexDelayMs", 1000));
   const startupVerboseProgress = cfg.get<boolean>("startup.verboseProgress", false);
+  const translationsEnabled = cfg.get<boolean>("translations.enabled", true);
+  const translationsLanguageId = cfg.get<number>("translations.languageId", 1);
+  const translationsHintsEnabled = cfg.get<boolean>("translations.hints.enabled", true);
 
   return {
     workspaceRoots,
@@ -139,7 +145,10 @@ export function getSettings(): SfpXmlLinterSettings {
     templateBuilderGeneratorEnableUserScripts,
     templateBuilderGeneratorUserScriptsRoots,
     startupFullReindexDelayMs,
-    startupVerboseProgress
+    startupVerboseProgress,
+    translationsEnabled,
+    translationsLanguageId,
+    translationsHintsEnabled
   };
 }
 

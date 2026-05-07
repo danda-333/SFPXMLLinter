@@ -251,21 +251,22 @@ async function run(): Promise<void> {
   const formIdentPos = doc.positionAt(formIdentOffset);
   const index = createIndex(doc);
 
-  // 1) Snapshot-only: accessor present but returns undefined => no fallback parsing.
+  // 1) Snapshot-only: accessor present but returns undefined => provider falls back to parse-first.
   const refSnapshotOnly = new SfpXmlReferencesProvider(() => index, () => undefined, () => undefined, () => [], () => 1);
   const refs = refSnapshotOnly.provideReferences(
     doc as unknown as import("vscode").TextDocument,
     componentPos as unknown as import("vscode").Position,
     { includeDeclaration: true } as unknown as import("vscode").ReferenceContext
   );
-  assert.deepEqual(refs, []);
+  assert.ok(Array.isArray(refs));
+  assert.ok(refs.length > 0);
 
   const defSnapshotOnly = new SfpXmlDefinitionProvider(() => index, () => undefined, () => undefined, () => 1);
   const def = defSnapshotOnly.provideDefinition(
     doc as unknown as import("vscode").TextDocument,
     componentPos as unknown as import("vscode").Position
   );
-  assert.equal(def, undefined);
+  assert.ok(def);
 
   const renameSnapshotOnly = new SfpXmlRenameProvider(() => index, () => undefined, () => undefined, () => [], () => 1);
   const rename = await renameSnapshotOnly.provideRenameEdits(

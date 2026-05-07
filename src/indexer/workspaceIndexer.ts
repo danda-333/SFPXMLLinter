@@ -1572,6 +1572,8 @@ function createLightweightParsedFormFacts(maskedText: string): ParsedDocumentFac
     actionShareCodeReferences: [],
     declaredControlInfos: [],
     declaredButtonInfos: [],
+    workflowStates: [],
+    workflowSteps: [],
     rootControlScopeKeys: new Set<string>(),
     rootButtonScopeKeys: new Set<string>(),
     rootSectionScopeKeys: new Set<string>()

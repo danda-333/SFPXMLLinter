@@ -50,7 +50,8 @@
     "onCommand:sfpXmlLinter.workspaceDiagnosticsReport",
     "onCommand:sfpXmlLinter.formatDocumentTolerant",
     "onCommand:sfpXmlLinter.formatSelectionTolerant",
-    "onCommand:sfpXmlLinter.migrateLegacyTemplateAliases"
+    "onCommand:sfpXmlLinter.migrateLegacyTemplateAliases",
+    "onCommand:sfpXmlLinter.toggleInlayHints"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -203,6 +204,10 @@
       {
         "command": "sfpXmlLinter.migrateLegacyTemplateAliases",
         "title": "SFP XML Linter: Migrate Legacy Template Aliases"
+      },
+      {
+        "command": "sfpXmlLinter.toggleInlayHints",
+        "title": "SFP XML Linter: Toggle Inlay Hints"
       }
     ],
     "views": {
@@ -298,7 +303,22 @@
           "items": {
             "type": "string"
           },
-          "description": "Reserved for future translations-related features."
+          "description": "Folders scanned recursively for translations CSV files."
+        },
+        "sfpXmlLinter.translations.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable workflow translations features (CSV loading + inlay hints)."
+        },
+        "sfpXmlLinter.translations.languageId": {
+          "type": "number",
+          "default": 1,
+          "description": "Language id used when selecting translation rows from CSV."
+        },
+        "sfpXmlLinter.translations.hints.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable all SFP XML Linter inlay hints (translations + model reference hints)."
         },
         "sfpXmlLinter.hoverDocsFiles": {
           "type": "array",
@@ -517,7 +537,7 @@
     "watch": "tsc -watch -p ./",
     "test:formatter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runFormatterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/formatter/runSelectionFormatterTests.js",
     "test:linter": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/linter/runLinterFixtures.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runIgnoreCodeActionProviderTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runComposedWorkflowReferenceTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runFeatureControlToggleTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runExpectedXPathContextIsolationTests.js && node -r ./out/tests/testConsoleColors.js out/tests/linter/runExpectedXPathItsmInovationRegressionTests.js",
-    "test:providers": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/providers/runCompletionProviderTests.js && node -r ./out/tests/testConsoleColors.js out/tests/providers/runProviderSnapshotConsistencyTests.js",
+    "test:providers": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/providers/runCompletionProviderTests.js && node -r ./out/tests/testConsoleColors.js out/tests/providers/runProviderSnapshotConsistencyTests.js && node -r ./out/tests/testConsoleColors.js out/tests/providers/runReferenceModelUtilsTests.js && node -r ./out/tests/testConsoleColors.js out/tests/providers/runWorkflowTranslationInlayTests.js",
     "test:all": "npm run test:providers && npm run test:linter && npm run test:composition && npm run test:templates",
     "test:contracts": "npm run compile && node -r ./out/tests/testConsoleColors.js out/tests/core/runContractGuardsSnapshotTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runSingleWriterGuardTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runSingleSourceGuardTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runCommandContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runValidationRuleMatrixContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runValidationModuleFactContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runValidationModuleSymbolContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runValidationModuleRuleCoverageContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runProviderAccessContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runOrchestrationEntryContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runCommandHandlerOrchestrationContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runPipelineModuleRegistrationContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runDiagnosticsPublisherContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runCompositionDataSourceContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runValidationDataAccessContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runExtensionBoundaryContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runWorkspaceScanBoundaryContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runFallbackParseBoundaryContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runConsumerNoFallbackHeuristicsContractTests.js && node -r ./out/tests/testConsoleColors.js out/tests/core/runFactsAndSymbolsWiringCoverageContractTests.js",
     "test:all:strict": "npm run test:all && npm run test:linter:perf && npm run test:templates:perf",

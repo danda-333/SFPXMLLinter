@@ -86,6 +86,17 @@ export function registerDefaultFactsAndSymbols(deps: RegisterDefaultFactsAndSymb
   });
 
   factRegistry.register({
+    kind: "fact.workflowStates",
+    collect(nodeId) {
+      const facts = getFacts(nodeId);
+      return {
+        states: facts?.workflowStates ?? [],
+        steps: facts?.workflowSteps ?? []
+      };
+    }
+  });
+
+  factRegistry.register({
     kind: "fact.mappingRefs",
     collect(nodeId) {
       const facts = getFacts(nodeId);

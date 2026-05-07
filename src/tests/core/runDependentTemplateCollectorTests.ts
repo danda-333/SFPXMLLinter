@@ -111,6 +111,8 @@ function createFacts(input: {
     actionShareCodeReferences: [] as any,
     declaredControlInfos: [] as any,
     declaredButtonInfos: [] as any,
+    workflowStates: [],
+    workflowSteps: [],
     rootControlScopeKeys: new Set<string>(),
     rootButtonScopeKeys: new Set<string>(),
     rootSectionScopeKeys: new Set<string>()

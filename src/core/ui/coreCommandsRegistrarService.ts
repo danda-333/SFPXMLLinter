@@ -17,6 +17,7 @@ export interface CoreCommandsRegistrarServiceDeps {
   compositionCopySummary: (payload?: { text?: string }) => Promise<void>;
   compositionLogNonEffectiveUsings: (payload?: { title?: string; lines?: string[] }) => void;
   migrateLegacyTemplateAliases: () => Promise<void>;
+  toggleTranslationInlayHints: () => Promise<void>;
 }
 
 export class CoreCommandsRegistrarService {
@@ -110,6 +111,12 @@ export class CoreCommandsRegistrarService {
     context.subscriptions.push(
       vscode.commands.registerCommand("sfpXmlLinter.migrateLegacyTemplateAliases", async () => {
         await this.deps.migrateLegacyTemplateAliases();
+      })
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("sfpXmlLinter.toggleInlayHints", async () => {
+        await this.deps.toggleTranslationInlayHints();
       })
     );
   }

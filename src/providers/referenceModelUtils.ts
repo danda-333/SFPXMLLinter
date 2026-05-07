@@ -4,7 +4,7 @@ import { ParsedDocumentFacts } from "../indexer/xmlFacts";
 import { normalizeComponentKey } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { DocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
-import { getParsedFactsByUri, getParsedFactsEntries } from "../core/model/indexAccess";
+import { getIndexedFormByIdent, getIndexedForms, getParsedFactsByUri, getParsedFactsEntries } from "../core/model/indexAccess";
 import { parseIndexUriKey } from "../core/model/indexUriParser";
 
 export type FormSymbolKind = "control" | "button" | "section";
@@ -37,6 +37,11 @@ export function findFormSymbolDeclaration(
   ident: string,
   getFactsForUri?: FactsByUriAccessor
 ): vscode.Location | undefined {
+  let indexedForm = getIndexedFormByIdent(index, formIdent);
+  if (!indexedForm) {
+    indexedForm = getIndexedForms(index).find((form) => sameText(form.ident, formIdent));
+  }
+
   for (const entry of getParsedFactsEntries(index, getFactsForUri ? ((uri) => getFactsForUri(uri)) : undefined, parseIndexUriKey)) {
     if ((entry.facts.rootTag ?? "").toLowerCase() !== "form") {
       continue;
@@ -67,7 +72,19 @@ export function findFormSymbolDeclaration(
     }
   }
 
-  return undefined;
+  if (!indexedForm) {
+    return undefined;
+  }
+
+  if (kind === "control") {
+    return indexedForm.controlDefinitions.get(ident);
+  }
+
+  if (kind === "button") {
+    return indexedForm.buttonDefinitions.get(ident);
+  }
+
+  return indexedForm.sectionDefinitions.get(ident);
 }
 
 export function findComponentSymbolDeclaration(
@@ -113,11 +130,12 @@ export function resolveWorkflowDeclaration(
   ident: string,
   getFactsForUri?: FactsByUriAccessor
 ): vscode.Location | undefined {
-  if (!workflowFacts.workflowFormIdent) {
+  const owningFormIdent = workflowFacts.workflowFormIdent ?? workflowFacts.rootFormIdent;
+  if (!owningFormIdent) {
     return undefined;
   }
 
-  const local = findFormSymbolDeclaration(index, workflowFacts.workflowFormIdent, kind, ident, getFactsForUri);
+  const local = findFormSymbolDeclaration(index, owningFormIdent, kind, ident, getFactsForUri);
   if (local) {
     return local;
   }
@@ -173,7 +191,8 @@ export function collectWorkflowReferenceLocations(
     if ((entry.facts.rootTag ?? "").toLowerCase() !== "workflow") {
       continue;
     }
-    if (!sameText(entry.facts.workflowFormIdent, formIdent)) {
+    const workflowFormIdent = entry.facts.workflowFormIdent ?? entry.facts.rootFormIdent;
+    if (!sameText(workflowFormIdent, formIdent)) {
       continue;
     }
     for (const ref of entry.facts.workflowReferences) {

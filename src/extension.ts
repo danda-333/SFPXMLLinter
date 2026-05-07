@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+﻿import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { WorkspaceIndexer, RebuildIndexProgressEvent } from "./indexer/workspaceIndexer";
@@ -60,6 +60,8 @@ import { LegacyTemplateAliasMigrationCommandsService } from "./core/template/leg
 import { PipelineUiCommandsService } from "./core/ui/pipelineUiCommandsService";
 import { VsCodeEventBridgeService } from "./core/ui/vsCodeEventBridgeService";
 import { LanguageProvidersRegistrarService } from "./core/ui/languageProvidersRegistrarService";
+import { WorkflowTranslationsService } from "./core/translations/workflowTranslations";
+import { WorkflowControlReference, WorkflowTranslationInlayProvider } from "./providers/workflowTranslationInlayProvider";
 import { CompositionCommandsRegistrarService } from "./core/ui/compositionCommandsRegistrarService";
 import { WorkspaceMaintenanceCommandsRegistrarService } from "./core/ui/workspaceMaintenanceCommandsRegistrarService";
 import { CoreCommandsRegistrarService } from "./core/ui/coreCommandsRegistrarService";
@@ -69,6 +71,9 @@ import { createFormatterOptions, createFormatterOptionsFromFormattingOptions, fo
 import { getUserOpenUris, isUserOpenDocument } from "./core/utils/editorVisibilityUtils";
 import { shouldAutoTriggerSqlSuggest } from "./core/utils/sqlBlockUtils";
 import { createVirtualXmlDocument, readWorkspaceFileText } from "./core/utils/virtualXmlUtils";
+import { buildDocumentCompositionModel, collectSelectedDocumentContributions } from "./composition/documentModel";
+import { resolveComponentByKey } from "./indexer/componentResolve";
+import { findFormSymbolDeclaration, resolveWorkflowDeclaration } from "./providers/referenceModelUtils";
 import {
   getProjectKeyForUri as getProjectKeyForUriFromSettings,
   isReindexRelevantUri as isReindexRelevantUriFromSettings,
@@ -96,6 +101,7 @@ function isComposedReferenceRule(code: unknown): boolean {
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const DEBUG_PREFIX = "[SFP-DBG]";
   const diagnostics = vscode.languages.createDiagnosticCollection("sfpXmlLinter");
+  const translationsDiagnostics = vscode.languages.createDiagnosticCollection("sfpXmlLinterTranslations");
   const unifiedOutput = vscode.window.createOutputChannel("SFP XML Linter");
   const buildOutput = unifiedOutput;
   const indexOutput = unifiedOutput;
@@ -124,6 +130,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const diagnosticsPublisher = new DiagnosticsPublisherService({
     diagnostics,
     onChanged: () => compositionTreeProvider.refresh()
+  });
+  const translationsDiagnosticsPublisher = new DiagnosticsPublisherService({
+    diagnostics: translationsDiagnostics
   });
   const engine = new DiagnosticsEngine();
   const factRegistry = new FactRegistry();
@@ -237,6 +246,487 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     fullReady: false
   };
   const documentationHoverResolver = new DocumentationHoverResolver();
+  const inlayHintsChangedEmitter = new vscode.EventEmitter<void>();
+  const workflowTranslationsService = new WorkflowTranslationsService(
+    (updates) => translationsDiagnosticsPublisher.setBatch(updates),
+    (message) => logIndex(message)
+  );
+  let translationsCsvWatchers: vscode.FileSystemWatcher[] = [];
+  const workflowTranslationInlayProvider = new WorkflowTranslationInlayProvider(
+    () =>
+      workflowTranslationsService.getSnapshot({
+        enabled: getSettings().translationsEnabled,
+        languageId: getSettings().translationsLanguageId,
+        resourcesRoots: getSettings().resourcesRoots
+      }),
+    () => ({
+      enabled: getSettings().translationsEnabled && getSettings().translationsHintsEnabled
+    }),
+    (document) => {
+      const out = new Map<string, { titleResourceKey?: string; title?: string }>();
+      const primaryIndex = getIndexForUri(document.uri);
+      const workflowFacts = resolveDocumentFacts(document, primaryIndex, {
+        getFactsForDocument: (doc) =>
+          factRegistry.getFact(
+            doc.uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        getFactsForUri: (uri) =>
+          factRegistry.getFact(
+            uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseDocumentFactsFromText(document.getText());
+      const formIdent = workflowFacts?.workflowFormIdent || workflowFacts?.rootFormIdent;
+      if (!formIdent) {
+        return out;
+      }
+      const composition = buildDocumentCompositionModel(workflowFacts, primaryIndex);
+      const referencedButtonIdents = workflowFacts.workflowReferences
+        .filter((item) => item.kind === "button")
+        .map((item) => item.ident);
+
+      const candidateIndexes = [primaryIndex, templateIndexer.getIndex(), runtimeIndexer.getIndex()];
+      for (const buttonIdent of referencedButtonIdents) {
+        let declaration: vscode.Location | undefined;
+        for (const candidateIndex of candidateIndexes) {
+          const candidateComposition = buildDocumentCompositionModel(workflowFacts, candidateIndex);
+          declaration = resolveWorkflowDeclaration(
+            candidateIndex,
+            workflowFacts,
+            candidateComposition,
+            "button",
+            buttonIdent,
+            (uri) =>
+              factRegistry.getFact(
+                uri.toString(),
+                "fact.parsedDocument",
+                "provider:workflow-translation-inlay"
+              ) as ReturnType<typeof parseDocumentFactsFromText> | undefined
+          );
+          if (declaration) {
+            break;
+          }
+        }
+        if (!declaration) {
+          continue;
+        }
+
+        const declarationDocument = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === declaration.uri.toString());
+        const declarationFacts = declarationDocument
+          ? (resolveDocumentFacts(declarationDocument, primaryIndex, {
+              getFactsForDocument: (doc) =>
+                factRegistry.getFact(
+                  doc.uri.toString(),
+                  "fact.parsedDocument",
+                  "provider:workflow-translation-inlay"
+                ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+              getFactsForUri: (uri) =>
+                factRegistry.getFact(
+                  uri.toString(),
+                  "fact.parsedDocument",
+                  "provider:workflow-translation-inlay"
+                ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+              parseFacts: parseDocumentFacts,
+              mode: "strict-accessor"
+            }) ?? parseDocumentFactsFromText(declarationDocument.getText()))
+          : getParsedFactsByUriFromIndexAccess(
+              primaryIndex,
+              declaration.uri,
+              (uri) =>
+                factRegistry.getFact(uri.toString(), "fact.parsedDocument", "provider:workflow-translation-inlay") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+            ) ?? (() => {
+              try {
+                const raw = fs.readFileSync(declaration.uri.fsPath, "utf8");
+                return parseDocumentFactsFromText(raw);
+              } catch {
+                return undefined;
+              }
+            })();
+        if (!declarationFacts) {
+          continue;
+        }
+        const buttonInfo = declarationFacts.declaredButtonInfos.find((item) => item.ident === buttonIdent);
+        if (!buttonInfo) {
+          continue;
+        }
+        out.set(buttonIdent, {
+          titleResourceKey: buttonInfo.titleResourceKey,
+          title: buttonInfo.title
+        });
+      }
+
+      // Fallback: when declaration cannot be resolved through Using composition,
+      // read final output Form facts from runtime index and map by Ident.
+      const unresolvedButtonIdents = referencedButtonIdents.filter((ident) => !out.has(ident));
+      if (unresolvedButtonIdents.length > 0) {
+        const runtimeIndex = runtimeIndexer.getIndex();
+        let runtimeFormFacts: ReturnType<typeof parseDocumentFactsFromText> | undefined;
+        for (const facts of runtimeIndex.parsedFactsByUri.values()) {
+          if ((facts.rootTag ?? "").toLowerCase() !== "form") {
+            continue;
+          }
+          if ((facts.formIdent ?? facts.rootFormIdent) !== formIdent) {
+            continue;
+          }
+          runtimeFormFacts = facts;
+          break;
+        }
+        if (runtimeFormFacts) {
+          for (const ident of unresolvedButtonIdents) {
+            const info = runtimeFormFacts.declaredButtonInfos.find((item) => item.ident === ident);
+            if (!info) {
+              continue;
+            }
+            out.set(ident, {
+              titleResourceKey: info.titleResourceKey,
+              title: info.title
+            });
+          }
+        }
+      }
+      return out;
+    },
+    (document) => {
+      const out = new Map<string, WorkflowControlReference>();
+      const primaryIndex = getIndexForUri(document.uri);
+      const workflowFacts = resolveDocumentFacts(document, primaryIndex, {
+        getFactsForDocument: (doc) =>
+          factRegistry.getFact(
+            doc.uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        getFactsForUri: (uri) =>
+          factRegistry.getFact(
+            uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseDocumentFactsFromText(document.getText());
+      const formIdent = workflowFacts?.workflowFormIdent || workflowFacts?.rootFormIdent;
+      if (!formIdent) {
+        return out;
+      }
+      const referencedControlIdents = workflowFacts.workflowReferences
+        .filter((item) => item.kind === "formControl")
+        .map((item) => item.ident);
+
+      const candidateIndexes = [primaryIndex, templateIndexer.getIndex(), runtimeIndexer.getIndex()];
+      for (const controlIdent of referencedControlIdents) {
+        let declaration: vscode.Location | undefined;
+        for (const candidateIndex of candidateIndexes) {
+          const candidateComposition = buildDocumentCompositionModel(workflowFacts, candidateIndex);
+          declaration = resolveWorkflowDeclaration(
+            candidateIndex,
+            workflowFacts,
+            candidateComposition,
+            "control",
+            controlIdent,
+            (uri) =>
+              factRegistry.getFact(
+                uri.toString(),
+                "fact.parsedDocument",
+                "provider:workflow-translation-inlay"
+              ) as ReturnType<typeof parseDocumentFactsFromText> | undefined
+          );
+          if (declaration) {
+            break;
+          }
+        }
+        if (!declaration) {
+          continue;
+        }
+
+        const declarationDocument = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === declaration.uri.toString());
+        const declarationFacts = declarationDocument
+          ? (resolveDocumentFacts(declarationDocument, primaryIndex, {
+              getFactsForDocument: (doc) =>
+                factRegistry.getFact(
+                  doc.uri.toString(),
+                  "fact.parsedDocument",
+                  "provider:workflow-translation-inlay"
+                ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+              getFactsForUri: (uri) =>
+                factRegistry.getFact(
+                  uri.toString(),
+                  "fact.parsedDocument",
+                  "provider:workflow-translation-inlay"
+                ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+              parseFacts: parseDocumentFacts,
+              mode: "strict-accessor"
+            }) ?? parseDocumentFactsFromText(declarationDocument.getText()))
+          : getParsedFactsByUriFromIndexAccess(
+              primaryIndex,
+              declaration.uri,
+              (uri) =>
+                factRegistry.getFact(uri.toString(), "fact.parsedDocument", "provider:workflow-translation-inlay") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+            ) ?? (() => {
+              try {
+                const raw = fs.readFileSync(declaration.uri.fsPath, "utf8");
+                return parseDocumentFactsFromText(raw);
+              } catch {
+                return undefined;
+              }
+            })();
+        if (!declarationFacts) {
+          continue;
+        }
+        const controlInfo = declarationFacts.declaredControlInfos.find((item) => item.ident === controlIdent);
+        if (!controlInfo) {
+          continue;
+        }
+        out.set(controlIdent, {
+          titleResourceKey: controlInfo.titleResourceKey,
+          title: controlInfo.title
+        });
+      }
+
+      // Fallback: when declaration cannot be resolved through Using composition,
+      // read final output Form facts from runtime index and map by Ident.
+      const unresolvedControlIdents = referencedControlIdents.filter((ident) => !out.has(ident));
+      if (unresolvedControlIdents.length > 0) {
+        const runtimeIndex = runtimeIndexer.getIndex();
+        let runtimeFormFacts: ReturnType<typeof parseDocumentFactsFromText> | undefined;
+        for (const facts of runtimeIndex.parsedFactsByUri.values()) {
+          if ((facts.rootTag ?? "").toLowerCase() !== "form") {
+            continue;
+          }
+          if ((facts.formIdent ?? facts.rootFormIdent) !== formIdent) {
+            continue;
+          }
+          runtimeFormFacts = facts;
+          break;
+        }
+        if (runtimeFormFacts) {
+          for (const ident of unresolvedControlIdents) {
+            const info = runtimeFormFacts.declaredControlInfos.find((item) => item.ident === ident);
+            if (!info) {
+              continue;
+            }
+            out.set(ident, {
+              titleResourceKey: info.titleResourceKey,
+              title: info.title
+            });
+          }
+        }
+      }
+      return out;
+    },
+    (document) => {
+      const out = new Map<string, WorkflowControlReference>();
+      const primaryIndex = getIndexForUri(document.uri);
+      const formFacts = resolveDocumentFacts(document, primaryIndex, {
+        getFactsForDocument: (doc) =>
+          factRegistry.getFact(
+            doc.uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        getFactsForUri: (uri) =>
+          factRegistry.getFact(
+            uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseDocumentFactsFromText(document.getText());
+      if (!formFacts || (formFacts.rootTag ?? "").toLowerCase() !== "form") {
+        return out;
+      }
+      const formIdent = formFacts.formIdent ?? formFacts.rootFormIdent;
+      if (!formIdent) {
+        return out;
+      }
+
+      const referencedControlIdents = [...new Set(formFacts.htmlControlReferences.map((item) => item.ident))];
+      const candidateIndexes = [primaryIndex, templateIndexer.getIndex(), runtimeIndexer.getIndex()];
+      for (const controlIdent of referencedControlIdents) {
+        let declaration: vscode.Location | undefined;
+        for (const candidateIndex of candidateIndexes) {
+          declaration = findFormSymbolDeclaration(
+            candidateIndex,
+            formIdent,
+            "control",
+            controlIdent,
+            (uri) =>
+              factRegistry.getFact(
+                uri.toString(),
+                "fact.parsedDocument",
+                "provider:workflow-translation-inlay"
+              ) as ReturnType<typeof parseDocumentFactsFromText> | undefined
+          );
+          if (declaration) {
+            break;
+          }
+        }
+        if (!declaration) {
+          continue;
+        }
+
+        const declarationDocument = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === declaration.uri.toString());
+        const declarationFacts = declarationDocument
+          ? (resolveDocumentFacts(declarationDocument, primaryIndex, {
+              getFactsForDocument: (doc) =>
+                factRegistry.getFact(
+                  doc.uri.toString(),
+                  "fact.parsedDocument",
+                  "provider:workflow-translation-inlay"
+                ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+              getFactsForUri: (uri) =>
+                factRegistry.getFact(
+                  uri.toString(),
+                  "fact.parsedDocument",
+                  "provider:workflow-translation-inlay"
+                ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+              parseFacts: parseDocumentFacts,
+              mode: "strict-accessor"
+            }) ?? parseDocumentFactsFromText(declarationDocument.getText()))
+          : getParsedFactsByUriFromIndexAccess(
+              primaryIndex,
+              declaration.uri,
+              (uri) =>
+                factRegistry.getFact(uri.toString(), "fact.parsedDocument", "provider:workflow-translation-inlay") as ReturnType<typeof parseDocumentFactsFromText> | undefined
+            ) ?? (() => {
+              try {
+                const raw = fs.readFileSync(declaration.uri.fsPath, "utf8");
+                return parseDocumentFactsFromText(raw);
+              } catch {
+                return undefined;
+              }
+            })();
+        if (!declarationFacts) {
+          continue;
+        }
+        const controlInfo = declarationFacts.declaredControlInfos.find((item) => item.ident === controlIdent);
+        if (!controlInfo) {
+          continue;
+        }
+        out.set(controlIdent, {
+          titleResourceKey: controlInfo.titleResourceKey,
+          title: controlInfo.title
+        });
+      }
+      return out;
+    },
+    (document) => {
+      const out = new Map<string, Set<string>>();
+      const primaryIndex = getIndexForUri(document.uri);
+      const workflowFacts = resolveDocumentFacts(document, primaryIndex, {
+        getFactsForDocument: (doc) =>
+          factRegistry.getFact(
+            doc.uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        getFactsForUri: (uri) =>
+          factRegistry.getFact(
+            uri.toString(),
+            "fact.parsedDocument",
+            "provider:workflow-translation-inlay"
+          ) as ReturnType<typeof parseDocumentFactsFromText> | undefined,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseDocumentFactsFromText(document.getText());
+
+      if (!workflowFacts || (workflowFacts.rootTag ?? "").toLowerCase() !== "workflow") {
+        return out;
+      }
+
+      const composition = buildDocumentCompositionModel(workflowFacts, primaryIndex);
+      for (const contributionRef of collectSelectedDocumentContributions(composition)) {
+        const component = resolveComponentByKey(primaryIndex, contributionRef.componentKey);
+        if (!component) {
+          continue;
+        }
+        for (const shareCodeIdent of contributionRef.contribution.workflowButtonShareCodeIdents) {
+          const buttonIdents = component.workflowButtonShareCodeButtonIdents.get(shareCodeIdent);
+          if (!buttonIdents || buttonIdents.size === 0) {
+            continue;
+          }
+          if (!out.has(shareCodeIdent)) {
+            out.set(shareCodeIdent, new Set<string>());
+          }
+          const target = out.get(shareCodeIdent);
+          if (!target) {
+            continue;
+          }
+          for (const buttonIdent of buttonIdents) {
+            target.add(buttonIdent);
+          }
+        }
+      }
+
+      // Fallback: aggregate ButtonShareCode content from final output WorkFlow
+      // so inherited Using chains are still represented in hints.
+      const formIdent = workflowFacts.workflowFormIdent || workflowFacts.rootFormIdent;
+      if (formIdent) {
+        const runtimeIndex = runtimeIndexer.getIndex();
+        let runtimeWorkflowFacts: ReturnType<typeof parseDocumentFactsFromText> | undefined;
+        for (const facts of runtimeIndex.parsedFactsByUri.values()) {
+          if ((facts.rootTag ?? "").toLowerCase() !== "workflow") {
+            continue;
+          }
+          if ((facts.workflowFormIdent ?? facts.rootFormIdent) !== formIdent) {
+            continue;
+          }
+          runtimeWorkflowFacts = facts;
+          break;
+        }
+        if (runtimeWorkflowFacts) {
+          for (const [shareCodeIdent, buttonIdents] of runtimeWorkflowFacts.buttonShareCodeButtonIdents.entries()) {
+            if (!out.has(shareCodeIdent)) {
+              out.set(shareCodeIdent, new Set<string>());
+            }
+            const target = out.get(shareCodeIdent);
+            if (!target) {
+              continue;
+            }
+            for (const buttonIdent of buttonIdents) {
+              target.add(buttonIdent);
+            }
+          }
+        }
+      }
+      return out;
+    },
+    (message) => logIndex(`inlay ${message}`)
+  );
+  workflowTranslationInlayProvider.onDidChangeInlayHints = inlayHintsChangedEmitter.event;
+  const fireInlayHintsChanged = (reason: string): void => {
+    workflowTranslationInlayProvider.invalidateCache();
+    logIndex(`inlay refresh reason=${reason}`);
+    inlayHintsChangedEmitter.fire();
+  };
+  const invalidateTranslationsAndHints = (): void => {
+    workflowTranslationsService.invalidate();
+    fireInlayHintsChanged("translations-invalidated");
+  };
+  const rebuildTranslationsCsvWatchers = (): void => {
+    for (const watcher of translationsCsvWatchers) {
+      watcher.dispose();
+    }
+    translationsCsvWatchers = [];
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const roots = getSettings().resourcesRoots;
+    for (const folder of folders) {
+      for (const root of roots) {
+        const pattern = new vscode.RelativePattern(folder, `${root.replace(/\\/g, "/")}/**/*.csv`);
+        const watcher = vscode.workspace.createFileSystemWatcher(pattern, false, false, false);
+        watcher.onDidCreate(() => invalidateTranslationsAndHints());
+        watcher.onDidChange(() => invalidateTranslationsAndHints());
+        watcher.onDidDelete(() => invalidateTranslationsAndHints());
+        translationsCsvWatchers.push(watcher);
+      }
+    }
+  };
   const hoverDocsWatcherService = new HoverDocsWatcherService({
     getWorkspaceFolders: () => vscode.workspace.workspaceFolders ?? [],
     getHoverDocsFiles: () => getSettings().hoverDocsFiles,
@@ -280,7 +770,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       createFormatterOptionsFromFormattingOptions(options, document, getSettings()),
     formatDocument: (text, options) => formatXmlTolerant(text, options),
     formatRangeLikeDocument: (document, range, options) => formatRangeLikeDocument(document, range, options),
-    logFormatter: (message) => logFormatter(message)
+    logFormatter: (message) => logFormatter(message),
+    createWorkflowTranslationInlayProvider: () => workflowTranslationInlayProvider
   });
   const compositionCommandsRegistrarService = new CompositionCommandsRegistrarService({
     logComposition: (message) => logComposition(message),
@@ -334,7 +825,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     refreshCompositionView: () => pipelineUiCommandsService.refreshCompositionView(),
     compositionCopySummary: (payload) => pipelineUiCommandsService.compositionCopySummary(payload),
     compositionLogNonEffectiveUsings: (payload) => pipelineUiCommandsService.compositionLogNonEffectiveUsings(payload),
-    migrateLegacyTemplateAliases: () => legacyTemplateAliasMigrationCommandsService.runInteractiveMigration()
+    migrateLegacyTemplateAliases: () => legacyTemplateAliasMigrationCommandsService.runInteractiveMigration(),
+    toggleTranslationInlayHints: async () => {
+      const cfg = vscode.workspace.getConfiguration("sfpXmlLinter");
+      const current = cfg.get<boolean>("translations.hints.enabled", true);
+      const next = !current;
+      const target = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
+        ? vscode.ConfigurationTarget.Workspace
+        : vscode.ConfigurationTarget.Global;
+      await cfg.update("translations.hints.enabled", next, target);
+      vscode.window.setStatusBarMessage(`SFP XML Linter: Inlay hints ${next ? "enabled" : "disabled"}.`, 2500);
+    }
   });
   let hasInitialIndex = false;
   type SavePerfAggregate = {
@@ -398,6 +899,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const getProjectKeyForUri = (uri: vscode.Uri): string | undefined => getProjectKeyForUriFromSettings(uri, getSettings());
 
   context.subscriptions.push(diagnostics);
+  context.subscriptions.push(translationsDiagnostics);
+  context.subscriptions.push(inlayHintsChangedEmitter);
+  context.subscriptions.push({
+    dispose: () => {
+      for (const watcher of translationsCsvWatchers) {
+        watcher.dispose();
+      }
+      translationsCsvWatchers = [];
+    }
+  });
   context.subscriptions.push(unifiedOutput);
   context.subscriptions.push(compositionTreeView);
   context.subscriptions.push(
@@ -444,6 +955,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   function isReadyLogMessage(message: string): boolean {
+    if (message.startsWith("inlay ")) {
+      return true;
+    }
     if (message.startsWith("REINDEX all passes DONE")) {
       return true;
     }
@@ -1117,7 +1631,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     validateUri: (uri, options) => validateUri(uri, options),
     getProjectKeyForUri: (uri) => getProjectKeyForUri(uri),
     getSettingsSnapshot: () => getSettings(),
-    sleep: (ms) => sleep(ms)
+    sleep: (ms) => sleep(ms),
+    onReindexCompleted: (scope) => {
+      fireInlayHintsChanged(`reindex-service-${scope}-done`);
+    }
   });
   context.subscriptions.push(reindexService);
 
@@ -1429,6 +1946,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   ): Promise<void> {
     await reindexService.queueReindex(scope, options);
     dependencyValidationService.markDependentUrisDirty();
+    fireInlayHintsChanged(`reindex-${scope}-done`);
   }
 
   async function revalidateWorkspaceFull(): Promise<void> {
@@ -1995,6 +2513,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   async function handleTextChanged(event: vscode.TextDocumentChangeEvent): Promise<void> {
     scheduleSqlSuggestOnTyping(event);
     pendingContentChangesSinceLastSave.add(event.document.uri.toString());
+    if (event.document.uri.fsPath.toLowerCase().endsWith(".csv")) {
+      invalidateTranslationsAndHints();
+    } else if (event.document.languageId === "xml") {
+      fireInlayHintsChanged("xml-text-change");
+    }
     compositionTreeProvider.refresh();
   }
 
@@ -2101,6 +2624,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function handleFilesCreated(files: readonly vscode.Uri[]): Promise<void> {
+    if (files.some((uri) => uri.fsPath.toLowerCase().endsWith(".csv"))) {
+      invalidateTranslationsAndHints();
+    }
     if (files.some((uri) => isSfpSettingsUri(uri))) {
       invalidateSystemMetadataCache();
       logIndex("SETTINGS created -> metadata cache invalidated");
@@ -2118,6 +2644,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function handleFilesDeleted(files: readonly vscode.Uri[]): Promise<void> {
+    if (files.some((uri) => uri.fsPath.toLowerCase().endsWith(".csv"))) {
+      invalidateTranslationsAndHints();
+    }
     if (files.some((uri) => isSfpSettingsUri(uri))) {
       invalidateSystemMetadataCache();
       logIndex("SETTINGS deleted -> metadata cache invalidated");
@@ -2139,6 +2668,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function handleFilesRenamed(files: readonly { oldUri: vscode.Uri; newUri: vscode.Uri }[]): Promise<void> {
+    if (files.some((item) => item.oldUri.fsPath.toLowerCase().endsWith(".csv") || item.newUri.fsPath.toLowerCase().endsWith(".csv"))) {
+      invalidateTranslationsAndHints();
+    }
     if (files.some((item) => isSfpSettingsUri(item.oldUri) || isSfpSettingsUri(item.newUri))) {
       invalidateSystemMetadataCache();
       logIndex("SETTINGS renamed -> metadata cache invalidated");
@@ -2164,6 +2696,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function handleConfigurationChanged(event: vscode.ConfigurationChangeEvent): Promise<void> {
     if (event.affectsConfiguration("sfpXmlLinter")) {
+      const onlyInlayTranslationsConfigChanged =
+        !event.affectsConfiguration("sfpXmlLinter.workspaceRoots") &&
+        !event.affectsConfiguration("sfpXmlLinter.rules") &&
+        !event.affectsConfiguration("sfpXmlLinter.incompleteMode") &&
+        !event.affectsConfiguration("sfpXmlLinter.templateBuilder") &&
+        !event.affectsConfiguration("sfpXmlLinter.hoverDocsFiles") &&
+        !event.affectsConfiguration("sfpXmlLinter.startup") &&
+        (event.affectsConfiguration("sfpXmlLinter.translations") ||
+          event.affectsConfiguration("sfpXmlLinter.resourcesRoots"));
+
+      invalidateTranslationsAndHints();
+      rebuildTranslationsCsvWatchers();
+
+      if (onlyInlayTranslationsConfigChanged) {
+        compositionTreeProvider.refresh();
+        return;
+      }
+
       invalidateSystemMetadataCache();
       documentationHoverResolver.markDirty();
       hoverDocsWatcherService.refresh();
@@ -2205,6 +2755,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }));
 
   vsCodeEventBridgeService.register(context);
+  rebuildTranslationsCsvWatchers();
 
   languageProvidersRegistrarService.register(context);
 
@@ -2262,5 +2813,3 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 export function deactivate(): void {
   // No-op
 }
-
-

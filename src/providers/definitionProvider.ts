@@ -5,9 +5,11 @@ import { documentInConfiguredRoots } from "../utils/paths";
 import { resolveComponentByKey } from "../indexer/componentResolve";
 import { buildDocumentCompositionModel, collectSelectedDocumentContributions } from "../composition/documentModel";
 import {
+  collectWorkflowReferenceLocations,
   FactsByUriAccessor,
   findFormDeclaration,
   findFormSymbolDeclaration,
+  FormSymbolKind,
   resolveWorkflowDeclaration
 } from "./referenceModelUtils";
 import { getParsedFactsByUri } from "../core/model/indexAccess";
@@ -17,7 +19,7 @@ type IndexAccessor = (uri?: vscode.Uri) => WorkspaceIndex;
 type FactsAccessor = (document: vscode.TextDocument) => ReturnType<typeof parseDocumentFactsFromText> | undefined;
 type ModelVersionAccessor = () => number;
 
-export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
+export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider, vscode.ImplementationProvider {
   public constructor(
     private readonly getIndex: IndexAccessor,
     private readonly getFactsForDocument?: FactsAccessor,
@@ -29,18 +31,86 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
     return this.withConsistentSnapshot(() => this.provideDefinitionInternal(document, position));
   }
 
+  public provideImplementation(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): vscode.ProviderResult<vscode.Definition | vscode.LocationLink[]> {
+    return this.withConsistentSnapshot(() => this.provideImplementationInternal(document, position));
+  }
+
+  private provideImplementationInternal(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): vscode.ProviderResult<vscode.Definition | vscode.LocationLink[]> {
+    if (!documentInConfiguredRoots(document)) {
+      return undefined;
+    }
+
+    const index = this.getIndex(document.uri);
+    const facts =
+      resolveDocumentFacts(document, index, {
+        getFactsForDocument: this.getFactsForDocument,
+        getFactsForUri: this.getFactsForUri ? ((uri, _index) => this.getFactsForUri?.(uri)) : undefined,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseDocumentFactsFromText(document.getText());
+    if (!facts) {
+      return undefined;
+    }
+
+    if ((facts.rootTag ?? "").toLowerCase() !== "form") {
+      return undefined;
+    }
+    const formIdent = facts.formIdent ?? facts.rootFormIdent;
+    if (!formIdent) {
+      return undefined;
+    }
+
+    const target = this.resolveFormDeclarationTargetKindAndIdent(facts, position);
+    if (!target) {
+      return undefined;
+    }
+
+    const locations = collectWorkflowReferenceLocations(index, formIdent, target.kind, target.ident, this.getFactsForUri);
+    return locations.length > 0 ? locations : undefined;
+  }
+
+  private resolveFormDeclarationTargetKindAndIdent(
+    facts: ReturnType<typeof parseDocumentFactsFromText>,
+    position: vscode.Position
+  ): { kind: FormSymbolKind; ident: string } | undefined {
+    for (const info of facts.declaredControlInfos) {
+      if (info.range.contains(position)) {
+        return { kind: "control", ident: info.ident };
+      }
+    }
+    for (const info of facts.declaredButtonInfos) {
+      if (info.range.contains(position)) {
+        return { kind: "button", ident: info.ident };
+      }
+    }
+    for (const occurrence of facts.identOccurrences) {
+      if (occurrence.kind === "section" && occurrence.range.contains(position)) {
+        return { kind: "section", ident: occurrence.ident };
+      }
+    }
+    return undefined;
+  }
+
+
   private provideDefinitionInternal(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
     if (!documentInConfiguredRoots(document)) {
       return undefined;
     }
 
     const index = this.getIndex(document.uri);
-    const facts = resolveDocumentFacts(document, index, {
-      getFactsForDocument: this.getFactsForDocument,
-      getFactsForUri: this.getFactsForUri ? ((uri, _index) => this.getFactsForUri?.(uri)) : undefined,
-      parseFacts: parseDocumentFacts,
-      mode: "strict-accessor"
-    });
+    const facts =
+      resolveDocumentFacts(document, index, {
+        getFactsForDocument: this.getFactsForDocument,
+        getFactsForUri: this.getFactsForUri ? ((uri, _index) => this.getFactsForUri?.(uri)) : undefined,
+        parseFacts: parseDocumentFacts,
+        mode: "strict-accessor"
+      }) ?? parseDocumentFactsFromText(document.getText());
     if (!facts) {
       return undefined;
     }
@@ -77,19 +147,19 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
         }
 
         if (ref.kind === "formControl") {
-          return facts.workflowFormIdent
+          return (facts.workflowFormIdent ?? facts.rootFormIdent)
             ? resolveWorkflowDeclaration(index, facts, documentComposition, "control", ref.ident, this.getFactsForUri)
             : undefined;
         }
 
         if (ref.kind === "button") {
-          return facts.workflowFormIdent
+          return (facts.workflowFormIdent ?? facts.rootFormIdent)
             ? resolveWorkflowDeclaration(index, facts, documentComposition, "button", ref.ident, this.getFactsForUri)
             : undefined;
         }
 
         if (ref.kind === "section") {
-          return facts.workflowFormIdent
+          return (facts.workflowFormIdent ?? facts.rootFormIdent)
             ? resolveWorkflowDeclaration(index, facts, documentComposition, "section", ref.ident, this.getFactsForUri)
             : undefined;
         }
@@ -118,7 +188,7 @@ export class SfpXmlDefinitionProvider implements vscode.DefinitionProvider {
       }
 
       for (const ref of facts.workflowControlIdentReferences) {
-        if (!ref.range.contains(position) || !facts.workflowFormIdent) {
+        if (!ref.range.contains(position) || !(facts.workflowFormIdent ?? facts.rootFormIdent)) {
           continue;
         }
         const resolved = resolveWorkflowDeclaration(index, facts, documentComposition, "control", ref.ident, this.getFactsForUri);
@@ -244,6 +314,7 @@ function findInjectedShareCodeDefinition(
 
   return undefined;
 }
+
 
 function resolveHtmlTemplateControlIdentFromTagContext(
   document: vscode.TextDocument,

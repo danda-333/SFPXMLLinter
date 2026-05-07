@@ -13,6 +13,14 @@
     - workspace scan boundary
     - fallback-parse boundary
 
+## 0.1.18
+
+- Authoring sugar enhancements for `If`:
+  - added `NotIn` condition support.
+  - replaced `NotDefined` with `IsDefined="true/false"` (inverted semantics).
+  - added `ElseIf` and `Else` branch support for richer conditional blocks.
+- Added/updated template core regression tests for new `If` behavior and branch evaluation.
+
 ## 0.1.17
 
 - Critical build reliability fix:

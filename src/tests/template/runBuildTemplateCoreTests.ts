@@ -706,6 +706,66 @@ function run(): void {
 </Form>`
     },
     {
+      name: "if-sugar-not-in-and-is-defined",
+      components: [],
+      template: `
+<Form Ident="ITSMRequest" Mode="AssignToMe">
+  <Sections>
+    <If Param="Mode" NotIn="Readonly,Closed">
+      <Section Ident="VisibleInEditableModes" />
+    </If>
+    <If Param="UnknownParam" IsDefined="false">
+      <Section Ident="MissingParamHandled" />
+    </If>
+    <If Param="Mode" IsDefined="true">
+      <Section Ident="DefinedParamHandled" />
+    </If>
+  </Sections>
+</Form>`,
+      expected: `
+<Form Ident="ITSMRequest" Mode="AssignToMe">
+  <Sections>
+    <Section Ident="VisibleInEditableModes" />
+    <Section Ident="MissingParamHandled" />
+    <Section Ident="DefinedParamHandled" />
+  </Sections>
+</Form>`
+    },
+    {
+      name: "if-sugar-elseif-else-branches",
+      components: [],
+      template: `
+<Form Ident="ITSMRequest" Mode="AssignToMe">
+  <Actions>
+    <If Param="Mode" Equals="AssignToMe">
+      <Action Ident="AssignToMeAction" />
+      <ElseIf Param="Mode" In="Assign,AssignToGroup">
+        <Action Ident="AssignAction" />
+      </ElseIf>
+      <Else>
+        <Action Ident="FallbackAction" />
+      </Else>
+    </If>
+    <If Param="Mode" Equals="Unknown">
+      <Action Ident="Never" />
+      <ElseIf Param="Mode" Equals="AssignToMe">
+        <Action Ident="ElseIfMatched" />
+      </ElseIf>
+      <Else>
+        <Action Ident="ElseMatched" />
+      </Else>
+    </If>
+  </Actions>
+</Form>`,
+      expected: `
+<Form Ident="ITSMRequest" Mode="AssignToMe">
+  <Actions>
+    <Action Ident="AssignToMeAction" />
+    <Action Ident="ElseIfMatched" />
+  </Actions>
+</Form>`
+    },
+    {
       name: "case-sugar-selects-branch-and-default",
       components: [],
       template: `
@@ -762,6 +822,37 @@ function run(): void {
     <Control Ident="ITSMCategoryLevel3Ident" />
     <Control Ident="ITSMCategoryLevel4Ident" />
   </Controls>
+</Form>`
+    },
+    {
+      name: "authoring-sugar-in-contribution-expands-with-using-params",
+      components: [
+        {
+          key: "Common/Shared/ButtonWithOptionalDialog",
+          text: `
+<Feature>
+  <Contribution Name="Buttons" Insert="append" Root="Form" TargetXPath="//Form/Buttons">
+    <If Param="NoButton" NotEquals="true">
+      <Button Ident="{{ButtonIdent}}" />
+    </If>
+  </Contribution>
+</Feature>`
+        }
+      ],
+      template: `
+<Form>
+  <Usings>
+    <Using Feature="Common/Shared/ButtonWithOptionalDialog" Contribution="Buttons" ButtonIdent="ResolveButton" NoButton="false" />
+    <Using Feature="Common/Shared/ButtonWithOptionalDialog" Contribution="Buttons" ButtonIdent="HiddenButton" NoButton="true" />
+  </Usings>
+  <Buttons>
+  </Buttons>
+</Form>`,
+      expected: `
+<Form>
+  <Buttons>
+    <Button Ident="ResolveButton" />
+  </Buttons>
 </Form>`
     }
   ];

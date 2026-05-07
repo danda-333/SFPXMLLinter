@@ -663,6 +663,9 @@ function applyUsingSections(
       let renderedInner = applyParamSubstitution(section.content, params);
       const sectionPatches = filterContributionPatchesForSection(contributionPatches, component.key, section.name);
       renderedInner = applyContributionPatchesToSection(renderedInner, sectionPatches, context);
+      // Evaluate authoring sugar in the scope of this Using/Contribution params
+      // (e.g. <If Param="NoButton" ...>) before placeholder expansion.
+      renderedInner = expandAuthoringSugar(renderedInner, params, context);
       renderedInner = replaceComponentPlaceholders(renderedInner, params, context, 1, activePlaceholderContexts);
       renderedInner = unwrapContributionSlots(renderedInner);
       reportMutation(context, {
@@ -933,36 +936,100 @@ function expandIfBlocks(text: string, inheritedParams: Map<string, string>, cont
 
 function renderIfBlock(block: TagBlock, inheritedParams: Map<string, string>, context: RenderContext): string {
   const attrs = parseXmlAttributes(block.attrs);
+  const primaryCondition = evaluateIfCondition(attrs, inheritedParams);
+  const branchInfo = parseIfBranchInfo(block.body);
+  if (primaryCondition.isMatch) {
+    return branchInfo.primaryBody;
+  }
+
+  for (const elseIfBlock of branchInfo.elseIfBlocks) {
+    const elseIfAttrs = parseXmlAttributes(elseIfBlock.attrs);
+    const elseIfCondition = evaluateIfCondition(elseIfAttrs, inheritedParams);
+    if (elseIfCondition.isMatch) {
+      return elseIfBlock.body;
+    }
+  }
+
+  if (branchInfo.elseBlock) {
+    return branchInfo.elseBlock.body;
+  }
+
+  if (context.onDebugLog && attrs.size > 0) {
+    context.onDebugLog(
+      `[If] condition did not match${primaryCondition.paramName ? ` for '${primaryCondition.paramName}'` : ""}.`
+    );
+  }
+  return "";
+}
+
+interface IfBranchInfo {
+  primaryBody: string;
+  elseIfBlocks: TagBlock[];
+  elseBlock?: TagBlock;
+}
+
+interface IfConditionEvaluation {
+  isMatch: boolean;
+  paramName?: string;
+}
+
+function parseIfBranchInfo(body: string): IfBranchInfo {
+  const elseIfBlocks = collectTagBlocks(body, "ElseIf");
+  const elseBlocks = collectTagBlocks(body, "Else");
+  const controls = [
+    ...elseIfBlocks.map((item) => ({ kind: "elseif" as const, block: item })),
+    ...elseBlocks.map((item) => ({ kind: "else" as const, block: item }))
+  ].sort((a, b) => a.block.start - b.block.start);
+
+  const firstControlStart = controls.length > 0 ? controls[0].block.start : -1;
+  const primaryBody = firstControlStart >= 0 ? body.slice(0, firstControlStart) : body;
+  const orderedElseIfBlocks = controls.filter((item) => item.kind === "elseif").map((item) => item.block);
+  const elseBlock = controls.find((item) => item.kind === "else")?.block;
+
+  return {
+    primaryBody,
+    elseIfBlocks: orderedElseIfBlocks,
+    elseBlock
+  };
+}
+
+function evaluateIfCondition(attrs: ReadonlyMap<string, string>, params: Map<string, string>): IfConditionEvaluation {
   const paramName = (attrs.get("Param") ?? attrs.get("Name") ?? attrs.get("Key") ?? "").trim();
   const leftRaw = attrs.get("Value");
+  const hasParam = paramName.length > 0 && params.has(paramName);
   const leftValue = leftRaw !== undefined
-    ? resolveParamValue(leftRaw, inheritedParams)
-    : (paramName ? (inheritedParams.get(paramName) ?? "") : "");
+    ? resolveParamValue(leftRaw, params)
+    : (paramName ? (params.get(paramName) ?? "") : "");
 
   const equalsRaw = attrs.get("Equals");
   const notEqualsRaw = attrs.get("NotEquals");
   const inRaw = attrs.get("In");
+  const notInRaw = attrs.get("NotIn");
   const isEmptyRaw = attrs.get("IsEmpty");
+  const isDefinedRaw = attrs.get("IsDefined");
 
   let isMatch: boolean;
   if (equalsRaw !== undefined) {
-    isMatch = leftValue === resolveParamValue(equalsRaw, inheritedParams);
+    isMatch = leftValue === resolveParamValue(equalsRaw, params);
   } else if (notEqualsRaw !== undefined) {
-    isMatch = leftValue !== resolveParamValue(notEqualsRaw, inheritedParams);
+    isMatch = leftValue !== resolveParamValue(notEqualsRaw, params);
   } else if (inRaw !== undefined) {
-    const inValues = splitListValues(resolveParamValue(inRaw, inheritedParams));
+    const inValues = splitListValues(resolveParamValue(inRaw, params));
     isMatch = inValues.includes(leftValue);
+  } else if (notInRaw !== undefined) {
+    const inValues = splitListValues(resolveParamValue(notInRaw, params));
+    isMatch = !inValues.includes(leftValue);
   } else if (isEmptyRaw !== undefined) {
-    const expectEmpty = parseBooleanAttribute(resolveParamValue(isEmptyRaw, inheritedParams)) ?? false;
+    const expectEmpty = parseBooleanAttribute(resolveParamValue(isEmptyRaw, params)) ?? false;
     isMatch = expectEmpty ? leftValue.trim().length === 0 : leftValue.trim().length > 0;
+  } else if (isDefinedRaw !== undefined) {
+    const expectDefined = parseBooleanAttribute(resolveParamValue(isDefinedRaw, params)) ?? true;
+    isMatch = expectDefined ? hasParam : !hasParam;
   } else {
     isMatch = isTruthy(leftValue);
   }
 
-  if (!isMatch && context.onDebugLog && attrs.size > 0) {
-    context.onDebugLog(`[If] condition did not match${paramName ? ` for '${paramName}'` : ""}.`);
-  }
-  return isMatch ? block.body : "";
+  return { isMatch, paramName };
 }
 
 function expandCaseBlocks(text: string, inheritedParams: Map<string, string>, context: RenderContext): string {

@@ -1927,7 +1927,25 @@ function stripOuterWrapperForTag(text: string, tagName: string): string {
 }
 
 function normalizeXmlTagSpacingLikeLegacy(text: string): string {
-  return text.replace(/<\/?[\w:.-]+(?:\s+[^<>]*?)?\s*\/?>/g, (tag) => normalizeXmlTag(tag));
+  const tokenRegex = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<!DOCTYPE[\s\S]*?>|<\/?[A-Za-z_][\w:.-]*\b[^>]*?>/gi;
+  let out = "";
+  let cursor = 0;
+  for (const match of text.matchAll(tokenRegex)) {
+    const token = match[0] ?? "";
+    const start = typeof match.index === "number" ? match.index : -1;
+    if (start < 0) {
+      continue;
+    }
+    out += text.slice(cursor, start);
+    if (token.startsWith("<!--") || token.startsWith("<![CDATA[") || token.startsWith("<?") || token.startsWith("<!DOCTYPE")) {
+      out += token;
+    } else {
+      out += normalizeXmlTag(token);
+    }
+    cursor = start + token.length;
+  }
+  out += text.slice(cursor);
+  return out;
 }
 
 function normalizeXmlTag(tag: string): string {

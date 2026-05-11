@@ -700,10 +700,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     (message) => logIndex(`inlay ${message}`)
   );
   workflowTranslationInlayProvider.onDidChangeInlayHints = inlayHintsChangedEmitter.event;
+  let inlayRefreshTimer: NodeJS.Timeout | undefined;
+  let lastInlayRefreshReason = "";
+  const queueInlayHintsChanged = (reason: string): void => {
+    lastInlayRefreshReason = reason;
+    if (inlayRefreshTimer) {
+      return;
+    }
+    inlayRefreshTimer = setTimeout(() => {
+      inlayRefreshTimer = undefined;
+      logIndex(`inlay refresh reason=${lastInlayRefreshReason}`);
+      inlayHintsChangedEmitter.fire();
+    }, 80);
+  };
   const fireInlayHintsChanged = (reason: string): void => {
     workflowTranslationInlayProvider.invalidateCache();
-    logIndex(`inlay refresh reason=${reason}`);
-    inlayHintsChangedEmitter.fire();
+    queueInlayHintsChanged(reason);
+  };
+  const fireInlayHintsChangedForUri = (uri: vscode.Uri, reason: string): void => {
+    workflowTranslationInlayProvider.invalidateCacheForUri(uri);
+    queueInlayHintsChanged(reason);
   };
   const invalidateTranslationsAndHints = (): void => {
     workflowTranslationsService.invalidate();
@@ -903,6 +919,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(inlayHintsChangedEmitter);
   context.subscriptions.push({
     dispose: () => {
+      if (inlayRefreshTimer) {
+        clearTimeout(inlayRefreshTimer);
+        inlayRefreshTimer = undefined;
+      }
       for (const watcher of translationsCsvWatchers) {
         watcher.dispose();
       }
@@ -2516,7 +2536,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (event.document.uri.fsPath.toLowerCase().endsWith(".csv")) {
       invalidateTranslationsAndHints();
     } else if (event.document.languageId === "xml") {
-      fireInlayHintsChanged("xml-text-change");
+      fireInlayHintsChangedForUri(event.document.uri, "xml-text-change");
     }
     compositionTreeProvider.refresh();
   }

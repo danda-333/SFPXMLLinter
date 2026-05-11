@@ -55,6 +55,12 @@ export class WorkflowTranslationInlayProvider implements vscode.InlayHintsProvid
     this.lastProvideSignatureByUri.clear();
   }
 
+  public invalidateCacheForUri(uri: vscode.Uri): void {
+    const key = uri.toString();
+    this.hintCacheByUri.delete(key);
+    this.lastProvideSignatureByUri.delete(key);
+  }
+
   public provideInlayHints(document: vscode.TextDocument, range: vscode.Range): vscode.ProviderResult<vscode.InlayHint[]> {
     const settings = this.getSettings();
     const snapshot = this.getTranslationSnapshot();

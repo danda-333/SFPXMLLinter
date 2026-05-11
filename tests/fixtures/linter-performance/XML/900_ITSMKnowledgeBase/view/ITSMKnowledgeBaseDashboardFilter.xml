@@ -5,8 +5,8 @@
     <!-- <Control xsi:type="AutoCompleteControl" Ident="CurrentCategoryIdent" DataType="String" TitleResourceKey="CurrentCategoryIdent_ITSM">
       <EmptyDataBind>
         <Columns>
-          <Column Ident="Ident" DataBindType="Value" />
-          <Column Ident="Name" DataBindType="Title" />
+          <Column Ident="Ident" DataBindType="Value"/>
+          <Column Ident="Name" DataBindType="Title"/>
         </Columns>
         <SQL><![CDATA[
           SELECT
@@ -19,15 +19,15 @@
 
         ]]></SQL>
         <Parameters>
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Bool" Value="1" />
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Company" DataType="String" MaxLength="50" Value="ITSMCompany" />
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Category" DataType="String" MaxLength="50" Value="ITSMCategory" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Bool" Value="1"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Company" DataType="String" MaxLength="50" Value="ITSMCompany"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Category" DataType="String" MaxLength="50" Value="ITSMCategory"/>
         </Parameters>
       </EmptyDataBind>
       <DataBind DefaultTitleResourceKey="SelectValue_ITSM">
         <Columns>
-          <Column Ident="Ident" DataBindType="Value" />
-          <Column Ident="Name" DataBindType="Title" />
+          <Column Ident="Ident" DataBindType="Value"/>
+          <Column Ident="Name" DataBindType="Title"/>
         </Columns>
         <SQL><![CDATA[
 
@@ -43,16 +43,16 @@
 
         ]]></SQL>
         <Parameters>
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Bool" Value="1" />
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Company" DataType="String" MaxLength="50" Value="ITSMCompany" />
-          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Category" DataType="String" MaxLength="50" Value="ITSMCategory" />
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="200" LikeType="Both" />
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Bool" Value="1"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Company" DataType="String" MaxLength="50" Value="ITSMCompany"/>
+          <dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Category" DataType="String" MaxLength="50" Value="ITSMCategory"/>
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" MaxLength="200" LikeType="Both"/>
         </Parameters>
       </DataBind>
       <SelectedDataBind>
         <Columns>
-          <Column Ident="Ident" DataBindType="Value" />
-          <Column Ident="Name" DataBindType="Title" />
+          <Column Ident="Ident" DataBindType="Value"/>
+          <Column Ident="Name" DataBindType="Title"/>
         </Columns>
         <SQL><![CDATA[
           SELECT
@@ -64,7 +64,7 @@
             ft.Ident = @CurrentCategoryIdent
         ]]></SQL>
         <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="CurrentCategoryIdent" DataType="String"/>
         </Parameters>
       </SelectedDataBind>
       <FilterConditions>

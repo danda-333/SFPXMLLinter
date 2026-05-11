@@ -77,7 +77,7 @@
               , 1, 0)
             </SQL>
             <Parameters>
-              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="PaymentTermsIdent" DataType="String" />
+              <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="PaymentTermsIdent" DataType="String"  />
             </Parameters>
           </Condition>
           <TrueActions><Action xsi:type="Required" ActionStart="BeforeValidation">
@@ -97,7 +97,7 @@
 
         <Action xsi:type="Email" SubjectResourceKey="*_Email_ITSM" BodyResourceKey="*_Email_ITSM" EmailIdent="*_Email_ITSM" ActionStart="AfterPermission" Ident="*_Email_ITSM">
           <Recipients>
-            <Recipient RecipientType="To" SourceType="Permission" Value="*" />
+            <Recipient RecipientType="To" SourceType="Permission" Value="*"/>
           </Recipients>
         </Action>
 
@@ -242,7 +242,7 @@
 
         </SQL>
         <Parameters>
-          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+          <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"  />
         </Parameters>
       </DataSource>
     </Action> -->

@@ -46,6 +46,9 @@ jobs:
         run: npm ci
 
       - name: Linter performance gate
+        env:
+          SFP_LINTER_PERF_BG_LIMIT_MS: "7000"
+          SFP_LINTER_PERF_REBUILD_LIMIT_MS: "7000"
         run: npm run test:linter:perf
 
       - name: Template generators performance gate

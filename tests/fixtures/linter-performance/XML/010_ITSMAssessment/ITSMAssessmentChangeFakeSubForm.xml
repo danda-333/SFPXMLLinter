@@ -187,34 +187,34 @@
 				<div class="row">
 					<div class="col-md-3">
 						<div class="form-group">
-							<ControlLabel ControlID="AssessmentOrder" />
-							<Control ID="AssessmentOrder" />
+							<ControlLabel ControlID="AssessmentOrder"/>
+							<Control ID="AssessmentOrder"/>
 						</div>
 					</div>
 					<div class="col-md-3">
 						<div class="form-group">
-							<ControlLabel ControlID="AssessmentType" />
-							<Control ID="AssessmentType" />
+							<ControlLabel ControlID="AssessmentType"/>
+							<Control ID="AssessmentType"/>
 						</div>
 						<div class="form-group d-none">
-							<ControlLabel ControlID="AssessmentTypeValue" />
-							<Control ID="AssessmentTypeValue" />
+							<ControlLabel ControlID="AssessmentTypeValue"/>
+							<Control ID="AssessmentTypeValue"/>
 						</div>
 					</div>
 				</div>
 				<div class="row js-showIfApprovaTypeGroup">
 					<div class="col-md-12">
 						<div class="form-group">
-							<ControlLabel ControlID="AssessmentGroupID" />
-							<Control ID="AssessmentGroupID" />
+							<ControlLabel ControlID="AssessmentGroupID"/>
+							<Control ID="AssessmentGroupID"/>
 						</div>
 					</div>
 				</div>
 				<div class="row js-showIfApprovaTypeAccount">
 					<div class="col-md-12">
 						<div class="form-group">
-							<ControlLabel ControlID="AssessmentAccountID" />
-							<Control ID="AssessmentAccountID" />
+							<ControlLabel ControlID="AssessmentAccountID"/>
+							<Control ID="AssessmentAccountID"/>
 						</div>
 					</div>
 				</div>
@@ -222,8 +222,8 @@
 				<div class="row d-none">
 					<div class="col-md-3">
 						<div class="form-group">
-							<Control ID="AssessmentRoundStartDateTime" />
-							<Control ID="AssessmentRoundGUID" />
+							<Control ID="AssessmentRoundStartDateTime"/>
+							<Control ID="AssessmentRoundGUID"/>
 						</div>
 					</div>
 				</div>

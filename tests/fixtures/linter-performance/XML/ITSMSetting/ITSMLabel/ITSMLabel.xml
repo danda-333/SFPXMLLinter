@@ -13,7 +13,7 @@
 	<Controls>
 
 		<Control xsi:type="TextBoxControl" Ident="TextValue" DataType="String" MaxLength="255" TitleResourceKey="TextValue_ITSM" IsRequired="true" IsReadOnly="true" />
-		<!-- <Control xsi:type="CheckBoxControl" Ident="IsActive" DataType="Bool" TitleResourceKey="IsActive_ITSM" LabelPlacementType="Right" Default="1" /> -->
+		<!-- <Control xsi:type="CheckBoxControl" Ident="IsActive" DataType="Bool" TitleResourceKey="IsActive_ITSM" LabelPlacementType="Right" Default="1"/> -->
 
 		<Control xsi:type="TimeLineControl" Ident="TimeLine" TitleResourceKey="TimeLine_ITSM" SortType="DESC">
 			<HistoryTypes>

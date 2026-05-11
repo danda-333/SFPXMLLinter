@@ -52,16 +52,16 @@
 			SELECT ControlType,Ident,IsVisible,IsReadOnly FROM @Controls
 		]]></SQL>
 		<Parameters>
-		<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
+		<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number"/>
 		<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserID" DataType="Number" ConstantType="UserID" />
-		<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" ConstantType="WorkFlowState" />
-		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateZero" DataType="Number" Value="0" />
-		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1" />
-		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="150" Value="Compliance" />
-		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="BasicPermission" DataType="String" MaxLength="50" Value="Compliance" />
-		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="TypeOfControl" DataType="String" MaxLength="150" Value="FormControl" />
-		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Permission" DataType="String" MaxLength="50" Value="ComplianceOfficer" />
-		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="150" Value="DeprecatedControlIdents" />
+		<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="State" DataType="Number" ConstantType="WorkFlowState"/>
+		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="StateZero" DataType="Number" Value="0"/>
+		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ActiveState" DataType="Number" Value="1"/>
+		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="FormIdent" DataType="String" MaxLength="150" Value="Compliance"/>
+		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="BasicPermission" DataType="String" MaxLength="50" Value="Compliance"/>
+		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="TypeOfControl" DataType="String" MaxLength="150" Value="FormControl"/>
+		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="Permission" DataType="String" MaxLength="50" Value="ComplianceOfficer"/>
+		<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="ControlIdent" DataType="String" MaxLength="150" Value="DeprecatedControlIdents"/>
 		</Parameters>
 	</ControlDataSource> -->
 

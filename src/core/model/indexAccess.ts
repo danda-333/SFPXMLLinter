@@ -20,10 +20,9 @@ export function getParsedFactsByUri(
   getFactsForUri?: FactsByUriAccessor
 ): ParsedDocumentFacts | undefined {
   if (getFactsForUri) {
-    const fromAccessor = getFactsForUri(uri, index);
-    if (fromAccessor) {
-      return fromAccessor;
-    }
+    // Accessor mode is strict by contract: when accessor is provided,
+    // do not silently fallback to parsedFactsByUri cache.
+    return getFactsForUri(uri, index);
   }
 
   const direct = index.parsedFactsByUri.get(uri.toString());
@@ -85,7 +84,8 @@ export function getParsedFactsEntries(
     }
     let facts: ParsedDocumentFacts | undefined;
     if (getFactsForUri) {
-      facts = getFactsForUri(uri, index) ?? fallbackFacts;
+      // Accessor mode is strict by contract: do not fallback when accessor misses.
+      facts = getFactsForUri(uri, index);
     } else {
       facts = fallbackFacts;
     }

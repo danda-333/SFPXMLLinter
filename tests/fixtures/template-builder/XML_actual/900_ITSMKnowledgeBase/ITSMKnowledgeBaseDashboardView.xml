@@ -7,7 +7,7 @@
 		<string>~/AppAsset/Packages/ITSM/Styles/WikiDashboardView.css</string>
 	</ExternalCssRelativePaths>
 	<Buttons>
-		<!-- <Button xsi:type="LinkButton" Ident="HomeButton" TitleResourceKey="" IconCssClass="icon-home2" Color="#2196F3" Url="~/ContentView/Index/ITSMKnowledgeBaseDashboardView" /> -->
+		<!-- <Button xsi:type="LinkButton" Ident="HomeButton" TitleResourceKey="" IconCssClass="icon-home2" Color="#2196F3" Url="~/ContentView/Index/ITSMKnowledgeBaseDashboardView"/> -->
 	</Buttons>
 	<Sections>
 		<Section xsi:type="ContentSourceSection">
@@ -24,7 +24,7 @@
 						<Column Ident="Name" />
 						<Column Ident="Icon" />
 						<Column Ident="Color" />
-						<!-- <Column Ident="Description" /> -->
+						<!-- <Column Ident="Description"/> -->
 						<Column Ident="Level" />
 						<Column Ident="ParentFolderTreeID" />
 					</Columns>

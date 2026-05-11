@@ -114,8 +114,8 @@
 									<div class="col-md-4">
 
 										<div class="form-group">
-											<ControlLabel ControlID="ITSMApproveSettingName" />
-											<Control ID="ITSMApproveSettingName" />
+											<ControlLabel ControlID="ITSMApproveSettingName"/>
+											<Control ID="ITSMApproveSettingName"/>
 										</div>
 
 									</div>
@@ -124,8 +124,8 @@
 									<div class="col-md-12">
 
 										<div class="form-group">
-											<ControlLabel ControlID="ITSMApproveSettingNameDescription" />
-											<Control ID="ITSMApproveSettingNameDescription" />
+											<ControlLabel ControlID="ITSMApproveSettingNameDescription"/>
+											<Control ID="ITSMApproveSettingNameDescription"/>
 										</div>
 
 									</div>
@@ -148,7 +148,7 @@
 									<div class="col-md-12">
 
 										<div class="form-group">
-											<Control ID="ITSMApproveSubForm" />
+											<Control ID="ITSMApproveSubForm"/>
 										</div>
 
 									</div>

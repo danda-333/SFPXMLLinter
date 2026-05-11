@@ -515,16 +515,16 @@
 			<Sources>
 				<DataSource Ident="ChildrenFolderTreeList">
 					<Columns>
-						<Column Ident="Ident" />
-						<Column Ident="FolderTreeID" />
-						<Column Ident="Name" />
-						<Column Ident="ParentFolderTreeID" />
-						<Column Ident="Level" />
+						<Column Ident="Ident"/>
+						<Column Ident="FolderTreeID"/>
+						<Column Ident="Name"/>
+						<Column Ident="ParentFolderTreeID"/>
+						<Column Ident="Level"/>
 
-						<Column Ident="IconCssClass" />
-						<Column Ident="ColorCssClass" />
-						<Column Ident="Description" />
-						<Column Ident="ITSMKnowledgeBaseCount" />
+						<Column Ident="IconCssClass"/>
+						<Column Ident="ColorCssClass"/>
+						<Column Ident="Description"/>
+						<Column Ident="ITSMKnowledgeBaseCount"/>
 					</Columns>
 					<SQL><![CDATA[
 						SELECT
@@ -591,8 +591,8 @@
 				</DataSource>
 				<DataSource Ident="Main">
 					<Columns>
-						<Column Ident="ParentFolderTreeID" />
-						<Column Ident="CurrentFolderTreeID" />
+						<Column Ident="ParentFolderTreeID"/>
+						<Column Ident="CurrentFolderTreeID"/>
 					</Columns>
 					<SQL><![CDATA[
 						DECLARE @FilterLen INT = LEN('#FILTER[FilterSet]#');

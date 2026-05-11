@@ -42,7 +42,7 @@
 					<div class="col-md-12">
 					  <div class="form-group">
 										<ControlLabel ControlID="LanguageIDs" />
-						<Control ID="LanguageIDs" />
+						<Control ID="LanguageIDs"/>
 					  </div>
 					</div>
 				  </div>

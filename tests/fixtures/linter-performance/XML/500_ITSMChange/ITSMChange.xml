@@ -240,8 +240,8 @@
 					ORDER BY dial.OrderValue ASC
 				]]></SQL>
 				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
 				</Parameters>
 			</DataBind>
 		</Control> -->
@@ -261,8 +261,8 @@
 					ORDER BY dial.OrderValue ASC
 				]]></SQL>
 				<Parameters>
-					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+					<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+					<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
 				</Parameters>
 			</DataBind>
 		</Control> -->
@@ -2685,9 +2685,9 @@
 
 					]]></SQL>
 					<Parameters>
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid" />
-						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange"/>
 						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
 					</Parameters>
 				</DataSource> -->
@@ -2714,9 +2714,9 @@
 
 					]]></SQL>
 					<Parameters>
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid" />
-						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualApproveRoundGuid"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange"/>
 						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
 					</Parameters>
 				</DataSource> -->
@@ -2756,9 +2756,9 @@
 
 					]]></SQL>
 					<Parameters>
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid" />
-						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange"/>
 						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
 					</Parameters>
 				</DataSource> -->
@@ -2785,9 +2785,9 @@
 
 					]]></SQL>
 					<Parameters>
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID" />
-						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid" />
-						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange" />
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Number" Ident="ID"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" DataType="Guid" Ident="ActualAssessmentRoundGuid"/>
+						<dsp:Parameter xsi:type="dsp:ValueParameter" DataType="String" Ident="FormIdent" Value="ITSMChange"/>
 						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
 					</Parameters>
 				</DataSource> -->
@@ -3003,7 +3003,7 @@
 				<Columns>
 					<Column Ident="ID" DataBindType="Value" />
 					<Column Ident="FullName" DataBindType="Title" />
-					<!-- <Column Ident="Selected" DataBindType="Selected" /> -->
+					<!-- <Column Ident="Selected" DataBindType="Selected"/> -->
 				</Columns>
 				<SQL><![CDATA[
 
@@ -3582,10 +3582,10 @@
 				</div>
 
 				<div class="d-none">
-					<Control ID="IsShowCategoryLevel3" />
-					<Control ID="IsShowCategoryLevel4" />
-					<Control ID="IsShowCategoryLevel5" />
-					<Control ID="IsElevatedPermissionOrNotFirstState" />
+					<Control ID="IsShowCategoryLevel3"/>
+					<Control ID="IsShowCategoryLevel4"/>
+					<Control ID="IsShowCategoryLevel5"/>
+					<Control ID="IsElevatedPermissionOrNotFirstState"/>
 				</div>
 
 												<div class="row">
@@ -3652,13 +3652,13 @@
 												<div class="row">
 													<div class="col-md-6">
 														<div class="form-group">
-															<ControlLabel ControlID="ContractReferenceNumber" />
+															<ControlLabel ControlID="ContractReferenceNumber"/>
 															<Control ID="ContractReferenceNumber" />
 														</div>
 													</div>
 													<div class="col-md-6">
 														<div class="form-group">
-															<ControlLabel ControlID="ContractAuthorityNumber" />
+															<ControlLabel ControlID="ContractAuthorityNumber"/>
 															<Control ID="ContractAuthorityNumber" />
 														</div>
 													</div>
@@ -3666,13 +3666,13 @@
 												<div class="row">
 													<div class="col-md-6">
 														<div class="form-group">
-															<ControlLabel ControlID="ProjectOfficeNumber" />
+															<ControlLabel ControlID="ProjectOfficeNumber"/>
 															<Control ID="ProjectOfficeNumber" />
 														</div>
 													</div>
 													<div class="col-md-6">
 														<div class="form-group">
-															<ControlLabel ControlID="ContractName" />
+															<ControlLabel ControlID="ContractName"/>
 															<Control ID="ContractName" />
 														</div>
 													</div>
@@ -3698,13 +3698,13 @@
 													<div class="row">
 														<div class="col-md-6">
 															<div class="form-group">
-																<ControlLabel ControlID="OfferFile" />
+																<ControlLabel ControlID="OfferFile"/>
 																<Control ID="OfferFile" />
 															</div>
 														</div>
 														<div class="col-md-6">
 															<div class="form-group">
-																<ControlLabel ControlID="PricingFile" />
+																<ControlLabel ControlID="PricingFile"/>
 																<Control ID="PricingFile" />
 															</div>
 														</div>
@@ -3712,19 +3712,19 @@
 													<div class="row">
 														<div class="col-md-4">
 															<div class="form-group">
-																<ControlLabel ControlID="OrderIssueDate" />
+																<ControlLabel ControlID="OrderIssueDate"/>
 																<Control ID="OrderIssueDate" />
 															</div>
 														</div>
 														<div class="col-md-4">
 															<div class="form-group">
-																<ControlLabel ControlID="OrderPublishDate" />
+																<ControlLabel ControlID="OrderPublishDate"/>
 																<Control ID="OrderPublishDate" />
 															</div>
 														</div>
 														<div class="col-md-4">
 															<div class="form-group">
-																<ControlLabel ControlID="DeliveryDate" />
+																<ControlLabel ControlID="DeliveryDate"/>
 																<Control ID="DeliveryDate" />
 															</div>
 														</div>
@@ -3786,7 +3786,7 @@
 													<div class="row">
 														<div class="col-md-4">
 															<div class="form-group">
-																<ControlLabel ControlID="ApprovalSubmissionDate" />
+																<ControlLabel ControlID="ApprovalSubmissionDate"/>
 																<Control ID="ApprovalSubmissionDate" />
 															</div>
 														</div>
@@ -3794,7 +3794,7 @@
 													<div class="row">
 														<div class="col-md-12">
 															<div class="form-group">
-																<ControlLabel ControlID="ApprovalSubmissionInformation" />
+																<ControlLabel ControlID="ApprovalSubmissionInformation"/>
 																<Control ID="ApprovalSubmissionInformation" />
 															</div>
 														</div>
@@ -3802,7 +3802,7 @@
 													<div class="row">
 														<div class="col-md-12">
 															<div class="form-group">
-																<ControlLabel ControlID="ApprovalConclusion" />
+																<ControlLabel ControlID="ApprovalConclusion"/>
 																<Control ID="ApprovalConclusion" />
 															</div>
 														</div>
@@ -4027,7 +4027,7 @@
 													<div class="row">
 														<div class="col-md-12">
 															<div class="form-group">
-																<ControlLabel ControlID="ExtendedDeliveryDate" />
+																<ControlLabel ControlID="ExtendedDeliveryDate"/>
 																<Control ID="ExtendedDeliveryDate" />
 															</div>
 														</div>
@@ -4035,7 +4035,7 @@
 													<div class="row">
 														<div class="col-md-12">
 															<div class="form-group">
-																<ControlLabel ControlID="ExtendedRequestDescription" />
+																<ControlLabel ControlID="ExtendedRequestDescription"/>
 																<Control ID="ExtendedRequestDescription" />
 															</div>
 														</div>
@@ -4053,7 +4053,7 @@
 						<!--HelpControls-->
 
 				<div class="row d-none">
-					<Control ID="ITSMKey" />
+					<Control ID="ITSMKey"/>
 				</div>
 
 						<!--HelpControls-->
@@ -4243,7 +4243,7 @@
 				<fieldset>
 					<div class="row">
 						<div class="col-md-12">
-							<Control ID="AssessmentHistory" />
+							<Control ID="AssessmentHistory"/>
 						</div>
 					</div>
 				</fieldset>
@@ -4484,7 +4484,7 @@
 				<fieldset>
 					<div class="row">
 						<div class="col-md-12">
-							<Component ID="ITSMKnowledgeBase" />
+							<Component ID="ITSMKnowledgeBase"/>
 						</div>
 					</div>
 				</fieldset>
@@ -4496,7 +4496,7 @@
 				<fieldset>
 					<div class="row">
 						<div class="col-md-12">
-							<Component ID="TimeLine" />
+							<Component ID="TimeLine"/>
 						</div>
 					</div>
 				</fieldset>

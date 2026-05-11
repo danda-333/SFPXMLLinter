@@ -27,13 +27,13 @@
 					  <div class="row">
 						  <div class="col-md-6">
 							  <div class="form-group">
-								  <ControlLabel ControlID="Name" />
-								  <Control ID="Name" />
+								  <ControlLabel ControlID="Name"/>
+								  <Control ID="Name"/>
 							  </div>
 						  </div>
 				<div class="col-md-6">
 							  <div class="form-group">
-								  <Control ID="Active" />
+								  <Control ID="Active"/>
 							  </div>
 						  </div>
 					  </div>
@@ -44,7 +44,7 @@
 				 <div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="FolderPermission" />
+							<Control ID="FolderPermission"/>
 						</div>
 					</div>
 				</div>
@@ -55,7 +55,7 @@
 				 <div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="ShareMainFolder" />
+							<Control ID="ShareMainFolder"/>
 						</div>
 					</div>
 				</div>

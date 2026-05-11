@@ -26,13 +26,13 @@
 					<div class="col-md-8">
 					  <div class="form-group">
 											<ControlLabel ControlID="FileName" />
-						<Control ID="FileName" />
+						<Control ID="FileName"/>
 					  </div>
 					</div>
 					<div class="col-md-8">
 					  <div class="form-group">
 											<ControlLabel ControlID="FileType" />
-						<Control ID="FileType" />
+						<Control ID="FileType"/>
 					  </div>
 					</div>
 				  </div>
@@ -48,13 +48,13 @@
 							<div class="col-md-8">
 								<div class="form-group">
 										<ControlLabel ControlID="FileName" />
-									<Control ID="FileName" />
+									<Control ID="FileName"/>
 								</div>
 							</div>
 							<div class="col-md-8">
 								<div class="form-group">
 										<ControlLabel ControlID="FileType" />
-									<Control ID="FileType" />
+									<Control ID="FileType"/>
 								</div>
 							</div>
 						</div>

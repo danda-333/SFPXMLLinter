@@ -522,28 +522,28 @@
 					  <div class="row d-none">
 						  <div class="col-md-3">
 							  <div class="form-group">
-								  <Control ID="ParentFolderTreeID" />
-								  <Control ID="IsFinalFolderTree" />
+								  <Control ID="ParentFolderTreeID"/>
+								  <Control ID="IsFinalFolderTree"/>
 								  <!-- @Ignore unknown-html-template-control-ident -->
-								  <Control ID="ID" />
-								  <Control ID="Name" />
+								  <Control ID="ID"/>
+								  <Control ID="Name"/>
 							  </div>
 						  </div>
 					  </div>
 					  <div class="row">
 						  <div class="col-md-8">
 							  <div class="form-group">
-								  <ControlLabel ControlID="CategoryName" />
-								  <Control ID="CategoryName" />
-								  <ControlLabel ControlID="ITSMServiceIdent" />
-								  <Control ID="ITSMServiceIdent" />
-								  <ControlLabel ControlID="ITSMCatalogSheetIdent" />
-								  <Control ID="ITSMCatalogSheetIdent" />
+								  <ControlLabel ControlID="CategoryName"/>
+								  <Control ID="CategoryName"/>
+								  <ControlLabel ControlID="ITSMServiceIdent"/>
+								  <Control ID="ITSMServiceIdent"/>
+								  <ControlLabel ControlID="ITSMCatalogSheetIdent"/>
+								  <Control ID="ITSMCatalogSheetIdent"/>
 							  </div>
 						  </div>
 				<div class="col-md-4">
 							  <div class="form-group">
-								  <Control ID="Active" />
+								  <Control ID="Active"/>
 							  </div>
 						  </div>
 					  </div>
@@ -551,19 +551,19 @@
 					  <div class="row">
 				<div class="col-md-4">
 							  <div class="form-group">
-								  <ControlLabel ControlID="IconCssClass" />
-								  <Control ID="IconCssClass" />
+								  <ControlLabel ControlID="IconCssClass"/>
+								  <Control ID="IconCssClass"/>
 							  </div>
 						  </div>
 				<div class="col-md-4">
 							  <div class="form-group">
-								  <ControlLabel ControlID="ColorCssClass" />
-								  <Control ID="ColorCssClass" />
+								  <ControlLabel ControlID="ColorCssClass"/>
+								  <Control ID="ColorCssClass"/>
 							  </div>
 						  </div>
 				<div class="col-md-4">
 							  <div class="form-group">
-								  <Control ID="IsBreakdown" />
+								  <Control ID="IsBreakdown"/>
 							  </div>
 						  </div>
 					  </div>
@@ -571,22 +571,22 @@
 					  <div class="row js-showIfIsBreakdown" style="display: none;">
 						  <div class="col-md-4">
 							  <div class="form-group">
-								  <ControlLabel ControlID="ITSMCategoryBreakdownID" />
-								  <Control ID="ITSMCategoryBreakdownID" />
+								  <ControlLabel ControlID="ITSMCategoryBreakdownID"/>
+								  <Control ID="ITSMCategoryBreakdownID"/>
 							  </div>
 						  </div>
 					  </div>
 					  <div class="row js-showIfIsFinalFolderTree" style="display: none;">
 						  <div class="col-md-4">
 							  <div class="form-group">
-								  <ControlLabel ControlID="SegmentTypeID" />
-								  <Control ID="SegmentTypeID" />
+								  <ControlLabel ControlID="SegmentTypeID"/>
+								  <Control ID="SegmentTypeID"/>
 							  </div>
 						  </div>
 				<div class="col-md-4">
 							  <div class="form-group">
-								  <ControlLabel ControlID="DefaultAssignedGroupID" />
-								  <Control ID="DefaultAssignedGroupID" />
+								  <ControlLabel ControlID="DefaultAssignedGroupID"/>
+								  <Control ID="DefaultAssignedGroupID"/>
 							  </div>
 						  </div>
 					  </div>
@@ -594,14 +594,14 @@
 					  <div class="row js-showIfIsFinalFolderTree" style="display: none;">
 						  <div class="col-md-4">
 							  <div class="form-group">
-								  <ControlLabel ControlID="ITSMOptionalFieldID" />
-								  <Control ID="ITSMOptionalFieldID" />
+								  <ControlLabel ControlID="ITSMOptionalFieldID"/>
+								  <Control ID="ITSMOptionalFieldID"/>
 							  </div>
 						  </div>
 						  <div class="col-md-4">
 							  <div class="form-group">
-								  <ControlLabel ControlID="ITSMApproveSettingID" />
-								  <Control ID="ITSMApproveSettingID" />
+								  <ControlLabel ControlID="ITSMApproveSettingID"/>
+								  <Control ID="ITSMApproveSettingID"/>
 							  </div>
 						  </div>
 					  </div>
@@ -609,12 +609,12 @@
 					  <div class="row js-showIfIsFinalFolderTree">
 				<div class="col-md-4">
 							  <div class="form-group">
-								  <Control ID="IsSuperiorApprove" />
+								  <Control ID="IsSuperiorApprove"/>
 							  </div>
 						  </div>
 				<div class="col-md-4">
 							  <div class="form-group">
-								  <Control ID="IsOperatorReviewMandatory" />
+								  <Control ID="IsOperatorReviewMandatory"/>
 							  </div>
 						  </div>
 					  </div>
@@ -626,7 +626,7 @@
 				 <div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="FolderPermission" />
+							<Control ID="FolderPermission"/>
 						</div>
 					</div>
 				</div>
@@ -637,7 +637,7 @@
 				 <div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="ShareMainFolder" />
+							<Control ID="ShareMainFolder"/>
 						</div>
 					</div>
 				</div>

@@ -83,7 +83,7 @@
                 </SQL>
                 <Parameters>
                   <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ID" DataType="Number" />
-                  <!-- <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentID" AlterIdent="ID" DataType="Number" SetDataType="ParentData" /> -->
+                  <!-- <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="ParentID" AlterIdent="ID" DataType="Number" SetDataType="ParentData"/> -->
                   <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TableID" DataType="Number" />
                   <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="SourceITSMID" DataType="Number" />
                   <dsp:Parameter xsi:type="dsp:VariableParameter" Ident="TargetITSMID" DataType="Number" />

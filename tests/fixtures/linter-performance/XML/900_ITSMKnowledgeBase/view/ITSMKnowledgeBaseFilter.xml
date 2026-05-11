@@ -8,7 +8,7 @@
 	<Controls>
 
 		<!-- @Ignore ident-convention-lookup-control -->
-		<!-- <Control xsi:type="ListBoxControl" Ident="Statuses" DataType="NumberList" TitleResourceKey="Statuses_ITSM">
+		<!-- <Control xsi:type="ListBoxControl" Ident="Statuses" DataType="NumberList" TitleResourceKey="Statuses_ITSM" >
 		  <ListItems>
 			<ListItem TitleResourceKey="Active_ITSM" Value="1" />
 			<ListItem TitleResourceKey="Inactive_ITSM" Value="0" />

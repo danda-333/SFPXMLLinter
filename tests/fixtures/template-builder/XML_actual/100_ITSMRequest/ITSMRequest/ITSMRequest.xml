@@ -200,8 +200,8 @@
 						ORDER BY dial.OrderValue ASC
 					</SQL>
 					<Parameters>
-						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
 					</Parameters>
 				</DataBind>
 			</Control> -->
@@ -221,8 +221,8 @@
 						ORDER BY dial.OrderValue ASC
 					</SQL>
 					<Parameters>
-						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0" />
-						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number" />
+						<dsp:Parameter xsi:type="dsp:ValueParameter" Ident="DeletedState" DataType="Number" Value="0"/>
+						<dsp:Parameter xsi:type="dsp:VariableParameter" Ident="UserLanguageID" ConstantType="UserLanguageID" DataType="Number"/>
 					</Parameters>
 				</DataBind>
 			</Control> -->
@@ -1889,7 +1889,7 @@
 		</div>
 
 		<div class="d-none">
-			<Control ID="IsShowCategoryLevel5" />
+			<Control ID="IsShowCategoryLevel5"/>
 		</div>
 
 										<div class="row">
@@ -2492,11 +2492,11 @@
 				</div>
 
 		<div class="row d-none">
-			<Control ID="ITSMKey" />
+			<Control ID="ITSMKey"/>
 		</div>
 
 		<div class="row d-none">
-			<Control ID="ThisFormIdent" />
+			<Control ID="ThisFormIdent"/>
 		</div>
 
 			]]></HTMLTemplate>

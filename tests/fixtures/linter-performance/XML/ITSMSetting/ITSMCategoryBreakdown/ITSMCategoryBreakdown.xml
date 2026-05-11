@@ -146,8 +146,8 @@
 								<div class="row">
 									<div class="col-md-6">
 										<div class="form-group">
-											<ControlLabel ControlID="BreakdownName" />
-											<Control ID="BreakdownName" />
+											<ControlLabel ControlID="BreakdownName"/>
+											<Control ID="BreakdownName"/>
 										</div>
 									</div>
 								</div>
@@ -155,7 +155,7 @@
 								<div class="row">
 									<div class="col-md-12">
 										<div class="form-group">
-											<Control ID="ITSMCategoryBreakdownSubForm" />
+											<Control ID="ITSMCategoryBreakdownSubForm"/>
 										</div>
 									</div>
 								</div>
@@ -163,7 +163,7 @@
 								<div class="row">
 									<div class="col-md-12">
 										<div class="form-group">
-											<Control ID="ITSMCategoryBreakdownServiceFormDialogOpen" />
+											<Control ID="ITSMCategoryBreakdownServiceFormDialogOpen"/>
 										</div>
 									</div>
 								</div>

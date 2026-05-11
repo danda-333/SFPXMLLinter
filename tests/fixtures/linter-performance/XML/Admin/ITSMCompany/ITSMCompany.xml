@@ -185,47 +185,47 @@
 					<div class="row">
 						<div class="col-md-6">
 							<div class="form-group">
-								<ControlLabel ControlID="Name" />
-								<Control ID="Name" />
+								<ControlLabel ControlID="Name"/>
+								<Control ID="Name"/>
 							</div>
 						</div>
 						<div class="col-md-6">
 							<div class="form-group">
-								<Control ID="Active" />
-							</div>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-6">
-							<div class="form-group">
-								<ControlLabel ControlID="IconCssClass" />
-								<Control ID="IconCssClass" />
-							</div>
-						</div>
-						<div class="col-md-6">
-							<div class="form-group">
-								<ControlLabel ControlID="ColorCssClass" />
-								<Control ID="ColorCssClass" />
+								<Control ID="Active"/>
 							</div>
 						</div>
 					</div>
 					<div class="row">
 						<div class="col-md-6">
 							<div class="form-group">
-								<ControlLabel ControlID="Address" />
-								<Control ID="Address" />
+								<ControlLabel ControlID="IconCssClass"/>
+								<Control ID="IconCssClass"/>
 							</div>
 						</div>
 						<div class="col-md-6">
 							<div class="form-group">
-								<Control ID="IsShareAmongAuthors" />
+								<ControlLabel ControlID="ColorCssClass"/>
+								<Control ID="ColorCssClass"/>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<ControlLabel ControlID="Address"/>
+								<Control ID="Address"/>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<Control ID="IsShareAmongAuthors"/>
 							</div>
 						</div>
 					</div>
 					<div class="row">
 						<div class="col-md-12">
 							<div class="form-group">
-								<Control ID="Note" />
+								<Control ID="Note"/>
 							</div>
 						</div>
 					</div>
@@ -237,7 +237,7 @@
 				<div class="row">
 					<div class="col-md-12">
 						<div class="form-group">
-							<Control ID="FolderPermission" />
+							<Control ID="FolderPermission"/>
 						</div>
 					</div>
 				</div>

@@ -7,7 +7,7 @@
 		<string>~/AppAsset/Packages/ITSM/Styles/WikiDashboardView.css</string>
 	</ExternalCssRelativePaths> -->
 	<Buttons>
-		<!-- <Button xsi:type="LinkButton" Ident="HomeButton" TitleResourceKey="_ITSM" IconCssClass="icon-home2" Color="#2196F3" Url="~/ContentView/Index/ITSMKnowledgeBaseDashboardView" /> -->
+		<!-- <Button xsi:type="LinkButton" Ident="HomeButton" TitleResourceKey="_ITSM" IconCssClass="icon-home2" Color="#2196F3" Url="~/ContentView/Index/ITSMKnowledgeBaseDashboardView"/> -->
 	</Buttons>
 	<Sections>
 		<Section xsi:type="ContentSourceSection">
@@ -290,9 +290,9 @@
 				</div>
 
 				<div class="card-body-lmtl4">
-					<p>Znalostní báze slouží jako místo, kde najdete návody, odpovědi na časté otázky a řešení běžných problémů bez nutnosti zakládat nový požadavek.<br />
-					Obsah je rozdělen do složek podle typu požadavků a problémů. Díky tomuto členění můžete snadno najít oblast, která odpovídá vaší situaci.<br />
-					V jednotlivých složkách jsou k dispozici samostatné články, které vás krok za krokem provedou řešením konkrétního problému nebo vysvětlí, jak postupovat v dané situaci.<br />
+					<p>Znalostní báze slouží jako místo, kde najdete návody, odpovědi na časté otázky a řešení běžných problémů bez nutnosti zakládat nový požadavek.<br/>
+					Obsah je rozdělen do složek podle typu požadavků a problémů. Díky tomuto členění můžete snadno najít oblast, která odpovídá vaší situaci.<br/>
+					V jednotlivých složkách jsou k dispozici samostatné články, které vás krok za krokem provedou řešením konkrétního problému nebo vysvětlí, jak postupovat v dané situaci.<br/>
 					Doporučujeme nejprve projít znalostní bázi a vyhledat odpovídající téma. Často zde najdete řešení rychleji, než kdybyste vytvářeli nový požadavek.</p>
 				</div>
 			</div>

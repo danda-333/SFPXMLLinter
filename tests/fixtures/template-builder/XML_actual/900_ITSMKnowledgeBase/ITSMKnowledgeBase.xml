@@ -140,7 +140,7 @@
 			</Settings>
 			<!-- <DataSource>
 				<Columns>
-					<Column Ident="Name" DataBindType="Value" />
+					<Column Ident="Name" DataBindType="Value"/>
 				</Columns>
 				<SQL>
 					SELECT Name

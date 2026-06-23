@@ -93,6 +93,10 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - templating naming supports both:
     - current: `Feature` / `Contribution`
     - legacy (temporary): `Component` / `Section`
+  - template `Using` evaluation is root-level only:
+    - only root `<Using ... />` and root `<Usings>...</Usings>` are treated as template directives
+    - nested `Using` / `Usings` are ignored by template composition and preserved in final XML
+    - this prevents collisions with non-template XML constructs such as Razor `Using` / `Usings`
   - composition helpers:
     - `UsePrimitive` + `XML_Primitives` library
     - sugar pipeline: `Repeat`, `If`, `Case`
@@ -214,6 +218,10 @@ Notes:
 - Diagnostics, completion, definition, references, and rename use the domain of the current document.
 - This prevents symbol collisions when the same `Form Ident` exists in both template and runtime trees.
 - Reindex/rebuild operations update both domains, but symbol resolution never mixes them.
+- Template `Using` parsing follows one shared root-level model across:
+  - render/build
+  - inherited using propagation
+  - dependency discovery
 
 ## Dev
 

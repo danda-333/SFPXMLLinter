@@ -854,6 +854,84 @@ function run(): void {
     <Button Ident="ResolveButton" />
   </Buttons>
 </Form>`
+    },
+    {
+      name: "non-template-using-and-usings-are-preserved",
+      components: [],
+      template: `
+<PartialRender Ident="TravelExpenseVER001PartialRender">
+  <Sections>
+    <Section xsi:type="ContentSection" Ident="TravelExpenseVER001ItemSubFormLastItem" IsRazorEngine="true">
+      <Settings>
+        <Setting xsi:type="RazorEngineSetting">
+          <Usings>
+            <string>System.Text.Json</string>
+          </Usings>
+        </Setting>
+      </Settings>
+      <HTMLTemplate>
+        <Using Namespace="System.Text.Json" />
+      </HTMLTemplate>
+    </Section>
+  </Sections>
+</PartialRender>`,
+      expected: `
+<PartialRender Ident="TravelExpenseVER001PartialRender">
+  <Sections>
+    <Section xsi:type="ContentSection" Ident="TravelExpenseVER001ItemSubFormLastItem" IsRazorEngine="true">
+      <Settings>
+        <Setting xsi:type="RazorEngineSetting">
+          <Usings>
+            <string>System.Text.Json</string>
+          </Usings>
+        </Setting>
+      </Settings>
+      <HTMLTemplate>
+        <Using Namespace="System.Text.Json" />
+      </HTMLTemplate>
+    </Section>
+  </Sections>
+</PartialRender>`
+    },
+    {
+      name: "nested-template-using-outside-root-is-ignored",
+      components: [
+        {
+          key: "Common/Buttons/SaveButton",
+          text: `
+<Feature>
+  <Contribution Name="Buttons" Root="Form" TargetXPath="//Form/Buttons" Insert="append">
+    <Button Ident="InjectedButton" />
+  </Contribution>
+</Feature>`
+        }
+      ],
+      template: `
+<Form>
+  <Sections>
+    <Section>
+      <Usings>
+        <Using Feature="Common/Buttons/SaveButton" />
+      </Usings>
+    </Section>
+  </Sections>
+  <Buttons>
+    <Button Ident="BaseButton" />
+  </Buttons>
+</Form>`,
+      expected: `
+<Form>
+  <Sections>
+    <Section>
+      <Usings>
+        <Using Feature="Common/Buttons/SaveButton" />
+      </Usings>
+    </Section>
+  </Sections>
+  <Buttons>
+    <Button Ident="BaseButton" />
+  </Buttons>
+</Form>`
     }
   ];
 
@@ -902,6 +980,12 @@ function runRefsTest(): void {
     <Using Name="Library/One.xml" />
     <!-- <Using Feature="Common/ShouldNotBeFound.xml" /> -->
   </Usings>
+  <Section>
+    <Usings>
+      <Using Feature="Common/NestedShouldNotBeFound.xml" />
+    </Usings>
+    <Using Feature="Common/NestedStandaloneShouldNotBeFound.xml" />
+  </Section>
   <UsePrimitive Name="Common/Dialogs/ConfirmFormDialogSection.primitive.xml" />
   <!-- <UsePrimitive Name="Common/ShouldNotBeFoundPrimitive.xml" /> -->
   <Include Feature="Common/IncA.feature.xml" />

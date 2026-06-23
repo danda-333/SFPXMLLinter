@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Template `Using` single-source-of-truth cleanup:
+  - unified template `Using` parsing across renderer, inherited-using service path, and dependency discovery.
+  - template `Using` / `Usings` are now recognized only at root level of the template document.
+  - nested/non-root `Using` blocks are ignored by templating logic and preserved in final XML.
+  - fixed false removal of non-template XML `Using` / `Usings` content (for example Razor settings in `PartialRender` files).
 - Single-source-of-truth contract hardening:
   - added aggregated contract snapshot guard (`runContractGuardsSnapshotTests`) that verifies contract guard inventory and `test:composition` wiring.
   - added focused guard entrypoint `npm run test:contracts` for fast contract-only verification.

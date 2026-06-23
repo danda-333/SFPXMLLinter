@@ -41,6 +41,20 @@ interface PrimitiveDefinition {
   templates: PrimitiveTemplate[];
 }
 
+interface RootLevelUsingNode {
+  start: number;
+  end: number;
+  rawAttrs: string;
+  attrs: Map<string, string>;
+}
+
+interface RootLevelUsingsBlock {
+  start: number;
+  end: number;
+  innerText: string;
+  usingNodes: RootLevelUsingNode[];
+}
+
 interface RenderTemplateOptions {
   legacyTagAliasesEnabled?: boolean;
 }
@@ -267,8 +281,7 @@ export function extractUsingComponentRefs(text: string, options?: RenderTemplate
   const scanText = maskXmlComments(text);
   const legacyTagAliasesEnabled = isLegacyTagAliasesEnabled(options);
 
-  for (const match of scanText.matchAll(/<Using\b([^>]*)\/?>/gi)) {
-    const attrs = match[1] ?? "";
+  for (const attrs of collectRootLevelUsingRawAttrs(scanText)) {
     const componentValue = resolveFeatureLikeAttrFromRawAttrs(attrs, legacyTagAliasesEnabled);
     if (!componentValue) {
       continue;
@@ -319,6 +332,10 @@ export function normalizePath(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
+function sameText(a: string, b: string): boolean {
+  return a.localeCompare(b, undefined, { sensitivity: "accent" }) === 0;
+}
+
 export function stripXmlComponentExtension(value: string): string {
   const lower = value.toLowerCase();
   if (lower.endsWith(".primitive.xml")) {
@@ -334,6 +351,14 @@ export function stripXmlComponentExtension(value: string): string {
     return value.slice(0, value.length - ".xml".length);
   }
   return value;
+}
+
+export function collectRootLevelUsingRawAttrs(text: string): string[] {
+  const structure = collectRootLevelUsingStructure(text);
+  return [
+    ...structure.usingNodes.map((node) => node.rawAttrs),
+    ...structure.usingsBlocks.flatMap((block) => block.usingNodes.map((node) => node.rawAttrs))
+  ];
 }
 
 function resolveComponentByKey(
@@ -586,13 +611,12 @@ function applyUsingSections(
   inheritedUsingsXml?: string
 ): { text: string; activePlaceholderContexts: ActivePlaceholderContexts } {
   const contributionPatches = parseContributionPatchDirectives(text, context);
-  const usingParseSource =
-    inheritedUsingsXml && inheritedUsingsXml.trim().length > 0
-      ? `${text}\n${inheritedUsingsXml}`
-      : text;
-  const usingDirectives = parseUsingDirectives(usingParseSource, context.legacyTagAliasesEnabled);
-  let out = removeUsingsBlocks(text);
-  out = removeStandaloneUsingTags(out);
+  const usingDirectives = [
+    ...parseUsingDirectives(text, context.legacyTagAliasesEnabled),
+    ...parseUsingDirectivesFragment(inheritedUsingsXml, context.legacyTagAliasesEnabled)
+  ];
+  let out = removeUsingsBlocks(text, context.legacyTagAliasesEnabled);
+  out = removeStandaloneUsingTags(out, context.legacyTagAliasesEnabled);
   out = removeContributionPatchBlocks(out);
 
   const activePlaceholderContexts: ActivePlaceholderContexts = new Map();
@@ -1559,10 +1583,13 @@ function buildTemplateParams(text: string): Map<string, string> {
 
 function parseUsingDirectives(text: string, legacyTagAliasesEnabled: boolean): UsingDirective[] {
   const out: UsingDirective[] = [];
-  const regex = /<Using\b([^>]*)\/?>/gi;
-  const scanText = maskXmlComments(text);
-  for (const m of scanText.matchAll(regex)) {
-    const attrs = parseXmlAttributes(m[1] ?? "");
+  const structure = collectRootLevelUsingStructure(text);
+  const rootLevelUsingNodes = [
+    ...structure.usingNodes,
+    ...structure.usingsBlocks.flatMap((block) => block.usingNodes)
+  ];
+  for (const usingNode of rootLevelUsingNodes) {
+    const attrs = usingNode.attrs;
     const componentValue = resolveFeatureLikeAttr(attrs, legacyTagAliasesEnabled);
     if (!componentValue) {
       continue;
@@ -1838,12 +1865,114 @@ function applyParamSubstitution(text: string, params: Map<string, string>): stri
   return text.replace(/\{\{([A-Za-z_][\w.-]*)\}\}/g, (m, key: string) => params.get(key) ?? m);
 }
 
-function removeUsingsBlocks(text: string): string {
-  return text.replace(/<Usings\b[^>]*>[\s\S]*?<\/Usings>/gi, "");
+function removeUsingsBlocks(text: string, legacyTagAliasesEnabled: boolean): string {
+  const ranges = collectRootLevelUsingStructure(text)
+    .usingsBlocks
+    .filter((block) => shouldRemoveUsingsBlock(block, legacyTagAliasesEnabled))
+    .map((block) => ({ start: block.start, end: block.end }));
+  return removeRanges(text, ranges);
 }
 
-function removeStandaloneUsingTags(text: string): string {
-  return text.replace(/^[ \t]*<Using\b[^>]*\/?>[ \t]*\r?\n?/gim, "");
+function removeStandaloneUsingTags(text: string, legacyTagAliasesEnabled: boolean): string {
+  const ranges = collectRootLevelUsingStructure(text)
+    .usingNodes
+    .filter((node) => resolveFeatureLikeAttr(node.attrs, legacyTagAliasesEnabled))
+    .map((node) => ({ start: node.start, end: node.end }));
+  return removeRanges(text, ranges);
+}
+
+function shouldRemoveUsingsBlock(block: RootLevelUsingsBlock, legacyTagAliasesEnabled: boolean): boolean {
+  if (block.usingNodes.some((node) => resolveFeatureLikeAttr(node.attrs, legacyTagAliasesEnabled))) {
+    return true;
+  }
+
+  return maskXmlComments(block.innerText).trim().length === 0;
+}
+
+function collectRootLevelUsingStructure(text: string): {
+  usingNodes: RootLevelUsingNode[];
+  usingsBlocks: RootLevelUsingsBlock[];
+} {
+  const usingNodes: RootLevelUsingNode[] = [];
+  const usingsBlocks: RootLevelUsingsBlock[] = [];
+  const roots = parseRangeNodes(text);
+  const root = roots[0];
+  if (!root) {
+    return { usingNodes, usingsBlocks };
+  }
+
+  for (const child of root.children) {
+    if (sameText(child.name, "Using")) {
+      const node = buildRootLevelUsingNode(text, child);
+      if (node) {
+        usingNodes.push(node);
+      }
+      continue;
+    }
+    if (!sameText(child.name, "Usings")) {
+      continue;
+    }
+
+    const blockUsingNodes: RootLevelUsingNode[] = [];
+    for (const grandChild of child.children) {
+      if (!sameText(grandChild.name, "Using")) {
+        continue;
+      }
+      const node = buildRootLevelUsingNode(text, grandChild);
+      if (node) {
+        blockUsingNodes.push(node);
+      }
+    }
+
+    usingsBlocks.push({
+      start: child.openStart,
+      end: child.closeEnd,
+      innerText: text.slice(child.openEnd, child.closeStart),
+      usingNodes: blockUsingNodes
+    });
+  }
+
+  return { usingNodes, usingsBlocks };
+}
+
+function buildRootLevelUsingNode(text: string, node: RangeNode): RootLevelUsingNode | undefined {
+  const rawOpenTag = text.slice(node.openStart, node.openEnd);
+  const rawAttrs = extractOpenTagAttrs(rawOpenTag);
+  if (rawAttrs === undefined) {
+    return undefined;
+  }
+  return {
+    start: node.openStart,
+    end: node.closeEnd,
+    rawAttrs,
+    attrs: parseXmlAttributes(rawAttrs)
+  };
+}
+
+function extractOpenTagAttrs(openTag: string): string | undefined {
+  const match = /^<\s*[A-Za-z_][\w:.-]*\b([\s\S]*?)\/?\s*>$/i.exec(openTag);
+  return match?.[1] ?? undefined;
+}
+
+function removeRanges(text: string, ranges: ReadonlyArray<{ start: number; end: number }>): string {
+  if (ranges.length === 0) {
+    return text;
+  }
+
+  let out = text;
+  const sorted = [...ranges].sort((a, b) => b.start - a.start);
+  for (const range of sorted) {
+    out = `${out.slice(0, range.start)}${out.slice(range.end)}`;
+  }
+  return out;
+}
+
+function parseUsingDirectivesFragment(text: string | undefined, legacyTagAliasesEnabled: boolean): UsingDirective[] {
+  const source = (text ?? "").trim();
+  if (!source) {
+    return [];
+  }
+  return parseUsingDirectives(`<Root>${source}</Root>`, legacyTagAliasesEnabled);
 }
 
 function removeContributionPatchBlocks(text: string): string {

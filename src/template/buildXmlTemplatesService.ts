@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { createHash } from "node:crypto";
 import {
   buildComponentLibrary,
+  collectRootLevelUsingRawAttrs,
   extractUsingComponentRefs,
   normalizePath,
   renderTemplateWithTrace,
@@ -917,9 +918,7 @@ function buildInheritedUsingsXml(
 
 function parseUsingEntries(text: string): ParsedUsingEntry[] {
   const out: ParsedUsingEntry[] = [];
-  const pattern = /<Using\b([^>]*)\/?>/gi;
-  for (const match of text.matchAll(pattern)) {
-    const attrs = match[1] ?? "";
+  for (const attrs of collectRootLevelUsingRawAttrs(text)) {
     const orderedAttrs = parseXmlAttributesOrdered(attrs);
     const featureValue =
       extractAttributeValue(attrs, "Feature") ??

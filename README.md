@@ -89,6 +89,7 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
 - Build command:
   - `SFP XML Linter: Build XML Templates`
   - `SFP XML Linter: Build XML Templates (All)`
+  - `SFP XML Linter: Normalize Template SQL/HTMLTemplate To CDATA`
   - Native TypeScript `BuildXmlTemplates` builder (no PowerShell fallback)
   - templating naming supports both:
     - current: `Feature` / `Contribution`
@@ -115,6 +116,10 @@ VS Code extension scaffold for SFP XML linting and semantic validation.
   - output quality options:
     - `sfpXmlLinter.templateBuilder.postBuildFormat` (default `true`)
     - `sfpXmlLinter.templateBuilder.provenanceMode` (`off` | `fileComment`)
+  - template block normalization:
+    - normalizes `<SQL>` and `<HTMLTemplate>` content in `XML_Templates` to CDATA on demand
+    - preserves already wrapped CDATA blocks
+    - after normalization the file is saved and the usual rebuild chain is triggered
   - builder modes:
     - `sfpXmlLinter.templateBuilder.mode` (`fast` | `debug` | `release`)
 - build/composition output channels:

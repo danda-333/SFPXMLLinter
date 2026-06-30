@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.22
+
+- Template normalization command:
+  - added `SFP XML Linter: Normalize Template SQL/HTMLTemplate To CDATA`.
+  - wraps raw contents of `<SQL>` and `<HTMLTemplate>` blocks in template files into CDATA safely.
+  - preserves already wrapped CDATA blocks.
+  - safely splits embedded `]]>` so normalized output remains valid XML.
+  - command runs directly on `XML_Templates` documents and saves the file, so the standard rebuild pipeline follows automatically.
+
 - Template `Using` single-source-of-truth cleanup:
   - unified template `Using` parsing across renderer, inherited-using service path, and dependency discovery.
   - template `Using` / `Usings` are now recognized only at root level of the template document.

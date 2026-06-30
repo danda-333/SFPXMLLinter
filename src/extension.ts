@@ -12,6 +12,7 @@ import {
   TemplateInheritedUsingEntry
 } from "./template/buildXmlTemplatesService";
 import { TemplateMutationRecord } from "./template/buildXmlTemplatesCore";
+import { normalizeTemplateSpecialBlocksToCdata } from "./template/templateSpecialBlockCdataNormalizer";
 import { globConfiguredXmlFiles } from "./utils/paths";
 import { getSettings, SfpXmlLinterSettings } from "./config/settings";
 import { parseDocumentFacts, parseDocumentFactsFromText } from "./indexer/xmlFacts";
@@ -797,6 +798,51 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const workspaceMaintenanceCommandsRegistrarService = new WorkspaceMaintenanceCommandsRegistrarService({
     queueReindexAll: () => queueReindex("all"),
     revalidateWorkspace: () => revalidateWorkspaceFull(),
+    normalizeActiveTemplateSpecialBlocksToCdata: async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("No active editor.");
+        return;
+      }
+
+      const document = editor.document;
+      if (document.languageId !== "xml") {
+        vscode.window.showInformationMessage("SFP XML Linter: Open an XML template document first.");
+        return;
+      }
+      if (!isInFolder(document.uri, "XML_Templates")) {
+        vscode.window.showInformationMessage("SFP XML Linter: Command works only for files under XML_Templates.");
+        return;
+      }
+
+      const source = document.getText();
+      const normalized = normalizeTemplateSpecialBlocksToCdata(source);
+      if (normalized.changedBlocks === 0 || normalized.text === source) {
+        vscode.window.showInformationMessage("SFP XML Linter: No SQL/HTMLTemplate blocks needed CDATA normalization.");
+        return;
+      }
+
+      const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(source.length));
+      const applied = await editor.edit((editBuilder) => {
+        editBuilder.replace(fullRange, normalized.text);
+      });
+      if (!applied) {
+        vscode.window.showWarningMessage("SFP XML Linter: Failed to apply CDATA normalization.");
+        return;
+      }
+
+      const saved = await document.save();
+      if (!saved) {
+        vscode.window.showWarningMessage("SFP XML Linter: Normalization applied, but save failed.");
+        return;
+      }
+
+      if (!getSettings().autoBuildOnSave) {
+        await manualTemplateBuildCommandsService.runBuildCurrentOrSelection(document.uri, undefined);
+      }
+
+      vscode.window.setStatusBarMessage(`SFP XML Linter: Wrapped ${normalized.changedBlocks} block(s) into CDATA.`, 3500);
+    },
     revalidateProject: () => revalidateCurrentProject(),
     switchProjectScopeToUri: (uri) => switchActiveProjectScopeToUri(uri),
     rebuildTemplateIndex: async () => {

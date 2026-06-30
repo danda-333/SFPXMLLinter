@@ -84,6 +84,7 @@ function run(): void {
     "sfpXmlLinter.workspaceDiagnosticsReport",
     "sfpXmlLinter.rebuildIndex",
     "sfpXmlLinter.revalidateWorkspace",
+    "sfpXmlLinter.normalizeTemplateSpecialBlocksToCdata",
     "sfpXmlLinter.revalidateProject",
     "sfpXmlLinter.switchProjectScopeToActiveFile",
     "sfpXmlLinter.formatDocumentTolerant",

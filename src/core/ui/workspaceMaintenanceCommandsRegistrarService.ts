@@ -14,6 +14,7 @@ export interface WorkspaceMaintenanceCommandsRegistrarServiceDeps {
   revalidateWorkspace: () => Promise<void>;
   revalidateProject: () => Promise<void>;
   switchProjectScopeToUri: (uri: vscode.Uri) => Promise<void>;
+  normalizeActiveTemplateSpecialBlocksToCdata: () => Promise<void>;
   rebuildTemplateIndex: () => Promise<void>;
   rebuildRuntimeIndex: () => Promise<void>;
   globConfiguredXmlFiles: () => Promise<vscode.Uri[]>;
@@ -52,6 +53,9 @@ export class WorkspaceMaintenanceCommandsRegistrarService {
     context.subscriptions.push(
       vscode.commands.registerCommand("sfpXmlLinter.revalidateWorkspace", async () => {
         await this.deps.revalidateWorkspace();
+      }),
+      vscode.commands.registerCommand("sfpXmlLinter.normalizeTemplateSpecialBlocksToCdata", async () => {
+        await this.deps.normalizeActiveTemplateSpecialBlocksToCdata();
       }),
       vscode.commands.registerCommand("sfpXmlLinter.revalidateProject", async () => {
         await this.deps.revalidateProject();
